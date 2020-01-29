@@ -34,12 +34,12 @@ public class CasterMonitor : MonoBehaviour
     #endregion
 
     #region DLLImport
-    [DllImport("SimulCasterServer.dll")]
+    [DllImport("SimulCasterServer")]
     private static extern void Initialise(IntPtr settings, OnShowActor showActor, OnHideActor hideActor,
         OnSetHeadPose headPoseSetter, OnNewInput newInputProcessing, OnDisconnect disconnect);
-    [DllImport("SimulCasterServer.dll")]
+    [DllImport("SimulCasterServer")]
     private static extern void Tick(float deltaTime);
-    [DllImport("SimulCasterServer.dll")]
+    [DllImport("SimulCasterServer")]
     private static extern void Shutdown();
     #endregion
 

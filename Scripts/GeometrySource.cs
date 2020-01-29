@@ -243,25 +243,25 @@ namespace avs
 public class GeometrySource
 {
     #region DLLImports
-    [DllImport("SimulCasterServer.dll")]
+    [DllImport("SimulCasterServer")]
     private static extern uid GenerateID();
 
-    [DllImport("SimulCasterServer.dll")]
+    [DllImport("SimulCasterServer")]
     private static extern void StoreNode(uid id, avs.Node node);
-    [DllImport("SimulCasterServer.dll")]
+    [DllImport("SimulCasterServer")]
     private static extern void StoreMesh(uid id, avs.Mesh mesh);
-    [DllImport("SimulCasterServer.dll")]
+    [DllImport("SimulCasterServer")]
     private static extern void StoreMaterial(uid id, [Out]avs.Material material);
-    [DllImport("SimulCasterServer.dll")]
+    [DllImport("SimulCasterServer")]
     private static extern void StoreTexture(uid id, avs.Texture texture, System.Int64 lastModified, string basisFileLocation);
-    [DllImport("SimulCasterServer.dll")]
+    [DllImport("SimulCasterServer")]
     private static extern void StoreShadowMap(uid id, avs.Texture shadowMap);
 
-    [DllImport("SimulCasterServer.dll")]
+    [DllImport("SimulCasterServer")]
     private static extern System.UInt64 GetAmountOfTexturesWaitingForCompression();
-    [DllImport("SimulCasterServer.dll")]
+    [DllImport("SimulCasterServer")]
     private static extern avs.Texture GetNextCompressedTexture();
-    [DllImport("SimulCasterServer.dll")]
+    [DllImport("SimulCasterServer")]
     private static extern void CompressNextTexture();
     #endregion
 
@@ -430,12 +430,12 @@ public class GeometrySource
             //case TextureFormat.ASTC_HDR_10x10: return 8;
             //case TextureFormat.ASTC_HDR_12x12: return 8;
             //Following are duplicates of ASTC_0x0
-            //case TextureFormat.ASTC_RGB_4x4: return 8;
-            //case TextureFormat.ASTC_RGB_5x5: return 8;
-            //case TextureFormat.ASTC_RGB_6x6: return 8;
-            //case TextureFormat.ASTC_RGB_8x8: return 8;
-            //case TextureFormat.ASTC_RGB_10x10: return 8;
-            //case TextureFormat.ASTC_RGB_12x12: return 8;
+            case TextureFormat.ASTC_RGB_4x4: return 8;
+            case TextureFormat.ASTC_RGB_5x5: return 8;
+            case TextureFormat.ASTC_RGB_6x6: return 8;
+            case TextureFormat.ASTC_RGB_8x8: return 8;
+            case TextureFormat.ASTC_RGB_10x10: return 8;
+            case TextureFormat.ASTC_RGB_12x12: return 8;
             case TextureFormat.ASTC_RGBA_4x4: return 8;
             case TextureFormat.ASTC_RGBA_5x5: return 8;
             case TextureFormat.ASTC_RGBA_6x6: return 8;
@@ -464,7 +464,7 @@ public class GeometrySource
 #if UNITY_2019_0_OR_NEWER
                 mipCount = (uint)texture.mipmapCount,
 #else
-                mipCount = (uint)1,
+                mipCount = 1,
 #endif
                 format = avs.TextureFormat.INVALID, //Assumed
                 compression = avs.TextureCompression.UNCOMPRESSED, //Assumed
@@ -477,6 +477,7 @@ public class GeometrySource
                 case Texture2D texture2D:
                     extractedTexture.depth = 1;
                     extractedTexture.arrayCount = 1;
+                    extractedTexture.mipCount = (uint)texture2D.mipmapCount;
                     extractedTexture.bytesPerPixel = GetBytesPerPixel(texture2D.format);
                     extractedTexture.data = texture2D.GetNativeTexturePtr();
                     break;
