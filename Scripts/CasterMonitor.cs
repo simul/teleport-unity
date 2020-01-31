@@ -4,8 +4,10 @@ using UnityEngine;
 
 public class CasterMonitor : MonoBehaviour
 {
+	//Unity can't serialise static variables, and seeing as this will be a global single-instance,
+	//I would rather have static access than lots of references to the CasterMonitor.
     private static SCServer.CasterSettings _casterSettings;
-    public SCServer.CasterSettings casterSettings;
+    public SCServer.CasterSettings casterSettings = new SCServer.CasterSettings();
 
     public CasterContext casterContext;
 
