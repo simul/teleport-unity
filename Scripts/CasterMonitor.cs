@@ -21,10 +21,10 @@ public class CasterMonitor : MonoBehaviour
     delegate void OnHideActor(IntPtr actorPtr);
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    delegate void OnSetHeadPose(avs.HeadPose newHeadPose);
+    delegate void OnSetHeadPose(in avs.HeadPose newHeadPose);
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    delegate void OnNewInput(avs.InputState newInput);
+    delegate void OnNewInput(in avs.InputState newInput);
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     delegate void OnDisconnect();
@@ -79,12 +79,12 @@ public class CasterMonitor : MonoBehaviour
         Debug.LogWarning("HideActor(IntPtr actorPtr) not implemented.");
     }
 
-    private void SetHeadPose(avs.HeadPose newHeadPose)
+    private void SetHeadPose(in avs.HeadPose newHeadPose)
     {
         Debug.LogWarning("SetHeadPose(avs.HeadPose newHeadPose) not implemented.");
     }
 
-    private void ProcessInput(avs.InputState newInput)
+    private void ProcessInput(in avs.InputState newInput)
     {
         Debug.LogWarning("ProcessInput(avs.InputState newInput) not implemented.");
     }
