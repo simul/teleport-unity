@@ -69,26 +69,30 @@ public class CasterMonitor : MonoBehaviour
 
     private void ShowActor(IntPtr actorPtr)
     {
-        throw new NotImplementedException();
+        Debug.LogWarning("ShowActor(IntPtr actorPtr) not implemented.");
+        //throw new NotImplementedException();
     }
 
     private void HideActor(IntPtr actorPtr)
     {
-        throw new NotImplementedException();
+        Debug.LogWarning("HideActor(IntPtr actorPtr) not implemented.");
+        //throw new NotImplementedException();
     }
 
     private void SetHeadPose(avs.HeadPose newHeadPose)
     {
-        throw new NotImplementedException();
+        Debug.LogWarning("SetHeadPose(avs.HeadPose newHeadPose) not implemented.");
     }
 
     private void ProcessInput(avs.InputState newInput)
     {
-        throw new NotImplementedException();
+        Debug.LogWarning("ProcessInput(avs.InputState newInput) not implemented.");
+        //throw new NotImplementedException();
     }
 
     private void Disconnect()
     {
-        throw new NotImplementedException();
+        Debug.LogWarning("Disconnect() not implemented.");
+        //throw new NotImplementedException();
     }
 }
