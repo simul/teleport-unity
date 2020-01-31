@@ -9,7 +9,6 @@ public class CasterMonitor : MonoBehaviour
 
     public CasterContext casterContext;
 
-    public int x { get; set; }
     public int listenPort = 10500;
     public int discoveryPort = 10607;
     public int connectionTimeout = 5; //How many seconds to wait before automatically disconnecting from the client.
