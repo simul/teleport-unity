@@ -9,12 +9,10 @@ public class CasterMonitor : MonoBehaviour
 
     public CasterContext casterContext;
 
+    public int x { get; set; }
     public int listenPort = 10500;
     public int discoveryPort = 10607;
     public int connectionTimeout = 5; //How many seconds to wait before automatically disconnecting from the client.
-
-    private GCHandle settingsHandle;
-    private GCHandle contextHandle;
 
     #region DLLDelegates
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
@@ -35,8 +33,10 @@ public class CasterMonitor : MonoBehaviour
 
     #region DLLImport
     [DllImport("SimulCasterServer")]
-    private static extern void Initialise(IntPtr settings, OnShowActor showActor, OnHideActor hideActor,
+    private static extern void Initialise(OnShowActor showActor, OnHideActor hideActor,
         OnSetHeadPose headPoseSetter, OnNewInput newInputProcessing, OnDisconnect disconnect);
+    [DllImport("SimulCasterServer")]
+    private static extern void UpdateCasterSettings(SCServer.CasterSettings newSettings);
     [DllImport("SimulCasterServer")]
     private static extern void Tick(float deltaTime);
     [DllImport("SimulCasterServer")]
@@ -52,14 +52,17 @@ public class CasterMonitor : MonoBehaviour
     {
         _casterSettings = casterSettings;
 
-        settingsHandle = GCHandle.Alloc(_casterSettings, GCHandleType.Pinned);
-
-        Initialise(settingsHandle.AddrOfPinnedObject(), ShowActor, HideActor, SetHeadPose, ProcessInput, Disconnect);
+        Initialise(ShowActor, HideActor, SetHeadPose, ProcessInput, Disconnect);
     }
 
     private void Update()
     {
         Tick(Time.deltaTime);
+    }
+
+    private void OnValidate()
+    {
+        UpdateCasterSettings(casterSettings);
     }
 
     private void OnDestroy()
@@ -70,13 +73,11 @@ public class CasterMonitor : MonoBehaviour
     private void ShowActor(IntPtr actorPtr)
     {
         Debug.LogWarning("ShowActor(IntPtr actorPtr) not implemented.");
-        //throw new NotImplementedException();
     }
 
     private void HideActor(IntPtr actorPtr)
     {
         Debug.LogWarning("HideActor(IntPtr actorPtr) not implemented.");
-        //throw new NotImplementedException();
     }
 
     private void SetHeadPose(avs.HeadPose newHeadPose)
@@ -87,12 +88,10 @@ public class CasterMonitor : MonoBehaviour
     private void ProcessInput(avs.InputState newInput)
     {
         Debug.LogWarning("ProcessInput(avs.InputState newInput) not implemented.");
-        //throw new NotImplementedException();
     }
 
     private void Disconnect()
     {
         Debug.LogWarning("Disconnect() not implemented.");
-        //throw new NotImplementedException();
     }
 }

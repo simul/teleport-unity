@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace SCServer
 {
-	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode), Serializable]
+	[StructLayout(LayoutKind.Sequential), Serializable]
     public class CasterSettings
     {
 		public Int32 requiredLatencyMs = 30;
