@@ -4,10 +4,14 @@ using UnityEngine;
 
 public class CasterMonitor : MonoBehaviour
 {
-	//Unity can't serialise static variables, and seeing as this will be a global single-instance,
-	//I would rather have static access than lots of references to the CasterMonitor.
+    public static readonly string GEOMETRY_LAYER_NAME = "Caster Geometry";
+
+    //Unity can't serialise static variables, and seeing as this will be a global single-instance,
+    //I would rather have static access than lots of references to the CasterMonitor.
     private static SCServer.CasterSettings _casterSettings;
     public SCServer.CasterSettings casterSettings = new SCServer.CasterSettings();
+
+    private static GeometrySource geometrySource = new GeometrySource();
 
     public CasterContext casterContext;
 
@@ -49,11 +53,29 @@ public class CasterMonitor : MonoBehaviour
         return _casterSettings;
     }
 
-	private void Awake()
+    public static GeometrySource GetGeometrySource()
+    {
+        return geometrySource;
+    }
+
+    private void OnEnable()
     {
         _casterSettings = casterSettings;
-
+        
         Initialise(ShowActor, HideActor, SetHeadPose, ProcessInput, Disconnect);
+    }
+
+    private void Start()
+    {
+        ///TODO: Implement geometrySource.AddMesh
+        //GameObject[] objects = FindObjectsOfType<GameObject>();
+        //foreach(GameObject actor in objects)
+        //{
+        //    if(actor.layer == LayerMask.NameToLayer(GEOMETRY_LAYER_NAME))
+        //    {
+        //        geometrySource.AddNode(actor);
+        //    }
+        //}
     }
 
     private void Update()
@@ -66,19 +88,25 @@ public class CasterMonitor : MonoBehaviour
         UpdateCasterSettings(casterSettings);
     }
 
-    private void OnDestroy()
+    private void OnDisable()
     {
         Shutdown();
     }
 
     private void ShowActor(IntPtr actorPtr)
     {
-        Debug.LogWarning("ShowActor(IntPtr actorPtr) not implemented.");
+        GameObject actor = Marshal.PtrToStructure<GameObject>(actorPtr);
+
+        Renderer actorRenderer = actor.GetComponent<Renderer>();
+        actorRenderer.enabled = true;
     }
 
     private void HideActor(IntPtr actorPtr)
     {
-        Debug.LogWarning("HideActor(IntPtr actorPtr) not implemented.");
+        GameObject actor = Marshal.PtrToStructure<GameObject>(actorPtr);
+
+        Renderer actorRenderer = actor.GetComponent<Renderer>();
+        actorRenderer.enabled = false;
     }
 
     private void SetHeadPose(in avs.HeadPose newHeadPose)

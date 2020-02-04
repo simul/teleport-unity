@@ -280,18 +280,21 @@ public class GeometrySource
         processedShadowMaps.Clear();
     }
 
-    public uid AddNode(GameObject node)
+    public uid AddNode(GameObject node, bool forceUpdate = false)
     {
         if(!node) return 0;
 
-        throw new System.NotImplementedException();
-    }
+        processedNodes.TryGetValue(node, out uid nodeID);
 
-    public uid AddNodeUnchecked(GameObject node)
-    {
-        if(!node) return 0;
+        if(forceUpdate || nodeID == 0)
+        {
+            MeshFilter meshFilter = node.GetComponent<MeshFilter>();
 
-        throw new System.NotImplementedException();
+            if(meshFilter != null) nodeID = AddMeshNode(meshFilter, nodeID);
+            else Debug.LogWarning(node.name + " was marked as streamable, but has no streamable component attached.");
+        }
+
+        return nodeID;
     }
 
     public uid AddMesh(Mesh mesh)
@@ -370,6 +373,54 @@ public class GeometrySource
         UnityEditor.EditorUtility.ClearProgressBar();
     }
 
+    private uid AddMeshNode(MeshFilter meshFilter, uid oldID)
+    {
+        GameObject node = meshFilter.gameObject;
+        avs.Node extractedNode = new avs.Node();
+
+        //Extract mesh used on node.
+        extractedNode.dataID = AddMesh(meshFilter.sharedMesh);
+        extractedNode.dataType = avs.NodeDataType.Mesh;
+
+        //Can't create a node with no data.
+        if(extractedNode.dataID == 0)
+        {
+            Debug.LogError("Failed to extract mesh data from game object: " + node.name);
+            return 0;
+        }
+
+        //Extract materials used on node.
+        List<uid> materialIDs = new List<uid>();
+        foreach(Material material in node.GetComponent<MeshRenderer>().sharedMaterials)
+        {
+            uid materialID = AddMaterial(material);
+
+            if(materialID == 0) Debug.LogWarning("Received 0 for ID of material on game object: " + node.name);
+            else materialIDs.Add(materialID);
+        }
+        extractedNode.materialAmount = (ulong)materialIDs.Count;
+        extractedNode.materialIDs = materialIDs.ToArray();
+
+        //Extract children of node, through transform hierarchy.
+        List<uid> childIDs = new List<uid>();
+        for(int i = 0; i < node.transform.childCount; i++)
+        {
+            uid childID = AddNode(node.transform.GetChild(i).gameObject);
+
+            if(childID == 0) Debug.LogWarning("Received 0 for ID of child on game object: " + node.name);
+            else childIDs.Add(childID);
+        }
+        extractedNode.childAmount = (ulong)childIDs.Count;
+        extractedNode.childIDs = childIDs.ToArray();
+
+        //Store extracted node.
+        uid nodeID = oldID == 0 ? GenerateID() : oldID;
+        processedNodes[node] = nodeID;
+        StoreNode(nodeID, extractedNode);
+
+        return nodeID;
+    }
+
     private static uint GetBytesPerPixel(TextureFormat format)
     {
         switch(format)
@@ -411,7 +462,7 @@ public class GeometrySource
             case TextureFormat.ETC2_RGB: return 1; //0.5 = 4bits
             case TextureFormat.ETC2_RGBA1: return 1; //0.5 = 4bits
             case TextureFormat.ETC2_RGBA8: return 1;
-            // These are not implemented in Unity 2018:
+            //These are duplicates of ASTC_RGB_0x0, and not implemented in Unity 2018:
             //case TextureFormat.ASTC_4x4: return 8;
             //case TextureFormat.ASTC_5x5: return 8;
             //case TextureFormat.ASTC_6x6: return 8;
@@ -422,14 +473,15 @@ public class GeometrySource
             case TextureFormat.R8: return 1;
             case TextureFormat.ETC_RGB4Crunched: return 1; //0.5 = 4bits
             case TextureFormat.ETC2_RGBA8Crunched: return 1;
-            // These are not implemented in Unity 2018:
-            //case TextureFormat.ASTC_HDR_4x4: return 8;
-            //case TextureFormat.ASTC_HDR_5x5: return 8;
-            //case TextureFormat.ASTC_HDR_6x6: return 8;
-            //case TextureFormat.ASTC_HDR_8x8: return 8;
-            //case TextureFormat.ASTC_HDR_10x10: return 8;
-            //case TextureFormat.ASTC_HDR_12x12: return 8;
-            //Following are duplicates of ASTC_0x0
+#if UNITY_2019_0_OR_NEWER
+            //These are not implemented in Unity 2018:
+            case TextureFormat.ASTC_HDR_4x4: return 8;
+            case TextureFormat.ASTC_HDR_5x5: return 8;
+            case TextureFormat.ASTC_HDR_6x6: return 8;
+            case TextureFormat.ASTC_HDR_8x8: return 8;
+            case TextureFormat.ASTC_HDR_10x10: return 8;
+            case TextureFormat.ASTC_HDR_12x12: return 8;
+#endif
             case TextureFormat.ASTC_RGB_4x4: return 8;
             case TextureFormat.ASTC_RGB_5x5: return 8;
             case TextureFormat.ASTC_RGB_6x6: return 8;
@@ -461,11 +513,8 @@ public class GeometrySource
 
                 width = (uint)texture.width,
                 height = (uint)texture.height,
-#if UNITY_2019_0_OR_NEWER
-                mipCount = (uint)texture.mipmapCount,
-#else
                 mipCount = 1,
-#endif
+
                 format = avs.TextureFormat.INVALID, //Assumed
                 compression = avs.TextureCompression.UNCOMPRESSED, //Assumed
 
