@@ -28,21 +28,23 @@ public class GeometryStreamingService
 
     Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
 
-    public void AddActor(uid clientID, GameObject actor)
+    public uid AddActor(uid clientID, GameObject actor)
     {
         uid actorID = CasterMonitor.GetGeometrySource().AddNode(actor);
         if(actorID != 0)
         {
             GCHandle actorHandle = GCHandle.Alloc(actor, GCHandleType.Pinned);
-
-            AddActor(clientID, actorHandle.AddrOfPinnedObject(), actorID);
+            
+            AddActor(clientID, GCHandle.ToIntPtr(actorHandle), actorID);
             gameObjectHandles.Add(actor, actorHandle);
         }
+
+        return actorID;
     }
 
     public uid RemoveActor(uid clientID, GameObject actor)
     {
-        uid actorID = RemoveActor(clientID, gameObjectHandles[actor].AddrOfPinnedObject());
+        uid actorID = RemoveActor(clientID, GCHandle.ToIntPtr(gameObjectHandles[actor]));
         gameObjectHandles.Remove(actor);
 
         return actorID;
@@ -50,11 +52,11 @@ public class GeometryStreamingService
 
     public uid GetActorID(uid clientID, GameObject actor)
     {
-        return GetActorID(clientID, gameObjectHandles[actor].AddrOfPinnedObject());
+        return GetActorID(clientID, GCHandle.ToIntPtr(gameObjectHandles[actor]));
     }
 
     public bool IsStreamingActor(uid clientID, GameObject actor)
     {
-        return IsStreamingActor(clientID, gameObjectHandles[actor].AddrOfPinnedObject());
+        return IsStreamingActor(clientID, GCHandle.ToIntPtr(gameObjectHandles[actor]));
     }
 }
