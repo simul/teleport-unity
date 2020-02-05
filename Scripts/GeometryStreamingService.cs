@@ -30,7 +30,7 @@ public class GeometryStreamingService
 
     public uid AddActor(uid clientID, GameObject actor)
     {
-        uid actorID = CasterMonitor.GetGeometrySource().AddNode(actor);
+        uid actorID = teleport.CasterMonitor.GetGeometrySource().AddNode(actor);
         if(actorID != 0)
         {
             GCHandle actorHandle = GCHandle.Alloc(actor, GCHandleType.Pinned);
