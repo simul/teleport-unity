@@ -44,6 +44,15 @@ namespace teleport
             }
             sessions[ClientID].SetHeadPose(newHeadPose);
         }
+        public static void StaticSetControllerPose(uid ClientID,int index, in avs.HeadPose newPose)
+        {
+            if (!sessions.ContainsKey(ClientID))
+            {
+                Debug.LogError("No Session Component found for " + ClientID);
+                return;
+            }
+            sessions[ClientID].SetControllerPose(index, newPose);
+        }
         Quaternion q = new Quaternion();
         Vector3 pos = new Vector3();
         void SetHeadPose( avs.HeadPose newHeadPose)
@@ -64,7 +73,29 @@ namespace teleport
             head.transform.rotation = q;
             head.transform.localPosition = pos;
         }
+        void SetControllerPose(int index,avs.HeadPose newPose)
+        {
+            if(!controllers.ContainsKey(index))
+            {
+                Teleport_Controller[] controller_components = GetComponentsInChildren<Teleport_Controller>();
+                foreach (var c in controller_components)
+                {
+                    if (c.Index == index)
+                        controllers[index] = c;
+                }
+                if (!controllers.ContainsKey(index))
+                    return;
+            }
+            var controller = controllers[index];
+            q.Set(newPose.orientation.x
+                , newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
+            pos.Set(newPose.position.x, newPose.position.y, newPose.position.z);
+            controller.transform.rotation = q;
+            controller.transform.localPosition = pos;
+        }
+        
         Teleport_Head head = null;
+        Dictionary<int,Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
         public static void StaticProcessInput(uid ClientID, in avs.InputState newInput)
         {
         }

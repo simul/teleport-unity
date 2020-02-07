@@ -33,6 +33,9 @@ namespace teleport
         delegate void OnSetHeadPose( uid clientID, in avs.HeadPose newHeadPose);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        delegate void OnSetControllerPose(uid clientID,int index, in avs.HeadPose newHeadPose);
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         delegate void OnNewInput( uid clientID, in avs.InputState newInput);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
@@ -42,7 +45,7 @@ namespace teleport
         #region DLLImport
         [DllImport("SimulCasterServer")]
         private static extern void Initialise(OnShowActor showActor, OnHideActor hideActor,
-            OnSetHeadPose headPoseSetter, OnNewInput newInputProcessing, OnDisconnect disconnect);
+            OnSetHeadPose headPoseSetter, OnSetControllerPose controllerPoseSetter, OnNewInput newInputProcessing, OnDisconnect disconnect);
         [DllImport("SimulCasterServer")]
         private static extern void UpdateCasterSettings(SCServer.CasterSettings newSettings);
 
@@ -68,7 +71,7 @@ namespace teleport
         {
             _casterSettings = casterSettings;
 
-            Initialise(ShowActor, HideActor, Teleport_SessionComponent.StaticSetHeadPose, Teleport_SessionComponent.StaticProcessInput, Disconnect);
+            Initialise(ShowActor, HideActor, Teleport_SessionComponent.StaticSetHeadPose, Teleport_SessionComponent.StaticSetControllerPose, Teleport_SessionComponent.StaticProcessInput, Disconnect);
         }
 
         private void Start()
