@@ -45,6 +45,7 @@ namespace teleport
             sessions[ClientID].SetHeadPose(newHeadPose);
         }
         Quaternion q = new Quaternion();
+        Vector3 pos = new Vector3();
         void SetHeadPose( avs.HeadPose newHeadPose)
         {
             if (!head)
@@ -57,9 +58,11 @@ namespace teleport
                 }
                 head = heads[0];
             }
-            q.Set(-newHeadPose.orientation.x
-                ,-newHeadPose.orientation.z,-newHeadPose.orientation.y, newHeadPose.orientation.w);
+            q.Set(newHeadPose.orientation.x
+                ,newHeadPose.orientation.y,newHeadPose.orientation.z, newHeadPose.orientation.w);
+            pos.Set(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
             head.transform.rotation = q;
+            head.transform.localPosition = pos;
         }
         Teleport_Head head = null;
         public static void StaticProcessInput(uid ClientID, in avs.InputState newInput)

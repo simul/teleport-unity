@@ -51,5 +51,7 @@ namespace SCServer
 		public byte compressionLevel = 1;
 
 		[MarshalAs(UnmanagedType.U1)] public bool willDisableMainCamera = false;
+
+		public byte axesStandard = 64|2|4;
 	}
 }
