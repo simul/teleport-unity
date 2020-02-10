@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 
 using uid = System.UInt64;
+
 namespace teleport
 {
     public class Teleport_SessionComponent : MonoBehaviour
@@ -26,27 +27,28 @@ namespace teleport
         public static extern System.UInt16 GetServerPort(uid clientID);
         [DllImport("SimulCasterServer")]
         private static extern uid GetUnlinkedClientID();
-        [DllImport("SimulCasterServer")]
 
+        [DllImport("SimulCasterServer")]
         private static extern void Client_SetOrigin(uid clientID, Vector3 pos);
         [DllImport("SimulCasterServer")]
         private static extern bool Client_IsConnected(uid clientID);
         [DllImport("SimulCasterServer")]
         private static extern bool Client_HasOrigin(uid clientID);
         #endregion
+
         #region Callbacks
         public static void StaticSetHeadPose(uid ClientID, in avs.HeadPose newHeadPose)
         {
-            if (!sessions.ContainsKey(ClientID))
+            if(!sessions.ContainsKey(ClientID))
             {
-                Debug.LogError("No Session Component found for "+ClientID);
+                Debug.LogError("No Session Component found for " + ClientID);
                 return;
             }
             sessions[ClientID].SetHeadPose(newHeadPose);
         }
-        public static void StaticSetControllerPose(uid ClientID,int index, in avs.HeadPose newPose)
+        public static void StaticSetControllerPose(uid ClientID, int index, in avs.HeadPose newPose)
         {
-            if (!sessions.ContainsKey(ClientID))
+            if(!sessions.ContainsKey(ClientID))
             {
                 Debug.LogError("No Session Component found for " + ClientID);
                 return;
@@ -55,12 +57,12 @@ namespace teleport
         }
         Quaternion q = new Quaternion();
         Vector3 pos = new Vector3();
-        void SetHeadPose( avs.HeadPose newHeadPose)
+        void SetHeadPose(avs.HeadPose newHeadPose)
         {
-            if (!head)
+            if(!head)
             {
                 Teleport_Head[] heads = GetComponentsInChildren<Teleport_Head>();
-                if (heads.Length != 1)
+                if(heads.Length != 1)
                 {
                     Debug.LogError("Precisely ONE Teleport_Head should be found.");
                     return;
@@ -68,22 +70,22 @@ namespace teleport
                 head = heads[0];
             }
             q.Set(newHeadPose.orientation.x
-                ,newHeadPose.orientation.y,newHeadPose.orientation.z, newHeadPose.orientation.w);
+                , newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
             pos.Set(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
             head.transform.rotation = q;
             head.transform.localPosition = pos;
         }
-        void SetControllerPose(int index,avs.HeadPose newPose)
+        void SetControllerPose(int index, avs.HeadPose newPose)
         {
             if(!controllers.ContainsKey(index))
             {
                 Teleport_Controller[] controller_components = GetComponentsInChildren<Teleport_Controller>();
-                foreach (var c in controller_components)
+                foreach(var c in controller_components)
                 {
-                    if (c.Index == index)
+                    if(c.Index == index)
                         controllers[index] = c;
                 }
-                if (!controllers.ContainsKey(index))
+                if(!controllers.ContainsKey(index))
                     return;
             }
             var controller = controllers[index];
@@ -93,55 +95,54 @@ namespace teleport
             controller.transform.rotation = q;
             controller.transform.localPosition = pos;
         }
-        
+
         Teleport_Head head = null;
-        Dictionary<int,Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
+        Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
         public static void StaticProcessInput(uid ClientID, in avs.InputState newInput)
         {
         }
         #endregion
-        Teleport_SessionComponent()
-        {
-        }
-        ~Teleport_SessionComponent()
-        {
-            if (sessions.ContainsKey(clientID))
-            {
-                sessions.Remove(clientID);
-            }
-        }
+
         private static Dictionary<uid, Teleport_SessionComponent> sessions = new Dictionary<uid, Teleport_SessionComponent>();
+
         private uid clientID = 0;
         private GeometryStreamingService geometryStreamingService = new GeometryStreamingService();
 
         private List<Collider> streamedObjects = new List<Collider>();
 
+        private void OnDisable()
+        {
+            if(sessions.ContainsKey(clientID))
+            {
+                sessions.Remove(clientID);
+            }
+        }
+
         private void LateUpdate()
         {
-            if (clientID == 0)
+            if(clientID == 0)
             {
-                Debug.LogWarning("Session component is not connected to any client!");
-
                 clientID = GetUnlinkedClientID();
-                if (clientID == 0)
-                    return;
-                if (sessions.ContainsKey(clientID))
+                if(clientID == 0) return;
+
+                if(sessions.ContainsKey(clientID))
                 {
                     Debug.LogError("Session duplicate key!");
                 }
                 sessions[clientID] = this;
             }
-            if (Client_IsConnected(clientID))
+
+            if(Client_IsConnected(clientID))
             {
-                if (!Client_HasOrigin(clientID))
+                if(!Client_HasOrigin(clientID))
                 {
                     Client_SetOrigin(clientID, transform.position);
                 }
             }
-            return;
+
             int layerMask = LayerMask.NameToLayer(CasterMonitor.GEOMETRY_LAYER_NAME);
 
-            if (layerMask != -1)
+            if(layerMask != -1)
             {
                 layerMask = 1 << 8;
                 List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, CasterMonitor.GetCasterSettings().detectionSphereRadius, layerMask));
@@ -150,27 +151,27 @@ namespace teleport
                 List<Collider> gainedColliders = new List<Collider>(innerSphereCollisions.Except(streamedObjects));
                 List<Collider> lostColliders = new List<Collider>(streamedObjects.Except(outerSphereCollisions));
 
-                foreach (Collider collider in gainedColliders)
+                foreach(Collider collider in gainedColliders)
                 {
                     uid actorID = geometryStreamingService.AddActor(clientID, collider.gameObject);
 
-                    if (actorID != 0)
+                    if(actorID != 0)
                     {
                         streamedObjects.Add(collider);
                         ActorEnteredBounds(clientID, actorID);
                     }
                     else
                     {
-                        Debug.LogWarning("Failed to add actor to stream: " + collider.gameObject.name);
+                        Debug.LogWarning("Failed to add game object to stream: " + collider.gameObject.name);
                     }
                 }
 
-                foreach (Collider collider in lostColliders)
+                foreach(Collider collider in lostColliders)
                 {
                     streamedObjects.Remove(collider);
 
                     uid actorID = geometryStreamingService.RemoveActor(clientID, collider.gameObject);
-                    if (actorID != 0)
+                    if(actorID != 0)
                     {
                         ActorLeftBounds(clientID, actorID);
                     }
@@ -186,5 +187,4 @@ namespace teleport
             }
         }
     }
-
 }

@@ -1,5 +1,18 @@
-﻿namespace avs
+﻿using System.Runtime.InteropServices;
+
+namespace avs
 {
+    public enum LogSeverity
+    {
+        Never = 0,
+        Debug,
+        Info,
+        Warning,
+        Error,
+        Critical,
+        Num_LogSeverity
+    }
+
     public enum AxesStandard
     {
         NotInitialised = 0,
@@ -54,12 +67,15 @@
         public static implicit operator Vector4(System.Numerics.Vector4 netVector) => new Vector4(netVector.X, netVector.Y, netVector.Z, netVector.W);
         public static implicit operator Vector4(UnityEngine.Vector4 unityVector) => new Vector4(unityVector.x, unityVector.y, unityVector.z, unityVector.w);
         public static implicit operator Vector4(UnityEngine.Color unityColour) => new Vector4(unityColour.r, unityColour.g, unityColour.b, unityColour.a);
+        public static implicit operator Vector4(UnityEngine.Quaternion quaternion) => new Vector4(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
 
         public static implicit operator System.Numerics.Vector4(Vector4 vector) => new System.Numerics.Vector4(vector.x, vector.y, vector.z, vector.w);
         public static implicit operator UnityEngine.Vector4(Vector4 vector) => new UnityEngine.Vector4(vector.x, vector.y, vector.z, vector.w);
         public static implicit operator UnityEngine.Color(Vector4 vector) => new UnityEngine.Color(vector.x, vector.y, vector.z, vector.w);
+        public static implicit operator UnityEngine.Quaternion(Vector4 vector) => new UnityEngine.Quaternion(vector.x, vector.y, vector.z, vector.w);
     }
 
+    [StructLayout(LayoutKind.Sequential)]
     public class Transform
     {
         public Vector3 position = new Vector3(0, 0, 0);
