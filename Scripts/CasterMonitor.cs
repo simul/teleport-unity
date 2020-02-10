@@ -9,18 +9,24 @@ namespace teleport
 {
     public class CasterMonitor : MonoBehaviour
     {
-        public static readonly string GEOMETRY_LAYER_NAME = "Teleport Geometry";
-
-        //Unity can't serialise static variables, and seeing as this will be a global single-instance,
-        //I would rather have static access than lots of references to the CasterMonitor.
-        private static SCServer.CasterSettings _casterSettings;
         public SCServer.CasterSettings casterSettings = new SCServer.CasterSettings();
 
-        private static GeometrySource geometrySource = new GeometrySource();
+        public GeometrySource geometrySource = new GeometrySource();
 
+        [Header("Geometry Selection")]
+        [SerializeField]
+        private LayerMask[] layersToStream = new LayerMask[0]; //Array of physics layers the user can choose to stream.
+        public string tagToStream; //Objects with this tag will be streamed; leaving it blank will cause it to just use the layer mask.
+
+        [Header("Connections")]
         public int listenPort = 10500;
         public int discoveryPort = 10607;
         public int connectionTimeout = 5; //How many seconds to wait before automatically disconnecting from the client.
+
+        [NonSerialized]
+        public LayerMask layerMask; //Layer mask generated from layersToStream array to determine streamed objects.
+
+        private static CasterMonitor instance; //There should only be one CasterMonitor instance at a time.
 
         //StringBuilders used for constructing log messages from libavstream.
         private static StringBuilder logInfo = new StringBuilder();
@@ -63,29 +69,33 @@ namespace teleport
         private static extern void Shutdown();
         #endregion
 
-        public static SCServer.CasterSettings GetCasterSettings()
+        public static CasterMonitor GetCasterMonitor()
         {
-            return _casterSettings;
-        }
-
-        public static GeometrySource GetGeometrySource()
-        {
-            return geometrySource;
+            return instance;
         }
 
         private void OnEnable()
         {
-            _casterSettings = casterSettings;
+            //We only want one instance, so delete duplicates.
+            if(instance != null && instance != this)
+            {
+                Destroy(this);
+                return;
+            }
+            instance = this;
 
             Initialise(ShowActor, HideActor, Teleport_SessionComponent.StaticSetHeadPose, Teleport_SessionComponent.StaticSetControllerPose, Teleport_SessionComponent.StaticProcessInput, LogMessageHandler);
         }
 
         private void Start()
         {
-            GameObject[] objects = FindObjectsOfType<GameObject>();
+            //Grab every game object if no tag is defined, otherwise grab all of the game objects with the matching tag.
+            GameObject[] objects = (tagToStream == "") ? FindObjectsOfType<GameObject>() : GameObject.FindGameObjectsWithTag(tagToStream);
+
+            //Extract data from all game objects/actors that respond to the streaming layer mask.
             foreach(GameObject actor in objects)
             {
-                if(actor.layer == LayerMask.NameToLayer(GEOMETRY_LAYER_NAME))
+                if(layersToStream.Length == 0 || (1 << actor.layer) == layerMask)
                 {
                     geometrySource.AddNode(actor);
                 }
@@ -100,6 +110,13 @@ namespace teleport
         private void OnValidate()
         {
             UpdateCasterSettings(casterSettings);
+
+			//Regenerate layer mask whenever a value changes; you can't serialise properties for the Unity Editor.
+            layerMask = 0;
+            foreach(LayerMask layer in layersToStream)
+            {
+                layerMask |= layer;
+            }
         }
 
         private void OnDisable()

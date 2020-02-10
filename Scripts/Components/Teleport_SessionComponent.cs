@@ -105,6 +105,8 @@ namespace teleport
 
         private static Dictionary<uid, Teleport_SessionComponent> sessions = new Dictionary<uid, Teleport_SessionComponent>();
 
+        private CasterMonitor casterMonitor; //Cached reference to the caster monitor.
+
         private uid clientID = 0;
         private GeometryStreamingService geometryStreamingService = new GeometryStreamingService();
 
@@ -116,6 +118,11 @@ namespace teleport
             {
                 sessions.Remove(clientID);
             }
+        }
+
+        private void Start()
+        {
+            casterMonitor = CasterMonitor.GetCasterMonitor();
         }
 
         private void LateUpdate()
@@ -140,19 +147,27 @@ namespace teleport
                 }
             }
 
-            int layerMask = LayerMask.NameToLayer(CasterMonitor.GEOMETRY_LAYER_NAME);
+            UpdateGeometryStreaming();
+        }
 
-            if(layerMask != -1)
+        private void UpdateGeometryStreaming()
+        {
+            int layerMask = casterMonitor.layerMask;
+
+            if(layerMask != 0)
             {
                 layerMask = 1 << 8;
-                List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, CasterMonitor.GetCasterSettings().detectionSphereRadius, layerMask));
-                List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, CasterMonitor.GetCasterSettings().detectionSphereRadius + CasterMonitor.GetCasterSettings().detectionSphereBufferDistance, layerMask));
+                List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius, layerMask));
+                List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius + casterMonitor.casterSettings.detectionSphereBufferDistance, layerMask));
 
                 List<Collider> gainedColliders = new List<Collider>(innerSphereCollisions.Except(streamedObjects));
                 List<Collider> lostColliders = new List<Collider>(streamedObjects.Except(outerSphereCollisions));
 
                 foreach(Collider collider in gainedColliders)
                 {
+                    //Skip game objects without the streaming tag.
+                    if(collider.tag != casterMonitor.tagToStream) continue;
+
                     uid actorID = geometryStreamingService.AddActor(clientID, collider.gameObject);
 
                     if(actorID != 0)
@@ -183,7 +198,7 @@ namespace teleport
             }
             else
             {
-                Debug.LogError("\"" + CasterMonitor.GEOMETRY_LAYER_NAME + "\" physics layer is not defined! Please create this layer mask, then assign it to the geometry you want to be streamed.");
+                Debug.LogError("Teleport geometry streaming physics layer is not defined! Please assign layer masks under \"Layers To Stream\".");
             }
         }
     }
