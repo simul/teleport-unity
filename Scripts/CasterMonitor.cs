@@ -34,6 +34,8 @@ namespace teleport
         private static StringBuilder logError = new StringBuilder();
         private static StringBuilder logCritical = new StringBuilder();
 
+        private bool isDelayingSceneExtraction = false; //Whether we're waiting to extract the scene data.
+
         #region DLLDelegates
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         delegate void OnShowActor(in IntPtr actorPtr);
@@ -89,16 +91,13 @@ namespace teleport
 
         private void Start()
         {
-            //Grab every game object if no tag is defined, otherwise grab all of the game objects with the matching tag.
-            GameObject[] objects = (tagToStream == "") ? FindObjectsOfType<GameObject>() : GameObject.FindGameObjectsWithTag(tagToStream);
-
-            //Extract data from all game objects/actors that respond to the streaming layer mask.
-            foreach(GameObject actor in objects)
+            if(casterSettings.isStreamingGeometry)
             {
-                if(layersToStream.Length == 0 || (1 << actor.layer) == layerMask)
-                {
-                    geometrySource.AddNode(actor);
-                }
+                InitialiseGeometrySource();
+            }
+            else
+            {
+                isDelayingSceneExtraction = true;
             }
         }
 
@@ -109,13 +108,21 @@ namespace teleport
 
         private void OnValidate()
         {
-            UpdateCasterSettings(casterSettings);
-
-			//Regenerate layer mask whenever a value changes; you can't serialise properties for the Unity Editor.
-            layerMask = 0;
-            foreach(LayerMask layer in layersToStream)
+            if(Application.isPlaying)
             {
-                layerMask |= layer;
+                UpdateCasterSettings(casterSettings);
+
+                //Regenerate layer mask whenever a value changes; you can't serialise properties for the Unity Editor.
+                layerMask = 0;
+                foreach(LayerMask layer in layersToStream)
+                {
+                    layerMask |= layer;
+                }
+
+                if(isDelayingSceneExtraction && casterSettings.isStreamingGeometry)
+                {
+                    InitialiseGeometrySource();
+                }
             }
         }
 
@@ -186,6 +193,24 @@ namespace teleport
 
                     break;
             }
+        }
+
+        private void InitialiseGeometrySource()
+        {
+            //Grab every game object if no tag is defined, otherwise grab all of the game objects with the matching tag.
+            GameObject[] objects = (tagToStream == "") ? FindObjectsOfType<GameObject>() : GameObject.FindGameObjectsWithTag(tagToStream);
+
+            //Extract data from all game objects/actors that respond to the streaming layer mask.
+            foreach(GameObject actor in objects)
+            {
+                if(layersToStream.Length == 0 || (1 << actor.layer) == layerMask)
+                {
+                    geometrySource.AddNode(actor);
+                }
+            }
+            geometrySource.CompressTextures();
+
+            isDelayingSceneExtraction = false;
         }
     }
 }

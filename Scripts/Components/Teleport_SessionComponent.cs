@@ -147,7 +147,10 @@ namespace teleport
                 }
             }
 
-            UpdateGeometryStreaming();
+            if(casterMonitor.casterSettings.isStreamingGeometry)
+            {
+                UpdateGeometryStreaming();
+            }
         }
 
         private void UpdateGeometryStreaming()

@@ -260,7 +260,8 @@ namespace teleport
         [DllImport("SimulCasterServer")]
         private static extern System.UInt64 GetAmountOfTexturesWaitingForCompression();
         [DllImport("SimulCasterServer")]
-        private static extern avs.Texture GetNextCompressedTexture();
+        [return: MarshalAs(UnmanagedType.BStr)]
+        private static extern string GetMessageForNextCompressedTexture(UInt64 textureIndex, UInt64 totalTextures);
         [DllImport("SimulCasterServer")]
         private static extern void CompressNextTexture();
         #endregion
@@ -567,13 +568,13 @@ namespace teleport
 
         public void CompressTextures()
         {
-            System.UInt64 totalTexturesToCompress = GetAmountOfTexturesWaitingForCompression();
+            UInt64 totalTexturesToCompress = GetAmountOfTexturesWaitingForCompression();
 
-            for(System.UInt64 i = 0; i < totalTexturesToCompress; i++)
+            for(UInt64 i = 0; i < totalTexturesToCompress; i++)
             {
-                avs.Texture texture = GetNextCompressedTexture();
-                UnityEditor.EditorUtility.DisplayProgressBar("Compressing Textures", "Compressing texture " + (i + 1) + "/" + totalTexturesToCompress + " (" + texture.name + " [" + texture.width + " x " + texture.height + "])", i / totalTexturesToCompress);
+                string compressionMessage = GetMessageForNextCompressedTexture(i, totalTexturesToCompress);
 
+                UnityEditor.EditorUtility.DisplayProgressBar("Compressing Textures", compressionMessage, i / (float)totalTexturesToCompress);
                 CompressNextTexture();
             }
 
@@ -836,6 +837,7 @@ namespace teleport
                     samplerID = 0
                 };
 
+                TextureFormat unityFormat;
                 switch(texture)
                 {
                     case Texture2D texture2D:
@@ -843,20 +845,46 @@ namespace teleport
                         extractedTexture.arrayCount = 1;
                         extractedTexture.mipCount = (uint)texture2D.mipmapCount;
                         extractedTexture.bytesPerPixel = GetBytesPerPixel(texture2D.format);
-                        extractedTexture.data = texture2D.GetNativeTexturePtr();
+                        //extractedTexture.data = texture2D.GetNativeTexturePtr();
+
+                        unityFormat = texture2D.format;
+
+                        {
+                            int byteSize = Marshal.SizeOf<byte>();
+
+                            Color32[] pixelData = texture2D.GetPixels32();
+                            extractedTexture.data = Marshal.AllocCoTaskMem(pixelData.Length * 4 * byteSize);
+
+                            int byteOffset = 0;
+                            foreach(Color32 pixel in pixelData)
+                            {
+                                Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.r);
+                                byteOffset += byteSize;
+
+                                Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.g);
+                                byteOffset += byteSize;
+
+                                Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.b);
+                                byteOffset += byteSize;
+
+                                Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.a);
+                                byteOffset += byteSize;
+                            }
+                        }
+
                         break;
-                    case Texture2DArray texture2DArray:
-                        extractedTexture.depth = 1;
-                        extractedTexture.arrayCount = (uint)texture2DArray.depth;
-                        extractedTexture.bytesPerPixel = GetBytesPerPixel(texture2DArray.format);
-                        extractedTexture.data = texture2DArray.GetNativeTexturePtr();
-                        break;
-                    case Texture3D texture3D:
-                        extractedTexture.depth = (uint)texture3D.depth;
-                        extractedTexture.arrayCount = 1;
-                        extractedTexture.bytesPerPixel = GetBytesPerPixel(texture3D.format);
-                        extractedTexture.data = texture3D.GetNativeTexturePtr();
-                        break;
+                    //case Texture2DArray texture2DArray:
+                    //    extractedTexture.depth = 1;
+                    //    extractedTexture.arrayCount = (uint)texture2DArray.depth;
+                    //    extractedTexture.bytesPerPixel = GetBytesPerPixel(texture2DArray.format);
+                    //    extractedTexture.data = texture2DArray.GetNativeTexturePtr();
+                    //    break;
+                    //case Texture3D texture3D:
+                    //    extractedTexture.depth = (uint)texture3D.depth;
+                    //    extractedTexture.arrayCount = 1;
+                    //    extractedTexture.bytesPerPixel = GetBytesPerPixel(texture3D.format);
+                    //    extractedTexture.data = texture3D.GetNativeTexturePtr();
+                    //    break;
                     default:
                         Debug.LogError("Passed texture was unsupported type: " + texture.GetType() + "!");
                         return 0;
@@ -864,19 +892,47 @@ namespace teleport
 
                 extractedTexture.dataSize = extractedTexture.width * extractedTexture.height * extractedTexture.depth * extractedTexture.bytesPerPixel;
 
+                switch(unityFormat)
+                {
+                    case TextureFormat.RGBA32:
+                        extractedTexture.format = avs.TextureFormat.RGBA8;
+                        break;
+                    default:
+                        extractedTexture.format = avs.TextureFormat.INVALID;
+                        break;
+                }
+
                 textureID = GenerateID();
                 processedTextures[texture] = textureID;
 
-                string textureAssetPath = UnityEditor.AssetDatabase.GetAssetPath(texture);
+                string basisFileLocation = "";
+                //Basis Universal compression won't be used if the file location is left empty.
+                if(CasterMonitor.GetCasterMonitor().casterSettings.useCompressedTextures)
+                {
+                    string textureAssetPath = UnityEditor.AssetDatabase.GetAssetPath(texture);
 
-                string basisFileLocation = textureAssetPath;//Use editor file location as unique name; this won't work out of the Unity Editor.
-                basisFileLocation = basisFileLocation.Replace("/", "#"); //Replace forward slashes with hashes.
-                basisFileLocation = Application.dataPath + "/" + basisFileLocation; //Get data path and append unique name.
+                    basisFileLocation = textureAssetPath; //Use editor file location as unique name; this won't work out of the Unity Editor.
+                    basisFileLocation = basisFileLocation.Replace("/", "#"); //Replace forward slashes with hashes.
+                    basisFileLocation = basisFileLocation.Remove(basisFileLocation.LastIndexOf('.')); //Remove file extension.
+                    basisFileLocation = Application.dataPath + "/" + basisFileLocation + ".basis"; //Get data path, and append unique name and basis file extension.
+                }
 
-                ///This is likely incorrect. It probably needs to convert to the same starting point.
-                long lastModified = System.IO.File.GetLastWriteTime(UnityEditor.AssetDatabase.GetAssetPath(texture)).Ticks;
+                long lastModified = System.IO.File.GetLastWriteTime(UnityEditor.AssetDatabase.GetAssetPath(texture)).ToFileTime();
 
                 StoreTexture(textureID, extractedTexture, lastModified, basisFileLocation);
+
+                Marshal.FreeCoTaskMem(extractedTexture.data);
+
+                //Warning messages for unsupported textures.
+                if(extractedTexture.bytesPerPixel != 4)
+                {
+                    Debug.LogWarning("Texture <b>" + texture.name + "</b> has an unsupported bytes per pixel of: <b>" + extractedTexture.bytesPerPixel + "</b>");
+                }
+
+                if(extractedTexture.format == avs.TextureFormat.INVALID)
+                {
+                    Debug.LogWarning("Texture <b>" + texture.name + "</b> has an unsupported texture format of: <b>" + unityFormat + "</b>");
+                }
             }
 
             return textureID;
