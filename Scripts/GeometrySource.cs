@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEngine;
@@ -911,10 +912,17 @@ namespace teleport
                 {
                     string textureAssetPath = UnityEditor.AssetDatabase.GetAssetPath(texture);
 
+                    string folderPath = Application.persistentDataPath + "/Basis Universal/";
+                    //Create directiory if it doesn't exist.
+                    if(!Directory.Exists(folderPath))
+                    {
+                        Directory.CreateDirectory(folderPath);
+                    }
+
                     basisFileLocation = textureAssetPath; //Use editor file location as unique name; this won't work out of the Unity Editor.
                     basisFileLocation = basisFileLocation.Replace("/", "#"); //Replace forward slashes with hashes.
                     basisFileLocation = basisFileLocation.Remove(basisFileLocation.LastIndexOf('.')); //Remove file extension.
-                    basisFileLocation = Application.dataPath + "/" + basisFileLocation + ".basis"; //Get data path, and append unique name and basis file extension.
+                    basisFileLocation = folderPath + basisFileLocation + ".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
                 }
 
                 long lastModified = System.IO.File.GetLastWriteTime(UnityEditor.AssetDatabase.GetAssetPath(texture)).ToFileTime();
