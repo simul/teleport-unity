@@ -76,6 +76,40 @@ namespace teleport
             return instance;
         }
 
+#if UNITY_EDITOR
+        //We can only use the Unity AssetDatabase while in the editor.
+        private void Awake()
+        {
+            //If the geometry source is not assigned; find an existing one, or create one.
+            if(geometrySource == null)
+            {
+                Debug.LogWarning("<b>" + name + "</b>'s Geometry Source is not set. Please assign in Editor, or your application may crash in standalone.");
+
+                string[] sourceGUIDs = UnityEditor.AssetDatabase.FindAssets("t:GeometrySource");
+
+                string assetPath;
+                if(sourceGUIDs.Length != 0)
+                {
+                    assetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(sourceGUIDs[0]);
+                }
+                else
+                {
+                    //Create new Geometry Source asset above scripts folder.
+                    UnityEditor.MonoScript thisScript = UnityEditor.MonoScript.FromMonoBehaviour(this);
+                    assetPath = UnityEditor.AssetDatabase.GetAssetPath(thisScript);
+
+                    assetPath = assetPath.Remove(assetPath.IndexOf("Scripts/"));
+                    assetPath += "Geometry Source.asset";
+
+                    UnityEditor.AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<GeometrySource>(), assetPath);
+                    Debug.LogWarning("No Geometry Source found. Created at: " + assetPath);
+                }
+
+                geometrySource = UnityEditor.AssetDatabase.LoadAssetAtPath<GeometrySource>(assetPath);
+            }
+        }
+#endif
+
         private void OnEnable()
         {
             //We only want one instance, so delete duplicates.

@@ -242,7 +242,6 @@ namespace avs
 
 namespace teleport
 {
-    [CreateAssetMenu]
     public class GeometrySource : ScriptableObject, ISerializationCallbackReceiver
     {
         #region DLLImports
@@ -948,12 +947,12 @@ namespace teleport
                 textureID = GenerateID();
                 processedResources[texture] = textureID;
 
+                string textureAssetPath = UnityEditor.AssetDatabase.GetAssetPath(texture);
+
                 string basisFileLocation = "";
                 //Basis Universal compression won't be used if the file location is left empty.
                 if(CasterMonitor.GetCasterMonitor().casterSettings.useCompressedTextures)
                 {
-                    string textureAssetPath = UnityEditor.AssetDatabase.GetAssetPath(texture);
-
                     string folderPath = Application.persistentDataPath + "/Basis Universal/";
                     //Create directiory if it doesn't exist.
                     if(!Directory.Exists(folderPath))
@@ -967,7 +966,7 @@ namespace teleport
                     basisFileLocation = folderPath + basisFileLocation + ".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
                 }
 
-                long lastModified = System.IO.File.GetLastWriteTime(UnityEditor.AssetDatabase.GetAssetPath(texture)).ToFileTime();
+                long lastModified = System.IO.File.GetLastWriteTime(textureAssetPath).ToFileTime();
 
                 StoreTexture(textureID, extractedTexture, lastModified, basisFileLocation);
 
