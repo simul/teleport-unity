@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 using uid = System.UInt64;
 
@@ -241,7 +242,8 @@ namespace avs
 
 namespace teleport
 {
-    public class GeometrySource
+    [CreateAssetMenu]
+    public class GeometrySource : ScriptableObject, ISerializationCallbackReceiver
     {
         #region DLLImports
         [DllImport("SimulCasterServer")]
@@ -259,6 +261,9 @@ namespace teleport
         private static extern void StoreShadowMap(uid id, avs.Texture shadowMap);
 
         [DllImport("SimulCasterServer")]
+        private static extern void RemoveNode(uid id);
+
+        [DllImport("SimulCasterServer")]
         private static extern System.UInt64 GetAmountOfTexturesWaitingForCompression();
         [DllImport("SimulCasterServer")]
         [return: MarshalAs(UnmanagedType.BStr)]
@@ -267,26 +272,63 @@ namespace teleport
         private static extern void CompressNextTexture();
         #endregion
 
-        private readonly Dictionary<GameObject, uid> processedNodes = new Dictionary<GameObject, uid>();
-        private readonly Dictionary<Mesh, uid> processedMeshes = new Dictionary<Mesh, uid>();
-        private readonly Dictionary<Material, uid> processedMaterials = new Dictionary<Material, uid>();
-        private readonly Dictionary<Texture, uid> processedTextures = new Dictionary<Texture, uid>();
-        private readonly Dictionary<Texture, uid> processedShadowMaps = new Dictionary<Texture, uid>();
+        #region CustomSerialisation
+        //Dictionaries aren't serialised, so to serialise them I am saving the data to key value arrays. 
+        public UnityEngine.Object[] processedResources_keys = new UnityEngine.Object[0];
+        public uid[] processedResources_values = new uid[0];
+        #endregion
+
+        private readonly Dictionary<UnityEngine.Object, uid> processedResources = new Dictionary<UnityEngine.Object, uid>(); // <GameObject, ID of extracted data in native plug-in>
+
+        private bool isAwake = false;
+
+        public void OnBeforeSerialize()
+        {
+            processedResources_keys = processedResources.Keys.ToArray();
+            processedResources_values = processedResources.Values.ToArray();
+        }
+
+        public void OnAfterDeserialize()
+        {
+            //Don't run during boot.
+            if(isAwake)
+            {
+                for(int i = 0; i < processedResources_keys.Length; i++)
+                {
+                    processedResources[processedResources_keys[i]] = processedResources_values[i];
+                }
+            }
+        }
+
+        public void Awake()
+        {   
+            //Clear resources on boot.
+            processedResources.Clear();
+
+            isAwake = true;
+        }
+
+        public void OnEnable()
+        {
+            //Remove nodes that have been lost due to level change.
+            var pairsToDelete = processedResources.Where(pair => pair.Key == null).ToArray();
+            foreach(var pair in pairsToDelete)
+            {
+                RemoveNode(pair.Value);
+                processedResources.Remove(pair.Key);
+            }
+        }
 
         public void ClearData()
         {
-            processedNodes.Clear();
-            processedMeshes.Clear();
-            processedMaterials.Clear();
-            processedTextures.Clear();
-            processedShadowMaps.Clear();
+            processedResources.Clear();
         }
 
         public uid AddNode(GameObject node, bool forceUpdate = false)
         {
             if(!node) return 0;
 
-            processedNodes.TryGetValue(node, out uid nodeID);
+            processedResources.TryGetValue(node, out uid nodeID);
 
             if(forceUpdate || nodeID == 0)
             {
@@ -303,7 +345,7 @@ namespace teleport
         {
             if(!mesh) return 0;
 
-            if(!processedMeshes.TryGetValue(mesh, out uid meshID))
+            if(!processedResources.TryGetValue(mesh, out uid meshID))
             {
                 avs.PrimitiveArray[] primitives = new avs.PrimitiveArray[mesh.subMeshCount];
                 Dictionary<uid, avs.Accessor> accessors = new Dictionary<uid, avs.Accessor>(6);
@@ -486,7 +528,7 @@ namespace teleport
                 }
 
                 meshID = GenerateID();
-                processedMeshes[mesh] = meshID;
+                processedResources[mesh] = meshID;
                 StoreMesh
                 (
                     meshID,
@@ -517,7 +559,7 @@ namespace teleport
         {
             if(!material) return 0;
 
-            if(!processedMaterials.TryGetValue(material, out uid materialID))
+            if(!processedResources.TryGetValue(material, out uid materialID))
             {
                 avs.Material extractedMaterial = new avs.Material();
                 extractedMaterial.nameLength = (ulong)material.name.Length;
@@ -553,7 +595,7 @@ namespace teleport
                 }
 
                 materialID = GenerateID();
-                processedMaterials[material] = materialID;
+                processedResources[material] = materialID;
                 StoreMaterial(materialID, extractedMaterial);
             }
 
@@ -631,7 +673,7 @@ namespace teleport
 
             //Store extracted node.
             uid nodeID = oldID == 0 ? GenerateID() : oldID;
-            processedNodes[node] = nodeID;
+            processedResources[node] = nodeID;
             StoreNode(nodeID, extractedNode);
 
             return nodeID;
@@ -821,7 +863,7 @@ namespace teleport
         {
             if(!texture) return 0;
 
-            if(!processedTextures.TryGetValue(texture, out uid textureID))
+            if(!processedResources.TryGetValue(texture, out uid textureID))
             {
                 avs.Texture extractedTexture = new avs.Texture()
                 {
@@ -904,7 +946,7 @@ namespace teleport
                 }
 
                 textureID = GenerateID();
-                processedTextures[texture] = textureID;
+                processedResources[texture] = textureID;
 
                 string basisFileLocation = "";
                 //Basis Universal compression won't be used if the file location is left empty.

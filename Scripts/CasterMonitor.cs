@@ -11,7 +11,7 @@ namespace teleport
     {
         public SCServer.CasterSettings casterSettings = new SCServer.CasterSettings();
 
-        public GeometrySource geometrySource = new GeometrySource();
+        public GeometrySource geometrySource;
 
         [Header("Geometry Selection")]
         [SerializeField]
