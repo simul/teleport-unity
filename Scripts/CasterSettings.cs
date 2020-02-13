@@ -26,6 +26,7 @@ namespace SCServer
 		public float confirmationWaitTime = 15; //Seconds to wait before resending a resource.
 
 		[Header("Encoding")]
+		[MarshalAs(UnmanagedType.U1)] public bool isStreamingVideo = true;
 		[MarshalAs(UnmanagedType.U1)] public bool isOverridingTextureTarget = false;
 		public IntPtr sceneCaptureTextureTarget;
 		public Int32 videoEncodeFrequency = 2;
@@ -35,7 +36,7 @@ namespace SCServer
 		public Int32 cullQuadIndex = -1; // This culls a quad at the index. For debugging only
 		public Int32 targetFPS = 60;
 		public Int32 idrInterval = 0;
-		//EncoderRateControlMode rateControlMode;
+		public byte rateControlMode; ///This needs to be changed to the actual enum, but I'm using byte(unsigned 8-bit int) as a placeholder to stop marshalling crashes.
 		public Int32 averageBitrate = 40000000;
 		public Int32 maxBitrate = 80000000;
 		[MarshalAs(UnmanagedType.U1)] public bool useAutoBitRate = false;
