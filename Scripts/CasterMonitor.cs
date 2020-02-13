@@ -69,6 +69,9 @@ namespace teleport
         private static extern void Tick(float deltaTime);
         [DllImport("SimulCasterServer")]
         private static extern void Shutdown();
+
+        [DllImport("SimulCasterServer")]
+        private static extern void ClearGeometryStore();
         #endregion
 
         public static CasterMonitor GetCasterMonitor()
@@ -94,6 +97,8 @@ namespace teleport
                 }
                 else
                 {
+                    ClearGeometryStore();
+
                     //Create new Geometry Source asset above scripts folder.
                     UnityEditor.MonoScript thisScript = UnityEditor.MonoScript.FromMonoBehaviour(this);
                     assetPath = UnityEditor.AssetDatabase.GetAssetPath(thisScript);
