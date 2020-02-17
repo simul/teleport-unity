@@ -27,8 +27,7 @@ namespace SCServer
 
 		[Header("Encoding")]
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingVideo = true;
-		[MarshalAs(UnmanagedType.U1)] public bool isOverridingTextureTarget = false;
-		public IntPtr sceneCaptureTextureTarget;
+		public float captureCubeTextureSize = 512; 
 		public Int32 videoEncodeFrequency = 2;
 		[MarshalAs(UnmanagedType.U1)] public bool isDeferringOutput = false;
 		[MarshalAs(UnmanagedType.U1)] public bool isCullingCubemaps = false;
