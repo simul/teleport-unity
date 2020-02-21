@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 using uid = System.UInt64;
 
@@ -55,7 +54,7 @@ namespace avs
                             //                                                      Must always be the last element in this enum class. 
     };
 
-    public enum MaterialExtensionIdentifier : System.UInt32
+    public enum MaterialExtensionIdentifier : UInt32
     {
         SIMPLE_GRASS_WIND
     }
@@ -68,7 +67,7 @@ namespace avs
 
     public struct PrimitiveArray
     {
-        public System.UInt64 attributeCount;
+        public UInt64 attributeCount;
         public Attribute[] attributes;
         public uid indices_accessor;
         public uid material;
@@ -98,22 +97,22 @@ namespace avs
         };
         public DataType type;
         public ComponentType componentType;
-        public System.UInt64 count;
+        public UInt64 count;
         public uid bufferView;
-        public System.UInt64 byteOffset;
+        public UInt64 byteOffset;
     };
 
     public struct BufferView
     {
         public uid buffer;
-        public System.UInt64 byteOffset;
-        public System.UInt64 byteLength;
-        public System.UInt64 byteStride;
+        public UInt64 byteOffset;
+        public UInt64 byteLength;
+        public UInt64 byteStride;
     };
 
     public struct GeometryBuffer
     {
-        public System.UInt64 byteLength;
+        public UInt64 byteLength;
         public byte[] data;
     };
 
@@ -172,34 +171,34 @@ namespace avs
         public uid dataID;
         public NodeDataType dataType;
 
-        public System.UInt64 materialAmount;
+        public UInt64 materialAmount;
         public uid[] materialIDs;
 
-        public System.UInt64 childAmount;
+        public UInt64 childAmount;
         public uid[] childIDs;
     }
 
     public class Mesh
     {
-        public System.Int64 primitiveArrayAmount;
+        public Int64 primitiveArrayAmount;
         public PrimitiveArray[] primitiveArrays;
 
-        public System.Int64 accessorAmount;
+        public Int64 accessorAmount;
         public uid[] accessorIDs;
         public Accessor[] accessors;
 
-        public System.Int64 bufferViewAmount;
+        public Int64 bufferViewAmount;
         public uid[] bufferViewIDs;
         public BufferView[] bufferViews;
 
-        public System.Int64 bufferAmount;
+        public Int64 bufferAmount;
         public uid[] bufferIDs;
         public GeometryBuffer[] buffers;
     }
 
     public struct Texture
     {
-        public System.UInt64 nameLength;
+        public UInt64 nameLength;
         [MarshalAs(UnmanagedType.LPStr)]
         public string name;
 
@@ -222,7 +221,7 @@ namespace avs
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     public class Material
     {
-        public System.UInt64 nameLength;
+        public UInt64 nameLength;
         [MarshalAs(UnmanagedType.LPStr)]
         public string name;
 
@@ -232,7 +231,7 @@ namespace avs
         public TextureAccessor emissiveTexture = new TextureAccessor();
         public Vector3 emissiveFactor = new Vector3(1.0f, 1.0f, 1.0f);
 
-        public System.UInt64 extensionAmount;
+        public UInt64 extensionAmount;
         [MarshalAs(UnmanagedType.ByValArray)]
         public MaterialExtensionIdentifier[] extensionIDs;
         [MarshalAs(UnmanagedType.ByValArray)]
@@ -251,11 +250,11 @@ namespace teleport
         [DllImport("SimulCasterServer")]
         private static extern void StoreNode(uid id, avs.Node node);
         [DllImport("SimulCasterServer")]
-        private static extern void StoreMesh(uid id, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(MeshMarshaler))]avs.Mesh mesh);
+        private static extern void StoreMesh(uid id, avs.AxesStandard extractToStandard, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(MeshMarshaler))]avs.Mesh mesh);
         [DllImport("SimulCasterServer")]
         private static extern void StoreMaterial(uid id, [Out]avs.Material material);
         [DllImport("SimulCasterServer")]
-        private static extern void StoreTexture(uid id, avs.Texture texture, System.Int64 lastModified, string basisFileLocation);
+        private static extern void StoreTexture(uid id, avs.Texture texture, Int64 lastModified, string basisFileLocation);
         [DllImport("SimulCasterServer")]
         private static extern void StoreShadowMap(uid id, avs.Texture shadowMap);
 
@@ -263,7 +262,7 @@ namespace teleport
         private static extern void RemoveNode(uid id);
 
         [DllImport("SimulCasterServer")]
-        private static extern System.UInt64 GetAmountOfTexturesWaitingForCompression();
+        private static extern UInt64 GetAmountOfTexturesWaitingForCompression();
         [DllImport("SimulCasterServer")]
         [return: MarshalAs(UnmanagedType.BStr)]
         private static extern string GetMessageForNextCompressedTexture(UInt64 textureIndex, UInt64 totalTextures);
@@ -346,209 +345,11 @@ namespace teleport
 
             if(!processedResources.TryGetValue(mesh, out uid meshID))
             {
-                avs.PrimitiveArray[] primitives = new avs.PrimitiveArray[mesh.subMeshCount];
-                Dictionary<uid, avs.Accessor> accessors = new Dictionary<uid, avs.Accessor>(6);
-                Dictionary<uid, avs.BufferView> bufferViews = new Dictionary<uid, avs.BufferView>(6);
-                Dictionary<uid, avs.GeometryBuffer> buffers = new Dictionary<uid, avs.GeometryBuffer>(5);
-
-                uid positionAccessorID = GenerateID();
-                uid normalAccessorID = GenerateID();
-                uid tangentAccessorID = GenerateID();
-                uid uv0AccessorID = GenerateID();
-                uid uv2AccessorID = GenerateID();
-
-                //Position Buffer:
-                {
-                    CreateMeshBufferAndView(mesh.vertices, buffers, bufferViews, out uid positionBufferID, out uid positionViewID);
-
-                    accessors.Add
-                    (
-                        positionAccessorID,
-                        new avs.Accessor
-                        {
-                            type = avs.Accessor.DataType.VEC3,
-                            componentType = avs.Accessor.ComponentType.FLOAT,
-                            count = (ulong)mesh.vertexCount,
-                            bufferView = positionViewID,
-                            byteOffset = 0
-                        }
-                    );
-                }
-
-                //Normal Buffer
-                {
-                    CreateMeshBufferAndView(mesh.normals, buffers, bufferViews, out uid normalBufferID, out uid normalViewID);
-
-                    accessors.Add
-                    (
-                        normalAccessorID,
-                        new avs.Accessor
-                        {
-                            type = avs.Accessor.DataType.VEC3,
-                            componentType = avs.Accessor.ComponentType.FLOAT,
-                            count = (ulong)mesh.normals.Length,
-                            bufferView = normalViewID,
-                            byteOffset = 0
-                        }
-                    );
-                }
-
-                //Tangent Buffer
-                {
-                    CreateMeshBufferAndView(mesh.tangents, buffers, bufferViews, out uid tangentBufferID, out uid tangentViewID);
-
-                    accessors.Add
-                    (
-                        tangentAccessorID,
-                        new avs.Accessor
-                        {
-                            type = avs.Accessor.DataType.VEC4,
-                            componentType = avs.Accessor.ComponentType.FLOAT,
-                            count = (ulong)mesh.tangents.Length,
-                            bufferView = tangentViewID,
-                            byteOffset = 0
-                        }
-                    );
-                }
-
-                //UVs/Tex-Coords Buffer (All UVs are combined into a single buffer, with a view for each UV):
-                {
-                    //Two floats per Vector2 * four bytes per float.
-                    int stride = 2 * 4;
-
-                    avs.GeometryBuffer uvBuffer = new avs.GeometryBuffer();
-                    uvBuffer.byteLength = (ulong)((mesh.uv.Length + mesh.uv2.Length) * stride);
-                    uvBuffer.data = new byte[uvBuffer.byteLength];
-
-                    //Get byte data from first UV channel.
-                    for(int i = 0; i < mesh.uv.Length; i++)
-                    {
-                        BitConverter.GetBytes(mesh.uv[i].x).CopyTo(uvBuffer.data, i * stride + 0);
-                        BitConverter.GetBytes(mesh.uv[i].y).CopyTo(uvBuffer.data, i * stride + 4);
-                    }
-
-                    int uv0Size = mesh.uv.Length * stride;
-                    //Get byte data from second UV channel.
-                    for(int i = 0; i < mesh.uv2.Length; i++)
-                    {
-                        BitConverter.GetBytes(mesh.uv2[i].x).CopyTo(uvBuffer.data, uv0Size + i * stride + 0);
-                        BitConverter.GetBytes(mesh.uv2[i].y).CopyTo(uvBuffer.data, uv0Size + i * stride + 4);
-                    }
-
-                    uid uvBufferID = GenerateID();
-                    uid uv0ViewID = GenerateID();
-                    uid uv2ViewID = GenerateID();
-
-                    buffers.Add(uvBufferID, uvBuffer);
-
-                    //Buffer view for first UV channel.
-                    bufferViews.Add
-                    (
-                        uv0ViewID,
-                        new avs.BufferView
-                        {
-                            buffer = uvBufferID,
-                            byteOffset = 0,
-                            byteLength = (ulong)(mesh.uv.Length * stride),
-                            byteStride = (ulong)stride
-                        }
-                    );
-
-                    //Buffer view for second UV channel.
-                    bufferViews.Add
-                    (
-                        uv2ViewID,
-                        new avs.BufferView
-                        {
-                            buffer = uvBufferID,
-                            byteOffset = (ulong)(mesh.uv.Length * stride), //Offset is length of first UV channel.
-                        byteLength = (ulong)(mesh.uv2.Length * stride),
-                            byteStride = (ulong)stride
-                        }
-                    );
-
-                    //Accessor for first UV channel.
-                    accessors.Add
-                    (
-                        uv0AccessorID,
-                        new avs.Accessor
-                        {
-                            type = avs.Accessor.DataType.VEC2,
-                            componentType = avs.Accessor.ComponentType.FLOAT,
-                            count = (ulong)mesh.uv.Length,
-                            bufferView = uv0ViewID,
-                            byteOffset = 0
-                        }
-                    );
-
-                    //Accessor for second UV channel.
-                    accessors.Add
-                    (
-                        uv2AccessorID,
-                        new avs.Accessor
-                        {
-                            type = avs.Accessor.DataType.VEC2,
-                            componentType = avs.Accessor.ComponentType.FLOAT,
-                            count = (ulong)mesh.uv2.Length,
-                            bufferView = uv2ViewID,
-                            byteOffset = 0
-                        }
-                    );
-                }
-
-                //Index Buffer
-                CreateMeshBufferAndView(mesh.triangles, buffers, bufferViews, out uid indexBufferID, out uid indexViewID);
-
-                for(int i = 0; i < primitives.Length; i++)
-                {
-                    primitives[i].attributeCount = 5;
-                    primitives[i].attributes = new avs.Attribute[primitives[i].attributeCount];
-                    primitives[i].primitiveMode = avs.PrimitiveMode.TRIANGLES; //Assumed
-
-                    primitives[i].attributes[0] = new avs.Attribute { accessor = positionAccessorID, semantic = avs.AttributeSemantic.POSITION };
-                    primitives[i].attributes[1] = new avs.Attribute { accessor = normalAccessorID, semantic = avs.AttributeSemantic.NORMAL };
-                    primitives[i].attributes[2] = new avs.Attribute { accessor = tangentAccessorID, semantic = avs.AttributeSemantic.TANGENT };
-                    primitives[i].attributes[3] = new avs.Attribute { accessor = uv0AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_0 };
-                    primitives[i].attributes[4] = new avs.Attribute { accessor = uv2AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_1 };
-
-                    primitives[i].indices_accessor = GenerateID();
-                    accessors.Add
-                    (
-                        primitives[i].indices_accessor,
-                        new avs.Accessor
-                        {
-                            type = avs.Accessor.DataType.SCALAR,
-                            componentType = avs.Accessor.ComponentType.INT,
-                            count = (ulong)mesh.triangles.Length,
-                            bufferView = indexViewID,
-                            byteOffset = mesh.GetIndexStart(i)
-                        }
-                    );
-                }
-
                 meshID = GenerateID();
                 processedResources[mesh] = meshID;
-                StoreMesh
-                (
-                    meshID,
-                    new avs.Mesh
-                    {
-                        primitiveArrayAmount = primitives.Length,
-                        primitiveArrays = primitives,
 
-                        accessorAmount = accessors.Count,
-                        accessorIDs = accessors.Keys.ToArray(),
-                        accessors = accessors.Values.ToArray(),
-
-                        bufferViewAmount = bufferViews.Count,
-                        bufferViewIDs = bufferViews.Keys.ToArray(),
-                        bufferViews = bufferViews.Values.ToArray(),
-
-                        bufferAmount = buffers.Count,
-                        bufferIDs = buffers.Keys.ToArray(),
-                        buffers = buffers.Values.ToArray()
-                    }
-                );
+                ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID);
+                ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID);
             }
 
             return meshID;
@@ -605,7 +406,7 @@ namespace teleport
         {
             if(!shadowMap) return 0;
 
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
 
         public void CompressTextures()
@@ -678,7 +479,213 @@ namespace teleport
             return nodeID;
         }
 
-        private void CreateMeshBufferAndView(in int[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, out uid bufferID, out uid bufferViewID)
+        private void ExtractMeshData(avs.AxesStandard extractToBasis, Mesh mesh, uid meshID)
+        {
+            avs.PrimitiveArray[] primitives = new avs.PrimitiveArray[mesh.subMeshCount];
+            Dictionary<uid, avs.Accessor> accessors = new Dictionary<uid, avs.Accessor>(6);
+            Dictionary<uid, avs.BufferView> bufferViews = new Dictionary<uid, avs.BufferView>(6);
+            Dictionary<uid, avs.GeometryBuffer> buffers = new Dictionary<uid, avs.GeometryBuffer>(5);
+
+            uid positionAccessorID = GenerateID();
+            uid normalAccessorID = GenerateID();
+            uid tangentAccessorID = GenerateID();
+            uid uv0AccessorID = GenerateID();
+            uid uv2AccessorID = GenerateID();
+
+            //Position Buffer:
+            {
+                CreateMeshBufferAndView(extractToBasis, mesh.vertices, buffers, bufferViews, out uid positionViewID);
+
+                accessors.Add
+                (
+                    positionAccessorID,
+                    new avs.Accessor
+                    {
+                        type = avs.Accessor.DataType.VEC3,
+                        componentType = avs.Accessor.ComponentType.FLOAT,
+                        count = (ulong)mesh.vertexCount,
+                        bufferView = positionViewID,
+                        byteOffset = 0
+                    }
+                );
+            }
+
+            //Normal Buffer
+            {
+                CreateMeshBufferAndView(extractToBasis, mesh.normals, buffers, bufferViews, out uid normalViewID);
+
+                accessors.Add
+                (
+                    normalAccessorID,
+                    new avs.Accessor
+                    {
+                        type = avs.Accessor.DataType.VEC3,
+                        componentType = avs.Accessor.ComponentType.FLOAT,
+                        count = (ulong)mesh.normals.Length,
+                        bufferView = normalViewID,
+                        byteOffset = 0
+                    }
+                );
+            }
+
+            //Tangent Buffer
+            {
+                CreateMeshBufferAndView(extractToBasis, mesh.tangents, buffers, bufferViews, out uid tangentViewID);
+
+                accessors.Add
+                (
+                    tangentAccessorID,
+                    new avs.Accessor
+                    {
+                        type = avs.Accessor.DataType.VEC4,
+                        componentType = avs.Accessor.ComponentType.FLOAT,
+                        count = (ulong)mesh.tangents.Length,
+                        bufferView = tangentViewID,
+                        byteOffset = 0
+                    }
+                );
+            }
+
+            //UVs/Tex-Coords Buffer (All UVs are combined into a single buffer, with a view for each UV):
+            {
+                //Two floats per Vector2 * four bytes per float.
+                int stride = 2 * 4;
+
+                avs.GeometryBuffer uvBuffer = new avs.GeometryBuffer();
+                uvBuffer.byteLength = (ulong)((mesh.uv.Length + mesh.uv2.Length) * stride);
+                uvBuffer.data = new byte[uvBuffer.byteLength];
+
+                //Get byte data from first UV channel.
+                for(int i = 0; i < mesh.uv.Length; i++)
+                {
+                    BitConverter.GetBytes(1 - mesh.uv[i].x).CopyTo(uvBuffer.data, i * stride + 0);
+                    BitConverter.GetBytes(mesh.uv[i].y).CopyTo(uvBuffer.data, i * stride + 4);
+                }
+
+                int uv0Size = mesh.uv.Length * stride;
+                //Get byte data from second UV channel.
+                for(int i = 0; i < mesh.uv2.Length; i++)
+                {
+                    BitConverter.GetBytes(1 - mesh.uv2[i].x).CopyTo(uvBuffer.data, uv0Size + i * stride + 0);
+                    BitConverter.GetBytes(mesh.uv2[i].y).CopyTo(uvBuffer.data, uv0Size + i * stride + 4);
+                }
+
+                uid uvBufferID = GenerateID();
+                uid uv0ViewID = GenerateID();
+                uid uv2ViewID = GenerateID();
+
+                buffers.Add(uvBufferID, uvBuffer);
+
+                //Buffer view for first UV channel.
+                bufferViews.Add
+                (
+                    uv0ViewID,
+                    new avs.BufferView
+                    {
+                        buffer = uvBufferID,
+                        byteOffset = 0,
+                        byteLength = (ulong)(mesh.uv.Length * stride),
+                        byteStride = (ulong)stride
+                    }
+                );
+
+                //Buffer view for second UV channel.
+                bufferViews.Add
+                (
+                    uv2ViewID,
+                    new avs.BufferView
+                    {
+                        buffer = uvBufferID,
+                        byteOffset = (ulong)(mesh.uv.Length * stride), //Offset is length of first UV channel.
+                        byteLength = (ulong)(mesh.uv2.Length * stride),
+                        byteStride = (ulong)stride
+                    }
+                );
+
+                //Accessor for first UV channel.
+                accessors.Add
+                (
+                    uv0AccessorID,
+                    new avs.Accessor
+                    {
+                        type = avs.Accessor.DataType.VEC2,
+                        componentType = avs.Accessor.ComponentType.FLOAT,
+                        count = (ulong)mesh.uv.Length,
+                        bufferView = uv0ViewID,
+                        byteOffset = 0
+                    }
+                );
+
+                //Accessor for second UV channel.
+                accessors.Add
+                (
+                    uv2AccessorID,
+                    new avs.Accessor
+                    {
+                        type = avs.Accessor.DataType.VEC2,
+                        componentType = avs.Accessor.ComponentType.FLOAT,
+                        count = (ulong)mesh.uv2.Length,
+                        bufferView = uv2ViewID,
+                        byteOffset = 0
+                    }
+                );
+            }
+
+            //Index Buffer
+            CreateMeshBufferAndView(mesh.triangles, buffers, bufferViews, out uid indexViewID);
+
+            for(int i = 0; i < primitives.Length; i++)
+            {
+                primitives[i].attributeCount = 5;
+                primitives[i].attributes = new avs.Attribute[primitives[i].attributeCount];
+                primitives[i].primitiveMode = avs.PrimitiveMode.TRIANGLES; //Assumed
+
+                primitives[i].attributes[0] = new avs.Attribute { accessor = positionAccessorID, semantic = avs.AttributeSemantic.POSITION };
+                primitives[i].attributes[1] = new avs.Attribute { accessor = normalAccessorID, semantic = avs.AttributeSemantic.NORMAL };
+                primitives[i].attributes[2] = new avs.Attribute { accessor = tangentAccessorID, semantic = avs.AttributeSemantic.TANGENT };
+                primitives[i].attributes[3] = new avs.Attribute { accessor = uv0AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_0 };
+                primitives[i].attributes[4] = new avs.Attribute { accessor = uv2AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_1 };
+
+                primitives[i].indices_accessor = GenerateID();
+                accessors.Add
+                (
+                    primitives[i].indices_accessor,
+                    new avs.Accessor
+                    {
+                        type = avs.Accessor.DataType.SCALAR,
+                        componentType = avs.Accessor.ComponentType.INT,
+                        count = (ulong)mesh.triangles.Length,
+                        bufferView = indexViewID,
+                        byteOffset = mesh.GetIndexStart(i)
+                    }
+                );
+            }
+
+            StoreMesh
+            (
+                meshID,
+                extractToBasis,
+                new avs.Mesh
+                {
+                    primitiveArrayAmount = primitives.Length,
+                    primitiveArrays = primitives,
+
+                    accessorAmount = accessors.Count,
+                    accessorIDs = accessors.Keys.ToArray(),
+                    accessors = accessors.Values.ToArray(),
+
+                    bufferViewAmount = bufferViews.Count,
+                    bufferViewIDs = bufferViews.Keys.ToArray(),
+                    bufferViews = bufferViews.Values.ToArray(),
+
+                    bufferAmount = buffers.Count,
+                    bufferIDs = buffers.Keys.ToArray(),
+                    buffers = buffers.Values.ToArray()
+                }
+            );
+        }
+
+        private void CreateMeshBufferAndView(in int[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, out uid bufferViewID)
         {
             //Four bytes per int.
             int stride = 4;
@@ -693,7 +700,7 @@ namespace teleport
                 BitConverter.GetBytes(data[i]).CopyTo(newBuffer.data, i * stride);
             }
 
-            bufferID = GenerateID();
+            uid bufferID = GenerateID();
             bufferViewID = GenerateID();
 
             buffers.Add(bufferID, newBuffer);
@@ -710,7 +717,7 @@ namespace teleport
             );
         }
 
-        private void CreateMeshBufferAndView(in Vector3[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, out uid bufferID, out uid bufferViewID)
+        private void CreateMeshBufferAndView(avs.AxesStandard extractToBasis, in Vector3[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, out uid bufferViewID)
         {
             //Three floats per Vector3 * four bytes per float.
             int stride = 3 * 4;
@@ -720,14 +727,32 @@ namespace teleport
             newBuffer.data = new byte[newBuffer.byteLength];
 
             //Get byte data from each Vector3, and copy into buffer.
-            for(int i = 0; i < data.Length; i++)
+            switch(extractToBasis)
             {
-                BitConverter.GetBytes(data[i].x).CopyTo(newBuffer.data, i * stride + 0);
-                BitConverter.GetBytes(data[i].y).CopyTo(newBuffer.data, i * stride + 4);
-                BitConverter.GetBytes(data[i].z).CopyTo(newBuffer.data, i * stride + 8);
+                case avs.AxesStandard.GlStyle:
+                    for(int i = 0; i < data.Length; i++)
+                    {
+                        BitConverter.GetBytes(data[i].x).CopyTo(newBuffer.data, i * stride + 0);
+                        BitConverter.GetBytes(data[i].y).CopyTo(newBuffer.data, i * stride + 4);
+                        BitConverter.GetBytes(data[i].z).CopyTo(newBuffer.data, i * stride + 8);
+                    }
+
+                    break;
+                case avs.AxesStandard.EngineeringStyle:
+                    for(int i = 0; i < data.Length; i++)
+                    {
+                        BitConverter.GetBytes(-data[i].x).CopyTo(newBuffer.data, i * stride + 0);
+                        BitConverter.GetBytes(data[i].z).CopyTo(newBuffer.data, i * stride + 4);
+                        BitConverter.GetBytes(data[i].y).CopyTo(newBuffer.data, i * stride + 8);
+                    }
+
+                    break;
+                default:
+                    Debug.LogError("Attempted to extract mesh buffer data with unsupported axes standard of:" + extractToBasis);
+                    break;
             }
 
-            bufferID = GenerateID();
+            uid bufferID = GenerateID();
             bufferViewID = GenerateID();
 
             buffers.Add(bufferID, newBuffer);
@@ -744,7 +769,7 @@ namespace teleport
             );
         }
 
-        private void CreateMeshBufferAndView(in Vector4[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, out uid bufferID, out uid bufferViewID)
+        private void CreateMeshBufferAndView(avs.AxesStandard extractToBasis, in Vector4[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, out uid bufferViewID)
         {
             //Four floats per Vector4 * four bytes per float.
             int stride = 4 * 4;
@@ -754,15 +779,34 @@ namespace teleport
             newBuffer.data = new byte[newBuffer.byteLength];
 
             //Get byte data from each Vector4, and copy into buffer.
-            for(int i = 0; i < data.Length; i++)
+            switch(extractToBasis)
             {
-                BitConverter.GetBytes(data[i].x).CopyTo(newBuffer.data, i * stride + 0);
-                BitConverter.GetBytes(data[i].y).CopyTo(newBuffer.data, i * stride + 4);
-                BitConverter.GetBytes(data[i].z).CopyTo(newBuffer.data, i * stride + 8);
-                BitConverter.GetBytes(data[i].w).CopyTo(newBuffer.data, i * stride + 12);
+                case avs.AxesStandard.GlStyle:
+                    for(int i = 0; i < data.Length; i++)
+                    {
+                        BitConverter.GetBytes(data[i].x).CopyTo(newBuffer.data, i * stride + 0);
+                        BitConverter.GetBytes(data[i].y).CopyTo(newBuffer.data, i * stride + 4);
+                        BitConverter.GetBytes(data[i].z).CopyTo(newBuffer.data, i * stride + 8);
+                        BitConverter.GetBytes(data[i].w).CopyTo(newBuffer.data, i * stride + 12);
+                    }
+
+                    break;
+                case avs.AxesStandard.EngineeringStyle:
+                    for(int i = 0; i < data.Length; i++)
+                    {
+                        BitConverter.GetBytes(-data[i].x).CopyTo(newBuffer.data, i * stride + 0);
+                        BitConverter.GetBytes(data[i].z).CopyTo(newBuffer.data, i * stride + 4);
+                        BitConverter.GetBytes(data[i].y).CopyTo(newBuffer.data, i * stride + 8);
+                        BitConverter.GetBytes(data[i].w).CopyTo(newBuffer.data, i * stride + 12);
+                    }
+
+                    break;
+                default:
+                    Debug.LogError("Attempted to extract mesh buffer data with unsupported axes standard of:" + extractToBasis);
+                    break;
             }
 
-            bufferID = GenerateID();
+            uid bufferID = GenerateID();
             bufferViewID = GenerateID();
 
             buffers.Add(bufferID, newBuffer);
@@ -892,25 +936,48 @@ namespace teleport
                         unityFormat = texture2D.format;
 
                         {
+                            //For some reason, textures imported as normal maps have their B and R components swapped. We are going to undo this when we pull the data for normal maps.
+                            UnityEditor.TextureImporterType textureType = ((UnityEditor.TextureImporter)UnityEditor.AssetImporter.GetAtPath(UnityEditor.AssetDatabase.GetAssetPath(texture))).textureType;
+
                             int byteSize = Marshal.SizeOf<byte>();
 
                             Color32[] pixelData = texture2D.GetPixels32();
                             extractedTexture.data = Marshal.AllocCoTaskMem(pixelData.Length * 4 * byteSize);
 
                             int byteOffset = 0;
-                            foreach(Color32 pixel in pixelData)
+                            if(textureType != UnityEditor.TextureImporterType.NormalMap)
                             {
-                                Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.r);
-                                byteOffset += byteSize;
+                                foreach(Color32 pixel in pixelData)
+                                {
+                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.r);
+                                    byteOffset += byteSize;
 
-                                Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.g);
-                                byteOffset += byteSize;
+                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.g);
+                                    byteOffset += byteSize;
 
-                                Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.b);
-                                byteOffset += byteSize;
+                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.b);
+                                    byteOffset += byteSize;
 
-                                Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.a);
-                                byteOffset += byteSize;
+                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.a);
+                                    byteOffset += byteSize;
+                                }
+                            }
+                            else
+                            {
+                                foreach(Color32 pixel in pixelData)
+                                {
+                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.b);
+                                    byteOffset += byteSize;
+
+                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.g);
+                                    byteOffset += byteSize;
+
+                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.r);
+                                    byteOffset += byteSize;
+
+                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.a);
+                                    byteOffset += byteSize;
+                                }
                             }
                         }
 
@@ -966,7 +1033,7 @@ namespace teleport
                     basisFileLocation = folderPath + basisFileLocation + ".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
                 }
 
-                long lastModified = System.IO.File.GetLastWriteTime(textureAssetPath).ToFileTime();
+                long lastModified = File.GetLastWriteTime(textureAssetPath).ToFileTime();
 
                 StoreTexture(textureID, extractedTexture, lastModified, basisFileLocation);
 

@@ -112,6 +112,11 @@ namespace teleport
 
                 geometrySource = UnityEditor.AssetDatabase.LoadAssetAtPath<GeometrySource>(assetPath);
             }
+
+            if(casterSettings.willCacheReset)
+            {
+                geometrySource.ClearData();
+            }
         }
 #endif
 
@@ -147,18 +152,18 @@ namespace teleport
 
         private void OnValidate()
         {
-            if (Application.isPlaying)
+            if(Application.isPlaying)
             {
                 UpdateCasterSettings(casterSettings);
 
                 //Regenerate layer mask whenever a value changes; you can't serialise properties for the Unity Editor.
                 layerMask = 0;
-                foreach (LayerMask layer in layersToStream)
+                foreach(LayerMask layer in layersToStream)
                 {
                     layerMask |= layer;
                 }
 
-                if (isDelayingSceneExtraction && casterSettings.isStreamingGeometry)
+                if(isDelayingSceneExtraction && casterSettings.isStreamingGeometry)
                 {
                     InitialiseGeometrySource();
                 }
@@ -244,7 +249,7 @@ namespace teleport
             {
                 if(layersToStream.Length == 0 || (1 << actor.layer) == layerMask)
                 {
-                    geometrySource.AddNode(actor);
+                    geometrySource.AddNode(actor, true);
                 }
             }
             geometrySource.CompressTextures();

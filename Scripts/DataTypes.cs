@@ -18,9 +18,11 @@ namespace avs
         NotInitialised = 0,
         RightHanded = 1,
         LeftHanded = 2,
-        EngineeringStyle = 4 | RightHanded,
-        GlStyle = 8 | RightHanded,
-        UnrealStyle = 16 | LeftHanded,
+        YVertical = 4,
+        EngineeringStyle = 8 | RightHanded,
+        GlStyle = 16 | RightHanded,
+        UnrealStyle = 32 | LeftHanded,
+        UnityStyle = 64 | LeftHanded | YVertical,
     }
 
     //We have to declare our own vector types, as .NET and Unity have different layouts.
