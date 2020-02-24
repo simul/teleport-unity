@@ -555,19 +555,49 @@ namespace teleport
                 uvBuffer.byteLength = (ulong)((mesh.uv.Length + mesh.uv2.Length) * stride);
                 uvBuffer.data = new byte[uvBuffer.byteLength];
 
-                //Get byte data from first UV channel.
-                for(int i = 0; i < mesh.uv.Length; i++)
+                switch(extractToBasis)
                 {
-                    BitConverter.GetBytes(1 - mesh.uv[i].x).CopyTo(uvBuffer.data, i * stride + 0);
-                    BitConverter.GetBytes(mesh.uv[i].y).CopyTo(uvBuffer.data, i * stride + 4);
-                }
+                    case avs.AxesStandard.GlStyle:
+                    {
+                        //Get byte data from first UV channel.
+                        for(int i = 0; i < mesh.uv.Length; i++)
+                        {
+                            BitConverter.GetBytes(mesh.uv[i].x).CopyTo(uvBuffer.data, i * stride + 0);
+                            BitConverter.GetBytes(mesh.uv[i].y).CopyTo(uvBuffer.data, i * stride + 4);
+                        }
 
-                int uv0Size = mesh.uv.Length * stride;
-                //Get byte data from second UV channel.
-                for(int i = 0; i < mesh.uv2.Length; i++)
-                {
-                    BitConverter.GetBytes(1 - mesh.uv2[i].x).CopyTo(uvBuffer.data, uv0Size + i * stride + 0);
-                    BitConverter.GetBytes(mesh.uv2[i].y).CopyTo(uvBuffer.data, uv0Size + i * stride + 4);
+                        int uv0Size = mesh.uv.Length * stride;
+                        //Get byte data from second UV channel.
+                        for(int i = 0; i < mesh.uv2.Length; i++)
+                        {
+                            BitConverter.GetBytes(mesh.uv2[i].x).CopyTo(uvBuffer.data, uv0Size + i * stride + 0);
+                            BitConverter.GetBytes(mesh.uv2[i].y).CopyTo(uvBuffer.data, uv0Size + i * stride + 4);
+                        }
+
+                        break;
+                    }
+                    case avs.AxesStandard.EngineeringStyle:
+                    {
+                        //Get byte data from first UV channel.
+                        for(int i = 0; i < mesh.uv.Length; i++)
+                        {
+                            BitConverter.GetBytes(1 - mesh.uv[i].x).CopyTo(uvBuffer.data, i * stride + 0);
+                            BitConverter.GetBytes(mesh.uv[i].y).CopyTo(uvBuffer.data, i * stride + 4);
+                        }
+
+                        int uv0Size = mesh.uv.Length * stride;
+                        //Get byte data from second UV channel.
+                        for(int i = 0; i < mesh.uv2.Length; i++)
+                        {
+                            BitConverter.GetBytes(1 - mesh.uv2[i].x).CopyTo(uvBuffer.data, uv0Size + i * stride + 0);
+                            BitConverter.GetBytes(mesh.uv2[i].y).CopyTo(uvBuffer.data, uv0Size + i * stride + 4);
+                        }
+
+                        break;
+                    }
+                    default:
+                        Debug.LogError("Attempted to extract mesh buffer data with unsupported axes standard of:" + extractToBasis);
+                        break;
                 }
 
                 uid uvBufferID = GenerateID();
@@ -638,7 +668,7 @@ namespace teleport
             {
                 primitives[i].attributeCount = 5;
                 primitives[i].attributes = new avs.Attribute[primitives[i].attributeCount];
-                primitives[i].primitiveMode = avs.PrimitiveMode.TRIANGLES; //Assumed
+                primitives[i].primitiveMode = avs.PrimitiveMode.TRIANGLES;
 
                 primitives[i].attributes[0] = new avs.Attribute { accessor = positionAccessorID, semantic = avs.AttributeSemantic.POSITION };
                 primitives[i].attributes[1] = new avs.Attribute { accessor = normalAccessorID, semantic = avs.AttributeSemantic.NORMAL };
@@ -653,7 +683,7 @@ namespace teleport
                     new avs.Accessor
                     {
                         type = avs.Accessor.DataType.SCALAR,
-                        componentType = avs.Accessor.ComponentType.INT,
+                        componentType = avs.Accessor.ComponentType.USHORT,
                         count = (ulong)mesh.triangles.Length,
                         bufferView = indexViewID,
                         byteOffset = mesh.GetIndexStart(i)
@@ -688,7 +718,7 @@ namespace teleport
         private void CreateMeshBufferAndView(in int[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, out uid bufferViewID)
         {
             //Four bytes per int.
-            int stride = 4;
+            int stride = 2;
 
             avs.GeometryBuffer newBuffer = new avs.GeometryBuffer();
             newBuffer.byteLength = (ulong)(data.Length * stride);
@@ -697,7 +727,7 @@ namespace teleport
             //Get byte data from each int, and copy into buffer.
             for(int i = 0; i < data.Length; i++)
             {
-                BitConverter.GetBytes(data[i]).CopyTo(newBuffer.data, i * stride);
+                BitConverter.GetBytes((ushort)data[i]).CopyTo(newBuffer.data, i * stride);
             }
 
             uid bufferID = GenerateID();
