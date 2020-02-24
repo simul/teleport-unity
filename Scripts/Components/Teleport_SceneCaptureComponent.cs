@@ -99,7 +99,7 @@ namespace teleport
             encOutputTexture.autoGenerateMips = false;
             encOutputTexture.Create();
 
-            encoder.Initialize(encInputTexArray, encOutputTexture);
+            encoder.Initialize(0, encInputTexArray, encOutputTexture);
         }
 
         void RenderToTexture()
