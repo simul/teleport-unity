@@ -25,6 +25,16 @@ namespace avs
         UnityStyle = 64 | LeftHanded | YVertical,
     }
 
+    public enum RateControlMode
+    {
+        RC_CONSTQP = 0, /*< Constant QP mode */
+	    RC_VBR = 1, /*< Variable bitrate mode */
+	    RC_CBR = 2, /*< Constant bitrate mode */
+	    RC_CBR_LOWDELAY_HQ = 3, /*< low-delay CBR, high quality */
+	    RC_CBR_HQ = 4, /*< CBR, high quality (slower) */
+	    RC_VBR_HQ = 5 /*< VBR, high quality (slower) */
+    };
+
     //We have to declare our own vector types, as .NET and Unity have different layouts.
     public struct Vector2
     {
