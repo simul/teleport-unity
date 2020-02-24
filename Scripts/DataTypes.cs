@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace avs
 {
@@ -97,8 +98,8 @@ namespace avs
 
     public struct InputState
     {
-        public System.UInt32 buttonsPressed;
-        public System.UInt32 buttonsReleased;
+        public UInt32 buttonsPressed;
+        public UInt32 buttonsReleased;
         public float trackpadAxisX;
         public float trackpadAxisY;
         public float joystickAxisX;
@@ -109,5 +110,27 @@ namespace avs
     {
         public Vector4 orientation;
         public Vector3 position;
+    }
+}
+
+namespace SCServer
+{
+    /*! Graphics API device handle type. */
+    public enum GraphicsDeviceType
+    {
+        Invalid = 0,
+        Direct3D11 = 1,
+        Direct3D12 = 2,
+        OpenGL = 3,
+        Vulkan = 4
+    }
+
+    public class VideoEncodeParams
+    {
+        public Int32 encodeWidth = 0;
+        public Int32 encodeHeight = 0;
+        public GraphicsDeviceType deviceType = GraphicsDeviceType.Invalid;
+        public IntPtr deviceHandle;
+        public IntPtr inputSurfaceResource;
     }
 }

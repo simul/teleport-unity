@@ -35,7 +35,7 @@ namespace SCServer
 		public Int32 cullQuadIndex = -1; // This culls a quad at the index. For debugging only
 		public Int32 targetFPS = 60;
 		public Int32 idrInterval = 0;
-		public byte rateControlMode; ///This needs to be changed to the actual enum, but I'm using byte(unsigned 8-bit int) as a placeholder to stop marshalling crashes.
+		public avs.RateControlMode rateControlMode; 
 		public Int32 averageBitrate = 40000000;
 		public Int32 maxBitrate = 80000000;
 		[MarshalAs(UnmanagedType.U1)] public bool useAutoBitRate = false;
