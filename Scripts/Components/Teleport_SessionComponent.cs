@@ -12,6 +12,9 @@ namespace teleport
     {
         #region DLLImports
         [DllImport("SimulCasterServer")]
+        public static extern void StopSession(uid clientID);
+        
+        [DllImport("SimulCasterServer")]
         public static extern void ActorEnteredBounds(uid clientID, uid actorID);
         [DllImport("SimulCasterServer")]
         public static extern void ActorLeftBounds(uid clientID, uid actorID);
@@ -36,28 +39,72 @@ namespace teleport
         private static extern bool Client_HasOrigin(uid clientID);
         #endregion
 
-        #region Callbacks
-        public static void StaticSetHeadPose(uid ClientID, in avs.HeadPose newHeadPose)
+        #region StaticCallbacks
+        private static Quaternion latestRotation = new Quaternion();
+        private static Vector3 latestPosition = new Vector3();
+
+        public static bool StaticDoesSessionExist(uid clientID)
         {
-            if(!sessions.ContainsKey(ClientID))
+            if(!sessions.ContainsKey(clientID))
             {
-                Debug.LogError("No Session Component found for " + ClientID);
-                return;
+                Debug.LogError("No session component found for client with ID: " + clientID);
+                return false;
             }
-            sessions[ClientID].SetHeadPose(newHeadPose);
+
+            return true;
         }
-        public static void StaticSetControllerPose(uid ClientID, int index, in avs.HeadPose newPose)
+
+        public static void StaticDisconnect(uid clientID)
         {
-            if(!sessions.ContainsKey(ClientID))
-            {
-                Debug.LogError("No Session Component found for " + ClientID);
-                return;
-            }
-            sessions[ClientID].SetControllerPose(index, newPose);
+            sessions[clientID].Disconnect();
         }
-        Quaternion q = new Quaternion();
-        Vector3 pos = new Vector3();
-        void SetHeadPose(avs.HeadPose newHeadPose)
+
+        public static void StaticSetHeadPose(uid clientID, in avs.HeadPose newHeadPose)
+        {
+            if(!StaticDoesSessionExist(clientID)) return;
+
+            latestRotation.Set(newHeadPose.orientation.x, newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
+            latestPosition.Set(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
+            sessions[clientID].SetHeadPose(latestRotation, latestPosition);
+        }
+
+        public static void StaticSetControllerPose(uid clientID, int index, in avs.HeadPose newPose)
+        {
+            if(!StaticDoesSessionExist(clientID)) return;
+
+            latestRotation.Set(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
+            latestPosition.Set(newPose.position.x, newPose.position.y, newPose.position.z);
+            sessions[clientID].SetControllerPose(index, latestRotation, latestPosition);
+        }
+
+        public static void StaticProcessInput(uid clientID, in avs.InputState newInput)
+        {
+        }
+        #endregion
+
+        private static Dictionary<uid, Teleport_SessionComponent> sessions = new Dictionary<uid, Teleport_SessionComponent>();
+
+        private CasterMonitor casterMonitor; //Cached reference to the caster monitor.
+
+        private uid clientID = 0;
+
+        private Teleport_Head head = null;
+        private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
+
+        private GeometryStreamingService geometryStreamingService = new GeometryStreamingService();
+        private List<Collider> streamedObjects = new List<Collider>();
+
+        public void Disconnect()
+        {
+            sessions.Remove(clientID);
+
+            geometryStreamingService.RemoveAllActors(clientID);
+            streamedObjects.Clear();
+
+            clientID = 0;
+        }
+
+        public void SetHeadPose(Quaternion newRotation, Vector3 newPosition)
         {
             if(!head)
             {
@@ -69,13 +116,11 @@ namespace teleport
                 }
                 head = heads[0];
             }
-            q.Set(newHeadPose.orientation.x
-                , newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
-            pos.Set(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
-            head.transform.rotation = q;
-            head.transform.localPosition = pos;
+
+            head.transform.rotation = newRotation;
+            head.transform.localPosition = newPosition;
         }
-        void SetControllerPose(int index, avs.HeadPose newPose)
+        public void SetControllerPose(int index, Quaternion newRotation, Vector3 newPosition)
         {
             if(!controllers.ContainsKey(index))
             {
@@ -89,28 +134,10 @@ namespace teleport
                     return;
             }
             var controller = controllers[index];
-            q.Set(newPose.orientation.x
-                , newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
-            pos.Set(newPose.position.x, newPose.position.y, newPose.position.z);
-            controller.transform.rotation = q;
-            controller.transform.localPosition = pos;
+            
+            controller.transform.rotation = newRotation;
+            controller.transform.localPosition = newPosition;
         }
-
-        Teleport_Head head = null;
-        Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
-        public static void StaticProcessInput(uid ClientID, in avs.InputState newInput)
-        {
-        }
-        #endregion
-
-        private static Dictionary<uid, Teleport_SessionComponent> sessions = new Dictionary<uid, Teleport_SessionComponent>();
-
-        private CasterMonitor casterMonitor; //Cached reference to the caster monitor.
-
-        private uid clientID = 0;
-        private GeometryStreamingService geometryStreamingService = new GeometryStreamingService();
-
-        private List<Collider> streamedObjects = new List<Collider>();
 
         private void OnDisable()
         {
@@ -151,6 +178,11 @@ namespace teleport
             {
                 UpdateGeometryStreaming();
             }
+        }
+
+        private void OnDestroy()
+        {
+            if(clientID != 0) StopSession(clientID);
         }
 
         private void UpdateGeometryStreaming()

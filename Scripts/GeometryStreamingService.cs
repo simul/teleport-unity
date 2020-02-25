@@ -31,6 +31,16 @@ namespace teleport
         //Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
         Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
 
+        public void RemoveAllActors(uid clientID)
+        {
+            foreach(GCHandle handle in gameObjectHandles.Values)
+            {
+                RemoveActor(clientID, GCHandle.ToIntPtr(handle));
+            }
+
+            gameObjectHandles.Clear();
+        }
+
         public uid AddActor(uid clientID, GameObject actor)
         {
             uid actorID = CasterMonitor.GetCasterMonitor().geometrySource.AddNode(actor);
