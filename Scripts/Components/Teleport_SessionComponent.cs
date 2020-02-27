@@ -191,7 +191,7 @@ namespace teleport
 
             if(layerMask != 0)
             {
-                layerMask = 1 << 8;
+               //layerMask = 1 << 8;
                 List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius, layerMask));
                 List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius + casterMonitor.casterSettings.detectionSphereBufferDistance, layerMask));
 
