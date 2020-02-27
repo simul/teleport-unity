@@ -84,9 +84,9 @@ namespace teleport
                     Debug.Log("Graphics api not supported");
                     return;
             }
-            vidParams.deviceHandle = outputTexture.GetNativeTexturePtr();
+            // deviceHandle set in dll
             vidParams.inputSurfaceResource = outputTexture.GetNativeTexturePtr();
-           // InitializeVideoEncoder(clientID, vidParams);
+            //InitializeVideoEncoder(clientID, vidParams);
         }
 
         private void InitShaders()
@@ -115,15 +115,14 @@ namespace teleport
 
             int b = 6 + a;
 
-            // Aidan: Offsets differ from Unreal here because Unity uses OpenGL convention where 0,0 is bottom left instead of top left like D3D.
-            
 
+            // Aidan: The offsets below differ from Unreal here because Unity uses OpenGL convention where 0,0 is bottom left instead of top left like D3D.
             // Colour
             shader.SetTexture(decomposeKernel, "RWInputCubeAsArray", cubemapTexArray);
             shader.SetTexture(decomposeKernel, "RWOutputColorTexture", outputTexture);
             shader.SetInts("Offset", new Int32[2] { 0, faceSize });
             shader.Dispatch(decomposeKernel, numThreadGroupsX, numThreadGroupsY, numThreadGroupsZ);
-
+           
             // Depth
             //shader.SetTexture(decomposeDepthKernel, "RWInputCubeAsArray", cubemapTexArray);
             //shader.SetTexture(decomposeDepthKernel, "RWOutputColorTexture", outputTexture);
@@ -132,7 +131,7 @@ namespace teleport
 
             // Camera Position 
             float[] camPos = new float[3] { cameraTransform.position.x, cameraTransform.position.y, cameraTransform.position.z };
-            // flip y because Unity usues OpenGL convention where 0,0 is bottom left instead of top left like D3D.
+            // flip y because Unity uses OpenGL convention where 0,0 is bottom left instead of top left like D3D.
             shader.SetInts("Offset", new Int32[2] { size - (32 * 4), 3 * 8});
             shader.SetFloats("CubemapCameraPositionMetres", camPos);
             shader.Dispatch(encodeCamKernel, 4, 1, 1);

@@ -120,7 +120,22 @@ public partial class TeleportCameraRenderer
 	{
 		BeginCamera(context, camera);
 		string samplename = camera.gameObject.name + " sample";
-		StartSample(context,samplename );
+		StartSample(context, samplename);
+
+		PrepareForSceneWindow(context, camera);
+		DrawOpaqueGeometry(context, camera);
+		DrawTransparentGeometry(context, camera);
+		DrawUnsupportedShaders(context, camera);
+		DrawGizmos(context, camera);
+		EndSample(context, samplename);
+		EndCamera(context, camera);
+	}
+
+	public void RenderToCubemap(ScriptableRenderContext context, Camera camera, bool isLastFace = false)
+	{
+		BeginCamera(context, camera);
+		string samplename = camera.gameObject.name + " sample";
+		StartSample(context, samplename);
 
 		PrepareForSceneWindow(context, camera);
 		DrawOpaqueGeometry(context, camera);

@@ -9,11 +9,12 @@ namespace teleport
 {
     public class Teleport_SceneCaptureComponent : MonoBehaviour
     {
-        private Camera cam;
+        public uid clientID = 0; // This needs to be set by a session component instance after start
         public Cubemap cubemap;
         //public RenderTexture cubemap;
         public RenderTexture encInputTexArray;
         public RenderTexture encOutputTexture;
+        private Camera cam;
         private CasterMonitor monitor; //Cached reference to the caster monitor.
         private VideoEncoder encoder = new VideoEncoder();
        
@@ -45,7 +46,7 @@ namespace teleport
 
         void Initialize()
         {
-            GameObject obj = new GameObject("CubemapCamera", typeof(Camera));
+            GameObject obj = new GameObject(TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID, typeof(Camera));
             obj.hideFlags = HideFlags.DontSave;
             obj.transform.position = transform.position;
             obj.transform.rotation = Quaternion.identity;
@@ -88,7 +89,7 @@ namespace teleport
             encInputTexArray.useMipMap = false;
             encInputTexArray.autoGenerateMips = false;
             encInputTexArray.Create();
-
+           
             encOutputTexture = new RenderTexture(size * 3, size * 3, 0, format, RenderTextureReadWrite.Default);
             encOutputTexture.enableRandomWrite = true;
             encOutputTexture.name = "Encoder Input Texture";
@@ -99,7 +100,7 @@ namespace teleport
             encOutputTexture.autoGenerateMips = false;
             encOutputTexture.Create();
 
-            encoder.Initialize(0, encInputTexArray, encOutputTexture);
+            encoder.Initialize(clientID, encInputTexArray, encOutputTexture);
         }
 
         void RenderToTexture()
@@ -115,7 +116,7 @@ namespace teleport
                 Debug.LogError("Error occured rendering the cubemap");
                 return;
             }
-
+           
             // Copy here because we cannot bind to a RWTexture2DArray otherwise
             for (int i = 0; i < 6; ++i)
             {
