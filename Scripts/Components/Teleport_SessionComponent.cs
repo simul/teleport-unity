@@ -187,13 +187,10 @@ namespace teleport
 
         private void UpdateGeometryStreaming()
         {
-            int layerMask = casterMonitor.layerMask;
-
-            if(layerMask != 0)
+            if(casterMonitor.layersToStream != 0)
             {
-                layerMask = 1 << 8;
-                List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius, layerMask));
-                List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius + casterMonitor.casterSettings.detectionSphereBufferDistance, layerMask));
+                List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius, casterMonitor.layersToStream));
+                List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius + casterMonitor.casterSettings.detectionSphereBufferDistance, casterMonitor.layersToStream));
 
                 List<Collider> gainedColliders = new List<Collider>(innerSphereCollisions.Except(streamedObjects));
                 List<Collider> lostColliders = new List<Collider>(streamedObjects.Except(outerSphereCollisions));

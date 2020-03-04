@@ -1037,7 +1037,8 @@ namespace teleport
                         extractedTexture.format = avs.TextureFormat.RGBA8;
                         break;
                     default:
-                        extractedTexture.format = avs.TextureFormat.INVALID;
+                        extractedTexture.format = avs.TextureFormat.G8;
+                        Debug.LogWarning("Texture with format of: " + unityFormat + " and bytes per pixel of: " + extractedTexture.bytesPerPixel);
                         break;
                 }
 
