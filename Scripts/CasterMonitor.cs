@@ -14,17 +14,13 @@ namespace teleport
         public GeometrySource geometrySource;
 
         [Header("Geometry Selection")]
-        [SerializeField]
-        private LayerMask[] layersToStream = new LayerMask[0]; //Array of physics layers the user can choose to stream.
+        public LayerMask layersToStream; //Mask of the physics layers the user can choose to stream.
         public string tagToStream; //Objects with this tag will be streamed; leaving it blank will cause it to just use the layer mask.
 
         [Header("Connections")]
         public int listenPort = 10500;
         public int discoveryPort = 10607;
         public int connectionTimeout = 5; //How many seconds to wait before automatically disconnecting from the client.
-
-        [NonSerialized]
-        public LayerMask layerMask; //Layer mask generated from layersToStream array to determine streamed objects.
 
         private static CasterMonitor instance; //There should only be one CasterMonitor instance at a time.
 
@@ -159,14 +155,7 @@ namespace teleport
             if(Application.isPlaying)
             {
                 UpdateCasterSettings(casterSettings);
-
-                //Regenerate layer mask whenever a value changes; you can't serialise properties for the Unity Editor.
-                layerMask = 0;
-                foreach(LayerMask layer in layersToStream)
-                {
-                    layerMask |= layer;
-                }
-
+                
                 if(isDelayingSceneExtraction && casterSettings.isStreamingGeometry)
                 {
                     InitialiseGeometrySource();
@@ -251,7 +240,7 @@ namespace teleport
             //Extract data from all game objects/actors that respond to the streaming layer mask.
             foreach(GameObject actor in objects)
             {
-                if(layersToStream.Length == 0 || (1 << actor.layer) == layerMask)
+                if((layersToStream & (1 << actor.layer)) != 0)
                 {
                     geometrySource.AddNode(actor, true);
                 }
