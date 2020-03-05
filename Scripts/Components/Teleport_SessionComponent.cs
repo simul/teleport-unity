@@ -54,6 +54,20 @@ namespace teleport
             return true;
         }
 
+        // Aidan: This is temporary for the capture component
+        public static uid GetClientID()
+        {
+            if (sessions.Count > 0)
+            {
+                return sessions.Last().Key;
+            }
+            else
+            {
+                Debug.Log("There are currently no clients");
+                return 0;
+            }
+        }
+
         public static void StaticDisconnect(uid clientID)
         {
             sessions[clientID].Disconnect();

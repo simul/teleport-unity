@@ -125,11 +125,12 @@ namespace SCServer
         Vulkan = 4
     }
 
-    public class VideoEncodeParams
+    [StructLayout(LayoutKind.Sequential)]
+    public struct VideoEncodeParams
     {
-        public Int32 encodeWidth = 0;
-        public Int32 encodeHeight = 0;
-        public GraphicsDeviceType deviceType = GraphicsDeviceType.Invalid;
+        public Int32 encodeWidth;
+        public Int32 encodeHeight;
+        public GraphicsDeviceType deviceType;
         public IntPtr deviceHandle;
         public IntPtr inputSurfaceResource;
     }

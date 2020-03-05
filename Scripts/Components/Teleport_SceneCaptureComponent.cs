@@ -10,14 +10,12 @@ namespace teleport
     public class Teleport_SceneCaptureComponent : MonoBehaviour
     {
         public uid clientID = 0; // This needs to be set by a session component instance after start
-        public Cubemap cubemap;
+        //public Cubemap cubemap;
         //public RenderTexture cubemap;
-        public RenderTexture encInputTexArray;
-        public RenderTexture encOutputTexture;
-        private Camera cam;
-        private CasterMonitor monitor; //Cached reference to the caster monitor.
-        private VideoEncoder encoder = new VideoEncoder();
-       
+        //public RenderTexture cubemapTexArray;
+        public RenderTexture sceneCaptureTexture;
+        Camera cam;
+        CasterMonitor monitor; //Cached reference to the caster monitor.   
 
         void Start()
         {
@@ -27,20 +25,26 @@ namespace teleport
 
         void OnDisable()
         {
-            encoder.Shutdown();
+            ReleaseResources();
+        }
+
+
+        void ReleaseResources()
+        {
             DestroyImmediate(cam);
-            DestroyImmediate(cubemap);
-            DestroyImmediate(encInputTexArray);
-            DestroyImmediate(encOutputTexture);
+            //DestroyImmediate(cubemap);
+            //DestroyImmediate(cubemapTexArray);
+            DestroyImmediate(sceneCaptureTexture);
         }
 
         void LateUpdate()
         {
-            if (encInputTexArray)
+            // for now just get latest client
+            clientID = Teleport_SessionComponent.GetClientID();
+     
+            if (clientID != 0 && cam.targetTexture)
             {
                 RenderToTexture();
-                encoder.PrepareFrame(cam.transform);
-                encoder.EncodeFrame(false);
             }
         }
 
@@ -55,20 +59,21 @@ namespace teleport
             cam.enabled = false;
 
             int size = (int)monitor.casterSettings.captureCubeTextureSize;
+
             RenderTextureFormat format;
             if (monitor.casterSettings.use10BitEncoding)
             {
-                format = RenderTextureFormat.ARGB64; 
+                format = RenderTextureFormat.ARGB64;
             }
             else
             {
                 format = RenderTextureFormat.ARGB32;
             }
 
-            cubemap = new Cubemap(size, TextureFormat.ARGB32, false);
-            cubemap.name = "Cubemap";
-            cubemap.hideFlags = HideFlags.DontSave;
-            cubemap.filterMode = FilterMode.Point;
+            //cubemap = new Cubemap(size, TextureFormat.ARGB32, false);
+            //cubemap.name = "Cubemap";
+            //cubemap.hideFlags = HideFlags.DontSave;
+            //cubemap.filterMode = FilterMode.Point;
 
             //cubemap = new RenderTexture(size, size, 0, format, RenderTextureReadWrite.Default);
             //cubemap.name = "Cubemap";
@@ -79,49 +84,37 @@ namespace teleport
             //cubemap.autoGenerateMips = false;
             //cubemap.Create();
 
-            encInputTexArray = new RenderTexture(size, size, 0, format, RenderTextureReadWrite.Default);
-            encInputTexArray.volumeDepth = 6;
-            encInputTexArray.enableRandomWrite = true;
-            encInputTexArray.name = "Cubemap Texture Array";
-            encInputTexArray.hideFlags = HideFlags.DontSave;
-            encInputTexArray.dimension = UnityEngine.Rendering.TextureDimension.Tex2DArray;
-            encInputTexArray.filterMode = FilterMode.Point;
-            encInputTexArray.useMipMap = false;
-            encInputTexArray.autoGenerateMips = false;
-            encInputTexArray.Create();
-           
-            encOutputTexture = new RenderTexture(size * 3, size * 3, 0, format, RenderTextureReadWrite.Default);
-            encOutputTexture.enableRandomWrite = true;
-            encOutputTexture.name = "Encoder Input Texture";
-            encOutputTexture.hideFlags = HideFlags.DontSave;
-            encOutputTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex2D;
-            encOutputTexture.filterMode = FilterMode.Point;
-            encOutputTexture.useMipMap = false;
-            encOutputTexture.autoGenerateMips = false;
-            encOutputTexture.Create();
+            //cubemapTexArray = new RenderTexture(size, size, 0, format, RenderTextureReadWrite.Default);
+            //cubemapTexArray.volumeDepth = 6;
+            //cubemapTexArray.enableRandomWrite = true;
+            //cubemapTexArray.name = "Cubemap Texture Array";
+            //cubemapTexArray.hideFlags = HideFlags.DontSave;
+            //cubemapTexArray.dimension = UnityEngine.Rendering.TextureDimension.Tex2DArray;
+            //cubemapTexArray.filterMode = FilterMode.Point;
+            //cubemapTexArray.useMipMap = false;
+            //cubemapTexArray.autoGenerateMips = false;
+            //cubemapTexArray.Create();
 
-            encoder.Initialize(clientID, encInputTexArray, encOutputTexture);
+            sceneCaptureTexture = new RenderTexture(size * 3, size * 3, 0, format, RenderTextureReadWrite.Default);
+            sceneCaptureTexture.name = "Scene Capture Texture";
+            sceneCaptureTexture.hideFlags = HideFlags.DontSave;
+            sceneCaptureTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex2D;
+            sceneCaptureTexture.useMipMap = false;
+            sceneCaptureTexture.autoGenerateMips = false;
+            sceneCaptureTexture.enableRandomWrite = true;
+            sceneCaptureTexture.Create();
+
+            cam.targetTexture = sceneCaptureTexture;
         }
 
         void RenderToTexture()
         {
-            //var faceToRender = Time.frameCount % 6;
-            //var faceMask = 1 << faceToRender;
-            int faceMask = 63;
-            cam.transform.position = transform.position;
-            cam.transform.forward = transform.forward;
-
-            if (!cam.RenderToCubemap(cubemap, faceMask))
-            {
-                Debug.LogError("Error occured rendering the cubemap");
-                return;
-            }
+            //cam.transform.position = transform.position;
+            //cam.transform.forward = transform.forward;
            
-            // Copy here because we cannot bind to a RWTexture2DArray otherwise
-            for (int i = 0; i < 6; ++i)
-            {
-                Graphics.CopyTexture(cubemap, i, encInputTexArray, i);
-            }   
+            // Update name in case client ID changed
+            cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
+            cam.Render();
         }
     }
 }
