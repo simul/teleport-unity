@@ -241,11 +241,20 @@ namespace avs
 
 namespace teleport
 {
+    public struct TextureExtractionData
+    {
+        public uid id;
+        public Texture unityTexture;
+        public avs.Texture textureData;
+    }
+
     public class GeometrySource : ScriptableObject, ISerializationCallbackReceiver
     {
         #region DLLImports
         [DllImport("SimulCasterServer")]
         private static extern uid GenerateID();
+        [DllImport("SimulCasterServer")]
+        private static extern void ClearGeometryStore();
 
         [DllImport("SimulCasterServer")]
         private static extern void StoreNode(uid id, avs.Node node);
@@ -276,9 +285,36 @@ namespace teleport
         public uid[] processedResources_values = new uid[0];
         #endregion
 
+        public List<TextureExtractionData> texturesWaitingForExtraction = new List<TextureExtractionData>();
+        public string compressedTexturesFolderPath;
+
         private readonly Dictionary<UnityEngine.Object, uid> processedResources = new Dictionary<UnityEngine.Object, uid>(); // <GameObject, ID of extracted data in native plug-in>
 
         private bool isAwake = false;
+
+        public static GeometrySource GetGeometrySource()
+        {
+            string[] sourceGUIDs = UnityEditor.AssetDatabase.FindAssets("t:GeometrySource");
+
+            string assetPath;
+            if(sourceGUIDs.Length != 0)
+            {
+                assetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(sourceGUIDs[0]);
+            }
+            else //Create new Geometry Source asset above scripts folder.
+            {
+                ClearGeometryStore();
+
+                assetPath = UnityEditor.AssetDatabase.FindAssets(nameof(GeometrySource) + ".cs")[0];
+                assetPath = assetPath.Remove(assetPath.IndexOf("Scripts/"));
+                assetPath += "Geometry Source.asset";
+
+                UnityEditor.AssetDatabase.CreateAsset(CreateInstance<GeometrySource>(), assetPath);
+                Debug.LogWarning("No Geometry Source found. Created at: " + assetPath);
+            }
+
+            return UnityEditor.AssetDatabase.LoadAssetAtPath<GeometrySource>(assetPath);
+        }
 
         public void OnBeforeSerialize()
         {
@@ -308,6 +344,8 @@ namespace teleport
 
         public void OnEnable()
         {
+            compressedTexturesFolderPath = Application.persistentDataPath + "/Basis Universal/";
+
             //Remove nodes that have been lost due to level change.
             var pairsToDelete = processedResources.Where(pair => pair.Key == null).ToArray();
             foreach(var pair in pairsToDelete)
@@ -320,6 +358,8 @@ namespace teleport
         public void ClearData()
         {
             processedResources.Clear();
+            texturesWaitingForExtraction.Clear();
+            ClearGeometryStore();
         }
 
         public uid AddNode(GameObject node, bool forceUpdate = false)
@@ -409,6 +449,39 @@ namespace teleport
             throw new NotImplementedException();
         }
 
+        public void AddTextureData(Texture texture, avs.Texture textureData)
+        {
+            uid textureID;
+            if(!processedResources.TryGetValue(texture, out textureID))
+            {
+                Debug.LogError(texture.name + " had its data extracted, but is not in the dictionary of processed resources!");
+                return;
+            }
+
+            string textureAssetPath = UnityEditor.AssetDatabase.GetAssetPath(texture);
+
+            string basisFileLocation = "";
+            //Basis Universal compression won't be used if the file location is left empty.
+            if(CasterMonitor.GetCasterMonitor().casterSettings.useCompressedTextures)
+            {
+                string folderPath = compressedTexturesFolderPath;
+                //Create directiory if it doesn't exist.
+                if(!Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                }
+
+                basisFileLocation = textureAssetPath; //Use editor file location as unique name; this won't work out of the Unity Editor.
+                basisFileLocation = basisFileLocation.Replace("/", "#"); //Replace forward slashes with hashes.
+                basisFileLocation = basisFileLocation.Remove(basisFileLocation.LastIndexOf('.')); //Remove file extension.
+                basisFileLocation = folderPath + basisFileLocation + ".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
+            }
+
+            long lastModified = File.GetLastWriteTime(textureAssetPath).ToFileTime();
+
+            StoreTexture(textureID, textureData, lastModified, basisFileLocation);
+        }
+
         public void CompressTextures()
         {
             UInt64 totalTexturesToCompress = GetAmountOfTexturesWaitingForCompression();
@@ -490,7 +563,7 @@ namespace teleport
             uid normalAccessorID = GenerateID();
             uid tangentAccessorID = GenerateID();
             uid uv0AccessorID = GenerateID();
-            uid uv2AccessorID = GenerateID();
+            uid uv2AccessorID = mesh.uv2.Length != 0 ? GenerateID() : 0;
 
             //Position Buffer:
             {
@@ -555,54 +628,24 @@ namespace teleport
                 uvBuffer.byteLength = (ulong)((mesh.uv.Length + mesh.uv2.Length) * stride);
                 uvBuffer.data = new byte[uvBuffer.byteLength];
 
-                switch(extractToBasis)
+                //Get byte data from first UV channel.
+                for(int i = 0; i < mesh.uv.Length; i++)
                 {
-                    case avs.AxesStandard.GlStyle:
-                    {
-                        //Get byte data from first UV channel.
-                        for(int i = 0; i < mesh.uv.Length; i++)
-                        {
-                            BitConverter.GetBytes(mesh.uv[i].x).CopyTo(uvBuffer.data, i * stride + 0);
-                            BitConverter.GetBytes(mesh.uv[i].y).CopyTo(uvBuffer.data, i * stride + 4);
-                        }
+                    BitConverter.GetBytes(mesh.uv[i].x).CopyTo(uvBuffer.data, i * stride + 0);
+                    BitConverter.GetBytes(mesh.uv[i].y).CopyTo(uvBuffer.data, i * stride + 4);
+                }
 
-                        int uv0Size = mesh.uv.Length * stride;
-                        //Get byte data from second UV channel.
-                        for(int i = 0; i < mesh.uv2.Length; i++)
-                        {
-                            BitConverter.GetBytes(mesh.uv2[i].x).CopyTo(uvBuffer.data, uv0Size + i * stride + 0);
-                            BitConverter.GetBytes(mesh.uv2[i].y).CopyTo(uvBuffer.data, uv0Size + i * stride + 4);
-                        }
-
-                        break;
-                    }
-                    case avs.AxesStandard.EngineeringStyle:
-                    {
-                        //Get byte data from first UV channel.
-                        for(int i = 0; i < mesh.uv.Length; i++)
-                        {
-                            BitConverter.GetBytes(1 - mesh.uv[i].x).CopyTo(uvBuffer.data, i * stride + 0);
-                            BitConverter.GetBytes(mesh.uv[i].y).CopyTo(uvBuffer.data, i * stride + 4);
-                        }
-
-                        int uv0Size = mesh.uv.Length * stride;
-                        //Get byte data from second UV channel.
-                        for(int i = 0; i < mesh.uv2.Length; i++)
-                        {
-                            BitConverter.GetBytes(1 - mesh.uv2[i].x).CopyTo(uvBuffer.data, uv0Size + i * stride + 0);
-                            BitConverter.GetBytes(mesh.uv2[i].y).CopyTo(uvBuffer.data, uv0Size + i * stride + 4);
-                        }
-
-                        break;
-                    }
-                    default:
-                        Debug.LogError("Attempted to extract mesh buffer data with unsupported axes standard of:" + extractToBasis);
-                        break;
+                int uv0Size = mesh.uv.Length * stride;
+                //Get byte data from second UV channel.
+                for(int i = 0; i < mesh.uv2.Length; i++)
+                {
+                    BitConverter.GetBytes(mesh.uv2[i].x).CopyTo(uvBuffer.data, uv0Size + i * stride + 0);
+                    BitConverter.GetBytes(mesh.uv2[i].y).CopyTo(uvBuffer.data, uv0Size + i * stride + 4);
                 }
 
                 uid uvBufferID = GenerateID();
                 uid uv0ViewID = GenerateID();
-                uid uv2ViewID = GenerateID();
+                uid uv2ViewID = mesh.uv2.Length != 0 ? GenerateID() : 0;
 
                 buffers.Add(uvBufferID, uvBuffer);
 
@@ -619,18 +662,21 @@ namespace teleport
                     }
                 );
 
-                //Buffer view for second UV channel.
-                bufferViews.Add
-                (
-                    uv2ViewID,
-                    new avs.BufferView
-                    {
-                        buffer = uvBufferID,
-                        byteOffset = (ulong)(mesh.uv.Length * stride), //Offset is length of first UV channel.
-                        byteLength = (ulong)(mesh.uv2.Length * stride),
-                        byteStride = (ulong)stride
-                    }
-                );
+                if(mesh.uv2.Length != 0)
+                {
+                    //Buffer view for second UV channel.
+                    bufferViews.Add
+                    (
+                        uv2ViewID,
+                        new avs.BufferView
+                        {
+                            buffer = uvBufferID,
+                            byteOffset = (ulong)(mesh.uv.Length * stride), //Offset is length of first UV channel.
+                            byteLength = (ulong)(mesh.uv2.Length * stride),
+                            byteStride = (ulong)stride
+                        }
+                    );
+                }
 
                 //Accessor for first UV channel.
                 accessors.Add
@@ -646,27 +692,30 @@ namespace teleport
                     }
                 );
 
-                //Accessor for second UV channel.
-                accessors.Add
-                (
-                    uv2AccessorID,
-                    new avs.Accessor
-                    {
-                        type = avs.Accessor.DataType.VEC2,
-                        componentType = avs.Accessor.ComponentType.FLOAT,
-                        count = (ulong)mesh.uv2.Length,
-                        bufferView = uv2ViewID,
-                        byteOffset = 0
-                    }
-                );
+                if(mesh.uv2.Length != 0)
+                {
+                    //Accessor for second UV channel.
+                    accessors.Add
+                    (
+                        uv2AccessorID,
+                        new avs.Accessor
+                        {
+                            type = avs.Accessor.DataType.VEC2,
+                            componentType = avs.Accessor.ComponentType.FLOAT,
+                            count = (ulong)mesh.uv2.Length,
+                            bufferView = uv2ViewID,
+                            byteOffset = 0
+                        }
+                    );
+                }
             }
 
             //Index Buffer
-            CreateMeshBufferAndView(mesh.triangles, buffers, bufferViews, out uid indexViewID);
+            CreateIndexBufferAndView(mesh.triangles, buffers, bufferViews, out uid indexViewID);
 
             for(int i = 0; i < primitives.Length; i++)
             {
-                primitives[i].attributeCount = 5;
+                primitives[i].attributeCount = (ulong)(mesh.uv2.Length != 0 ? 5 : 4);
                 primitives[i].attributes = new avs.Attribute[primitives[i].attributeCount];
                 primitives[i].primitiveMode = avs.PrimitiveMode.TRIANGLES;
 
@@ -674,7 +723,7 @@ namespace teleport
                 primitives[i].attributes[1] = new avs.Attribute { accessor = normalAccessorID, semantic = avs.AttributeSemantic.NORMAL };
                 primitives[i].attributes[2] = new avs.Attribute { accessor = tangentAccessorID, semantic = avs.AttributeSemantic.TANGENT };
                 primitives[i].attributes[3] = new avs.Attribute { accessor = uv0AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_0 };
-                primitives[i].attributes[4] = new avs.Attribute { accessor = uv2AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_1 };
+                if(mesh.uv2.Length != 0) primitives[i].attributes[4] = new avs.Attribute { accessor = uv2AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_1 };
 
                 primitives[i].indices_accessor = GenerateID();
                 accessors.Add
@@ -715,9 +764,10 @@ namespace teleport
             );
         }
 
-        private void CreateMeshBufferAndView(in int[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, out uid bufferViewID)
+        private void CreateIndexBufferAndView(in int[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, out uid bufferViewID)
         {
-            //Four bytes per int.
+            //Two bytes per unsigned short.
+            //Right now the Oculus SDK expects USHORT indexes, if the object/surface is not instanced. 
             int stride = 2;
 
             avs.GeometryBuffer newBuffer = new avs.GeometryBuffer();
@@ -725,9 +775,11 @@ namespace teleport
             newBuffer.data = new byte[newBuffer.byteLength];
 
             //Get byte data from each int, and copy into buffer.
-            for(int i = 0; i < data.Length; i++)
+            //We are changing the indexes into counter-clockwise winding.
+            for(int i = 0; i < (data.Length / 2); i++)
             {
-                BitConverter.GetBytes((ushort)data[i]).CopyTo(newBuffer.data, i * stride);
+                BitConverter.GetBytes((ushort)data[i]).CopyTo(newBuffer.data, (data.Length - 1 - i) * stride);
+                BitConverter.GetBytes((ushort)data[data.Length - 1 - i]).CopyTo(newBuffer.data, i * stride);
             }
 
             uid bufferID = GenerateID();
@@ -771,7 +823,7 @@ namespace teleport
                 case avs.AxesStandard.EngineeringStyle:
                     for(int i = 0; i < data.Length; i++)
                     {
-                        BitConverter.GetBytes(-data[i].x).CopyTo(newBuffer.data, i * stride + 0);
+                        BitConverter.GetBytes(data[i].x).CopyTo(newBuffer.data, i * stride + 0);
                         BitConverter.GetBytes(data[i].z).CopyTo(newBuffer.data, i * stride + 4);
                         BitConverter.GetBytes(data[i].y).CopyTo(newBuffer.data, i * stride + 8);
                     }
@@ -824,7 +876,7 @@ namespace teleport
                 case avs.AxesStandard.EngineeringStyle:
                     for(int i = 0; i < data.Length; i++)
                     {
-                        BitConverter.GetBytes(-data[i].x).CopyTo(newBuffer.data, i * stride + 0);
+                        BitConverter.GetBytes(data[i].x).CopyTo(newBuffer.data, i * stride + 0);
                         BitConverter.GetBytes(data[i].z).CopyTo(newBuffer.data, i * stride + 4);
                         BitConverter.GetBytes(data[i].y).CopyTo(newBuffer.data, i * stride + 8);
                         BitConverter.GetBytes(data[i].w).CopyTo(newBuffer.data, i * stride + 12);
@@ -938,6 +990,12 @@ namespace teleport
 
             if(!processedResources.TryGetValue(texture, out uid textureID))
             {
+                if(Application.isPlaying)
+                {
+                    Debug.LogWarning("Texture <b>" + texture.name + "</b> has not been extracted, but is being used on streamed geometry!");
+                    return 0;
+                }
+
                 avs.Texture extractedTexture = new avs.Texture()
                 {
                     nameLength = (ulong)texture.name.Length,
@@ -953,133 +1011,31 @@ namespace teleport
                     samplerID = 0
                 };
 
-                TextureFormat unityFormat;
                 switch(texture)
                 {
                     case Texture2D texture2D:
                         extractedTexture.depth = 1;
                         extractedTexture.arrayCount = 1;
                         extractedTexture.mipCount = (uint)texture2D.mipmapCount;
-                        extractedTexture.bytesPerPixel = GetBytesPerPixel(texture2D.format);
-                        //extractedTexture.data = texture2D.GetNativeTexturePtr();
-
-                        unityFormat = texture2D.format;
-
-                        {
-                            //For some reason, textures imported as normal maps have their B and R components swapped. We are going to undo this when we pull the data for normal maps.
-                            UnityEditor.TextureImporterType textureType = ((UnityEditor.TextureImporter)UnityEditor.AssetImporter.GetAtPath(UnityEditor.AssetDatabase.GetAssetPath(texture))).textureType;
-
-                            int byteSize = Marshal.SizeOf<byte>();
-
-                            Color32[] pixelData = texture2D.GetPixels32();
-                            extractedTexture.data = Marshal.AllocCoTaskMem(pixelData.Length * 4 * byteSize);
-
-                            int byteOffset = 0;
-                            if(textureType != UnityEditor.TextureImporterType.NormalMap)
-                            {
-                                foreach(Color32 pixel in pixelData)
-                                {
-                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.r);
-                                    byteOffset += byteSize;
-
-                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.g);
-                                    byteOffset += byteSize;
-
-                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.b);
-                                    byteOffset += byteSize;
-
-                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.a);
-                                    byteOffset += byteSize;
-                                }
-                            }
-                            else
-                            {
-                                foreach(Color32 pixel in pixelData)
-                                {
-                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.b);
-                                    byteOffset += byteSize;
-
-                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.g);
-                                    byteOffset += byteSize;
-
-                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.r);
-                                    byteOffset += byteSize;
-
-                                    Marshal.WriteByte(extractedTexture.data, byteOffset, pixel.a);
-                                    byteOffset += byteSize;
-                                }
-                            }
-                        }
-
                         break;
-                    //case Texture2DArray texture2DArray:
-                    //    extractedTexture.depth = 1;
-                    //    extractedTexture.arrayCount = (uint)texture2DArray.depth;
-                    //    extractedTexture.bytesPerPixel = GetBytesPerPixel(texture2DArray.format);
-                    //    extractedTexture.data = texture2DArray.GetNativeTexturePtr();
-                    //    break;
-                    //case Texture3D texture3D:
-                    //    extractedTexture.depth = (uint)texture3D.depth;
-                    //    extractedTexture.arrayCount = 1;
-                    //    extractedTexture.bytesPerPixel = GetBytesPerPixel(texture3D.format);
-                    //    extractedTexture.data = texture3D.GetNativeTexturePtr();
-                    //    break;
+                    case Texture2DArray texture2DArray:
+                        extractedTexture.depth = 1;
+                        extractedTexture.arrayCount = (uint)texture2DArray.depth;
+                        extractedTexture.bytesPerPixel = GetBytesPerPixel(texture2DArray.format);
+                        break;
+                    case Texture3D texture3D:
+                        extractedTexture.depth = (uint)texture3D.depth;
+                        extractedTexture.arrayCount = 1;
+                        extractedTexture.bytesPerPixel = GetBytesPerPixel(texture3D.format);
+                        break;
                     default:
                         Debug.LogError("Passed texture was unsupported type: " + texture.GetType() + "!");
                         return 0;
                 }
-
-                extractedTexture.dataSize = extractedTexture.width * extractedTexture.height * extractedTexture.depth * extractedTexture.bytesPerPixel;
-
-                switch(unityFormat)
-                {
-                    case TextureFormat.RGBA32:
-                        extractedTexture.format = avs.TextureFormat.RGBA8;
-                        break;
-                    default:
-                        extractedTexture.format = avs.TextureFormat.G8;
-                        Debug.LogWarning("Texture with format of: " + unityFormat + " and bytes per pixel of: " + extractedTexture.bytesPerPixel);
-                        break;
-                }
-
+                
                 textureID = GenerateID();
                 processedResources[texture] = textureID;
-
-                string textureAssetPath = UnityEditor.AssetDatabase.GetAssetPath(texture);
-
-                string basisFileLocation = "";
-                //Basis Universal compression won't be used if the file location is left empty.
-                if(CasterMonitor.GetCasterMonitor().casterSettings.useCompressedTextures)
-                {
-                    string folderPath = Application.persistentDataPath + "/Basis Universal/";
-                    //Create directiory if it doesn't exist.
-                    if(!Directory.Exists(folderPath))
-                    {
-                        Directory.CreateDirectory(folderPath);
-                    }
-
-                    basisFileLocation = textureAssetPath; //Use editor file location as unique name; this won't work out of the Unity Editor.
-                    basisFileLocation = basisFileLocation.Replace("/", "#"); //Replace forward slashes with hashes.
-                    basisFileLocation = basisFileLocation.Remove(basisFileLocation.LastIndexOf('.')); //Remove file extension.
-                    basisFileLocation = folderPath + basisFileLocation + ".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
-                }
-
-                long lastModified = File.GetLastWriteTime(textureAssetPath).ToFileTime();
-
-                StoreTexture(textureID, extractedTexture, lastModified, basisFileLocation);
-
-                Marshal.FreeCoTaskMem(extractedTexture.data);
-
-                //Warning messages for unsupported textures.
-                if(extractedTexture.bytesPerPixel != 4)
-                {
-                    Debug.LogWarning("Texture <b>" + texture.name + "</b> has an unsupported bytes per pixel of: <b>" + extractedTexture.bytesPerPixel + "</b>");
-                }
-
-                if(extractedTexture.format == avs.TextureFormat.INVALID)
-                {
-                    Debug.LogWarning("Texture <b>" + texture.name + "</b> has an unsupported texture format of: <b>" + unityFormat + "</b>");
-                }
+                texturesWaitingForExtraction.Add(new TextureExtractionData{id = textureID, unityTexture = texture, textureData = extractedTexture});
             }
 
             return textureID;

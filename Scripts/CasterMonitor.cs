@@ -30,8 +30,6 @@ namespace teleport
         private static StringBuilder logError = new StringBuilder();
         private static StringBuilder logCritical = new StringBuilder();
 
-        private bool isDelayingSceneExtraction = false; //Whether we're waiting to extract the scene data.
-
         #region DLLDelegates
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         delegate void OnShowActor(in IntPtr actorPtr);
@@ -69,14 +67,12 @@ namespace teleport
         private static extern void Tick(float deltaTime);
         [DllImport("SimulCasterServer")]
         private static extern void Shutdown();
-
-        [DllImport("SimulCasterServer")]
-        private static extern void ClearGeometryStore();
         #endregion
 
         public static CasterMonitor GetCasterMonitor()
         {
-            return instance;
+            if(Application.isPlaying) return instance;
+            else return FindObjectOfType<CasterMonitor>();
         }
 
 #if UNITY_EDITOR
@@ -88,34 +84,7 @@ namespace teleport
             {
                 Debug.LogWarning("<b>" + name + "</b>'s Geometry Source is not set. Please assign in Editor, or your application may crash in standalone.");
 
-                string[] sourceGUIDs = UnityEditor.AssetDatabase.FindAssets("t:GeometrySource");
-
-                string assetPath;
-                if(sourceGUIDs.Length != 0)
-                {
-                    assetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(sourceGUIDs[0]);
-                }
-                else
-                {
-                    ClearGeometryStore();
-
-                    //Create new Geometry Source asset above scripts folder.
-                    UnityEditor.MonoScript thisScript = UnityEditor.MonoScript.FromMonoBehaviour(this);
-                    assetPath = UnityEditor.AssetDatabase.GetAssetPath(thisScript);
-
-                    assetPath = assetPath.Remove(assetPath.IndexOf("Scripts/"));
-                    assetPath += "Geometry Source.asset";
-
-                    UnityEditor.AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<GeometrySource>(), assetPath);
-                    Debug.LogWarning("No Geometry Source found. Created at: " + assetPath);
-                }
-
-                geometrySource = UnityEditor.AssetDatabase.LoadAssetAtPath<GeometrySource>(assetPath);
-            }
-
-            if(casterSettings.willCacheReset)
-            {
-                geometrySource.ClearData();
+                geometrySource = GeometrySource.GetGeometrySource();
             }
         }
 #endif
@@ -133,18 +102,6 @@ namespace teleport
             Initialise(ShowActor, HideActor, Teleport_SessionComponent.StaticSetHeadPose, Teleport_SessionComponent.StaticSetControllerPose, Teleport_SessionComponent.StaticProcessInput, Teleport_SessionComponent.StaticDisconnect, LogMessageHandler);
         }
 
-        private void Start()
-        {
-            if(casterSettings.isStreamingGeometry)
-            {
-                InitialiseGeometrySource();
-            }
-            else
-            {
-                isDelayingSceneExtraction = true;
-            }
-        }
-
         private void Update()
         {
             Tick(Time.deltaTime);
@@ -155,11 +112,6 @@ namespace teleport
             if(Application.isPlaying)
             {
                 UpdateCasterSettings(casterSettings);
-                
-                if(isDelayingSceneExtraction && casterSettings.isStreamingGeometry)
-                {
-                    InitialiseGeometrySource();
-                }
             }
         }
 
@@ -230,24 +182,6 @@ namespace teleport
 
                     break;
             }
-        }
-
-        private void InitialiseGeometrySource()
-        {
-            //Grab every game object if no tag is defined, otherwise grab all of the game objects with the matching tag.
-            GameObject[] objects = (tagToStream == "") ? FindObjectsOfType<GameObject>() : GameObject.FindGameObjectsWithTag(tagToStream);
-
-            //Extract data from all game objects/actors that respond to the streaming layer mask.
-            foreach(GameObject actor in objects)
-            {
-                if((layersToStream & (1 << actor.layer)) != 0)
-                {
-                    geometrySource.AddNode(actor, true);
-                }
-            }
-            geometrySource.CompressTextures();
-
-            isDelayingSceneExtraction = false;
         }
     }
 }
