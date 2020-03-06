@@ -49,7 +49,7 @@ namespace SCServer
 		[MarshalAs(UnmanagedType.U1)] public bool debugNetworkPackets = false;
 		[MarshalAs(UnmanagedType.U1)] public bool debugControlPackets = false;
 		[MarshalAs(UnmanagedType.U1)] public bool calculateChecksums = false;
-		[MarshalAs(UnmanagedType.U1)] public bool willCacheReset = false;
+		[MarshalAs(UnmanagedType.U1)] private bool willCacheReset = false;
 		public byte estimatedDecodingFrequency = 10; //An estimate of how frequently the client will decode the packets sent to it; used by throttling.
 
 		[Header("Compression")]
