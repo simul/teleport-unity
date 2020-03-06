@@ -378,7 +378,7 @@ namespace teleport
                     MeshRenderer meshRenderer = node.GetComponent<MeshRenderer>();
                     if(meshRenderer && meshRenderer.enabled)
                     {
-                        nodeID = AddMeshNode(meshFilter, nodeID);
+                        nodeID = AddMeshNode(meshFilter, nodeID, forceUpdate);
                     }
                 }
                 else
@@ -406,11 +406,12 @@ namespace teleport
             return meshID;
         }
 
-        public uid AddMaterial(Material material)
+        public uid AddMaterial(Material material, bool forceUpdate = false)
         {
             if(!material) return 0;
 
-            if(!processedResources.TryGetValue(material, out uid materialID))
+            processedResources.TryGetValue(material, out uid materialID);
+            if(forceUpdate || materialID == 0)
             {
                 avs.Material extractedMaterial = new avs.Material();
                 extractedMaterial.nameLength = (ulong)material.name.Length;
@@ -445,7 +446,7 @@ namespace teleport
                     extractedMaterial.emissiveFactor = material.GetColor("_EmissionColor");
                 }
 
-                materialID = GenerateID();
+                if(materialID == 0) materialID = GenerateID();
                 processedResources[material] = materialID;
                 StoreMaterial(materialID, extractedMaterial);
             }
@@ -462,8 +463,7 @@ namespace teleport
 
         public void AddTextureData(Texture texture, avs.Texture textureData)
         {
-            uid textureID;
-            if(!processedResources.TryGetValue(texture, out textureID))
+            if(!processedResources.TryGetValue(texture, out uid textureID))
             {
                 Debug.LogError(texture.name + " had its data extracted, but is not in the dictionary of processed resources!");
                 return;
@@ -508,7 +508,7 @@ namespace teleport
             UnityEditor.EditorUtility.ClearProgressBar();
         }
 
-        private uid AddMeshNode(MeshFilter meshFilter, uid oldID)
+        private uid AddMeshNode(MeshFilter meshFilter, uid oldID, bool forceUpdate = false)
         {
             GameObject node = meshFilter.gameObject;
             avs.Node extractedNode = new avs.Node();
@@ -528,7 +528,7 @@ namespace teleport
             List<uid> materialIDs = new List<uid>();
             foreach(Material material in node.GetComponent<MeshRenderer>().sharedMaterials)
             {
-                uid materialID = AddMaterial(material);
+                uid materialID = AddMaterial(material, forceUpdate);
 
                 if(materialID == 0) Debug.LogWarning("Received 0 for ID of material on game object: " + node.name);
                 else materialIDs.Add(materialID);
