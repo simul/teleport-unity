@@ -372,8 +372,19 @@ namespace teleport
             {
                 MeshFilter meshFilter = node.GetComponent<MeshFilter>();
 
-                if(meshFilter != null) nodeID = AddMeshNode(meshFilter, nodeID);
-                else Debug.LogWarning(node.name + " was marked as streamable, but has no streamable component attached.");
+                if(meshFilter != null)
+                {
+                    //Only stream mesh nodes that have their mesh renderer enabled.
+                    MeshRenderer meshRenderer = node.GetComponent<MeshRenderer>();
+                    if(meshRenderer && meshRenderer.enabled)
+                    {
+                        nodeID = AddMeshNode(meshFilter, nodeID);
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning(node.name + " was marked as streamable, but has no streamable component attached.");
+                }
             }
 
             return nodeID;
