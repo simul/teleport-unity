@@ -8,7 +8,7 @@
 #include "Common.cginc"
 
 // -1 because Unity uses OpenGL convention where bottom left is 0,0
-static const int2 FaceOffsets[] = { {0,1},{1,1},{2,1},{0,0},{1,0},{2,0} };
+static const int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
 
 // The input texture, but as an array of 6 2d faces.
 RWTexture2DArray<float4> RWInputCubeAsArray;

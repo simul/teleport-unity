@@ -10,28 +10,37 @@ using uid = System.UInt64;
 
 public partial class TeleportCameraRenderer
 {
-	TeleportLighting lighting = new TeleportLighting();
-
-	static int[,] faceOffsets = new int[6, 2] { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } };
-
-	static Quaternion frontQuat = Quaternion.identity;
-	static Quaternion backQuat = new Quaternion(0, 1, 0, 180).normalized;
-	static Quaternion rightQuat = new Quaternion(0, 1, 0, 90).normalized;
-	static Quaternion leftQuat = new Quaternion(0, 1, 0, -90).normalized;
-	static Quaternion upQuat = new Quaternion(1, 0, 0, 90).normalized;
-	static Quaternion downQuat = new Quaternion(1, 0, 0, -90).normalized;
-
-	static Quaternion[] faceQuats = new Quaternion[] { frontQuat, backQuat, rightQuat, leftQuat, upQuat, downQuat };
-
-	Dictionary<uid, VideoEncoder> videoEncoders = new Dictionary<uid, VideoEncoder>();
-
-
+	// Start cubemap members
 	struct CamView
 	{
 		public Vector3 forward, up;
 
 		public CamView(Vector3 forward, Vector3 up) => (this.forward, this.up) = (forward, up);
 	}
+
+	static int[,] glFaceOffsets = new int[6, 2] { { 0, 2 }, { 1, 2 }, { 2, 2 }, { 0, 1 }, { 1, 1 }, { 2, 1 } };
+
+	static int[,] nonGLFaceOffsets = new int[6, 2] { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } };
+
+	// For culling only
+	static Quaternion frontQuat = Quaternion.identity;
+	static Quaternion backQuat = Quaternion.Euler(0, 180, 0);
+	static Quaternion rightQuat = Quaternion.Euler(0, 90, 0);
+	static Quaternion leftQuat = Quaternion.Euler(0, -90, 0);
+	static Quaternion upQuat = Quaternion.Euler(90, 0, 0);
+	static Quaternion downQuat = Quaternion.Euler(-90, 0, 0);
+
+	static Quaternion[] faceQuats = new Quaternion[] { frontQuat, backQuat, rightQuat, leftQuat, upQuat, downQuat };
+
+	// To align with Unreal Engine
+	static Quaternion frontFaceRot = Quaternion.Euler(0, 0, 90);
+	static Quaternion backFaceRot = Quaternion.Euler(0, 0, -90);
+	static Quaternion rightFaceRot = Quaternion.Euler(0, 0, 180);
+	static Quaternion leftFaceRot = Quaternion.identity;
+	static Quaternion upFaceRot = Quaternion.Euler(0, 0, -90);
+	static Quaternion downFaceRot = Quaternion.Euler(0, 0, 90); 
+
+	static Quaternion[] faceRotations = new Quaternion[] { frontFaceRot, backFaceRot, rightFaceRot, leftFaceRot, upFaceRot, downFaceRot };
 
 	// Switch back and front because Unity view matrices have -z for forward
 	static CamView frontCamView = new CamView(Vector3.back, Vector3.up);
@@ -41,8 +50,15 @@ public partial class TeleportCameraRenderer
 	static CamView upCamView = new CamView(Vector3.up, Vector3.back);
 	static CamView downCamView = new CamView(Vector3.down, Vector3.forward);
 
-	
 	static CamView[] faceCamViews = new CamView[] { frontCamView, backCamView, rightCamView, leftCamView, upCamView, downCamView };
+
+	// End cubemap members
+
+
+	TeleportLighting lighting = new TeleportLighting();
+
+	
+
 
 	public TeleportCameraRenderer()
 	{
@@ -185,11 +201,7 @@ public partial class TeleportCameraRenderer
 
 		if (streamCubemap)
 		{
-			if (!videoEncoders.ContainsKey(clientID))
-			{
-				videoEncoders.Add(clientID, new VideoEncoder(clientID));
-			}
-			videoEncoders[clientID].CreateEncodeCommands(context, camera);
+			Teleport_SceneCaptureComponent.videoEncoders[clientID].CreateEncodeCommands(context, camera);
 		}
 
 		for (int i = 0; i < 6; ++i)
@@ -199,7 +211,18 @@ public partial class TeleportCameraRenderer
 	}
 
 	void DrawCubemapFace(ScriptableRenderContext context, Camera camera, int face)
-	{ 
+	{
+		int[,] faceOffsets;
+
+		if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore || SystemInfo.graphicsDeviceType == GraphicsDeviceType.Vulkan)
+		{
+			faceOffsets = glFaceOffsets;
+		}
+		else
+		{
+			faceOffsets = nonGLFaceOffsets;
+		}
+
 		int offsetX = faceOffsets[face, 0];
 		int offsetY = faceOffsets[face, 1];
 
@@ -209,7 +232,8 @@ public partial class TeleportCameraRenderer
 
 		CamView view = faceCamViews[face];
 		Vector3 to = camera.transform.position + view.forward * 10;
-		camera.worldToCameraMatrix = Matrix4x4.LookAt(camera.transform.position, to, view.up);
+
+		camera.worldToCameraMatrix = Matrix4x4.Rotate(faceRotations[face]) * Matrix4x4.LookAt(camera.transform.position, to, view.up);
 
 		BeginCamera(context, camera);
 		PrepareForSceneWindow(context, camera);

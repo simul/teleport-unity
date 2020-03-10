@@ -27,14 +27,10 @@ namespace teleport
 
         ComputeShader shader;
         int encodeCamKernel;
-        int decomposeKernel;
-        int decomposeDepthKernel;
 
         CommandBuffer commandBuffer = null;
 
         bool initalized = false;
-
-        //RenderTexture sceneCaptureTexture;
 
         [StructLayout(LayoutKind.Sequential)]
         struct EncodeVideoParamsWrapper
@@ -55,27 +51,6 @@ namespace teleport
             this.clientID = clientID;
 
             monitor = CasterMonitor.GetCasterMonitor();
-
-            //int size = (int)monitor.casterSettings.captureCubeTextureSize;
-
-            //RenderTextureFormat format;
-            //if (monitor.casterSettings.use10BitEncoding)
-            //{
-            //    format = RenderTextureFormat.ARGB64;
-            //}
-            //else
-            //{
-            //    format = RenderTextureFormat.ARGB32;
-            //}
-
-            //sceneCaptureTexture = new RenderTexture(size * 3, size * 3, 0, format, RenderTextureReadWrite.Default);
-            //sceneCaptureTexture.name = "Scene Capture Texture";
-            //sceneCaptureTexture.hideFlags = HideFlags.DontSave;
-            //sceneCaptureTexture.dimension = TextureDimension.Tex2D;
-            //sceneCaptureTexture.useMipMap = false;
-            //sceneCaptureTexture.autoGenerateMips = false;
-            //sceneCaptureTexture.enableRandomWrite = true;
-            //sceneCaptureTexture.Create();
 
             InitShaders();     
         }
@@ -155,31 +130,12 @@ namespace teleport
                 Debug.Log("Shader not found at path " + shaderPath + ".compute");
             }
             encodeCamKernel = shader.FindKernel("EncodeCameraPositionCS");
-            //decomposeKernel = shader.FindKernel("DecomposeCS");
-            //decomposeDepthKernel = shader.FindKernel("DecomposeDepthCS");
         }
 
         private void AddComputeShaderCommands(Camera camera)
         {
-            Int32 numThreadGroupsX = (int)monitor.casterSettings.captureCubeTextureSize / THREADGROUP_SIZE;
-            Int32 numThreadGroupsY = (int)monitor.casterSettings.captureCubeTextureSize / THREADGROUP_SIZE;
-            Int32 numThreadGroupsZ = 6;
-
             int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
             int size = faceSize * 3;
-
-            // Aidan: The offsets below differ from Unreal here because Unity uses OpenGL convention where 0,0 is bottom left instead of top left like D3D.
-            // Colour
-            // shader.SetTexture(decomposeKernel, "RWInputCubeAsArray", cubemapTexArray);
-            // shader.SetTexture(decomposeKernel, "RWOutputColorTexture", encoderTexture);
-            //shader.SetInts("Offset", new Int32[2] { 0, faceSize });
-            //shader.Dispatch(decomposeKernel, numThreadGroupsX, numThreadGroupsY, numThreadGroupsZ);
-
-            // Depth
-            //shader.SetTexture(decomposeDepthKernel, "RWInputCubeAsArray", cubemapTexArray);
-            //shader.SetTexture(decomposeDepthKernel, "RWOutputColorTexture", outputTexture);
-            //shader.SetInt("Offset",  shader.SetInts("Offset", new Int32[2] { 0, 0 });
-            //shader.Dispatch(decomposeDepthKernel, numThreadGroupsX, numThreadGroupsY, numThreadGroupsZ);
 
             // Camera Position 
             var camTransform = camera.transform;
