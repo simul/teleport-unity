@@ -88,7 +88,7 @@ namespace teleport
                 proj.m11 = -proj.m11; 
                 proj.m13 = -proj.m13;
                 cam.projectionMatrix = proj;
-                // Opposite winding order now needfs to be culled
+                // Cull opposite winding order or vertices on camera would be culled after inverting
                 GL.invertCulling = true;
             }
           

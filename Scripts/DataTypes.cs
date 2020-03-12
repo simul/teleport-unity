@@ -36,6 +36,14 @@ namespace avs
 	    RC_VBR_HQ = 5 /*< VBR, high quality (slower) */
     };
 
+    public enum VideoCodec
+    {
+        Any = 0,
+		Invalid = 0,
+		H264, /*!< H264 */
+		HEVC /*!< HEVC (H265) */
+	};
+
     //We have to declare our own vector types, as .NET and Unity have different layouts.
     public struct Vector2
     {

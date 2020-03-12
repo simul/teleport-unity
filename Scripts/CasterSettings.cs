@@ -35,7 +35,8 @@ namespace SCServer
 		public Int32 cullQuadIndex = -1; // This culls a quad at the index. For debugging only
 		public Int32 targetFPS = 60;
 		public Int32 idrInterval = 0;
-		public avs.RateControlMode rateControlMode; 
+		public avs.VideoCodec videoCodec = avs.VideoCodec.HEVC;
+		public avs.RateControlMode rateControlMode = avs.RateControlMode.RC_CBR_LOWDELAY_HQ; 
 		public Int32 averageBitrate = 40000000;
 		public Int32 maxBitrate = 80000000;
 		[MarshalAs(UnmanagedType.U1)] public bool useAutoBitRate = false;
