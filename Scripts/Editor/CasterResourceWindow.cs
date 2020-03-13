@@ -90,6 +90,8 @@ namespace teleport
 
             EditorGUILayout.EndHorizontal();
 
+            EditorGUILayout.LabelField("Debug Controls");
+
             EditorGUILayout.BeginHorizontal();
 
             if(GUILayout.Button("Clear Cached Data"))
@@ -118,6 +120,11 @@ namespace teleport
             }
 
             EditorGUILayout.EndHorizontal();
+
+            if(GUILayout.Button("Reload From Disk"))
+            {
+                geometrySource.LoadFromDisk();
+            }
         }
 
         private void FindStreamedObjects()
@@ -136,8 +143,9 @@ namespace teleport
             {
                 geometrySource.AddNode(gameObject, true);
             }
-
             ExtractTextures();
+
+            geometrySource.SaveToDisk();
         }
 
         private void ExtractTextures()

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using UnityEditor;
 using UnityEngine;
 
 using uid = System.UInt64;
@@ -198,9 +199,8 @@ namespace avs
 
     public struct Texture
     {
-        public UInt64 nameLength;
-        [MarshalAs(UnmanagedType.LPStr)]
-        public string name;
+        [MarshalAs(UnmanagedType.BStr)]
+        public IntPtr name;
 
         public uint width;
         public uint height;
@@ -221,9 +221,8 @@ namespace avs
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     public class Material
     {
-        public UInt64 nameLength;
-        [MarshalAs(UnmanagedType.LPStr)]
-        public string name;
+        [MarshalAs(UnmanagedType.BStr)]
+        public IntPtr name;
 
         public PBRMetallicRoughness pbrMetallicRoughness = new PBRMetallicRoughness();
         public TextureAccessor normalTexture = new TextureAccessor();
@@ -250,22 +249,52 @@ namespace teleport
 
     public class GeometrySource : ScriptableObject, ISerializationCallbackReceiver
     {
+    	//Meta data on a resource loaded from disk.
+        private struct LoadedResource
+        {
+            public uid oldID; //ID of the resource as it was loaded from disk; needs to be replaced.
+            public IntPtr guid; //ID string of the asset that this resource relates to.
+            public Int64 lastModified;
+        }
+
+		//Resources we have confirmed to still exist, and have assigned a new ID to.
+        private struct ReaffirmedResource
+        {
+            public uid oldID;
+            public uid newID;
+        }
+
         #region DLLImports
         [DllImport("SimulCasterServer")]
+        private static extern void DeleteUnmanagedArray(in IntPtr unmanagedArray);
+
+        [DllImport("SimulCasterServer")]
         private static extern uid GenerateID();
+
+        [DllImport("SimulCasterServer")]
+        private static extern void SaveGeometryStore();
+        [DllImport("SimulCasterServer")]
+        private static extern void LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 materialAmount, out IntPtr loadedMaterials);
+        //Tell the geometry store which resources still exist, and their new IDs.
+        [DllImport("SimulCasterServer")]
+        private static extern void ReaffirmResources(int meshAmount, ReaffirmedResource[] reaffirmedMeshes, int textureAmount, ReaffirmedResource[] reaffirmedTextures, int materialAmount, ReaffirmedResource[] reaffirmedMaterials);
         [DllImport("SimulCasterServer")]
         private static extern void ClearGeometryStore();
 
         [DllImport("SimulCasterServer")]
         private static extern void StoreNode(uid id, avs.Node node);
         [DllImport("SimulCasterServer")]
-        private static extern void StoreMesh(uid id, avs.AxesStandard extractToStandard, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(MeshMarshaler))]avs.Mesh mesh);
+        private static extern void StoreMesh(   uid id,
+                                                [MarshalAs(UnmanagedType.BStr)] string guid,
+                                                Int64 lastModified,
+                                                [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(MeshMarshaler))] avs.Mesh mesh,
+                                                avs.AxesStandard extractToStandard);
         [DllImport("SimulCasterServer")]
-        private static extern void StoreMaterial(uid id, [Out]avs.Material material);
+        private static extern void StoreMaterial(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Material material);
         [DllImport("SimulCasterServer")]
-        private static extern void StoreTexture(uid id, avs.Texture texture, Int64 lastModified, string basisFileLocation);
+        private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture texture, string basisFileLocation);
         [DllImport("SimulCasterServer")]
-        private static extern void StoreShadowMap(uid id, avs.Texture shadowMap);
+        private static extern void StoreShadowMap(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture shadowMap);
 
         [DllImport("SimulCasterServer")]
         private static extern void RemoveNode(uid id);
@@ -339,6 +368,8 @@ namespace teleport
             //Clear resources on boot.
             processedResources.Clear();
 
+            LoadFromDisk();
+
             isAwake = true;
         }
 
@@ -353,6 +384,30 @@ namespace teleport
                 RemoveNode(pair.Value);
                 processedResources.Remove(pair.Key);
             }
+        }
+
+        public void SaveToDisk()
+        {
+            SaveGeometryStore();
+        }
+
+        public void LoadFromDisk()
+        {
+            //Load data from files.
+            LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 materialAmount, out IntPtr loadedMaterials);
+
+            //Confirm resources loaded from disk still exists, and assign new IDs.
+            List<ReaffirmedResource> reaffirmedMeshes = ReaffirmLoadedResources<Mesh>((int)meshAmount, loadedMeshes);
+            List<ReaffirmedResource> reaffirmedTextures = ReaffirmLoadedResources<Texture>((int)textureAmount, loadedTextures);
+            List<ReaffirmedResource> reaffirmedMaterials = ReaffirmLoadedResources<Material>((int)materialAmount, loadedMaterials);
+
+            //Inform geometry store about resources that still exist, and pass new IDs.
+            ReaffirmResources(reaffirmedMeshes.Count, reaffirmedMeshes.ToArray(), reaffirmedTextures.Count, reaffirmedTextures.ToArray(), reaffirmedMaterials.Count, reaffirmedMaterials.ToArray());
+
+            //Delete unmanaged memory.
+            DeleteUnmanagedArray(loadedMeshes);
+            DeleteUnmanagedArray(loadedTextures);
+            DeleteUnmanagedArray(loadedMaterials);
         }
 
         public void ClearData()
@@ -414,8 +469,7 @@ namespace teleport
             if(forceUpdate || materialID == 0)
             {
                 avs.Material extractedMaterial = new avs.Material();
-                extractedMaterial.nameLength = (ulong)material.name.Length;
-                extractedMaterial.name = material.name;
+                extractedMaterial.name = Marshal.StringToBSTR(material.name);
 
                 extractedMaterial.pbrMetallicRoughness.baseColorTexture.index = AddTexture(material.mainTexture);
                 extractedMaterial.pbrMetallicRoughness.baseColorTexture.tiling = material.mainTextureScale;
@@ -446,9 +500,15 @@ namespace teleport
                     extractedMaterial.emissiveFactor = material.GetColor("_EmissionColor");
                 }
 
+                extractedMaterial.extensionAmount = 0;
+                extractedMaterial.extensionIDs = null;
+                extractedMaterial.extensions = null;
+
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long _);
+
                 if(materialID == 0) materialID = GenerateID();
                 processedResources[material] = materialID;
-                StoreMaterial(materialID, extractedMaterial);
+                StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)), extractedMaterial);
             }
 
             return materialID;
@@ -469,7 +529,10 @@ namespace teleport
                 return;
             }
 
-            string textureAssetPath = UnityEditor.AssetDatabase.GetAssetPath(texture);
+            AssetDatabase.TryGetGUIDAndLocalFileIdentifier(texture, out string guid, out long _);
+
+            string textureAssetPath = AssetDatabase.GetAssetPath(texture);
+            long lastModified = GetAssetWriteTimeUTC(textureAssetPath);
 
             string basisFileLocation = "";
             //Basis Universal compression won't be used if the file location is left empty.
@@ -487,10 +550,8 @@ namespace teleport
                 basisFileLocation = basisFileLocation.Remove(basisFileLocation.LastIndexOf('.')); //Remove file extension.
                 basisFileLocation = folderPath + basisFileLocation + ".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
             }
-
-            long lastModified = File.GetLastWriteTime(textureAssetPath).ToFileTime();
-
-            StoreTexture(textureID, textureData, lastModified, basisFileLocation);
+            
+            StoreTexture(textureID, guid, lastModified, textureData, basisFileLocation);
         }
 
         public void CompressTextures()
@@ -751,10 +812,13 @@ namespace teleport
                 );
             }
 
+            AssetDatabase.TryGetGUIDAndLocalFileIdentifier(mesh, out string guid, out long _);
+
             StoreMesh
             (
                 meshID,
-                extractToBasis,
+                guid,
+                GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)),
                 new avs.Mesh
                 {
                     primitiveArrayAmount = primitives.Length,
@@ -771,7 +835,8 @@ namespace teleport
                     bufferAmount = buffers.Count,
                     bufferIDs = buffers.Keys.ToArray(),
                     buffers = buffers.Values.ToArray()
-                }
+                },
+                extractToBasis
             );
         }
 
@@ -786,7 +851,7 @@ namespace teleport
             newBuffer.data = new byte[newBuffer.byteLength];
 
             //Get byte data from each int, and copy into buffer.
-            //We are changing the indexes into counter-clockwise winding.
+            //We are changing the indexes into counter-clockwise winding, as it is what the Simul rendering SDK uses.
             for(int i = 0; i < (data.Length / 2); i++)
             {
                 BitConverter.GetBytes((ushort)data[i]).CopyTo(newBuffer.data, (data.Length - 1 - i) * stride);
@@ -1009,8 +1074,7 @@ namespace teleport
 
                 avs.Texture extractedTexture = new avs.Texture()
                 {
-                    nameLength = (ulong)texture.name.Length,
-                    name = texture.name,
+                    name = Marshal.StringToBSTR(texture.name),
 
                     width = (uint)texture.width,
                     height = (uint)texture.height,
@@ -1050,6 +1114,56 @@ namespace teleport
             }
 
             return textureID;
+        }
+
+        private long GetAssetWriteTimeUTC(string filePath)
+        {
+            return File.GetLastWriteTimeUtc(filePath).ToFileTimeUtc();
+        }
+
+        //Confirms resources loaded from disk of a certain Unity asset type still exist, and creates a pairing of their old IDs and their newly assigned IDs.
+        //  resourceAmount : Amount of resources in loadedResources.
+        //  loadedResources : LoadedResource array that was created in unmanaged memory.
+        //Returns list of resources that have been confirmed to exist, with their new ID assigned.
+        private List<ReaffirmedResource> ReaffirmLoadedResources<UnityAsset>(int resourceAmount, in IntPtr loadedResources) where UnityAsset : UnityEngine.Object
+        {
+            List<ReaffirmedResource> reaffirmedResources = new List<ReaffirmedResource>();
+
+            int resourceSize = Marshal.SizeOf<LoadedResource>();
+            //Go through each resource, confirm it still exists, and create a new reaffirmed resource with their new ID if it does.
+            for(int i = 0; i < resourceAmount; i++)
+            {
+                //Create new pointer to the memory location of the LoadedResource for this index.
+                IntPtr resourcePtr = new IntPtr(loadedResources.ToInt64() + i * resourceSize);
+
+                //Marshal data to usuable types.
+                LoadedResource metaResource = Marshal.PtrToStructure<LoadedResource>(resourcePtr);
+                string guid = Marshal.PtrToStringBSTR(metaResource.guid);
+
+                //Attempt to find asset.
+                string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                UnityAsset asset = AssetDatabase.LoadAssetAtPath<UnityAsset>(assetPath);
+
+                if(asset)
+                {
+                    long lastModified = GetAssetWriteTimeUTC(assetPath);
+
+                    //Use the asset as is, if it has not been modified since it was saved.
+                    if(metaResource.lastModified >= lastModified)
+                    {
+                        uid newID = GenerateID();
+
+                        reaffirmedResources.Add(new ReaffirmedResource { oldID = metaResource.oldID, newID = newID });
+                        processedResources[asset] = newID;
+                    }
+                }
+                else
+                {
+                    Debug.Log("Disposed of missing " + nameof(UnityAsset) + " asset with GUID:" + metaResource.guid);
+                }
+            }
+
+            return reaffirmedResources;
         }
     }
 }
