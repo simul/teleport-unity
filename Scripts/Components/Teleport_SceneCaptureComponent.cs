@@ -35,7 +35,7 @@ namespace teleport
             DestroyImmediate(sceneCaptureTexture);
         }
 
-        void LateUpdate()
+        void Update()
         {
             // for now just get latest client
             uid id = Teleport_SessionComponent.GetClientID();
@@ -88,13 +88,11 @@ namespace teleport
                 proj.m11 = -proj.m11; 
                 proj.m13 = -proj.m13;
                 cam.projectionMatrix = proj;
-                // Cull opposite winding order or vertices on camera would be culled after inverting
-                GL.invertCulling = true;
             }
           
             cam.enabled = false;
 
-            int size = (int)monitor.casterSettings.captureCubeTextureSize;
+            int size = (int)monitor.casterSettings.captureCubeTextureSize * 3;
 
             RenderTextureFormat format;
             if (monitor.casterSettings.use10BitEncoding)
@@ -106,7 +104,7 @@ namespace teleport
                 format = RenderTextureFormat.ARGB32;
             }
 
-            sceneCaptureTexture = new RenderTexture(size * 3, size * 3, 0, format, RenderTextureReadWrite.Default);
+            sceneCaptureTexture = new RenderTexture(size, size, 24, format, RenderTextureReadWrite.Default);
             sceneCaptureTexture.name = "Scene Capture Texture";
             sceneCaptureTexture.hideFlags = HideFlags.DontSave;
             sceneCaptureTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex2D;
@@ -121,11 +119,14 @@ namespace teleport
         void RenderToTexture()
         {
             cam.transform.position = transform.position;
-            cam.transform.forward = transform.forward;
+            cam.transform.rotation = transform.rotation;
            
             // Update name in case client ID changed
             cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
+            // Cull opposite winding order or vertices on camera would be culled after inverting
+            GL.invertCulling = true;
             cam.Render();
+            GL.invertCulling = false;
         }
     }
 }

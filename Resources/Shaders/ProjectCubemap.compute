@@ -2,6 +2,7 @@
 // (c) 2020 Simul.co
 
 #pragma kernel EncodeCameraPositionCS
+#pragma kernel QuantizationCS
 #pragma kernel DecomposeCS
 #pragma kernel DecomposeDepthCS
 
@@ -38,9 +39,28 @@ void EncodeCameraPositionCS(uint2 ThreadID : SV_DispatchThreadID)
 	float4 Y = masked_bits.yyyy;
 	float4 Z = masked_bits.zzzz;
 	RWOutputColorTexture[Pos] = X;
-	// minus here instead of plus because Unity uses OpenGL convention where bottom left is 0,0
 	RWOutputColorTexture[Pos + int2(0, 8)] = Y; 
 	RWOutputColorTexture[Pos + int2(0, 16)] = Z;
+}
+
+
+[numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
+void QuantizationCS(uint2 ThreadID : SV_DispatchThreadID)
+{
+	uint OutputW, OutputH;
+	RWOutputColorTexture.GetDimensions(OutputW, OutputH);
+
+	if (ThreadID.x >= OutputW || ThreadID.y >= OutputH)
+		return;
+
+	int2 pos = int2(ThreadID);
+
+	float4 SceneColor = RWOutputColorTexture[pos];
+	SceneColor.x = sqrt(SceneColor.x);
+	SceneColor.y = sqrt(SceneColor.y);
+	SceneColor.z = sqrt(SceneColor.z);
+
+	RWOutputColorTexture[pos] = SceneColor;
 }
 
 [numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]

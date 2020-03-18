@@ -199,13 +199,12 @@ public partial class TeleportCameraRenderer
 			return;
 		}
 
-		if (streamCubemap)
-		{
-			Teleport_SceneCaptureComponent.videoEncoders[clientID].CreateEncodeCommands(context, camera);
-		}
-
 		for (int i = 0; i < 6; ++i)
 		{
+			if (streamCubemap && i == 5)
+			{
+				Teleport_SceneCaptureComponent.videoEncoders[clientID].CreateEncodeCommands(camera);
+			}
 			DrawCubemapFace(context, camera, i);
 		}
 	}

@@ -27,6 +27,7 @@ namespace teleport
 
         ComputeShader shader;
         int encodeCamKernel;
+        int quantizationKernel;
 
         CommandBuffer commandBuffer = null;
 
@@ -55,7 +56,7 @@ namespace teleport
             InitShaders();     
         }
 
-        public void CreateEncodeCommands(ScriptableRenderContext context, Camera camera)
+        public void CreateEncodeCommands(Camera camera)
         {
             if (commandBuffer == null)
             {
@@ -70,7 +71,7 @@ namespace teleport
 
             if (!initalized)
             {
-                InitEncoder(context, camera);
+                InitEncoder(camera);
                 initalized = true;
             }
 
@@ -87,7 +88,7 @@ namespace teleport
             commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 1, paramsWrapperPtr);
         }
 
-        private void InitEncoder(ScriptableRenderContext context, Camera camera)
+        private void InitEncoder(Camera camera)
         {
             var paramsWrapper = new EncodeVideoParamsWrapper();
             paramsWrapper.clientID = clientID;
@@ -130,6 +131,7 @@ namespace teleport
                 Debug.Log("Shader not found at path " + shaderPath + ".compute");
             }
             encodeCamKernel = shader.FindKernel("EncodeCameraPositionCS");
+            quantizationKernel = shader.FindKernel("QuantizationCS");
         }
 
         private void AddComputeShaderCommands(Camera camera)
@@ -141,11 +143,16 @@ namespace teleport
             var camTransform = camera.transform;
             float[] camPos = new float[3] { camTransform.position.x, camTransform.position.z, camTransform.position.y };
 
-            // flip y because Unity uses OpenGL convention where 0,0 is bottom left instead of top left like D3D.
             shader.SetTexture(encodeCamKernel, "RWOutputColorTexture", camera.targetTexture);
             shader.SetInts("Offset", new Int32[2] { size - (32 * 4), size - (3 * 8)});
             shader.SetFloats("CubemapCameraPositionMetres", camPos);
             commandBuffer.DispatchCompute(shader, encodeCamKernel, 4, 1, 1);
+
+            // Colour Quantization
+            int numThreadGroupsX = size / THREADGROUP_SIZE;
+            int numThreadGroupsY = (faceSize * 2) / THREADGROUP_SIZE;
+            shader.SetTexture(quantizationKernel, "RWOutputColorTexture", camera.targetTexture);
+            commandBuffer.DispatchCompute(shader, quantizationKernel, numThreadGroupsX, numThreadGroupsY, 1);
         }
 
         public void Shutdown()
