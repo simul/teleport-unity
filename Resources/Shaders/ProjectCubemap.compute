@@ -3,8 +3,7 @@
 
 #pragma kernel EncodeCameraPositionCS
 #pragma kernel QuantizationCS
-#pragma kernel DecomposeCS
-#pragma kernel DecomposeDepthCS
+#pragma kernel EncodeDepthCS
 
 #include "Common.cginc"
 
@@ -14,8 +13,10 @@ static const int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
 // The input texture, but as an array of 6 2d faces.
 RWTexture2DArray<float4> RWInputCubeAsArray;
 RWTexture2D<float4> RWOutputColorTexture;
+Texture2D<float4> DepthTexture;
 
-int2 Offset;
+int2 CamPosOffset;
+int2 DepthOffset;
 float3 CubemapCameraPositionMetres;
 
 // Here. we will encode the camera position CubemapCameraPositionMetres in blocks of monochrome colour.
@@ -32,7 +33,7 @@ void EncodeCameraPositionCS(uint2 ThreadID : SV_DispatchThreadID)
 
 	// We will use the thread x as the bit index.
 	uint3 masked_bits = (raw_uint >> (ThreadID.x / 4))& uint(1);		// 1 or 0, 1 or 0, 1 or 0
-	int2 Pos = Offset;
+	int2 Pos = CamPosOffset;
 	Pos.x += int(ThreadID.x);
 	Pos.y += int(ThreadID.y);
 	float4 X = masked_bits.xxxx;
@@ -42,7 +43,6 @@ void EncodeCameraPositionCS(uint2 ThreadID : SV_DispatchThreadID)
 	RWOutputColorTexture[Pos + int2(0, 8)] = Y; 
 	RWOutputColorTexture[Pos + int2(0, 16)] = Z;
 }
-
 
 [numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
 void QuantizationCS(uint2 ThreadID : SV_DispatchThreadID)
@@ -63,26 +63,6 @@ void QuantizationCS(uint2 ThreadID : SV_DispatchThreadID)
 	RWOutputColorTexture[pos] = SceneColor;
 }
 
-[numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
-void DecomposeCS(uint3 ThreadID : SV_DispatchThreadID)
-{
-	uint InputW, InputH, InputD;
-	RWInputCubeAsArray.GetDimensions(InputW, InputH, InputD);
-	uint OutputW, OutputH;
-	RWOutputColorTexture.GetDimensions(OutputW, OutputH);
-	int3 pos = int3(ThreadID);
-
-	if (ThreadID.x >= OutputW || ThreadID.y >= OutputH)
-		return;
-
-	float4 SceneColor = RWInputCubeAsArray[pos];
-	SceneColor.x = sqrt(SceneColor.x);
-	SceneColor.y = sqrt(SceneColor.y);
-	SceneColor.z = sqrt(SceneColor.z);
-	
-	RWOutputColorTexture[int2(ThreadID.x, ThreadID.y) + Offset + InputW * FaceOffsets[pos.z]] = SceneColor;
-}
-
 float PosToDistanceMultiplier(int2 pos, int w)
 {
 	float h = (w + 1.0) / 2.0;
@@ -93,30 +73,31 @@ float PosToDistanceMultiplier(int2 pos, int w)
 float GetDepth(int3 pos, int w)
 {
 	float m = PosToDistanceMultiplier(pos.xy, w);
-	float d = RWInputCubeAsArray[pos].a;
+	int2 inPos = pos.xy + w * FaceOffsets[pos.z];
+	float d = Linear01Depth(DepthTexture[inPos].r);
 	d *= m;
 	return d;
 }
 
 [numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
-void DecomposeDepthCS(uint3 ThreadID : SV_DispatchThreadID)
+void EncodeDepthCS(uint3 ThreadID : SV_DispatchThreadID)
 {
-	uint InputW, InputH, InputD;
-	RWInputCubeAsArray.GetDimensions(InputW, InputH, InputD);
 	uint OutputW, OutputH;
 	RWOutputColorTexture.GetDimensions(OutputW, OutputH);
+
+	if (ThreadID.x >= OutputW || ThreadID.y >= OutputH)
+		return;
 
 	int3 pos = int3(ThreadID);
 	pos.xy *= 2;
 
-	if (ThreadID.x >= OutputW || ThreadID.y >= OutputH)
-		return;
+	uint InputW = OutputW / 3;
 
 	float d00 = GetDepth(pos, InputW);
 	float d01 = GetDepth(pos + int3(1, 0, 0), InputW);
 	float d10 = GetDepth(pos + int3(0, 1, 0), InputW); 
 	float4 DepthValue = float4(d00, d01, d10, 1.0) / 100.0 / 20.0;
 
-	RWOutputColorTexture[int2(ThreadID.x, ThreadID.y) + Offset + InputW * FaceOffsets[pos.z] / 2] = DepthValue;
+	RWOutputColorTexture[int2(ThreadID.x, ThreadID.y) + DepthOffset + InputW * FaceOffsets[pos.z] / 2] = DepthValue;
 }
 

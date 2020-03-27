@@ -1,5 +1,7 @@
 ﻿// (c) 2018 Simul.co
 
+#include "UnityCG.cginc"
+
 #define mat4 float4x4
 #define mat3 float3x3
 #define vec2 float2

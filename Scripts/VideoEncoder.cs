@@ -28,6 +28,7 @@ namespace teleport
         ComputeShader shader;
         int encodeCamKernel;
         int quantizationKernel;
+        int encodeDepthKernel;
 
         CommandBuffer commandBuffer = null;
 
@@ -57,15 +58,12 @@ namespace teleport
         }
 
         public void CreateEncodeCommands(Camera camera)
-        {
-            if (commandBuffer == null)
-            {
-                commandBuffer = new CommandBuffer();
-                commandBuffer.name = "Video Encoder";
-                camera.AddCommandBuffer(CameraEvent.AfterEverything, commandBuffer);
-            }
+        {     
+            ReleaseCommandbuffer(camera);
 
-            commandBuffer.Clear();
+            commandBuffer = new CommandBuffer();
+            commandBuffer.name = "Video Encoder";
+            camera.AddCommandBuffer(CameraEvent.AfterEverything, commandBuffer);
 
             AddComputeShaderCommands(camera);
 
@@ -88,7 +86,16 @@ namespace teleport
             commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 1, paramsWrapperPtr);
         }
 
-        private void InitEncoder(Camera camera)
+        public void ReleaseCommandbuffer(Camera camera)
+        {
+            if (commandBuffer != null)
+            {
+                camera.RemoveCommandBuffers(CameraEvent.AfterEverything);
+                commandBuffer.Release();
+            }
+        }
+
+        void InitEncoder(Camera camera)
         {
             var paramsWrapper = new EncodeVideoParamsWrapper();
             paramsWrapper.clientID = clientID;
@@ -132,27 +139,52 @@ namespace teleport
             }
             encodeCamKernel = shader.FindKernel("EncodeCameraPositionCS");
             quantizationKernel = shader.FindKernel("QuantizationCS");
+            encodeDepthKernel = shader.FindKernel("EncodeDepthCS");
         }
 
         private void AddComputeShaderCommands(Camera camera)
         {
+            EncodeCameraPosition(camera);
+            QuantizeColor(camera);
+            EncodeDepth(camera);
+        }
+
+        void EncodeCameraPosition(Camera camera)
+        {
             int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
             int size = faceSize * 3;
-
-            // Camera Position 
+          
             var camTransform = camera.transform;
             float[] camPos = new float[3] { camTransform.position.x, camTransform.position.z, camTransform.position.y };
 
             shader.SetTexture(encodeCamKernel, "RWOutputColorTexture", camera.targetTexture);
-            shader.SetInts("Offset", new Int32[2] { size - (32 * 4), size - (3 * 8)});
+            shader.SetInts("CamPosOffset", new Int32[2] { size - (32 * 4), size - (3 * 8) });
             shader.SetFloats("CubemapCameraPositionMetres", camPos);
             commandBuffer.DispatchCompute(shader, encodeCamKernel, 4, 1, 1);
+            
+        }
 
-            // Colour Quantization
+        void QuantizeColor(Camera camera)
+        {
+            int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
+            int size = faceSize * 3;
+
             int numThreadGroupsX = size / THREADGROUP_SIZE;
             int numThreadGroupsY = (faceSize * 2) / THREADGROUP_SIZE;
             shader.SetTexture(quantizationKernel, "RWOutputColorTexture", camera.targetTexture);
             commandBuffer.DispatchCompute(shader, quantizationKernel, numThreadGroupsX, numThreadGroupsY, 1);
+        }
+
+        void EncodeDepth(Camera camera)
+        {
+            int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
+
+            int numThreadGroupsX = (faceSize / 2) / THREADGROUP_SIZE;
+            int numThreadGroupsY = (faceSize / 2) / THREADGROUP_SIZE;
+            shader.SetTexture(encodeDepthKernel, "RWOutputColorTexture", camera.targetTexture);
+            shader.SetTextureFromGlobal(encodeDepthKernel, "DepthTexture", "_LastCameraDepthTexture");
+            shader.SetInts("DepthOffset", new Int32[2] { 0, faceSize * 2 });
+            commandBuffer.DispatchCompute(shader, encodeDepthKernel, numThreadGroupsX, numThreadGroupsY, 6);
         }
 
         public void Shutdown()

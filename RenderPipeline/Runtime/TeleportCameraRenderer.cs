@@ -18,6 +18,7 @@ public partial class TeleportCameraRenderer
 		public CamView(Vector3 forward, Vector3 up) => (this.forward, this.up) = (forward, up);
 	}
 
+	static int NumFaces = 6;
 	static int[,] glFaceOffsets = new int[6, 2] { { 0, 2 }, { 1, 2 }, { 2, 2 }, { 0, 1 }, { 1, 1 }, { 2, 1 } };
 
 	static int[,] nonGLFaceOffsets = new int[6, 2] { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } };
@@ -199,9 +200,9 @@ public partial class TeleportCameraRenderer
 			return;
 		}
 
-		for (int i = 0; i < 6; ++i)
+		for (int i = 0; i < NumFaces; ++i)
 		{
-			if (streamCubemap && i == 5)
+			if (streamCubemap && i == NumFaces - 1)
 			{
 				Teleport_SceneCaptureComponent.videoEncoders[clientID].CreateEncodeCommands(camera);
 			}

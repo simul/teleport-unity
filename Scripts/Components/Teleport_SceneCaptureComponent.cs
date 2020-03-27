@@ -17,6 +17,7 @@ namespace teleport
         public RenderTexture sceneCaptureTexture;
         Camera cam;
         CasterMonitor monitor; //Cached reference to the caster monitor.   
+        bool invertCulling = false;
 
         void Start()
         {
@@ -35,7 +36,7 @@ namespace teleport
             DestroyImmediate(sceneCaptureTexture);
         }
 
-        void Update()
+        void LateUpdate()
         {
             // for now just get latest client
             uid id = Teleport_SessionComponent.GetClientID();
@@ -44,11 +45,13 @@ namespace teleport
             {
                 if (videoEncoders.ContainsKey(clientID))
                 {
+                    videoEncoders[clientID].ReleaseCommandbuffer(cam);
                     videoEncoders.Remove(clientID);
                 }
 
                 if (videoEncoders.ContainsKey(id))
                 {
+                    videoEncoders[id].ReleaseCommandbuffer(cam);
                     videoEncoders.Remove(id);
                 }
 
@@ -80,12 +83,13 @@ namespace teleport
             cam.farClipPlane = 1000;
             cam.fieldOfView = 90;
             cam.aspect = 1;
+            cam.depthTextureMode |= DepthTextureMode.Depth;
 
-            // Invert the vertical field of view for non gl/vulkan apis
             if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.OpenGLCore && SystemInfo.graphicsDeviceType != GraphicsDeviceType.Vulkan)
             {
+                invertCulling = true;
                 Matrix4x4 proj = cam.projectionMatrix;
-                proj.m11 = -proj.m11; 
+                proj.m11 = -proj.m11;
                 proj.m13 = -proj.m13;
                 cam.projectionMatrix = proj;
             }
@@ -123,9 +127,15 @@ namespace teleport
            
             // Update name in case client ID changed
             cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
+
             // Cull opposite winding order or vertices on camera would be culled after inverting
-            GL.invertCulling = true;
+            if (invertCulling)
+            {
+                GL.invertCulling = true;
+            }
+           
             cam.Render();
+            
             GL.invertCulling = false;
         }
     }
