@@ -78,7 +78,7 @@ namespace teleport
             GameObject obj = new GameObject(TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID, typeof(Camera));
             obj.hideFlags = HideFlags.DontSave;
             obj.transform.position = transform.position;
-            obj.transform.rotation = Quaternion.identity;
+            obj.transform.rotation = transform.rotation;
             cam = obj.GetComponent<Camera>();
             cam.farClipPlane = 1000;
             cam.fieldOfView = 90;
@@ -124,7 +124,7 @@ namespace teleport
         {
             cam.transform.position = transform.position;
             cam.transform.rotation = transform.rotation;
-           
+
             // Update name in case client ID changed
             cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
 
