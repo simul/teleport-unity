@@ -57,13 +57,11 @@ namespace teleport
             InitShaders();     
         }
 
-        public void CreateEncodeCommands(Camera camera)
+        public void CreateEncodeCommands(ScriptableRenderContext context, Camera camera)
         {     
-            ReleaseCommandbuffer(camera);
-
             commandBuffer = new CommandBuffer();
             commandBuffer.name = "Video Encoder";
-            camera.AddCommandBuffer(CameraEvent.AfterEverything, commandBuffer);
+            //camera.AddCommandBuffer(CameraEvent.AfterEverything, commandBuffer);
 
             AddComputeShaderCommands(camera);
 
@@ -84,13 +82,17 @@ namespace teleport
             Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);
 
             commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 1, paramsWrapperPtr);
+
+            context.ExecuteCommandBuffer(commandBuffer);
+            ReleaseCommandbuffer(camera);
+            context.Submit();
         }
 
         public void ReleaseCommandbuffer(Camera camera)
         {
             if (commandBuffer != null)
             {
-                camera.RemoveCommandBuffers(CameraEvent.AfterEverything);
+                //camera.RemoveCommandBuffers(CameraEvent.AfterEverything);
                 commandBuffer.Release();
             }
         }
@@ -182,7 +184,7 @@ namespace teleport
             int numThreadGroupsX = (faceSize / 2) / THREADGROUP_SIZE;
             int numThreadGroupsY = (faceSize / 2) / THREADGROUP_SIZE;
             shader.SetTexture(encodeDepthKernel, "RWOutputColorTexture", camera.targetTexture);
-            shader.SetTextureFromGlobal(encodeDepthKernel, "DepthTexture", "_LastCameraDepthTexture");
+            shader.SetTextureFromGlobal(encodeDepthKernel, "DepthTexture", "_CameraDepthTexture");
             shader.SetInts("DepthOffset", new Int32[2] { 0, faceSize * 2 });
             commandBuffer.DispatchCompute(shader, encodeDepthKernel, numThreadGroupsX, numThreadGroupsY, 6);
         }
