@@ -202,11 +202,12 @@ public partial class TeleportCameraRenderer
 
 		for (int i = 0; i < NumFaces; ++i)
 		{
-			if (streamCubemap && i == NumFaces - 1)
-			{
-				Teleport_SceneCaptureComponent.videoEncoders[clientID].CreateEncodeCommands(camera);
-			}
 			DrawCubemapFace(context, camera, i);
+		}
+
+		if (streamCubemap)
+		{
+			Teleport_SceneCaptureComponent.videoEncoders[clientID].CreateEncodeCommands(context, camera);
 		}
 	}
 
