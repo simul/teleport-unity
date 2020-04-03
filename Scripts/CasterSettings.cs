@@ -35,7 +35,8 @@ namespace SCServer
 		public Int32 cullQuadIndex = -1; // This culls a quad at the index. For debugging only
 		public Int32 targetFPS = 60;
 		public Int32 idrInterval = 0;
-		public avs.RateControlMode rateControlMode; 
+		public avs.VideoCodec videoCodec = avs.VideoCodec.HEVC;
+		public avs.RateControlMode rateControlMode = avs.RateControlMode.RC_CBR_LOWDELAY_HQ; 
 		public Int32 averageBitrate = 40000000;
 		public Int32 maxBitrate = 80000000;
 		[MarshalAs(UnmanagedType.U1)] public bool useAutoBitRate = false;
@@ -49,7 +50,7 @@ namespace SCServer
 		[MarshalAs(UnmanagedType.U1)] public bool debugNetworkPackets = false;
 		[MarshalAs(UnmanagedType.U1)] public bool debugControlPackets = false;
 		[MarshalAs(UnmanagedType.U1)] public bool calculateChecksums = false;
-		[MarshalAs(UnmanagedType.U1)] public bool willCacheReset = false;
+		[MarshalAs(UnmanagedType.U1)] private bool willCacheReset = false;
 		public byte estimatedDecodingFrequency = 10; //An estimate of how frequently the client will decode the packets sent to it; used by throttling.
 
 		[Header("Compression")]

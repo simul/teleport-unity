@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 using uid = System.UInt64;
 
@@ -9,15 +11,13 @@ namespace teleport
 {
     public class Teleport_SceneCaptureComponent : MonoBehaviour
     {
+        public static Dictionary<uid, VideoEncoder> videoEncoders = new Dictionary<uid, VideoEncoder>();
+
         public uid clientID = 0; // This needs to be set by a session component instance after start
-        public Cubemap cubemap;
-        //public RenderTexture cubemap;
-        public RenderTexture encInputTexArray;
-        public RenderTexture encOutputTexture;
-        private Camera cam;
-        private CasterMonitor monitor; //Cached reference to the caster monitor.
-        private VideoEncoder encoder = new VideoEncoder();
-       
+        public RenderTexture sceneCaptureTexture;
+        Camera cam;
+        CasterMonitor monitor; //Cached reference to the caster monitor.   
+        bool invertCulling = false;
 
         void Start()
         {
@@ -27,20 +27,49 @@ namespace teleport
 
         void OnDisable()
         {
-            encoder.Shutdown();
+            ReleaseResources();
+        }
+
+        void ReleaseResources()
+        {
             DestroyImmediate(cam);
-            DestroyImmediate(cubemap);
-            DestroyImmediate(encInputTexArray);
-            DestroyImmediate(encOutputTexture);
+            DestroyImmediate(sceneCaptureTexture);
         }
 
         void LateUpdate()
         {
-            if (encInputTexArray)
+            // for now just get latest client
+            uid id = Teleport_SessionComponent.GetClientID();
+     
+            if (id != clientID)
+            {
+                if (videoEncoders.ContainsKey(clientID))
+                {
+                    videoEncoders[clientID].ReleaseCommandbuffer(cam);
+                    videoEncoders.Remove(clientID);
+                }
+
+                if (videoEncoders.ContainsKey(id))
+                {
+                    videoEncoders[id].ReleaseCommandbuffer(cam);
+                    videoEncoders.Remove(id);
+                }
+
+                if (id != 0)
+                {
+                    clientID = id;
+
+                    videoEncoders.Add(clientID, new VideoEncoder(clientID));
+                }
+                else
+                {
+                    clientID = 0;
+                }
+            }
+
+            if (clientID > 0 && cam.targetTexture)
             {
                 RenderToTexture();
-                encoder.PrepareFrame(cam.transform);
-                encoder.EncodeFrame(false);
             }
         }
 
@@ -49,79 +78,65 @@ namespace teleport
             GameObject obj = new GameObject(TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID, typeof(Camera));
             obj.hideFlags = HideFlags.DontSave;
             obj.transform.position = transform.position;
-            obj.transform.rotation = Quaternion.identity;
+            obj.transform.rotation = transform.rotation;
             cam = obj.GetComponent<Camera>();
             cam.farClipPlane = 1000;
+            cam.fieldOfView = 90;
+            cam.aspect = 1;
+            cam.depthTextureMode |= DepthTextureMode.Depth;
+
+            if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.OpenGLCore && SystemInfo.graphicsDeviceType != GraphicsDeviceType.Vulkan)
+            {
+                invertCulling = true;
+                Matrix4x4 proj = cam.projectionMatrix;
+                proj.m11 = -proj.m11;
+                proj.m13 = -proj.m13;
+                cam.projectionMatrix = proj;
+            }
+          
             cam.enabled = false;
 
-            int size = (int)monitor.casterSettings.captureCubeTextureSize;
+            int size = (int)monitor.casterSettings.captureCubeTextureSize * 3;
+
             RenderTextureFormat format;
             if (monitor.casterSettings.use10BitEncoding)
             {
-                format = RenderTextureFormat.ARGB64; 
+                format = RenderTextureFormat.ARGB64;
             }
             else
             {
                 format = RenderTextureFormat.ARGB32;
             }
 
-            cubemap = new Cubemap(size, TextureFormat.ARGB32, false);
-            cubemap.name = "Cubemap";
-            cubemap.hideFlags = HideFlags.DontSave;
-            cubemap.filterMode = FilterMode.Point;
+            sceneCaptureTexture = new RenderTexture(size, size, 24, format, RenderTextureReadWrite.Default);
+            sceneCaptureTexture.name = "Scene Capture Texture";
+            sceneCaptureTexture.hideFlags = HideFlags.DontSave;
+            sceneCaptureTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex2D;
+            sceneCaptureTexture.useMipMap = false;
+            sceneCaptureTexture.autoGenerateMips = false;
+            sceneCaptureTexture.enableRandomWrite = true;
+            sceneCaptureTexture.Create();
 
-            //cubemap = new RenderTexture(size, size, 0, format, RenderTextureReadWrite.Default);
-            //cubemap.name = "Cubemap";
-            //cubemap.hideFlags = HideFlags.DontSave;
-            //cubemap.dimension = UnityEngine.Rendering.TextureDimension.Cube;
-            //cubemap.filterMode = FilterMode.Point;
-            //cubemap.useMipMap = false;
-            //cubemap.autoGenerateMips = false;
-            //cubemap.Create();
-
-            encInputTexArray = new RenderTexture(size, size, 0, format, RenderTextureReadWrite.Default);
-            encInputTexArray.volumeDepth = 6;
-            encInputTexArray.enableRandomWrite = true;
-            encInputTexArray.name = "Cubemap Texture Array";
-            encInputTexArray.hideFlags = HideFlags.DontSave;
-            encInputTexArray.dimension = UnityEngine.Rendering.TextureDimension.Tex2DArray;
-            encInputTexArray.filterMode = FilterMode.Point;
-            encInputTexArray.useMipMap = false;
-            encInputTexArray.autoGenerateMips = false;
-            encInputTexArray.Create();
-           
-            encOutputTexture = new RenderTexture(size * 3, size * 3, 0, format, RenderTextureReadWrite.Default);
-            encOutputTexture.enableRandomWrite = true;
-            encOutputTexture.name = "Encoder Input Texture";
-            encOutputTexture.hideFlags = HideFlags.DontSave;
-            encOutputTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex2D;
-            encOutputTexture.filterMode = FilterMode.Point;
-            encOutputTexture.useMipMap = false;
-            encOutputTexture.autoGenerateMips = false;
-            encOutputTexture.Create();
-
-            encoder.Initialize(clientID, encInputTexArray, encOutputTexture);
+            cam.targetTexture = sceneCaptureTexture;
         }
 
         void RenderToTexture()
         {
-            //var faceToRender = Time.frameCount % 6;
-            //var faceMask = 1 << faceToRender;
-            int faceMask = 63;
             cam.transform.position = transform.position;
-            cam.transform.forward = transform.forward;
+            cam.transform.rotation = transform.rotation;
 
-            if (!cam.RenderToCubemap(cubemap, faceMask))
+            // Update name in case client ID changed
+            cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
+
+            // Cull opposite winding order or vertices on camera would be culled after inverting
+            if (invertCulling)
             {
-                Debug.LogError("Error occured rendering the cubemap");
-                return;
+                GL.invertCulling = true;
             }
            
-            // Copy here because we cannot bind to a RWTexture2DArray otherwise
-            for (int i = 0; i < 6; ++i)
-            {
-                Graphics.CopyTexture(cubemap, i, encInputTexArray, i);
-            }   
+            cam.Render();
+            
+            GL.invertCulling = false;
         }
     }
 }

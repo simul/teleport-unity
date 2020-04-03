@@ -12,81 +12,121 @@ namespace teleport
     {
         #region DLLImports
         [DllImport("SimulCasterServer")]
-        private static extern void InitializeVideoEncoder(uid clientID, SCServer.VideoEncodeParams videoEncodeParams);
-        [DllImport("SimulCasterServer")]
-        private static extern void EncodeVideoFrame(uid clientID, avs.Transform cameraTransform);
+        static extern System.IntPtr GetRenderEventWithDataCallback();
         #endregion
 
         //Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
         Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
 
-        private const int THREADGROUP_SIZE = 32;
+        const int THREADGROUP_SIZE = 32;
 
-        private uid clientID;
-        private CasterMonitor monitor;
+        uid clientID;
+        CasterMonitor monitor;
 
-        private RenderTexture cubemapTexArray;
-        private RenderTexture outputTexture;
+        static String shaderPath = "Shaders/ProjectCubemap";
 
-        private static String shaderPath = "Shaders/ProjectCubemap";
+        ComputeShader shader;
+        int encodeCamKernel;
+        int quantizationKernel;
+        int encodeDepthKernel;
 
-        private ComputeShader shader;
-        private int encodeCamKernel;
-        private int decomposeKernel;
-        private int decomposeDepthKernel;
+        CommandBuffer commandBuffer = null;
 
-        public void Initialize(uid inClientID, RenderTexture inCubemapTexArray, RenderTexture inOutputTexture)
+        bool initalized = false;
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct EncodeVideoParamsWrapper
         {
-            clientID = inClientID;
-            cubemapTexArray = inCubemapTexArray;
-            outputTexture = inOutputTexture;
+            public uid clientID;
+            public SCServer.VideoEncodeParams videoEncodeParams;
+        };
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct TransformWrapper
+        {
+            public uid clientID;
+            public avs.Transform transform;
+        };
+
+        public VideoEncoder(uid clientID)
+        {
+            this.clientID = clientID;
 
             monitor = CasterMonitor.GetCasterMonitor();
 
-            InitEncoder();
             InitShaders();     
         }
-         
-        public void PrepareFrame(Transform cameraTransform)
-        {
-            DispatchShaders(cameraTransform);
+
+        public void CreateEncodeCommands(Camera camera)
+        {     
+            ReleaseCommandbuffer(camera);
+
+            commandBuffer = new CommandBuffer();
+            commandBuffer.name = "Video Encoder";
+            camera.AddCommandBuffer(CameraEvent.AfterEverything, commandBuffer);
+
+            AddComputeShaderCommands(camera);
+
+            if (!initalized)
+            {
+                InitEncoder(camera);
+                initalized = true;
+            }
+
+            var paramsWrapper = new TransformWrapper();
+            paramsWrapper.clientID = clientID;
+            paramsWrapper.transform = new avs.Transform();
+            paramsWrapper.transform.position = camera.transform.position;
+            paramsWrapper.transform.rotation = camera.transform.rotation;
+            paramsWrapper.transform.scale = new avs.Vector3(1, 1, 1);
+
+            IntPtr paramsWrapperPtr = Marshal.AllocHGlobal(Marshal.SizeOf(new TransformWrapper()));
+            Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);
+
+            commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 1, paramsWrapperPtr);
         }
 
-        public void EncodeFrame(bool forceIDR)
+        public void ReleaseCommandbuffer(Camera camera)
         {
-
+            if (commandBuffer != null)
+            {
+                camera.RemoveCommandBuffers(CameraEvent.AfterEverything);
+                commandBuffer.Release();
+            }
         }
 
-        public void Shutdown()
+        void InitEncoder(Camera camera)
         {
+            var paramsWrapper = new EncodeVideoParamsWrapper();
+            paramsWrapper.clientID = clientID;
+            paramsWrapper.videoEncodeParams = new SCServer.VideoEncodeParams();
+            paramsWrapper.videoEncodeParams.encodeWidth = paramsWrapper.videoEncodeParams.encodeHeight = (int)monitor.casterSettings.captureCubeTextureSize * 3;
 
-        }
-
-        private void InitEncoder()
-        {
-            var vidParams = new SCServer.VideoEncodeParams();
-            vidParams.encodeWidth = vidParams.encodeHeight = (int)monitor.casterSettings.captureCubeTextureSize * 3;
             switch(SystemInfo.graphicsDeviceType)
             {
                 case (GraphicsDeviceType.Direct3D11):
-                    vidParams.deviceType = SCServer.GraphicsDeviceType.Direct3D11;
+                    paramsWrapper.videoEncodeParams.deviceType = SCServer.GraphicsDeviceType.Direct3D11;
                     break;
                 case (GraphicsDeviceType.Direct3D12):
-                    vidParams.deviceType = SCServer.GraphicsDeviceType.Direct3D12;
+                    paramsWrapper.videoEncodeParams.deviceType = SCServer.GraphicsDeviceType.Direct3D12; // May not work if device not created with shared heap flag in Unity source
                     break;
                 case (GraphicsDeviceType.OpenGLCore):
-                    vidParams.deviceType = SCServer.GraphicsDeviceType.OpenGL; // Needs to be supported
+                    paramsWrapper.videoEncodeParams.deviceType = SCServer.GraphicsDeviceType.OpenGL; // Needs to be supported
                     break;
                 case (GraphicsDeviceType.Vulkan):
-                    vidParams.deviceType = SCServer.GraphicsDeviceType.Vulkan; // Needs to be supported
+                    paramsWrapper.videoEncodeParams.deviceType = SCServer.GraphicsDeviceType.Vulkan; // Needs to be supported
                     break;
                 default:
                     Debug.Log("Graphics api not supported");
                     return;
             }
+
             // deviceHandle set in dll
-            vidParams.inputSurfaceResource = outputTexture.GetNativeTexturePtr();
-            //InitializeVideoEncoder(clientID, vidParams);
+            paramsWrapper.videoEncodeParams.inputSurfaceResource = camera.targetTexture.GetNativeTexturePtr();
+            IntPtr paramsWrapperPtr = Marshal.AllocHGlobal(Marshal.SizeOf(new EncodeVideoParamsWrapper()));
+            Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);    
+
+            commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 0, paramsWrapperPtr);
         }
 
         private void InitShaders()
@@ -98,43 +138,58 @@ namespace teleport
                 Debug.Log("Shader not found at path " + shaderPath + ".compute");
             }
             encodeCamKernel = shader.FindKernel("EncodeCameraPositionCS");
-            decomposeKernel = shader.FindKernel("DecomposeCS");
-            decomposeDepthKernel = shader.FindKernel("DecomposeDepthCS");
+            quantizationKernel = shader.FindKernel("QuantizationCS");
+            encodeDepthKernel = shader.FindKernel("EncodeDepthCS");
         }
 
-        private void DispatchShaders(Transform cameraTransform)
+        private void AddComputeShaderCommands(Camera camera)
         {
-            Int32 numThreadGroupsX = (int)monitor.casterSettings.captureCubeTextureSize / THREADGROUP_SIZE;
-            Int32 numThreadGroupsY = (int)monitor.casterSettings.captureCubeTextureSize / THREADGROUP_SIZE;
-            Int32 numThreadGroupsZ = 6;
+            EncodeCameraPosition(camera);
+            QuantizeColor(camera);
+            EncodeDepth(camera);
+        }
 
+        void EncodeCameraPosition(Camera camera)
+        {
+            int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
+            int size = faceSize * 3;
+          
+            var camTransform = camera.transform;
+            float[] camPos = new float[3] { camTransform.position.x, camTransform.position.z, camTransform.position.y };
+
+            shader.SetTexture(encodeCamKernel, "RWOutputColorTexture", camera.targetTexture);
+            shader.SetInts("CamPosOffset", new Int32[2] { size - (32 * 4), size - (3 * 8) });
+            shader.SetFloats("CubemapCameraPositionMetres", camPos);
+            commandBuffer.DispatchCompute(shader, encodeCamKernel, 4, 1, 1);
+            
+        }
+
+        void QuantizeColor(Camera camera)
+        {
             int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
             int size = faceSize * 3;
 
-            int a = -1;
+            int numThreadGroupsX = size / THREADGROUP_SIZE;
+            int numThreadGroupsY = (faceSize * 2) / THREADGROUP_SIZE;
+            shader.SetTexture(quantizationKernel, "RWOutputColorTexture", camera.targetTexture);
+            commandBuffer.DispatchCompute(shader, quantizationKernel, numThreadGroupsX, numThreadGroupsY, 1);
+        }
 
-            int b = 6 + a;
+        void EncodeDepth(Camera camera)
+        {
+            int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
 
+            int numThreadGroupsX = (faceSize / 2) / THREADGROUP_SIZE;
+            int numThreadGroupsY = (faceSize / 2) / THREADGROUP_SIZE;
+            shader.SetTexture(encodeDepthKernel, "RWOutputColorTexture", camera.targetTexture);
+            shader.SetTextureFromGlobal(encodeDepthKernel, "DepthTexture", "_LastCameraDepthTexture");
+            shader.SetInts("DepthOffset", new Int32[2] { 0, faceSize * 2 });
+            commandBuffer.DispatchCompute(shader, encodeDepthKernel, numThreadGroupsX, numThreadGroupsY, 6);
+        }
 
-            // Aidan: The offsets below differ from Unreal here because Unity uses OpenGL convention where 0,0 is bottom left instead of top left like D3D.
-            // Colour
-            shader.SetTexture(decomposeKernel, "RWInputCubeAsArray", cubemapTexArray);
-            shader.SetTexture(decomposeKernel, "RWOutputColorTexture", outputTexture);
-            shader.SetInts("Offset", new Int32[2] { 0, faceSize });
-            shader.Dispatch(decomposeKernel, numThreadGroupsX, numThreadGroupsY, numThreadGroupsZ);
-           
-            // Depth
-            //shader.SetTexture(decomposeDepthKernel, "RWInputCubeAsArray", cubemapTexArray);
-            //shader.SetTexture(decomposeDepthKernel, "RWOutputColorTexture", outputTexture);
-            //shader.SetInt("Offset",  shader.SetInts("Offset", new Int32[2] { 0, 0 });
-            //shader.Dispatch(decomposeDepthKernel, numThreadGroupsX, numThreadGroupsY, numThreadGroupsZ);
+        public void Shutdown()
+        {
 
-            // Camera Position 
-            float[] camPos = new float[3] { cameraTransform.position.x, cameraTransform.position.y, cameraTransform.position.z };
-            // flip y because Unity uses OpenGL convention where 0,0 is bottom left instead of top left like D3D.
-            shader.SetInts("Offset", new Int32[2] { size - (32 * 4), 3 * 8});
-            shader.SetFloats("CubemapCameraPositionMetres", camPos);
-            shader.Dispatch(encodeCamKernel, 4, 1, 1);
         }
 
     }

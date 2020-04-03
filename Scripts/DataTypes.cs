@@ -36,6 +36,14 @@ namespace avs
 	    RC_VBR_HQ = 5 /*< VBR, high quality (slower) */
     };
 
+    public enum VideoCodec
+    {
+        Any = 0,
+		Invalid = 0,
+		H264, /*!< H264 */
+		HEVC /*!< HEVC (H265) */
+	};
+
     //We have to declare our own vector types, as .NET and Unity have different layouts.
     public struct Vector2
     {
@@ -125,11 +133,12 @@ namespace SCServer
         Vulkan = 4
     }
 
-    public class VideoEncodeParams
+    [StructLayout(LayoutKind.Sequential)]
+    public struct VideoEncodeParams
     {
-        public Int32 encodeWidth = 0;
-        public Int32 encodeHeight = 0;
-        public GraphicsDeviceType deviceType = GraphicsDeviceType.Invalid;
+        public Int32 encodeWidth;
+        public Int32 encodeHeight;
+        public GraphicsDeviceType deviceType;
         public IntPtr deviceHandle;
         public IntPtr inputSurfaceResource;
     }
