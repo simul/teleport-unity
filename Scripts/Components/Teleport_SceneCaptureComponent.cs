@@ -45,13 +45,11 @@ namespace teleport
             {
                 if (videoEncoders.ContainsKey(clientID))
                 {
-                    videoEncoders[clientID].ReleaseCommandbuffer(cam);
                     videoEncoders.Remove(clientID);
                 }
 
                 if (videoEncoders.ContainsKey(id))
                 {
-                    videoEncoders[id].ReleaseCommandbuffer(cam);
                     videoEncoders.Remove(id);
                 }
 
@@ -128,7 +126,9 @@ namespace teleport
             // Update name in case client ID changed
             cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
 
-            // Cull opposite winding order or vertices on camera would be culled after inverting
+            bool originalInvertCulling = GL.invertCulling;
+
+            // Cull opposite winding order to prevent vertices from being culled after inverting
             if (invertCulling)
             {
                 GL.invertCulling = true;
@@ -136,7 +136,7 @@ namespace teleport
            
             cam.Render();
             
-            GL.invertCulling = false;
+            GL.invertCulling = originalInvertCulling;
         }
     }
 }
