@@ -149,8 +149,8 @@ namespace teleport
             }
             var controller = controllers[index];
             
-            controller.transform.rotation = newRotation;
-            controller.transform.localPosition = newPosition;
+         //   controller.transform.rotation = newRotation;
+            controller.transform.SetPositionAndRotation( newPosition,newRotation);
         }
 
         private void OnDisable()

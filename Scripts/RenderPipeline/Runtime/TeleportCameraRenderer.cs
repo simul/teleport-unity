@@ -175,6 +175,13 @@ public partial class TeleportCameraRenderer
 	{
 		context.Submit();
 	}
+	void Clear(ScriptableRenderContext context)
+	{
+		var buffer = new CommandBuffer();
+		buffer.ClearRenderTarget(true, true, Color.black);
+		context.ExecuteCommandBuffer(buffer);
+		buffer.Release();
+	}
 
 	public void Render(ScriptableRenderContext context, Camera camera)
 	{
@@ -184,6 +191,7 @@ public partial class TeleportCameraRenderer
 		StartSample(context, samplename);
 
 		PrepareForSceneWindow(context, camera);
+		Clear(context);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
 		DrawUnsupportedShaders(context, camera);
@@ -196,7 +204,7 @@ public partial class TeleportCameraRenderer
 	{
 		if (!camera.targetTexture)
 		{
-			Debug.LogError("The camera needs a target texture for rendering the cubemap");
+		 	Debug.LogError("The camera needs a target texture for rendering the cubemap");
 			return;
 		}
 
@@ -242,6 +250,7 @@ public partial class TeleportCameraRenderer
 		StartSample(context, samplename);
 
 		PrepareForSceneWindow(context, camera);
+		Clear(context);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
 		EndSample(context, samplename);
