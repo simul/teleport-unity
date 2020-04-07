@@ -237,9 +237,14 @@ public partial class TeleportCameraRenderer
 		camera.worldToCameraMatrix = Matrix4x4.Rotate(faceRotations[face]) * Matrix4x4.LookAt(camera.transform.position, to, view.up);
 
 		BeginCamera(context, camera);
+
+		string samplename = camera.gameObject.name + " Face " + face;
+		StartSample(context, samplename);
+
 		PrepareForSceneWindow(context, camera);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
+		EndSample(context, samplename);
 		EndCamera(context, camera);
 	}
  
