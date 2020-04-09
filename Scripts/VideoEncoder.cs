@@ -61,7 +61,6 @@ namespace teleport
         {     
             commandBuffer = new CommandBuffer();
             commandBuffer.name = "Video Encoder";
-            //camera.AddCommandBuffer(CameraEvent.AfterEverything, commandBuffer);
 
             AddComputeShaderCommands(camera);
 
@@ -92,7 +91,6 @@ namespace teleport
         {
             if (commandBuffer != null)
             {
-                //camera.RemoveCommandBuffers(CameraEvent.AfterEverything);
                 commandBuffer.Release();
             }
         }

@@ -200,7 +200,7 @@ public partial class TeleportCameraRenderer
 		EndCamera(context, camera);
 	}
 
-	public void RenderToCubemap(ScriptableRenderContext context, Camera camera, uid clientID, bool streamCubemap = true)
+	public void RenderToCubemap(ScriptableRenderContext context, Camera camera, uid clientID)
 	{
 		if (!camera.targetTexture)
 		{
@@ -213,7 +213,8 @@ public partial class TeleportCameraRenderer
 			DrawCubemapFace(context, camera, i);
 		}
 
-		if (streamCubemap)
+		CasterMonitor monitor = CasterMonitor.GetCasterMonitor();
+		if (clientID != 0 && monitor && monitor.casterSettings.isStreamingVideo)
 		{
 			Teleport_SceneCaptureComponent.videoEncoders[clientID].CreateEncodeCommands(context, camera);
 		}

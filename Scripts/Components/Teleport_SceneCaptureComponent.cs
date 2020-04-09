@@ -65,7 +65,7 @@ namespace teleport
                 }
             }
 
-            if (clientID > 0 && cam.targetTexture)
+            if (cam.targetTexture)
             {
                 RenderToTexture();
             }
@@ -76,8 +76,9 @@ namespace teleport
             GameObject obj = new GameObject(TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID, typeof(Camera));
             obj.hideFlags = HideFlags.DontSave;
             obj.transform.position = transform.position;
-            obj.transform.rotation = transform.rotation;
+            obj.transform.rotation = Quaternion.identity;
             cam = obj.GetComponent<Camera>();
+            cam.nearClipPlane = 0.05f;
             cam.farClipPlane = 1000;
             cam.fieldOfView = 90;
             cam.aspect = 1;
@@ -106,7 +107,7 @@ namespace teleport
                 format = RenderTextureFormat.ARGB32;
             }
 
-            sceneCaptureTexture = new RenderTexture(size, size, 24, format, RenderTextureReadWrite.Default);
+            sceneCaptureTexture = new RenderTexture(size, size, 0, format, RenderTextureReadWrite.Default);
             sceneCaptureTexture.name = "Scene Capture Texture";
             sceneCaptureTexture.hideFlags = HideFlags.DontSave;
             sceneCaptureTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex2D;
@@ -121,7 +122,6 @@ namespace teleport
         void RenderToTexture()
         {
             cam.transform.position = transform.position;
-            cam.transform.rotation = transform.rotation;
 
             // Update name in case client ID changed
             cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
