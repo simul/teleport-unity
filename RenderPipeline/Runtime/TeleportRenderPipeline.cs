@@ -42,7 +42,7 @@ public class TeleportRenderPipeline : RenderPipeline
 			}
 			string clientIDStr = camera.name.Remove(index, CUBEMAP_CAM_PREFIX.Length);
 			uid clientID = uid.Parse(clientIDStr);
-			renderer.RenderToCubemap(context, camera, clientID, true);
+			renderer.RenderToCubemap(context, camera, clientID);
 		}
 		else
 		{

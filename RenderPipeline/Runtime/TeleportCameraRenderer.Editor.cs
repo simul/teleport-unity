@@ -15,7 +15,7 @@ public partial class TeleportCameraRenderer
 #if UNITY_EDITOR
 	partial void StartSample(ScriptableRenderContext context, string name)
 	{
-		var buffer = new CommandBuffer ();
+		var buffer = new CommandBuffer();
 		Profiler.BeginSample("Editor Only");
 		buffer.name = name;
 		context.ExecuteCommandBuffer(buffer);
