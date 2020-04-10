@@ -91,6 +91,7 @@ public partial class TeleportCameraRenderer
 			}
 		}
 	}
+
 	bool Cull(ScriptableRenderContext context, Camera camera, out CullingResults cullingResults)
 	{
 		//ScriptableCullingParameters p
@@ -191,7 +192,7 @@ public partial class TeleportCameraRenderer
 		StartSample(context, samplename);
 
 		PrepareForSceneWindow(context, camera);
-		Clear(context);
+		//Clear(context);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
 		DrawUnsupportedShaders(context, camera);
