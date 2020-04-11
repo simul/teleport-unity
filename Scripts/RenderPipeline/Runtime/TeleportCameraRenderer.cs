@@ -43,11 +43,11 @@ public partial class TeleportCameraRenderer
 
 	static Quaternion[] faceRotations = new Quaternion[] { frontFaceRot, backFaceRot, rightFaceRot, leftFaceRot, upFaceRot, downFaceRot };
 
-	// Switch back and front because Unity view matrices have -z for forward
-	static CamView frontCamView = new CamView(Vector3.back, Vector3.up);
-	static CamView backCamView = new CamView(Vector3.forward, Vector3.up);
-	static CamView rightCamView = new CamView(Vector3.right, Vector3.up);
-	static CamView leftCamView = new CamView(Vector3.left, Vector3.up);
+	// Flip up axis for right and left faces for view space matrix mutiplications
+	static CamView frontCamView = new CamView(-Vector3.forward, Vector3.up);
+	static CamView backCamView = new CamView(-Vector3.back, Vector3.up);
+	static CamView rightCamView = new CamView(Vector3.right, -Vector3.up);
+	static CamView leftCamView = new CamView(Vector3.left, -Vector3.up);
 	static CamView upCamView = new CamView(Vector3.up, Vector3.back);
 	static CamView downCamView = new CamView(Vector3.down, Vector3.forward);
 
@@ -57,9 +57,6 @@ public partial class TeleportCameraRenderer
 
 
 	TeleportLighting lighting = new TeleportLighting();
-
-	
-
 
 	public TeleportCameraRenderer()
 	{
@@ -192,7 +189,6 @@ public partial class TeleportCameraRenderer
 		StartSample(context, samplename);
 
 		PrepareForSceneWindow(context, camera);
-		//Clear(context);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
 		DrawUnsupportedShaders(context, camera);
@@ -242,9 +238,10 @@ public partial class TeleportCameraRenderer
 		camera.pixelRect = new Rect(offsetX * faceSize, offsetY * faceSize, faceSize, faceSize);
 
 		CamView view = faceCamViews[face];
-		Vector3 to = camera.transform.position + view.forward * 10;
+		Vector3 to = view.forward;
+		Vector3 pos = camera.transform.position;
 
-		camera.worldToCameraMatrix = Matrix4x4.Rotate(faceRotations[face]) * Matrix4x4.LookAt(camera.transform.position, to, view.up);
+		camera.worldToCameraMatrix = Matrix4x4.Rotate(faceRotations[face]) * Matrix4x4.LookAt(Vector3.zero, to, view.up) * Matrix4x4.Translate(-pos);
 
 		BeginCamera(context, camera);
 
@@ -252,7 +249,7 @@ public partial class TeleportCameraRenderer
 		StartSample(context, samplename);
 
 		PrepareForSceneWindow(context, camera);
-		Clear(context);
+		//Clear(context);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
 		EndSample(context, samplename);
