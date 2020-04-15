@@ -87,10 +87,11 @@ namespace teleport
             if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.OpenGLCore && SystemInfo.graphicsDeviceType != GraphicsDeviceType.Vulkan)
             {
                 invertCulling = true;
+                // Roderick: this reversal on the y axis seems to be incorrect.
                 Matrix4x4 proj = cam.projectionMatrix;
                 proj.m11 = -proj.m11;
                 proj.m13 = -proj.m13;
-                cam.projectionMatrix = proj;
+              //  cam.projectionMatrix = proj;
             }
           
             cam.enabled = false;

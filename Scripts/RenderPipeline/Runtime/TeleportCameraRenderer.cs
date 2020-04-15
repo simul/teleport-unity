@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Conditional = System.Diagnostics.ConditionalAttribute;
 
 using teleport;
 
@@ -24,28 +25,28 @@ public partial class TeleportCameraRenderer
 	static int[,] nonGLFaceOffsets = new int[6, 2] { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } };
 
 	// For culling only
-	static Quaternion frontQuat = Quaternion.identity;
-	static Quaternion backQuat = Quaternion.Euler(0, 180, 0);
-	static Quaternion rightQuat = Quaternion.Euler(0, 90, 0);
-	static Quaternion leftQuat = Quaternion.Euler(0, -90, 0);
-	static Quaternion upQuat = Quaternion.Euler(90, 0, 0);
-	static Quaternion downQuat = Quaternion.Euler(-90, 0, 0);
+	//static Quaternion frontQuat = Quaternion.identity;
+	//static Quaternion backQuat = Quaternion.Euler(0, 180, 0);
+	//static Quaternion rightQuat = Quaternion.Euler(0, 90, 0);
+	//static Quaternion leftQuat = Quaternion.Euler(0, -90, 0);
+	//static Quaternion upQuat = Quaternion.Euler(90, 0, 0);
+	//static Quaternion downQuat = Quaternion.Euler(-90, 0, 0);
 
-	static Quaternion[] faceQuats = new Quaternion[] { frontQuat, backQuat, rightQuat, leftQuat, upQuat, downQuat };
+	//static Quaternion[] faceQuats = new Quaternion[] { frontQuat, backQuat, rightQuat, leftQuat, upQuat, downQuat };
 
 	// To align with Unreal Engine
-	static Quaternion frontFaceRot = Quaternion.Euler(0, 0, 90);
-	static Quaternion backFaceRot = Quaternion.Euler(0, 0, -90);
-	static Quaternion rightFaceRot = Quaternion.Euler(0, 0, 180);
-	static Quaternion leftFaceRot = Quaternion.identity;
+	static Quaternion frontFaceRot = Quaternion.Euler(0, 0, 0);
+	static Quaternion backFaceRot = Quaternion.Euler(0, 0, 0);
+	static Quaternion rightFaceRot = Quaternion.identity;
+	static Quaternion leftFaceRot = Quaternion. Euler(0, 0, 180);
 	static Quaternion upFaceRot = Quaternion.Euler(0, 0, -90);
 	static Quaternion downFaceRot = Quaternion.Euler(0, 0, 90); 
 
 	static Quaternion[] faceRotations = new Quaternion[] { frontFaceRot, backFaceRot, rightFaceRot, leftFaceRot, upFaceRot, downFaceRot };
 
 	// Switch back and front because Unity view matrices have -z for forward
-	static CamView frontCamView = new CamView(Vector3.back, Vector3.up);
-	static CamView backCamView = new CamView(Vector3.forward, Vector3.up);
+	static CamView frontCamView = new CamView(Vector3.back, Vector3.left);
+	static CamView backCamView = new CamView(Vector3.forward, Vector3.right);
 	static CamView rightCamView = new CamView(Vector3.right, Vector3.up);
 	static CamView leftCamView = new CamView(Vector3.left, Vector3.up);
 	static CamView upCamView = new CamView(Vector3.up, Vector3.back);
@@ -56,7 +57,7 @@ public partial class TeleportCameraRenderer
 	// End cubemap members
 
 
-	TeleportLighting lighting = new TeleportLighting();
+	TeleportLighting teleportLighting = new TeleportLighting();
 
 	
 
@@ -82,7 +83,6 @@ public partial class TeleportCameraRenderer
 			buffer.ClearRenderTarget(
 				camera.clearFlags == CameraClearFlags.Depth || camera.clearFlags == CameraClearFlags.Color || camera.clearFlags == CameraClearFlags.Skybox,
 				camera.clearFlags == CameraClearFlags.Color, camera.backgroundColor, 1.0f);
-			//buffer.EndSample(buffer.name);
 			ExecuteBuffer(context, buffer);
 			buffer.Release();
 			if (camera.clearFlags == CameraClearFlags.Skybox)
@@ -103,7 +103,7 @@ public partial class TeleportCameraRenderer
 		cullingResults = new CullingResults();
 		return false;
 	}
-	static ShaderTagId unlitShaderTagId = new ShaderTagId("SRPDefaultUnlit");
+	//static ShaderTagId unlitShaderTagId = new ShaderTagId("SRPDefaultUnlit");
 	static ShaderTagId[] legacyShaderTagIds = {
 		new ShaderTagId("Always"),
 		new ShaderTagId("Forward"),
@@ -118,13 +118,7 @@ public partial class TeleportCameraRenderer
 };
 	void SetupLighting(ScriptableRenderContext context, CullingResults cullingResults, ref DrawingSettings drawingSettings)
 	{
-		lighting.Setup(context, cullingResults);
-		NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
-		for (int i = 0; i < visibleLights.Length; i++)
-		{
-			VisibleLight visibleLight = visibleLights[i];
-			//SetupDirectionalLight(i, visibleLight);
-		}
+		teleportLighting.Setup(context, cullingResults);
 	}
 	void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera)
 	{
@@ -176,10 +170,10 @@ public partial class TeleportCameraRenderer
 	{
 		context.Submit();
 	}
-	void Clear(ScriptableRenderContext context)
+	void Clear(ScriptableRenderContext context,Color color)
 	{
 		var buffer = new CommandBuffer();
-		buffer.ClearRenderTarget(true, true, Color.black);
+		buffer.ClearRenderTarget(true, true, color);
 		context.ExecuteCommandBuffer(buffer);
 		buffer.Release();
 	}
@@ -192,7 +186,6 @@ public partial class TeleportCameraRenderer
 		StartSample(context, samplename);
 
 		PrepareForSceneWindow(context, camera);
-		//Clear(context);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
 		DrawUnsupportedShaders(context, camera);
@@ -233,7 +226,7 @@ public partial class TeleportCameraRenderer
 		{
 			faceOffsets = nonGLFaceOffsets;
 		}
-
+		Color [] direction_colours = { new Color(.01F,0.0F,0.0F), new Color(.01F, 0.0F, 0.0F), new Color(0.0F, .005F, 0.0F), new Color(0.0F, .005F, 0.0F), new Color(0.0F, 0.0F, 0.01F), new Color(0.0F, 0.0F, 0.01F) };
 		int offsetX = faceOffsets[face, 0];
 		int offsetY = faceOffsets[face, 1];
 
@@ -242,21 +235,25 @@ public partial class TeleportCameraRenderer
 		camera.pixelRect = new Rect(offsetX * faceSize, offsetY * faceSize, faceSize, faceSize);
 
 		CamView view = faceCamViews[face];
-		Vector3 to = camera.transform.position + view.forward * 10;
+		Vector3 pos=camera.transform.position;
+		Vector3 from = pos;
+		from.Set(0, 0, 0);
+		Vector3 to = from + view.forward * 10;
 
-		camera.worldToCameraMatrix = Matrix4x4.Rotate(faceRotations[face]) * Matrix4x4.LookAt(camera.transform.position, to, view.up);
-
+		camera.worldToCameraMatrix = Matrix4x4.Rotate(faceRotations[face]) * Matrix4x4.LookAt(from, to, view.up)* Matrix4x4.Translate(-pos);
+		Matrix4x4 proj=camera.projectionMatrix;
 		BeginCamera(context, camera);
 
 		string samplename = camera.gameObject.name + " Face " + face;
 		StartSample(context, samplename);
 
 		PrepareForSceneWindow(context, camera);
-		Clear(context);
+		Clear(context,direction_colours[face]);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
+		DrawUnsupportedShaders(context, camera);
 		EndSample(context, samplename);
 		EndCamera(context, camera);
 	}
- 
+
 }

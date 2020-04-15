@@ -23,14 +23,19 @@ public class TeleportLighting
 		unity_4LightAtten0 = Shader.PropertyToID("unity_4LightAtten0"),//float4(ForwardBase pass only) attenuation factors of first four non-important point lights.
 		unity_LightColor = Shader.PropertyToID("unity_LightColor"),// half4[4]    (ForwardBase pass only) colors of of first four non-important point lights.
 		unity_WorldToShadow = Shader.PropertyToID("unity_WorldToShadow"),
-		dirLightCountId = Shader.PropertyToID("_DirectionalLightCount"),
-		dirLightColorsId = Shader.PropertyToID("_DirectionalLightColors"),
-		dirLightDirectionsId = Shader.PropertyToID("_DirectionalLightDirections"),
-		unity_LightAtten = Shader.PropertyToID("unity_LightAtten");
-	static int visibleLightColorsId =
-		Shader.PropertyToID("_VisibleLightColors");
-	static int visibleLightDirectionsOrPositionsId =
-		Shader.PropertyToID("_VisibleLightDirectionsOrPositions");
+		_DirectionalLightCount = Shader.PropertyToID("_DirectionalLightCount"),
+		_DirectionalLightColors = Shader.PropertyToID("_DirectionalLightColors"),
+		_DirectionalLightDirections = Shader.PropertyToID("_DirectionalLightDirections"),
+		unity_LightAtten = Shader.PropertyToID("unity_LightAtten"),
+		_VisibleLightColors = Shader.PropertyToID("_VisibleLightColors"),
+		_VisibleLightDirectionsOrPositions = Shader.PropertyToID("_VisibleLightDirectionsOrPositions"),
+		unity_AmbientSky = Shader.PropertyToID("unity_AmbientSky"),
+		unity_AmbientEquator = Shader.PropertyToID("unity_AmbientEquator"),
+		unity_AmbientGround = Shader.PropertyToID("unity_AmbientGround"),
+		UNITY_LIGHTMODEL_AMBIENT = Shader.PropertyToID("UNITY_LIGHTMODEL_AMBIENT"),
+		unity_FogColor = Shader.PropertyToID("unity_FogColor"),
+		unity_FogParams = Shader.PropertyToID("unity_FogParams"),
+		unity_OcclusionMaskSelector = Shader.PropertyToID("unity_OcclusionMaskSelector");
 
 	Vector4[] visibleLightColors = new Vector4[maxVisibleLights];
 	Vector4[] visibleLightDirectionsOrPositions = new Vector4[maxVisibleLights];
@@ -45,9 +50,26 @@ public class TeleportLighting
 			SetupLight(i, visibleLight);
 		}
 
-		buffer.SetGlobalInt(dirLightCountId, visibleLights.Length);
-		buffer.SetGlobalVectorArray(visibleLightColorsId, visibleLightColors);
-		buffer.SetGlobalVectorArray(visibleLightDirectionsOrPositionsId, visibleLightDirectionsOrPositions);
+		buffer.SetGlobalInt(_DirectionalLightCount, visibleLights.Length);
+		buffer.SetGlobalVectorArray(_VisibleLightColors, visibleLightColors);
+		buffer.SetGlobalVectorArray(_VisibleLightDirectionsOrPositions, visibleLightDirectionsOrPositions);
+
+		Vector3 unityVector = new Vector3(1.0F, 1.0F, 1.0F);
+		buffer.SetGlobalVector(unity_4LightPosX0, unityVector);
+		buffer.SetGlobalVector(unity_4LightPosY0, unityVector);
+		buffer.SetGlobalVector(unity_4LightPosZ0, unityVector);
+
+		buffer.SetGlobalVector(unity_4LightAtten0, unityVector);
+		buffer.SetGlobalVector(unity_LightColor, unityVector);
+
+		buffer.SetGlobalVector(unity_AmbientSky, unityVector);
+		buffer.SetGlobalVector(unity_AmbientEquator, unityVector);
+		buffer.SetGlobalVector(unity_AmbientGround, unityVector);
+		buffer.SetGlobalVector(UNITY_LIGHTMODEL_AMBIENT, unityVector);
+		buffer.SetGlobalVector(unity_FogColor, unityVector);
+		buffer.SetGlobalVector(unity_FogParams, unityVector);
+		buffer.SetGlobalVector(unity_OcclusionMaskSelector, unityVector);
+		
 		buffer.EndSample(bufferName);
 		context.ExecuteCommandBuffer(buffer);
 		buffer.Clear();
@@ -73,9 +95,15 @@ public class TeleportLighting
 				//w is squared light range.
 			}
 		}
+		Matrix4x4 LightMatrix0=new Matrix4x4();
+		Matrix4x4[] WorldToShadow = new Matrix4x4[4];
+		WorldToShadow[0] = Matrix4x4.identity;
+		LightMatrix0 = Matrix4x4.identity;
 		visibleLightColors[index] = light.finalColor;
 		buffer.SetGlobalVector(_LightColor0, light.finalColor);
 		buffer.SetGlobalVector(_WorldSpaceLightPos0, visibleLightDirectionsOrPositions[index]);
+		buffer.SetGlobalMatrix(_LightMatrix0, LightMatrix0);
+		buffer.SetGlobalMatrixArray(unity_WorldToShadow, WorldToShadow); 
 		buffer.SetGlobalVectorArray(unity_LightAtten, lightAttenuations);
 	}
 }
