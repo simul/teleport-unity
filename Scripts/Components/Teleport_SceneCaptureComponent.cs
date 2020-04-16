@@ -17,7 +17,6 @@ namespace teleport
         public RenderTexture sceneCaptureTexture;
         Camera cam;
         CasterMonitor monitor; //Cached reference to the caster monitor.   
-        bool invertCulling = false;
 
         void Start()
         {
@@ -84,16 +83,6 @@ namespace teleport
             cam.aspect = 1;
             cam.depthTextureMode |= DepthTextureMode.Depth;
 
-            if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.OpenGLCore && SystemInfo.graphicsDeviceType != GraphicsDeviceType.Vulkan)
-            {
-                invertCulling = true;
-                // Roderick: this reversal on the y axis seems to be incorrect.
-                Matrix4x4 proj = cam.projectionMatrix;
-                proj.m11 = -proj.m11;
-                proj.m13 = -proj.m13;
-              //  cam.projectionMatrix = proj;
-            }
-          
             cam.enabled = false;
 
             int size = (int)monitor.casterSettings.captureCubeTextureSize * 3;
@@ -108,7 +97,7 @@ namespace teleport
                 format = RenderTextureFormat.ARGB32;
             }
 
-            sceneCaptureTexture = new RenderTexture(size, size, 0, format, RenderTextureReadWrite.Default);
+            sceneCaptureTexture = new RenderTexture(size, size, 24, format, RenderTextureReadWrite.Default);
             sceneCaptureTexture.name = "Scene Capture Texture";
             sceneCaptureTexture.hideFlags = HideFlags.DontSave;
             sceneCaptureTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex2D;
@@ -126,18 +115,7 @@ namespace teleport
 
             // Update name in case client ID changed
             cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
-
-            bool originalInvertCulling = GL.invertCulling;
-
-            // Cull opposite winding order to prevent vertices from being culled after inverting
-            if (invertCulling)
-            {
-                GL.invertCulling = true;
-            }
-           
             cam.Render();
-            
-            GL.invertCulling = originalInvertCulling;
         }
     }
 }

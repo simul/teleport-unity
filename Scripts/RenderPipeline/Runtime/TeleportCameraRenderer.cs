@@ -59,9 +59,6 @@ public partial class TeleportCameraRenderer
 
 	TeleportLighting teleportLighting = new TeleportLighting();
 
-	
-
-
 	public TeleportCameraRenderer()
 	{
 		
