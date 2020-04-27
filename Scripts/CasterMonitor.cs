@@ -18,8 +18,8 @@ namespace teleport
         public string tagToStream; //Objects with this tag will be streamed; leaving it blank will cause it to just use the layer mask.
 
         [Header("Connections")]
-        public int listenPort = 10500;
-        public int discoveryPort = 10607;
+        public uint listenPort = 10500u;
+        public uint discoveryPort = 10607u;
         public int connectionTimeout = 5; //How many seconds to wait before automatically disconnecting from the client.
 
         private static CasterMonitor instance; //There should only be one CasterMonitor instance at a time.
@@ -54,10 +54,21 @@ namespace teleport
         #endregion
 
         #region DLLImport
+
+        struct InitializeState
+        {
+            public OnShowActor showActor;
+            public OnHideActor hideActor;
+            public OnSetHeadPose headPoseSetter;
+            public OnSetControllerPose controllerPoseSetter;
+            public OnNewInput newInputProcessing;
+            public OnDisconnect disconnect;
+            public OnMessageHandler messageHandler;
+            public uint DISCOVERY_PORT;
+            public uint SERVICE_PORT;
+        };
         [DllImport("SimulCasterServer")]
-        private static extern void Initialise(OnShowActor showActor, OnHideActor hideActor,
-            OnSetHeadPose headPoseSetter, OnSetControllerPose controllerPoseSetter, OnNewInput newInputProcessing,
-            OnDisconnect disconnect, OnMessageHandler messageHandler);
+        private static extern void Initialise(InitializeState initializeState);
         [DllImport("SimulCasterServer")]
         private static extern void UpdateCasterSettings(SCServer.CasterSettings newSettings);
 
@@ -98,8 +109,17 @@ namespace teleport
                 return;
             }
             instance = this;
-
-            Initialise(ShowActor, HideActor, Teleport_SessionComponent.StaticSetHeadPose, Teleport_SessionComponent.StaticSetControllerPose, Teleport_SessionComponent.StaticProcessInput, Teleport_SessionComponent.StaticDisconnect, LogMessageHandler);
+            InitializeState initializeState=new InitializeState();
+            initializeState.showActor = CasterMonitor.ShowActor;
+            initializeState.hideActor = HideActor;
+            initializeState.headPoseSetter = Teleport_SessionComponent.StaticSetHeadPose;
+            initializeState.controllerPoseSetter = Teleport_SessionComponent.StaticSetControllerPose;
+            initializeState.newInputProcessing = Teleport_SessionComponent.StaticProcessInput;
+            initializeState.disconnect = Teleport_SessionComponent.StaticDisconnect;
+            initializeState.messageHandler=LogMessageHandler;
+            initializeState.SERVICE_PORT = listenPort;
+            initializeState.DISCOVERY_PORT = discoveryPort;
+            Initialise(initializeState);
         }
 
         private void Update()

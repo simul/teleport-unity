@@ -63,7 +63,7 @@ namespace teleport
             }
             else
             {
-                Debug.Log("There are currently no clients");
+                //Debug.Log("There are currently no clients"); No spam.
                 return 0;
             }
         }
