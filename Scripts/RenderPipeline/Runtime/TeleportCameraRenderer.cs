@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
@@ -20,9 +21,7 @@ public partial class TeleportCameraRenderer
 	}
 
 	static int NumFaces = 6;
-	static int[,] glFaceOffsets = new int[6, 2] { { 0, 2 }, { 1, 2 }, { 2, 2 }, { 0, 1 }, { 1, 1 }, { 2, 1 } };
-
-	static int[,] nonGLFaceOffsets = new int[6, 2] { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } };
+	static int[,] faceOffsets = new int[6, 2] { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } };
 
 	// For culling only
 	//static Quaternion frontQuat = Quaternion.identity;
@@ -59,9 +58,13 @@ public partial class TeleportCameraRenderer
 
 	TeleportLighting teleportLighting = new TeleportLighting();
 
+
+	static Shader depthShader = null;
+	static Material depthMaterial = null;
+
 	public TeleportCameraRenderer()
 	{
-		
+
 	}
 
 	void ExecuteBuffer(ScriptableRenderContext context, CommandBuffer buffer)
@@ -162,7 +165,35 @@ public partial class TeleportCameraRenderer
 			cullingResults, ref drawingSettings, ref filteringSettings
 		);
 	}
+	void DrawDepth(ScriptableRenderContext context, Camera camera, Rect viewport, int face)
+	{
+		if (depthMaterial == null)
+		{
+			depthShader = Resources.Load("Shaders/CubemapDepth", typeof(Shader)) as Shader;
+			if (depthShader != null)
+			{
+				depthMaterial = new Material(depthShader);
+			}
+			else
+			{
+				Debug.LogError("ComputeDepth.shader resource not found!");
+				return;
+			}
+		}
 
+		depthMaterial.SetInt("Face", face);
+
+		var buffer = new CommandBuffer();
+		buffer.BeginSample("Custom Depth CB");
+		buffer.name = "Custom Depth CB";
+		buffer.SetRenderTarget(camera.targetTexture);
+		buffer.SetViewport(viewport);
+		buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 0, MeshTopology.Triangles, 6);
+		buffer.EndSample("Custom Depth CB");
+		context.ExecuteCommandBuffer(buffer);
+		buffer.Release();
+	}
+	
 	void EndCamera(ScriptableRenderContext context, Camera camera)
 	{
 		context.Submit();
@@ -213,23 +244,16 @@ public partial class TeleportCameraRenderer
 
 	void DrawCubemapFace(ScriptableRenderContext context, Camera camera, int face)
 	{
-		int[,] faceOffsets;
+		int faceSize = camera.targetTexture.width / 3;
+		int halfFaceSize = faceSize / 2;
 
-		if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore || SystemInfo.graphicsDeviceType == GraphicsDeviceType.Vulkan)
-		{
-			faceOffsets = glFaceOffsets;
-		}
-		else
-		{
-			faceOffsets = nonGLFaceOffsets;
-		}
 		Color [] direction_colours = { new Color(.01F,0.0F,0.0F), new Color(.01F, 0.0F, 0.0F), new Color(0.0F, .005F, 0.0F), new Color(0.0F, .005F, 0.0F), new Color(0.0F, 0.0F, 0.01F), new Color(0.0F, 0.0F, 0.01F) };
 		int offsetX = faceOffsets[face, 0];
 		int offsetY = faceOffsets[face, 1];
-
-		int faceSize = camera.targetTexture.width / 3;
-
+		
 		camera.pixelRect = new Rect(offsetX * faceSize, offsetY * faceSize, faceSize, faceSize);
+
+		var depthViewport = new Rect(offsetX * halfFaceSize, (faceSize * 2) + (offsetY * halfFaceSize), halfFaceSize, halfFaceSize);
 
 		CamView view = faceCamViews[face];
 		Vector3 pos=camera.transform.position;
@@ -245,9 +269,10 @@ public partial class TeleportCameraRenderer
 		StartSample(context, samplename);
 
 		PrepareForSceneWindow(context, camera);
-		Clear(context,direction_colours[face]);
+		Clear(context, direction_colours[face]);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
+		DrawDepth(context, camera, depthViewport, face);
 		DrawUnsupportedShaders(context, camera);
 		EndSample(context, samplename);
 		EndCamera(context, camera);

@@ -146,7 +146,7 @@ namespace teleport
         {
             EncodeCameraPosition(camera);
             QuantizeColor(camera);
-            EncodeDepth(camera);
+            //EncodeDepth(camera);
         }
 
         void EncodeCameraPosition(Camera camera)
