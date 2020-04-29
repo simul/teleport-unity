@@ -1,5 +1,8 @@
 ﻿using System;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class DEBUG_ExtractTexture : MonoBehaviour
 {
@@ -61,12 +64,14 @@ public class DEBUG_ExtractTexture : MonoBehaviour
             renderTextures[i].Create();
 
             //Normal maps need to be extracted differently; i.e. convert from DXT5nm format.
+#if UNITY_EDITOR
             UnityEditor.TextureImporterType textureType = ((UnityEditor.TextureImporter)UnityEditor.AssetImporter.GetAtPath(UnityEditor.AssetDatabase.GetAssetPath(sourceTextures[i]))).textureType;
             int kernelHandle = shader.FindKernel(textureType == UnityEditor.TextureImporterType.NormalMap ? "ExtractNormalMap" : "ExtractTexture");
 
             shader.SetTexture(kernelHandle, "Source", sourceTextures[i]);
             shader.SetTexture(kernelHandle, "Result", renderTextures[i]);
             shader.Dispatch(kernelHandle, sourceTextures[i].width / 8, sourceTextures[i].height / 8, 1);
+#endif
         }
     }
 }

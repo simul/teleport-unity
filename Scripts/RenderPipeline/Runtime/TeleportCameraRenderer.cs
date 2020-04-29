@@ -244,7 +244,9 @@ public partial class TeleportCameraRenderer
 		PrepareForSceneWindow(context, camera);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
+#if UNITY_EDITOR
 		DrawUnsupportedShaders(context, camera);
+#endif
 		DrawGizmos(context, camera);
 		EndSample(context, samplename);
 		EndCamera(context, camera);
@@ -299,7 +301,9 @@ public partial class TeleportCameraRenderer
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
 		DrawDepth(context, camera, depthViewport, face);
+#if UNITY_EDITOR
 		DrawUnsupportedShaders(context, camera);
+#endif
 		EndSample(context, samplename);
 		EndCamera(context, camera);
 	}

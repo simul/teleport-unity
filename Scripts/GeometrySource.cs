@@ -323,6 +323,7 @@ namespace teleport
 
         public static GeometrySource GetGeometrySource()
         {
+#if UNITY_EDITOR
             string[] sourceGUIDs = UnityEditor.AssetDatabase.FindAssets("t:GeometrySource");
 
             string assetPath;
@@ -343,6 +344,9 @@ namespace teleport
             }
 
             return UnityEditor.AssetDatabase.LoadAssetAtPath<GeometrySource>(assetPath);
+#else
+            return null;
+#endif
         }
 
         public void OnBeforeSerialize()
@@ -505,11 +509,13 @@ namespace teleport
                 extractedMaterial.extensionIDs = null;
                 extractedMaterial.extensions = null;
 
+#if UNITY_EDITOR
                 AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long _);
 
                 if(materialID == 0) materialID = GenerateID();
                 processedResources[material] = materialID;
                 StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)), extractedMaterial);
+#endif
             }
 
             return materialID;
@@ -530,6 +536,7 @@ namespace teleport
                 return;
             }
 
+#if UNITY_EDITOR
             AssetDatabase.TryGetGUIDAndLocalFileIdentifier(texture, out string guid, out long _);
 
             string textureAssetPath = AssetDatabase.GetAssetPath(texture);
@@ -553,12 +560,14 @@ namespace teleport
             }
             
             StoreTexture(textureID, guid, lastModified, textureData, basisFileLocation);
+#endif
         }
 
         public void CompressTextures()
         {
             UInt64 totalTexturesToCompress = GetAmountOfTexturesWaitingForCompression();
 
+#if UNITY_EDITOR
             for(UInt64 i = 0; i < totalTexturesToCompress; i++)
             {
                 string compressionMessage = GetMessageForNextCompressedTexture(i, totalTexturesToCompress);
@@ -568,6 +577,7 @@ namespace teleport
             }
 
             UnityEditor.EditorUtility.ClearProgressBar();
+#endif
         }
 
         private uid AddMeshNode(MeshFilter meshFilter, uid oldID, bool forceUpdate = false)
@@ -813,6 +823,7 @@ namespace teleport
                 );
             }
 
+#if UNITY_EDITOR
             AssetDatabase.TryGetGUIDAndLocalFileIdentifier(mesh, out string guid, out long _);
 
             StoreMesh
@@ -839,6 +850,7 @@ namespace teleport
                 },
                 extractToBasis
             );
+#endif
         }
 
         private void CreateIndexBufferAndView(in int[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, out uid bufferViewID)
@@ -1141,6 +1153,7 @@ namespace teleport
                 LoadedResource metaResource = Marshal.PtrToStructure<LoadedResource>(resourcePtr);
                 string guid = Marshal.PtrToStringBSTR(metaResource.guid);
 
+#if UNITY_EDITOR
                 //Attempt to find asset.
                 string assetPath = AssetDatabase.GUIDToAssetPath(guid);
                 UnityAsset asset = AssetDatabase.LoadAssetAtPath<UnityAsset>(assetPath);
@@ -1162,6 +1175,7 @@ namespace teleport
                 {
                     Debug.Log("Disposed of missing " + nameof(UnityAsset) + " asset with GUID:" + metaResource.guid);
                 }
+#endif
             }
 
             return reaffirmedResources;
