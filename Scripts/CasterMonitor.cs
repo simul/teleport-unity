@@ -32,10 +32,10 @@ namespace teleport
 
         #region DLLDelegates
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        delegate void OnShowActor(in IntPtr actorPtr);
+        delegate void OnShowActor(uid clientID, in IntPtr actorPtr);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        delegate void OnHideActor(in IntPtr actorPtr);
+        delegate void OnHideActor(uid clientID, in IntPtr actorPtr);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         delegate void OnSetHeadPose(uid clientID, in avs.HeadPose newHeadPose);
@@ -86,19 +86,19 @@ namespace teleport
             else return FindObjectOfType<CasterMonitor>();
         }
 
-#if UNITY_EDITOR
         //We can only use the Unity AssetDatabase while in the editor.
         private void Awake()
         {
+#if UNITY_EDITOR
             //If the geometry source is not assigned; find an existing one, or create one.
-            if(geometrySource == null)
+            if (geometrySource == null)
             {
                 Debug.LogWarning("<b>" + name + "</b>'s Geometry Source is not set. Please assign in Editor, or your application may crash in standalone.");
 
                 geometrySource = GeometrySource.GetGeometrySource();
             }
-        }
 #endif
+        }
 
         private void OnEnable()
         {
@@ -140,7 +140,7 @@ namespace teleport
             Shutdown();
         }
 
-        private static void ShowActor(in IntPtr actorPtr)
+        private static void ShowActor(uid clientID, in IntPtr actorPtr)
         {
             GameObject actor = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
 
@@ -148,12 +148,12 @@ namespace teleport
             actorRenderer.enabled = true;
         }
 
-        public static void HideActor(in IntPtr actorPtr)
+        public static void HideActor(uid clientID,in IntPtr actorPtr)
         {
             GameObject actor = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
 
             Renderer actorRenderer = actor.GetComponent<Renderer>();
-            actorRenderer.enabled = false;
+            //actorRenderer.enabled = false;
         }
 
         private static void LogMessageHandler(avs.LogSeverity Severity, string Msg, in IntPtr userData)

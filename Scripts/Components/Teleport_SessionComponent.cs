@@ -84,7 +84,8 @@ namespace teleport
 
         public static void StaticSetControllerPose(uid clientID, int index, in avs.HeadPose newPose)
         {
-            if(!StaticDoesSessionExist(clientID)) return;
+            if(!StaticDoesSessionExist(clientID))
+                return;
 
             latestRotation.Set(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
             latestPosition.Set(newPose.position.x, newPose.position.y, newPose.position.z);
@@ -171,7 +172,8 @@ namespace teleport
             if(clientID == 0)
             {
                 clientID = GetUnlinkedClientID();
-                if(clientID == 0) return;
+                if(clientID == 0)
+                return;
 
                 if(sessions.ContainsKey(clientID))
                 {
@@ -196,7 +198,8 @@ namespace teleport
 
         private void OnDestroy()
         {
-            if(clientID != 0) StopSession(clientID);
+            if(clientID != 0)
+                StopSession(clientID);
         }
 
         private void UpdateGeometryStreaming()
@@ -212,7 +215,8 @@ namespace teleport
                 foreach(Collider collider in gainedColliders)
                 {
                     //Skip game objects without the streaming tag.
-                    if(collider.tag != casterMonitor.tagToStream) continue;
+                    if(collider.tag != casterMonitor.tagToStream)
+                        continue;
 
                     uid actorID = geometryStreamingService.AddActor(clientID, collider.gameObject);
 

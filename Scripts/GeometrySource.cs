@@ -419,7 +419,8 @@ namespace teleport
 
         public uid AddNode(GameObject node, bool forceUpdate = false)
         {
-            if(!node) return 0;
+            if(!node)
+                return 0;
 
             processedResources.TryGetValue(node, out uid nodeID);
 
