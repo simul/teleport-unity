@@ -43,7 +43,7 @@ namespace teleport
 
         public uid AddActor(uid clientID, GameObject actor)
         {
-            uid actorID = CasterMonitor.GetCasterMonitor().geometrySource.AddNode(actor);
+            uid actorID = GeometrySource.GetGeometrySource().AddNode(actor);
             if(actorID != 0)
             {
                 GCHandle actorHandle = GCHandle.Alloc(actor, GCHandleType.Pinned);

@@ -9,8 +9,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6ad7aa8e847d223499a8951811c4374a, type: 3}
-  m_Name: Geometry Source
+  m_Script: {fileID: 11500000, guid: fd1feaa2afedf9547b8cddfcff4af45c, type: 3}
+  m_Name: Teleport Render Pipeline Asset
   m_EditorClassIdentifier: 
-  processedResources_keys: []
-  processedResources_values: 

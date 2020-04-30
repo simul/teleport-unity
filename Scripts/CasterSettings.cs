@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEditor;
 
 namespace SCServer
 {
+
 	[StructLayout(LayoutKind.Sequential), Serializable]
     public class CasterSettings
     {

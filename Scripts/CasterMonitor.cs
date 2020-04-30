@@ -10,12 +10,11 @@ namespace teleport
     public class CasterMonitor : MonoBehaviour
     {
         public SCServer.CasterSettings casterSettings = new SCServer.CasterSettings();
+        
+        // Reference to the global (per-project) TeleportSettings asset.
+        private TeleportSettings teleportSettings= null;
 
-        public GeometrySource geometrySource;
-
-        [Header("Geometry Selection")]
-        public LayerMask layersToStream; //Mask of the physics layers the user can choose to stream.
-        public string tagToStream; //Objects with this tag will be streamed; leaving it blank will cause it to just use the layer mask.
+        private GeometrySource geometrySource = null;
 
         [Header("Connections")]
         public uint listenPort = 10500u;
@@ -89,15 +88,12 @@ namespace teleport
         //We can only use the Unity AssetDatabase while in the editor.
         private void Awake()
         {
-#if UNITY_EDITOR
+            teleportSettings=TeleportSettings.GetOrCreateSettings();
             //If the geometry source is not assigned; find an existing one, or create one.
             if (geometrySource == null)
             {
-                Debug.LogWarning("<b>" + name + "</b>'s Geometry Source is not set. Please assign in Editor, or your application may crash in standalone.");
-
                 geometrySource = GeometrySource.GetGeometrySource();
             }
-#endif
         }
 
         private void OnEnable()
