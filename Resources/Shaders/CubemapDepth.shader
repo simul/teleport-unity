@@ -100,7 +100,7 @@
 
 		float4 depth = float4(d00, d01, d10, 1.0) / 100.0 / 20.0;
 
-		return float4(depth, depth, depth, 1.0);
+		return float4(depth.xyz, 1.0);
 	}
 
 	ENDCG
