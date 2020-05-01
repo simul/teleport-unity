@@ -18,10 +18,17 @@ namespace teleport
         Camera cam;
         CasterMonitor monitor; //Cached reference to the caster monitor.   
 
+        private static Teleport_SceneCaptureComponent renderingSceneCapture = null;
+
         void Start()
         {
             monitor = CasterMonitor.GetCasterMonitor();
             Initialize();
+        }
+
+        private void OnEnable()
+        {
+           
         }
 
         void OnDisable()
@@ -64,7 +71,7 @@ namespace teleport
                 }
             }
 
-            if (cam.targetTexture)
+            if (sceneCaptureTexture)
             {
                 RenderToTexture();
             }
@@ -97,16 +104,14 @@ namespace teleport
                 format = RenderTextureFormat.ARGB32;
             }
 
-            sceneCaptureTexture = new RenderTexture(size, size, 24, format, RenderTextureReadWrite.Default);
+            sceneCaptureTexture = new RenderTexture(size, size, 0, format, RenderTextureReadWrite.Default);
             sceneCaptureTexture.name = "Scene Capture Texture";
             sceneCaptureTexture.hideFlags = HideFlags.DontSave;
-            sceneCaptureTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex2D;
+            sceneCaptureTexture.dimension = TextureDimension.Tex2D;
             sceneCaptureTexture.useMipMap = false;
             sceneCaptureTexture.autoGenerateMips = false;
             sceneCaptureTexture.enableRandomWrite = true;
             sceneCaptureTexture.Create();
-
-            cam.targetTexture = sceneCaptureTexture;
         }
 
         void RenderToTexture()
@@ -115,7 +120,13 @@ namespace teleport
 
             // Update name in case client ID changed
             cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
+            renderingSceneCapture = this;
             cam.Render();
+        }
+
+        public static Teleport_SceneCaptureComponent GetRenderingSceneCapture()
+        {
+            return renderingSceneCapture;
         }
     }
 }
