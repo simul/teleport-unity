@@ -81,8 +81,10 @@ namespace teleport
 
         public static CasterMonitor GetCasterMonitor()
         {
-            if(Application.isPlaying) return instance;
-            else return FindObjectOfType<CasterMonitor>();
+            if(Application.isPlaying)
+                return instance;
+            else
+                return FindObjectOfType<CasterMonitor>();
         }
 
         //We can only use the Unity AssetDatabase while in the editor.
