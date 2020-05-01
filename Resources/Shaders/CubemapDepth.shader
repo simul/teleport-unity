@@ -99,7 +99,7 @@
 
 		//int W = TexW / 3;
 
-	  int3 pos = int3(i.uv * W, 1);
+		int3 pos = int3(i.uv * W, 1);
 		
 		float d00 = GetDepth(pos, W);
 		float d01 = GetDepth(pos + int3(1, 0, 0), W);
