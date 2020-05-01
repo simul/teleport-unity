@@ -92,14 +92,14 @@
 
 	float4 frag(v2f i, UNITY_VPOS_TYPE screenPos : VPOS) : SV_Target
 	{
-		uint W, TexH;
-		DepthTexture.GetDimensions(W, TexH);
+		uint W, H;
+		DepthTexture.GetDimensions(W, H);
 
 		//int W = _CameraDepthTexture_TexelSize.z / 3;
 
 		//int W = TexW / 3;
 
-	    int3 pos = int3(i.uv * W, 1);
+	  int3 pos = int3(i.uv * W, 1);
 		
 		float d00 = GetDepth(pos, W);
 		float d01 = GetDepth(pos + int3(1, 0, 0), W);

@@ -14,8 +14,8 @@ namespace teleport
         public static Dictionary<uid, VideoEncoder> videoEncoders = new Dictionary<uid, VideoEncoder>();
 
         public uid clientID = 0; // This needs to be set by a session component instance after start
-        public RenderTexture sceneCaptureTexture;
-        Camera cam;
+        public RenderTexture sceneCaptureTexture = null;
+        Camera cam = null;
         CasterMonitor monitor; //Cached reference to the caster monitor.   
 
         private static Teleport_SceneCaptureComponent renderingSceneCapture = null;
@@ -71,7 +71,7 @@ namespace teleport
                 }
             }
 
-            if (sceneCaptureTexture)
+            if (cam && sceneCaptureTexture)
             {
                 RenderToTexture();
             }
@@ -84,6 +84,8 @@ namespace teleport
             obj.transform.position = transform.position;
             obj.transform.rotation = Quaternion.identity;
             cam = obj.GetComponent<Camera>();
+            if (!cam)
+              return;
             cam.nearClipPlane = 0.05f;
             cam.farClipPlane = 1000;
             cam.fieldOfView = 90;

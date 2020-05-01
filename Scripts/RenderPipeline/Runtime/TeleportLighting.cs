@@ -1,34 +1,35 @@
 ﻿using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
+using System;
 
 public class TeleportLighting
 {
 
-	const string bufferName = "Lighting";
-
-	CommandBuffer buffer = new CommandBuffer
-	{
-		name = bufferName
-	};
-	const int maxVisibleLights = 4;
+	const int maxUnimportantLights = 4;
 	static int
 		_LightColor0 = Shader.PropertyToID("_LightColor0"),
 		_WorldSpaceLightPos0 = Shader.PropertyToID("_WorldSpaceLightPos0"), // dir or pos
 		_LightMatrix0 = Shader.PropertyToID("_LightMatrix0"),
+		unity_LightAtten4 = Shader.PropertyToID("unity_LightAtten0"),
+		unity_LightColor0 = Shader.PropertyToID("unity_LightColor0"),
+		unity_LightColor1 = Shader.PropertyToID("unity_LightColor1"),
+		unity_LightColor2 = Shader.PropertyToID("unity_LightColor2"),
+		unity_LightColor3 = Shader.PropertyToID("unity_LightColor3"),
+		unity_LightColor = Shader.PropertyToID("unity_LightColor"),
 		unity_4LightPosX0 = Shader.PropertyToID("unity_4LightPosX0"),
 		unity_4LightPosY0 = Shader.PropertyToID("unity_4LightPosY0"),
 		unity_4LightPosZ0 = Shader.PropertyToID("unity_4LightPosZ0"),
 		//world space positions of first four non-important point lights.
 		unity_4LightAtten0 = Shader.PropertyToID("unity_4LightAtten0"),//float4(ForwardBase pass only) attenuation factors of first four non-important point lights.
-		unity_LightColor = Shader.PropertyToID("unity_LightColor"),// half4[4]    (ForwardBase pass only) colors of of first four non-important point lights.
+
+		// Non-important.
+		//unimportant_LightColor = Shader.PropertyToID("unity_LightColor"),// half4[4]    (ForwardBase pass only) colors of of first four non-important point lights.
+		unimportant_LightPosition = Shader.PropertyToID("unity_LightPosition"),
+		unimportant_LightAtten = Shader.PropertyToID("unity_LightAtten"),
+		unimportant_SpotDirection = Shader.PropertyToID("unity_SpotDirection"),
+
 		unity_WorldToShadow = Shader.PropertyToID("unity_WorldToShadow"),
-		_DirectionalLightCount = Shader.PropertyToID("_DirectionalLightCount"),
-		_DirectionalLightColors = Shader.PropertyToID("_DirectionalLightColors"),
-		_DirectionalLightDirections = Shader.PropertyToID("_DirectionalLightDirections"),
-		unity_LightAtten = Shader.PropertyToID("unity_LightAtten"),
-		_VisibleLightColors = Shader.PropertyToID("_VisibleLightColors"),
-		_VisibleLightDirectionsOrPositions = Shader.PropertyToID("_VisibleLightDirectionsOrPositions"),
 		unity_AmbientSky = Shader.PropertyToID("unity_AmbientSky"),
 		unity_AmbientEquator = Shader.PropertyToID("unity_AmbientEquator"),
 		unity_AmbientGround = Shader.PropertyToID("unity_AmbientGround"),
@@ -37,73 +38,189 @@ public class TeleportLighting
 		unity_FogParams = Shader.PropertyToID("unity_FogParams"),
 		unity_OcclusionMaskSelector = Shader.PropertyToID("unity_OcclusionMaskSelector");
 
-	Vector4[] visibleLightColors = new Vector4[maxVisibleLights];
-	Vector4[] visibleLightDirectionsOrPositions = new Vector4[maxVisibleLights];
-	Vector4[] lightAttenuations = new Vector4[maxVisibleLights];
-	public void Setup(ScriptableRenderContext context,CullingResults cullingResults)
+	static Vector4[] unimportant_LightColours = new Vector4[maxUnimportantLights];
+	static Vector4[] unimportant_LightColours8 = new Vector4[8];
+	static Vector4[] unimportant_LightPositions = new Vector4[maxUnimportantLights];
+	static Vector4[] unimportant_lightAttenuations = new Vector4[maxUnimportantLights];
+	static Vector4[] unimportant_SpotDirections = new Vector4[maxUnimportantLights];
+
+	static Vector4 nonImportantX = Vector4.zero;
+	static Vector4 nonImportantY = Vector4.zero;
+	static Vector4 nonImportantZ = Vector4.zero;
+	static Vector4 nonImportantAtten = Vector4.one;
+	const string k_SetupLightConstants = "Setup Light Constants";
+
+	const string bufferName = "Lighting";
+	public void SetupForwardBasePass(ScriptableRenderContext context,CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
 	{
+		CommandBuffer buffer = CommandBufferPool.Get(k_SetupLightConstants);
 		buffer.BeginSample(bufferName);
 		NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
+		if (lightingOrder.MainLightIndex >= 0)
+			SetupMainLight(buffer,visibleLights[lightingOrder.MainLightIndex]);
+		nonImportantX = Vector4.zero;
+		nonImportantY = Vector4.zero;
+		nonImportantZ = Vector4.zero;
+		nonImportantAtten = Vector4.zero;
+		int n = 0;
 		for (int i = 0; i < visibleLights.Length; i++)
 		{
-			VisibleLight visibleLight = visibleLights[i];
-			SetupLight(i, visibleLight);
+			if (i != lightingOrder.MainLightIndex&& i != lightingOrder.SecondLightIndex)
+			{ 
+				VisibleLight visibleLight = visibleLights[i];
+				SetupUnimportantLight(buffer, n, visibleLight);
+				n++;
+			}
 		}
-
-		buffer.SetGlobalInt(_DirectionalLightCount, visibleLights.Length);
-		buffer.SetGlobalVectorArray(_VisibleLightColors, visibleLightColors);
-		buffer.SetGlobalVectorArray(_VisibleLightDirectionsOrPositions, visibleLightDirectionsOrPositions);
+		for (int i= lightingOrder.NumUnimportantLights; i<4;i++)
+		{
+			unimportant_LightColours[i] = Vector3.zero;
+		}
+		// We want to use keywords to choose the correct shader variants.
+		CoreUtils.SetKeyword(buffer, "VERTEXLIGHT_ON", lightingOrder.NumUnimportantLights > 0);
+		CoreUtils.SetKeyword(buffer, "LIGHTPROBE_SH",true);
+		CoreUtils.SetKeyword(buffer, "_ALPHATEST_ON", false);
+		CoreUtils.SetKeyword(buffer, "_METALLICGLOSSMAP", false);
+		CoreUtils.SetKeyword(buffer, "_NORMALMAP", true);
+	//	CoreUtils.SetKeyword(buffer, "LIGHTMAP_ON", numUnimportantLights == 0);
+	//	CoreUtils.SetKeyword(buffer, "UNITY_SHOULD_SAMPLE_SH", true);
+	//Standard, SubShader #0
+	//DIRECTIONAL LIGHTPROBE_SH VERTEXLIGHT_ON _NORMALMAP
+	//buffer.SetGlobalVectorArray(unimportant_LightColor, unimportant_LightColours);
+		buffer.SetGlobalVectorArray(unimportant_LightPosition, unimportant_LightPositions);
+		buffer.SetGlobalVectorArray(unimportant_LightAtten, unimportant_lightAttenuations);
+		buffer.SetGlobalVectorArray(unimportant_SpotDirection, unimportant_SpotDirections);
 
 		Vector3 unityVector = new Vector3(1.0F, 1.0F, 1.0F);
-		buffer.SetGlobalVector(unity_4LightPosX0, unityVector);
-		buffer.SetGlobalVector(unity_4LightPosY0, unityVector);
-		buffer.SetGlobalVector(unity_4LightPosZ0, unityVector);
+		buffer.SetGlobalVector(unity_4LightPosX0, nonImportantX);
+		buffer.SetGlobalVector(unity_4LightPosY0, nonImportantY);
+		buffer.SetGlobalVector(unity_4LightPosZ0, nonImportantZ);
 
-		buffer.SetGlobalVector(unity_4LightAtten0, unityVector);
-		buffer.SetGlobalVector(unity_LightColor, unityVector);
+		buffer.SetGlobalVector(unity_4LightAtten0, nonImportantAtten);
+		buffer.SetGlobalVectorArray(unity_LightAtten4, unimportant_lightAttenuations);
+		buffer.SetGlobalVector(unity_LightColor0, unimportant_LightColours[0]);
+		buffer.SetGlobalVector(unity_LightColor1, unimportant_LightColours[1]);
+		buffer.SetGlobalVector(unity_LightColor2, unimportant_LightColours[2]);
+		buffer.SetGlobalVector(unity_LightColor3, unimportant_LightColours[3]);
+		//buffer.SetGlobalVector(unity_LightColor0+1, unimportant_LightColours[1]);
+		buffer.SetGlobalVectorArray(unity_LightColor, unimportant_LightColours);
 
-		buffer.SetGlobalVector(unity_AmbientSky, unityVector);
-		buffer.SetGlobalVector(unity_AmbientEquator, unityVector);
-		buffer.SetGlobalVector(unity_AmbientGround, unityVector);
-		buffer.SetGlobalVector(UNITY_LIGHTMODEL_AMBIENT, unityVector);
-		buffer.SetGlobalVector(unity_FogColor, unityVector);
-		buffer.SetGlobalVector(unity_FogParams, unityVector);
-		buffer.SetGlobalVector(unity_OcclusionMaskSelector, unityVector);
-		
+		//buffer.SetGlobalVector(unity_AmbientSky, unityVector);
+		//buffer.SetGlobalVector(unity_AmbientEquator, unityVector);
+		//buffer.SetGlobalVector(unity_AmbientGround, unityVector);
+		//buffer.SetGlobalVector(UNITY_LIGHTMODEL_AMBIENT, unityVector);
+		//buffer.SetGlobalVector(unity_FogColor, unityVector);
+		//buffer.SetGlobalVector(unity_FogParams, unityVector);
+		//buffer.SetGlobalVector(unity_OcclusionMaskSelector, unityVector);
+		//
 		buffer.EndSample(bufferName);
 		context.ExecuteCommandBuffer(buffer);
-		buffer.Clear();
+		CommandBufferPool.Release(buffer);
 	}
-	void SetupLight(int index, VisibleLight light)
+	public bool SetupForwardAddPass(ScriptableRenderContext context, CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
 	{
+		CommandBuffer buffer = CommandBufferPool.Get(k_SetupLightConstants);
+		buffer.BeginSample(bufferName);
+		NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
+		if (visibleLights.Length < 2|| lightingOrder.SecondLightIndex<0)
+			return false;
+		{
+			VisibleLight visibleLight = visibleLights[lightingOrder.SecondLightIndex];
+			SetupAddLight(buffer, visibleLight);
+		}
+
+		//buffer.SetGlobalVectorArray(_VisibleLightColors, visibleLightColors);
+		//buffer.SetGlobalVectorArray(_VisibleLightDirectionsOrPositions, visibleLightDirectionsOrPositions);
+
+		buffer.EndSample(bufferName);
+		context.ExecuteCommandBuffer(buffer);
+		CommandBufferPool.Release(buffer);
+		return true;
+	}
+	void SetupUnimportantLight(CommandBuffer buffer,int index, VisibleLight light)
+	{
+		//LightRenderMode mode =light.light.renderMode;
+		Vector3 lightPos = light.localToWorldMatrix.GetColumn(3);
 		if (light.lightType == LightType.Directional)
 		{
-			visibleLightDirectionsOrPositions[index] = -light.localToWorldMatrix.GetColumn(2);
+			unimportant_LightPositions[index] = -light.localToWorldMatrix.GetColumn(2);
 		}
 		else
 		{
-			visibleLightDirectionsOrPositions[index] =	light.localToWorldMatrix.GetColumn(3);
+			unimportant_LightPositions[index] = light.localToWorldMatrix.GetColumn(3);
 			if (light.lightType == LightType.Spot)
 			{
-				lightAttenuations[index].x=Mathf.Cos(light.spotAngle / 2.0f);
-				lightAttenuations[index].y =1.0f / Mathf.Cos(light.spotAngle / 4.0f);
-				lightAttenuations[index].z = 1.0f;
-				lightAttenuations[index].w = Mathf.Pow(light.range,2.0f);
+				unimportant_lightAttenuations[index].x = Mathf.Cos(light.spotAngle / 2.0f);
+				unimportant_lightAttenuations[index].y = 1.0f / Mathf.Cos(light.spotAngle / 4.0f);
+				unimportant_lightAttenuations[index].z = 1.0f;
+				unimportant_lightAttenuations[index].w = Mathf.Pow(light.range, 2.0f);
 				//Light attenuation factors.x is cos(spotAngle / 2) or –1 for non - spot lights;
 				// y is 1 / cos(spotAngle / 4) or 1 for non - spot lights;
 				// z is quadratic attenuation;
 				//w is squared light range.
 			}
 		}
-		Matrix4x4 LightMatrix0=new Matrix4x4();
-		Matrix4x4[] WorldToShadow = new Matrix4x4[4];
-		WorldToShadow[0] = Matrix4x4.identity;
-		LightMatrix0 = Matrix4x4.identity;
-		visibleLightColors[index] = light.finalColor;
-		buffer.SetGlobalVector(_LightColor0, light.finalColor);
-		buffer.SetGlobalVector(_WorldSpaceLightPos0, visibleLightDirectionsOrPositions[index]);
-		buffer.SetGlobalMatrix(_LightMatrix0, LightMatrix0);
-		buffer.SetGlobalMatrixArray(unity_WorldToShadow, WorldToShadow); 
-		buffer.SetGlobalVectorArray(unity_LightAtten, lightAttenuations);
+
+		//float4 corr = rsqrt(lengthSq);
+		//ndotl = max(float4(0, 0, 0, 0), ndotl * corr);
+		// attenuation
+		float atten = 25.0F / Mathf.Pow(light.range, 2.0f);
+
+
+		//ightColor0 = final_col * (1.0 + lengthSq * atten); ;
+
+
+		//float corr = 1.0F/(light.range);
+		// attenuation
+		//float atten = 1.0F / (1.0F + 25.0F);
+		float diff = (1.0F + atten);
+
+		unimportant_LightColours8[index] = light.finalColor*diff;
+		if (index<4)
+		{
+			unimportant_LightColours[index] = light.finalColor*diff;
+			nonImportantX[index] = lightPos.x;
+			nonImportantY[index] = lightPos.y;
+			nonImportantZ[index] = lightPos.z;
+			nonImportantAtten[index ] = atten;
+		}
+	}
+	void SetupAddLight(CommandBuffer buffer, VisibleLight light)
+	{
+		SetupMainLight(buffer, light);
+	}
+	void SetupMainLight(CommandBuffer buffer, VisibleLight light)
+	{
+		//LightRenderMode mode =light.light.renderMode;
+		Vector4 lightPos = light.localToWorldMatrix.GetColumn(3);
+		lightPos.w = 1.0F;
+		Vector4 lightDir = -light.localToWorldMatrix.GetColumn(2);
+		lightDir.w = 0.0F;
+		Vector4 atten = new Vector4();
+		if (light.lightType != LightType.Directional)
+		{
+			if (light.lightType == LightType.Spot)
+			{
+				atten.x=Mathf.Cos(light.spotAngle / 2.0f);
+				atten.y =1.0f / Mathf.Cos(light.spotAngle / 4.0f);
+				atten.z = 1.0f;
+				atten.w = Mathf.Pow(light.range,2.0f);
+				//Light attenuation factors.x is cos(spotAngle / 2) or –1 for non - spot lights;
+				// y is 1 / cos(spotAngle / 4) or 1 for non - spot lights;
+				// z is quadratic attenuation;
+				//w is squared light range.
+			}
+		}
+		{
+			Matrix4x4[] WorldToShadow = new Matrix4x4[4];
+			WorldToShadow[0] = Matrix4x4.identity;
+			buffer.SetGlobalVector(_LightColor0, light.finalColor);
+			if (light.lightType == LightType.Directional)
+				buffer.SetGlobalVector(_WorldSpaceLightPos0, lightDir);
+			else
+				buffer.SetGlobalVector(_WorldSpaceLightPos0, lightPos);
+			buffer.SetGlobalMatrix(_LightMatrix0, light.localToWorldMatrix);
+			buffer.SetGlobalMatrixArray(unity_WorldToShadow, WorldToShadow);
+		}
 	}
 }

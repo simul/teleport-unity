@@ -23,23 +23,13 @@ public partial class TeleportCameraRenderer
 	static int NumFaces = 6;
 	static int[,] faceOffsets = new int[6, 2] { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } };
 
-	// For culling only
-	//static Quaternion frontQuat = Quaternion.identity;
-	//static Quaternion backQuat = Quaternion.Euler(0, 180, 0);
-	//static Quaternion rightQuat = Quaternion.Euler(0, 90, 0);
-	//static Quaternion leftQuat = Quaternion.Euler(0, -90, 0);
-	//static Quaternion upQuat = Quaternion.Euler(90, 0, 0);
-	//static Quaternion downQuat = Quaternion.Euler(-90, 0, 0);
-
-	//static Quaternion[] faceQuats = new Quaternion[] { frontQuat, backQuat, rightQuat, leftQuat, upQuat, downQuat };
-
 	// To align with Unreal Engine
 	static Quaternion frontFaceRot = Quaternion.Euler(0, 0, 0);
 	static Quaternion backFaceRot = Quaternion.Euler(0, 0, 0);
 	static Quaternion rightFaceRot = Quaternion.identity;
 	static Quaternion leftFaceRot = Quaternion. Euler(0, 0, 180);
 	static Quaternion upFaceRot = Quaternion.Euler(0, 0, -90);
-	static Quaternion downFaceRot = Quaternion.Euler(0, 0, 90); 
+	static Quaternion downFaceRot = Quaternion.Euler(0, 0, -90); 
 
 	static Quaternion[] faceRotations = new Quaternion[] { frontFaceRot, backFaceRot, rightFaceRot, leftFaceRot, upFaceRot, downFaceRot };
 
@@ -85,9 +75,10 @@ public partial class TeleportCameraRenderer
 		if (camera.clearFlags != CameraClearFlags.Nothing )
 		{
 			var buffer = new CommandBuffer { name = camera.name + " TeleportCameraRenderer BeginCamera" };
+		
 			buffer.ClearRenderTarget(
 				camera.clearFlags == CameraClearFlags.Depth || camera.clearFlags == CameraClearFlags.Color || camera.clearFlags == CameraClearFlags.Skybox,
-				camera.clearFlags == CameraClearFlags.Color, camera.backgroundColor, 1.0f);
+				camera.clearFlags == CameraClearFlags.Color, camera.backgroundColor.linear, 1.0f);
 			ExecuteBuffer(context, buffer);
 			buffer.Release();
 			if (camera.clearFlags == CameraClearFlags.Skybox)
@@ -108,7 +99,7 @@ public partial class TeleportCameraRenderer
 		cullingResults = new CullingResults();
 		return false;
 	}
-	//static ShaderTagId unlitShaderTagId = new ShaderTagId("SRPDefaultUnlit");
+	static ShaderTagId unlitShaderTagId = new ShaderTagId("SRPDefaultUnlit");
 	static ShaderTagId[] legacyShaderTagIds = {
 		new ShaderTagId("Always"),
 		new ShaderTagId("Forward"),
@@ -121,9 +112,11 @@ public partial class TeleportCameraRenderer
 		new ShaderTagId("SRPDefaultLit"),
 		new ShaderTagId("SRPDefaultUnlit")
 };
+	static ShaderTagId[] addLightShaderTagIds = {
+		new ShaderTagId("ForwardAdd"),
+};
 	void SetupLighting(ScriptableRenderContext context, CullingResults cullingResults, ref DrawingSettings drawingSettings)
 	{
-		teleportLighting.Setup(context, cullingResults);
 	}
 	void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera)
 	{
@@ -131,21 +124,55 @@ public partial class TeleportCameraRenderer
 		{
 			criteria = SortingCriteria.CommonOpaque
 		};
-		var drawingSettings = new DrawingSettings(legacyShaderTagIds[0], sortingSettings);
 		var filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
 		CullingResults cullingResults;
 		if (!Cull(context, camera, out cullingResults))
 		{
 			return;
 		}
-		SetupLighting(context, cullingResults, ref drawingSettings);
+		TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetMainLightIndex(cullingResults.visibleLights);
+		{
+			var drawingSettings = new DrawingSettings(legacyShaderTagIds[0], sortingSettings);
+			drawingSettings.mainLightIndex = lightingOrder.MainLightIndex;
+
+			//drawingSettings.enableDynamicBatching = true;
+			//drawingSettings.enableInstancing= true;
+			if (cullingResults.visibleLights.Length > 0)
+			{
+				drawingSettings.perObjectData |= PerObjectData.LightProbe
+						| PerObjectData.ReflectionProbes
+						| PerObjectData.LightProbeProxyVolume
+						| PerObjectData.Lightmaps
+						| PerObjectData.LightData
+						| PerObjectData.MotionVectors
+						| PerObjectData.LightIndices
+						| PerObjectData.ReflectionProbeData
+						| PerObjectData.OcclusionProbe
+						| PerObjectData.OcclusionProbeProxyVolume
+						| PerObjectData.ShadowMask;
+			}
+			teleportLighting.SetupForwardBasePass(context, cullingResults, lightingOrder);
 		for (int i = 1; i < legacyShaderTagIds.Length; i++)
 		{
 			drawingSettings.SetShaderPassName(i, legacyShaderTagIds[i]);
 		}
-		context.DrawRenderers(
-			cullingResults, ref drawingSettings, ref filteringSettings
-		);
+			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
+	}
+		if(cullingResults.visibleLights.Length>1)
+		{
+			var drawingSettings = new DrawingSettings(addLightShaderTagIds[0], sortingSettings);
+			drawingSettings.mainLightIndex = 0;
+			drawingSettings.enableDynamicBatching = true;
+			drawingSettings.enableInstancing= true;
+			teleportLighting.SetupForwardAddPass(context, cullingResults, lightingOrder);
+			for (int i = 0; i < addLightShaderTagIds.Length; i++)
+			{
+				drawingSettings.SetShaderPassName(i, addLightShaderTagIds[i]);
+			}
+			context.DrawRenderers(	cullingResults, ref drawingSettings, ref filteringSettings);
+		}
+
+		//
 	}
 	void DrawTransparentGeometry(ScriptableRenderContext context, Camera camera)
 	{
@@ -222,7 +249,9 @@ public partial class TeleportCameraRenderer
 		PrepareForSceneWindow(context, camera);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
+#if UNITY_EDITOR
 		DrawUnsupportedShaders(context, camera);
+#endif
 		DrawGizmos(context, camera);
 		EndSample(context, samplename);
 		EndCamera(context, camera);
@@ -288,12 +317,10 @@ public partial class TeleportCameraRenderer
 		var depthViewport = new Rect(offsetX * halfFaceSize, (faceSize * 2) + (offsetY * halfFaceSize), halfFaceSize, halfFaceSize);
 
 		CamView view = faceCamViews[face];
+		Vector3 to = view.forward;
 		Vector3 pos=camera.transform.position;
-		Vector3 from = pos;
-		from.Set(0, 0, 0);
-		Vector3 to = from + view.forward * 10;
 
-		camera.worldToCameraMatrix = Matrix4x4.Rotate(faceRotations[face]) * Matrix4x4.LookAt(from, to, view.up)* Matrix4x4.Translate(-pos);
+		camera.worldToCameraMatrix = Matrix4x4.Rotate(faceRotations[face]) * Matrix4x4.LookAt(Vector3.zero, to, view.up)* Matrix4x4.Translate(-pos);
 		Matrix4x4 proj=camera.projectionMatrix;
 		BeginCamera(context, camera);
 
@@ -301,12 +328,14 @@ public partial class TeleportCameraRenderer
 		StartSample(context, samplename);
 
 		PrepareForSceneWindow(context, camera);
-		Clear(context, direction_colours[face]);
+		Clear(context,0*direction_colours[face]);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
 		DrawDepth(context, camera, depthViewport, face);
+#if UNITY_EDITOR
 		DrawUnsupportedShaders(context, camera);
-		QuantizeColor(context, camera, face);
+#endif
+    QuantizeColor(context, camera, face);
 		EndSample(context, samplename);
 		EndCamera(context, camera);
 	}

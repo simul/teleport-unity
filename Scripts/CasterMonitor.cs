@@ -10,16 +10,15 @@ namespace teleport
     public class CasterMonitor : MonoBehaviour
     {
         public SCServer.CasterSettings casterSettings = new SCServer.CasterSettings();
+        
+        // Reference to the global (per-project) TeleportSettings asset.
+        private TeleportSettings teleportSettings= null;
 
-        public GeometrySource geometrySource;
-
-        [Header("Geometry Selection")]
-        public LayerMask layersToStream; //Mask of the physics layers the user can choose to stream.
-        public string tagToStream; //Objects with this tag will be streamed; leaving it blank will cause it to just use the layer mask.
+        private GeometrySource geometrySource = null;
 
         [Header("Connections")]
-        public int listenPort = 10500;
-        public int discoveryPort = 10607;
+        public uint listenPort = 10500u;
+        public uint discoveryPort = 10607u;
         public int connectionTimeout = 5; //How many seconds to wait before automatically disconnecting from the client.
 
         private static CasterMonitor instance; //There should only be one CasterMonitor instance at a time.
@@ -32,10 +31,10 @@ namespace teleport
 
         #region DLLDelegates
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        delegate void OnShowActor(in IntPtr actorPtr);
+        delegate void OnShowActor(uid clientID, in IntPtr actorPtr);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        delegate void OnHideActor(in IntPtr actorPtr);
+        delegate void OnHideActor(uid clientID, in IntPtr actorPtr);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         delegate void OnSetHeadPose(uid clientID, in avs.HeadPose newHeadPose);
@@ -54,10 +53,21 @@ namespace teleport
         #endregion
 
         #region DLLImport
+
+        struct InitializeState
+        {
+            public OnShowActor showActor;
+            public OnHideActor hideActor;
+            public OnSetHeadPose headPoseSetter;
+            public OnSetControllerPose controllerPoseSetter;
+            public OnNewInput newInputProcessing;
+            public OnDisconnect disconnect;
+            public OnMessageHandler messageHandler;
+            public uint DISCOVERY_PORT;
+            public uint SERVICE_PORT;
+        };
         [DllImport("SimulCasterServer")]
-        private static extern void Initialise(OnShowActor showActor, OnHideActor hideActor,
-            OnSetHeadPose headPoseSetter, OnSetControllerPose controllerPoseSetter, OnNewInput newInputProcessing,
-            OnDisconnect disconnect, OnMessageHandler messageHandler);
+        private static extern void Initialise(InitializeState initializeState);
         [DllImport("SimulCasterServer")]
         private static extern void UpdateCasterSettings(SCServer.CasterSettings newSettings);
 
@@ -75,19 +85,16 @@ namespace teleport
             else return FindObjectOfType<CasterMonitor>();
         }
 
-#if UNITY_EDITOR
         //We can only use the Unity AssetDatabase while in the editor.
         private void Awake()
         {
+            teleportSettings=TeleportSettings.GetOrCreateSettings();
             //If the geometry source is not assigned; find an existing one, or create one.
-            if(geometrySource == null)
+            if (geometrySource == null)
             {
-                Debug.LogWarning("<b>" + name + "</b>'s Geometry Source is not set. Please assign in Editor, or your application may crash in standalone.");
-
                 geometrySource = GeometrySource.GetGeometrySource();
             }
         }
-#endif
 
         private void OnEnable()
         {
@@ -98,8 +105,17 @@ namespace teleport
                 return;
             }
             instance = this;
-
-            Initialise(ShowActor, HideActor, Teleport_SessionComponent.StaticSetHeadPose, Teleport_SessionComponent.StaticSetControllerPose, Teleport_SessionComponent.StaticProcessInput, Teleport_SessionComponent.StaticDisconnect, LogMessageHandler);
+            InitializeState initializeState=new InitializeState();
+            initializeState.showActor = CasterMonitor.ShowActor;
+            initializeState.hideActor = HideActor;
+            initializeState.headPoseSetter = Teleport_SessionComponent.StaticSetHeadPose;
+            initializeState.controllerPoseSetter = Teleport_SessionComponent.StaticSetControllerPose;
+            initializeState.newInputProcessing = Teleport_SessionComponent.StaticProcessInput;
+            initializeState.disconnect = Teleport_SessionComponent.StaticDisconnect;
+            initializeState.messageHandler=LogMessageHandler;
+            initializeState.SERVICE_PORT = listenPort;
+            initializeState.DISCOVERY_PORT = discoveryPort;
+            Initialise(initializeState);
         }
 
         private void Update()
@@ -120,7 +136,7 @@ namespace teleport
             Shutdown();
         }
 
-        private static void ShowActor(in IntPtr actorPtr)
+        private static void ShowActor(uid clientID, in IntPtr actorPtr)
         {
             GameObject actor = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
 
@@ -128,12 +144,12 @@ namespace teleport
             actorRenderer.enabled = true;
         }
 
-        public static void HideActor(in IntPtr actorPtr)
+        public static void HideActor(uid clientID,in IntPtr actorPtr)
         {
             GameObject actor = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
 
             Renderer actorRenderer = actor.GetComponent<Renderer>();
-            actorRenderer.enabled = false;
+            //actorRenderer.enabled = false;
         }
 
         private static void LogMessageHandler(avs.LogSeverity Severity, string Msg, in IntPtr userData)

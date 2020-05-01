@@ -63,7 +63,7 @@ namespace teleport
             }
             else
             {
-                Debug.Log("There are currently no clients");
+                //Debug.Log("There are currently no clients");
                 return 0;
             }
         }
@@ -84,7 +84,8 @@ namespace teleport
 
         public static void StaticSetControllerPose(uid clientID, int index, in avs.HeadPose newPose)
         {
-            if(!StaticDoesSessionExist(clientID)) return;
+            if(!StaticDoesSessionExist(clientID))
+                return;
 
             latestRotation.Set(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
             latestPosition.Set(newPose.position.x, newPose.position.y, newPose.position.z);
@@ -99,6 +100,7 @@ namespace teleport
         private static Dictionary<uid, Teleport_SessionComponent> sessions = new Dictionary<uid, Teleport_SessionComponent>();
 
         private CasterMonitor casterMonitor; //Cached reference to the caster monitor.
+        private TeleportSettings teleportSettings = null;
 
         private uid clientID = 0;
 
@@ -160,10 +162,10 @@ namespace teleport
                 sessions.Remove(clientID);
             }
         }
-
         private void Start()
         {
             casterMonitor = CasterMonitor.GetCasterMonitor();
+            teleportSettings= TeleportSettings.GetOrCreateSettings();
         }
 
         private void LateUpdate()
@@ -171,7 +173,8 @@ namespace teleport
             if(clientID == 0)
             {
                 clientID = GetUnlinkedClientID();
-                if(clientID == 0) return;
+                if(clientID == 0)
+                return;
 
                 if(sessions.ContainsKey(clientID))
                 {
@@ -196,15 +199,16 @@ namespace teleport
 
         private void OnDestroy()
         {
-            if(clientID != 0) StopSession(clientID);
+            if(clientID != 0)
+                StopSession(clientID);
         }
 
         private void UpdateGeometryStreaming()
         {
-            if(casterMonitor.layersToStream != 0)
+            if(teleportSettings.LayersToStream != 0)
             {
-                List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius, casterMonitor.layersToStream));
-                List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius + casterMonitor.casterSettings.detectionSphereBufferDistance, casterMonitor.layersToStream));
+                List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius, teleportSettings.LayersToStream));
+                List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius + casterMonitor.casterSettings.detectionSphereBufferDistance, teleportSettings.LayersToStream));
 
                 List<Collider> gainedColliders = new List<Collider>(innerSphereCollisions.Except(streamedObjects));
                 List<Collider> lostColliders = new List<Collider>(streamedObjects.Except(outerSphereCollisions));
@@ -212,7 +216,8 @@ namespace teleport
                 foreach(Collider collider in gainedColliders)
                 {
                     //Skip game objects without the streaming tag.
-                    if(collider.tag != casterMonitor.tagToStream) continue;
+                    if(collider.tag != teleportSettings.TagToStream)
+                        continue;
 
                     uid actorID = geometryStreamingService.AddActor(clientID, collider.gameObject);
 
