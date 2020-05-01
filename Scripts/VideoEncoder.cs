@@ -18,17 +18,8 @@ namespace teleport
         //Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
         Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
 
-        const int THREADGROUP_SIZE = 32;
-
         uid clientID;
         CasterMonitor monitor;
-
-        static String shaderPath = "Shaders/ProjectCubemap";
-
-        ComputeShader shader;
-        int encodeCamKernel;
-        int quantizationKernel;
-        int encodeDepthKernel;
 
         CommandBuffer commandBuffer = null;
 
@@ -52,17 +43,13 @@ namespace teleport
         {
             this.clientID = clientID;
 
-            monitor = CasterMonitor.GetCasterMonitor();
-
-            InitShaders();     
+            monitor = CasterMonitor.GetCasterMonitor();    
         }
 
         public void CreateEncodeCommands(ScriptableRenderContext context, Camera camera)
         {     
             commandBuffer = new CommandBuffer();
             commandBuffer.name = "Video Encoder";
-
-            AddComputeShaderCommands(camera);
 
             if (!initalized)
             {
@@ -127,64 +114,6 @@ namespace teleport
             Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);    
 
             commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 0, paramsWrapperPtr);
-        }
-
-        private void InitShaders()
-        {
-            // NB: Do not include file extension when loading a shader
-            shader = Resources.Load<ComputeShader>(shaderPath);
-            if (!shader)
-            {
-                Debug.Log("Shader not found at path " + shaderPath + ".compute");
-            }
-            encodeCamKernel = shader.FindKernel("EncodeCameraPositionCS");
-            quantizationKernel = shader.FindKernel("QuantizationCS");
-            encodeDepthKernel = shader.FindKernel("EncodeDepthCS");
-        }
-
-        private void AddComputeShaderCommands(Camera camera)
-        {
-            EncodeCameraPosition(camera);
-            QuantizeColor(camera);
-            //EncodeDepth(camera);
-        }
-
-        void EncodeCameraPosition(Camera camera)
-        {
-            int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
-            int size = faceSize * 3;
-          
-            var camTransform = camera.transform;
-            float[] camPos = new float[3] { camTransform.position.x, camTransform.position.z, camTransform.position.y };
-
-            shader.SetTexture(encodeCamKernel, "RWOutputColorTexture", camera.targetTexture);
-            shader.SetInts("CamPosOffset", new Int32[2] { size - (32 * 4), size - (3 * 8) });
-            shader.SetFloats("CubemapCameraPositionMetres", camPos);
-            commandBuffer.DispatchCompute(shader, encodeCamKernel, 4, 1, 1);
-            
-        }
-
-        void QuantizeColor(Camera camera)
-        {
-            int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
-            int size = faceSize * 3;
-
-            int numThreadGroupsX = size / THREADGROUP_SIZE;
-            int numThreadGroupsY = (faceSize * 2) / THREADGROUP_SIZE;
-            shader.SetTexture(quantizationKernel, "RWOutputColorTexture", camera.targetTexture);
-            commandBuffer.DispatchCompute(shader, quantizationKernel, numThreadGroupsX, numThreadGroupsY, 1);
-        }
-
-        void EncodeDepth(Camera camera)
-        {
-            int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
-
-            int numThreadGroupsX = (faceSize / 2) / THREADGROUP_SIZE;
-            int numThreadGroupsY = (faceSize / 2) / THREADGROUP_SIZE;
-            shader.SetTexture(encodeDepthKernel, "RWOutputColorTexture", camera.targetTexture);
-            shader.SetTextureFromGlobal(encodeDepthKernel, "DepthTexture", "_CameraDepthTexture");
-            shader.SetInts("DepthOffset", new Int32[2] { 0, faceSize * 2 });
-            commandBuffer.DispatchCompute(shader, encodeDepthKernel, numThreadGroupsX, numThreadGroupsY, 6);
         }
 
         public void Shutdown()

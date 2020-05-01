@@ -9,141 +9,126 @@ using uid = System.UInt64;
 
 namespace teleport
 {
-	public class Teleport_SceneCaptureComponent : MonoBehaviour
-	{
-		public static Dictionary<uid, VideoEncoder> videoEncoders = new Dictionary<uid, VideoEncoder>();
+    public class Teleport_SceneCaptureComponent : MonoBehaviour
+    {
+        public static Dictionary<uid, VideoEncoder> videoEncoders = new Dictionary<uid, VideoEncoder>();
 
-		public uid clientID = 0; // This needs to be set by a session component instance after start
-		public RenderTexture sceneCaptureTexture;
-		Camera cam=null;
-		CasterMonitor monitor; //Cached reference to the caster monitor.   
-		bool invertCulling = false;
+        public uid clientID = 0; // This needs to be set by a session component instance after start
+        public RenderTexture sceneCaptureTexture = null;
+        Camera cam = null;
+        CasterMonitor monitor; //Cached reference to the caster monitor.   
 
-		void Start()
-		{
-			monitor = CasterMonitor.GetCasterMonitor();
-			Initialize();
-		}
+        private static Teleport_SceneCaptureComponent renderingSceneCapture = null;
 
-		void OnDisable()
-		{
-			ReleaseResources();
-		}
+        void Start()
+        {
+            monitor = CasterMonitor.GetCasterMonitor();
+            Initialize();
+        }
 
-		void ReleaseResources()
-		{
-			DestroyImmediate(cam);
-			DestroyImmediate(sceneCaptureTexture);
-		}
+        private void OnEnable()
+        {
+           
+        }
 
-		void LateUpdate()
-		{
-			// for now just get latest client
-			uid id = Teleport_SessionComponent.GetClientID();
-	 
-			if (id != clientID)
-			{
-				if (videoEncoders.ContainsKey(clientID))
-				{
-					videoEncoders.Remove(clientID);
-				}
+        void OnDisable()
+        {
+            ReleaseResources();
+        }
 
-				if (videoEncoders.ContainsKey(id))
-				{
-					videoEncoders.Remove(id);
-				}
+        void ReleaseResources()
+        {
+            DestroyImmediate(cam);
+            DestroyImmediate(sceneCaptureTexture);
+        }
 
-				if (id != 0)
-				{
-					clientID = id;
+        void LateUpdate()
+        {
+            // for now just get latest client
+            uid id = Teleport_SessionComponent.GetClientID();
+     
+            if (id != clientID)
+            {
+                if (videoEncoders.ContainsKey(clientID))
+                {
+                    videoEncoders.Remove(clientID);
+                }
 
-					videoEncoders.Add(clientID, new VideoEncoder(clientID));
-				}
-				else
-				{
-					clientID = 0;
-				}
-			}
+                if (videoEncoders.ContainsKey(id))
+                {
+                    videoEncoders.Remove(id);
+                }
 
-			if (cam)
-			if (cam.targetTexture)
-			{
-				RenderToTexture();
-			}
-		}
+                if (id != 0)
+                {
+                    clientID = id;
 
-		void Initialize()
-		{
-			GameObject obj = new GameObject(TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID, typeof(Camera));
-			obj.hideFlags = HideFlags.DontSave;
-			obj.transform.position = transform.position;
-			obj.transform.rotation = Quaternion.identity;
-			cam = obj.GetComponent<Camera>();
+                    videoEncoders.Add(clientID, new VideoEncoder(clientID));
+                }
+                else
+                {
+                    clientID = 0;
+                }
+            }
 
-			if (!cam)
-				return;
-			cam.nearClipPlane = 0.05f;
-			cam.farClipPlane = 1000;
-			cam.fieldOfView = 90;
-			cam.aspect = 1;
-			cam.depthTextureMode |= DepthTextureMode.Depth;
-		   
-			if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.OpenGLCore && SystemInfo.graphicsDeviceType != GraphicsDeviceType.Vulkan)
-			{
-				invertCulling = true;
-				// Roderick: this reversal on the y axis seems to be incorrect.
-				Matrix4x4 proj = cam.projectionMatrix;
-				proj.m11 = -proj.m11;
-				proj.m13 = -proj.m13;
-			  //  cam.projectionMatrix = proj;
-			}
+            if (cam && sceneCaptureTexture)
+            {
+                RenderToTexture();
+            }
+        }
 
-			cam.enabled = false;
+        void Initialize()
+        {
+            GameObject obj = new GameObject(TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID, typeof(Camera));
+            obj.hideFlags = HideFlags.DontSave;
+            obj.transform.position = transform.position;
+            obj.transform.rotation = Quaternion.identity;
+            cam = obj.GetComponent<Camera>();
+            if (!cam)
+              return;
+            cam.nearClipPlane = 0.05f;
+            cam.farClipPlane = 1000;
+            cam.fieldOfView = 90;
+            cam.aspect = 1;
+            cam.depthTextureMode |= DepthTextureMode.Depth;
 
-			int size = (int)monitor.casterSettings.captureCubeTextureSize * 3;
+            cam.enabled = false;
 
-			RenderTextureFormat format;
-			if (monitor.casterSettings.use10BitEncoding)
-			{
-				format = RenderTextureFormat.ARGB64;
-			}
-			else
-			{
-				format = RenderTextureFormat.ARGB32;
-			}
+            int size = (int)monitor.casterSettings.captureCubeTextureSize * 3;
 
-			sceneCaptureTexture = new RenderTexture(size, size, 24, format, RenderTextureReadWrite.Default);
-			sceneCaptureTexture.name = "Scene Capture Texture";
-			sceneCaptureTexture.hideFlags = HideFlags.DontSave;
-			sceneCaptureTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex2D;
-			sceneCaptureTexture.useMipMap = false;
-			sceneCaptureTexture.autoGenerateMips = false;
-			sceneCaptureTexture.enableRandomWrite = true;
-			sceneCaptureTexture.Create();
+            RenderTextureFormat format;
+            if (monitor.casterSettings.use10BitEncoding)
+            {
+                format = RenderTextureFormat.ARGB64;
+            }
+            else
+            {
+                format = RenderTextureFormat.ARGB32;
+            }
 
-			cam.targetTexture = sceneCaptureTexture;
-		}
+            sceneCaptureTexture = new RenderTexture(size, size, 0, format, RenderTextureReadWrite.Default);
+            sceneCaptureTexture.name = "Scene Capture Texture";
+            sceneCaptureTexture.hideFlags = HideFlags.DontSave;
+            sceneCaptureTexture.dimension = TextureDimension.Tex2D;
+            sceneCaptureTexture.useMipMap = false;
+            sceneCaptureTexture.autoGenerateMips = false;
+            sceneCaptureTexture.enableRandomWrite = true;
+            sceneCaptureTexture.Create();
+        }
 
-		void RenderToTexture()
-		{
-			if (!cam)
-				return;
-			cam.transform.position = transform.position;
+        void RenderToTexture()
+        {
+            cam.transform.position = transform.position;
 
-			// Update name in case client ID changed
-			cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
+            // Update name in case client ID changed
+            cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
+            renderingSceneCapture = this;
+            cam.Render();
+        }
 
-			bool originalInvertCulling = GL.invertCulling;
-
-			// Cull opposite winding order to prevent vertices from being culled after inverting
-			if (invertCulling)
-			{
-				GL.invertCulling = true;
-			}
-		   
-			cam.Render();
-			
-			GL.invertCulling = originalInvertCulling;
-		}
-	}
+        public static Teleport_SceneCaptureComponent GetRenderingSceneCapture()
+        {
+            return renderingSceneCapture;
+        }
+    }
 }

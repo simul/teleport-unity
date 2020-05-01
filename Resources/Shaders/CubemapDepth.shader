@@ -9,6 +9,7 @@
 
 	uniform sampler2D _CameraDepthTexture;
 	uniform float4 _CameraDepthTexture_TexelSize;
+	Texture2D<float4> DepthTexture;
 
 	int Face;
 
@@ -27,11 +28,12 @@
 	float GetDepth(int3 pos, int w)
 	{
 		float m = PosToDistanceMultiplier(pos.xy, w);
-		int2 inPos = pos.xy + w * FaceOffsets[pos.z];
-		float2 uv = float2(inPos.x, inPos.y);
-		uv *= _CameraDepthTexture_TexelSize.xy;
-		uv.y = 1.0 - uv.y;
-		float d = tex2D(_CameraDepthTexture, uv).r;
+		//int2 inPos = pos.xy + w * FaceOffsets[pos.z];
+		//float2 uv = float2(inPos.x, inPos.y);
+		//uv *= _CameraDepthTexture_TexelSize.xy;
+		//uv.y = 1.0 - uv.y;
+		//float d = tex2D(_CameraDepthTexture, uv).r;
+		float d = Linear01Depth(DepthTexture[pos.xy].r);
 		d *= m;
 		return d;
 	}
@@ -90,9 +92,14 @@
 
 	float4 frag(v2f i, UNITY_VPOS_TYPE screenPos : VPOS) : SV_Target
 	{
-		int W = _CameraDepthTexture_TexelSize.z / 3;
+		uint W, H;
+		DepthTexture.GetDimensions(W, H);
 
-	    int3 pos = int3(i.uv * W, Face);
+		//int W = _CameraDepthTexture_TexelSize.z / 3;
+
+		//int W = TexW / 3;
+
+	  int3 pos = int3(i.uv * W, 1);
 		
 		float d00 = GetDepth(pos, W);
 		float d01 = GetDepth(pos + int3(1, 0, 0), W);
@@ -100,7 +107,7 @@
 
 		float4 depth = float4(d00, d01, d10, 1.0) / 100.0 / 20.0;
 
-		return float4(depth.xyz, 1.0);
+		return depth;
 	}
 
 	ENDCG

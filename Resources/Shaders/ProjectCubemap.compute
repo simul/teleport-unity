@@ -11,12 +11,14 @@ static const int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
 
 // The input texture, but as an array of 6 2d faces.
 RWTexture2DArray<float4> RWInputCubeAsArray;
+Texture2D<float4> InputColorTexture;
 RWTexture2D<float4> RWOutputColorTexture;
 Texture2D<float4> DepthTexture;
 
 int2 CamPosOffset;
 int2 DepthOffset;
 float3 CubemapCameraPositionMetres;
+int Face;
 
 // Here. we will encode the camera position CubemapCameraPositionMetres in blocks of monochrome colour.
 [numthreads(32, 4, 1)]
@@ -46,20 +48,22 @@ void EncodeCameraPositionCS(uint2 ThreadID : SV_DispatchThreadID)
 [numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
 void QuantizationCS(uint2 ThreadID : SV_DispatchThreadID)
 {
-	uint OutputW, OutputH;
-	RWOutputColorTexture.GetDimensions(OutputW, OutputH);
+	uint InputW, InputH;
+	InputColorTexture.GetDimensions(InputW, InputH);
 
-	if (ThreadID.x >= OutputW || ThreadID.y >= OutputH)
+	if (ThreadID.x >= InputW || ThreadID.y >= InputH)
 		return;
 
 	int2 pos = int2(ThreadID);
 
-	float4 SceneColor = RWOutputColorTexture[pos];
+	float4 SceneColor = InputColorTexture[pos];
 	SceneColor.x = sqrt(SceneColor.x);
 	SceneColor.y = sqrt(SceneColor.y);
 	SceneColor.z = sqrt(SceneColor.z);
 
-	RWOutputColorTexture[pos] = SceneColor;
+	int2 outPos = pos + FaceOffsets[Face] * InputW;
+
+	RWOutputColorTexture[outPos] = SceneColor;
 }
 
 float PosToDistanceMultiplier(int2 pos, int w)
