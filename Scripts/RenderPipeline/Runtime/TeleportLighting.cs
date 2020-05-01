@@ -11,6 +11,9 @@ public class TeleportLighting
 		_LightColor0 = Shader.PropertyToID("_LightColor0"),
 		_WorldSpaceLightPos0 = Shader.PropertyToID("_WorldSpaceLightPos0"), // dir or pos
 		_LightMatrix0 = Shader.PropertyToID("_LightMatrix0"),
+		_LightTexture0 = Shader.PropertyToID("_LightTexture0"),
+		_LightTextureB0 = Shader.PropertyToID("_LightTextureB0"),
+		unity_ProbeVolumeSH = Shader.PropertyToID("unity_ProbeVolumeSH"),
 		unity_LightAtten4 = Shader.PropertyToID("unity_LightAtten0"),
 		unity_LightColor0 = Shader.PropertyToID("unity_LightColor0"),
 		unity_LightColor1 = Shader.PropertyToID("unity_LightColor1"),
@@ -30,13 +33,15 @@ public class TeleportLighting
 		unimportant_SpotDirection = Shader.PropertyToID("unity_SpotDirection"),
 
 		unity_WorldToShadow = Shader.PropertyToID("unity_WorldToShadow"),
+		unity_WorldToShadow0 = Shader.PropertyToID("unity_WorldToShadow0"),
 		unity_AmbientSky = Shader.PropertyToID("unity_AmbientSky"),
 		unity_AmbientEquator = Shader.PropertyToID("unity_AmbientEquator"),
 		unity_AmbientGround = Shader.PropertyToID("unity_AmbientGround"),
 		UNITY_LIGHTMODEL_AMBIENT = Shader.PropertyToID("UNITY_LIGHTMODEL_AMBIENT"),
 		unity_FogColor = Shader.PropertyToID("unity_FogColor"),
 		unity_FogParams = Shader.PropertyToID("unity_FogParams"),
-		unity_OcclusionMaskSelector = Shader.PropertyToID("unity_OcclusionMaskSelector");
+		unity_OcclusionMaskSelector = Shader.PropertyToID("unity_OcclusionMaskSelector"),
+		unity_WorldToLight = Shader.PropertyToID("unity_WorldToLight");
 
 	static Vector4[] unimportant_LightColours = new Vector4[maxUnimportantLights];
 	static Vector4[] unimportant_LightColours8 = new Vector4[8];
@@ -122,12 +127,14 @@ public class TeleportLighting
 		CommandBuffer buffer = CommandBufferPool.Get(k_SetupLightConstants);
 		buffer.BeginSample(bufferName);
 		NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
-		if (visibleLights.Length < 2|| lightingOrder.SecondLightIndex<0)
+		if ( lightingOrder.SecondLightIndex<0)
 			return false;
-		{
-			VisibleLight visibleLight = visibleLights[lightingOrder.SecondLightIndex];
-			SetupAddLight(buffer, visibleLight);
-		}
+		VisibleLight visibleLight = visibleLights[lightingOrder.SecondLightIndex];
+		SetupAddLight(buffer, visibleLight);
+		
+		CoreUtils.SetKeyword(buffer, "POINT", visibleLight.lightType==LightType.Point);
+		CoreUtils.SetKeyword(buffer, "SPOT", visibleLight.lightType == LightType.Spot);
+		CoreUtils.SetKeyword(buffer, "SHADOWS_DEPTH", visibleLight.light.shadows==LightShadows.Hard);
 
 		//buffer.SetGlobalVectorArray(_VisibleLightColors, visibleLightColors);
 		//buffer.SetGlobalVectorArray(_VisibleLightDirectionsOrPositions, visibleLightDirectionsOrPositions);
@@ -220,7 +227,29 @@ public class TeleportLighting
 			else
 				buffer.SetGlobalVector(_WorldSpaceLightPos0, lightPos);
 			buffer.SetGlobalMatrix(_LightMatrix0, light.localToWorldMatrix);
+			if (light.lightType == LightType.Spot)
+			{
+				buffer.SetGlobalTexture(_LightTexture0, light.light.cookie);
+				Matrix4x4 lightToWorld = light.localToWorldMatrix;
+				Vector3 matScale = new Vector3(light.range, light.range, light.range);
+				lightToWorld *= Matrix4x4.Scale(matScale);
+				Matrix4x4 worldToLight = lightToWorld.inverse;
+				Vector4 spotDir = worldToLight.GetRow(2);
+				float tanVal = (float)(Math.Tan(3.1415926536F / 180.0F * light.spotAngle / 2.0F));
+				spotDir *= 2.0F*tanVal;
+				Vector4 spotRow = new Vector4(spotDir.x, spotDir.y, spotDir.z, spotDir.w);
+				worldToLight.SetRow(3, spotRow);
+				buffer.SetGlobalMatrix(unity_WorldToLight, worldToLight);
+
+				spotRow *= 2.0F;
+				worldToLight.SetRow(3, spotRow);
+				WorldToShadow[0] = worldToLight;
+			}
+			else
+				buffer.SetGlobalMatrix(unity_WorldToLight, light.localToWorldMatrix.inverse);
 			buffer.SetGlobalMatrixArray(unity_WorldToShadow, WorldToShadow);
+			buffer.SetGlobalMatrix(unity_WorldToShadow0, WorldToShadow[0]); 
 		}
 	}
 }
+//FOG_LINEAR SHADOWS_DEPTH SPOT _METALLICGLOSSMAP _NORMALMAP

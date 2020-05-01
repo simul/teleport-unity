@@ -131,7 +131,7 @@ public partial class TeleportCameraRenderer
 			drawingSettings.mainLightIndex = lightingOrder.MainLightIndex;
 
 			//drawingSettings.enableDynamicBatching = true;
-			//drawingSettings.enableInstancing= true;
+			//drawingSettings.enableInstancing = true;
 			if (cullingResults.visibleLights.Length > 0)
 			{
 				drawingSettings.perObjectData |= PerObjectData.LightProbe
@@ -147,13 +147,13 @@ public partial class TeleportCameraRenderer
 						| PerObjectData.ShadowMask;
 			}
 			teleportLighting.SetupForwardBasePass(context, cullingResults, lightingOrder);
-		for (int i = 1; i < legacyShaderTagIds.Length; i++)
-		{
-			drawingSettings.SetShaderPassName(i, legacyShaderTagIds[i]);
-		}
+			for (int i = 1; i < legacyShaderTagIds.Length; i++)
+			{
+				drawingSettings.SetShaderPassName(i, legacyShaderTagIds[i]);
+			}
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
-	}
-		if(cullingResults.visibleLights.Length>1)
+		}
+		if(cullingResults.visibleLights.Length>1||lightingOrder.SecondLightIndex>=0)
 		{
 			var drawingSettings = new DrawingSettings(addLightShaderTagIds[0], sortingSettings);
 			drawingSettings.mainLightIndex = 0;
