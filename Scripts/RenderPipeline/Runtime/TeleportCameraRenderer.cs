@@ -48,7 +48,7 @@ public partial class TeleportCameraRenderer
 
 	TeleportLighting teleportLighting = new TeleportLighting();
 
-	RenderTexture cubemapTexture;
+	RenderTexture cubemapTexture = null;
 	static Shader depthShader = null;
 	static Material depthMaterial = null;
 
@@ -213,12 +213,11 @@ public partial class TeleportCameraRenderer
 			}
 		}
 
-		depthMaterial.SetInt("Face", face);
+		depthMaterial.SetTexture("DepthTexture", cubemapTexture, RenderTextureSubElement.Depth);
 
 		var buffer = new CommandBuffer();
 		buffer.name = "Custom Depth CB";
 		buffer.SetRenderTarget(Teleport_SceneCaptureComponent.GetRenderingSceneCapture().sceneCaptureTexture);
-		buffer.SetGlobalTexture("DepthTexture", cubemapTexture.depthBuffer);
 		buffer.SetViewport(viewport);
 		buffer.BeginSample(buffer.name);
 		buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 0, MeshTopology.Triangles, 6);
@@ -311,8 +310,6 @@ public partial class TeleportCameraRenderer
 		Color [] direction_colours = { new Color(.01F,0.0F,0.0F), new Color(.01F, 0.0F, 0.0F), new Color(0.0F, .005F, 0.0F), new Color(0.0F, .005F, 0.0F), new Color(0.0F, 0.0F, 0.01F), new Color(0.0F, 0.0F, 0.01F) };
 		int offsetX = faceOffsets[face, 0];
 		int offsetY = faceOffsets[face, 1];
-		
-		//camera.pixelRect = new Rect(offsetX * faceSize, offsetY * faceSize, faceSize, faceSize);
 
 		var depthViewport = new Rect(offsetX * halfFaceSize, (faceSize * 2) + (offsetY * halfFaceSize), halfFaceSize, halfFaceSize);
 
@@ -335,7 +332,7 @@ public partial class TeleportCameraRenderer
 #if UNITY_EDITOR
 		DrawUnsupportedShaders(context, camera);
 #endif
-    QuantizeColor(context, camera, face);
+		QuantizeColor(context, camera, face);
 		EndSample(context, samplename);
 		EndCamera(context, camera);
 	}
