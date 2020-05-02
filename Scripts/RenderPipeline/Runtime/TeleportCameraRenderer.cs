@@ -286,7 +286,7 @@ public partial class TeleportCameraRenderer
 			cubemapTexture.Create();
 		}
 
-		camera.SetTargetBuffers(cubemapTexture.colorBuffer, cubemapTexture.depthBuffer);
+		camera.targetTexture = cubemapTexture;
 
 		for (int i = 0; i < NumFaces; ++i)
 		{
@@ -361,7 +361,6 @@ public partial class TeleportCameraRenderer
 	{
 		var monitor = CasterMonitor.GetCasterMonitor();
 		int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
-		//int size = faceSize * 3;
 
 		const int THREADGROUP_SIZE = 32;
 		int numThreadGroupsX = faceSize / THREADGROUP_SIZE;
@@ -373,7 +372,6 @@ public partial class TeleportCameraRenderer
 		computeShader.SetInt("Face", face);
 
 		var buffer = new CommandBuffer();
-		//buffer.SetGlobalTexture("RWOutputColorTexture", Graphics.activeColorBuffer);
 		buffer.name = "Quantize Colour";
 		buffer.DispatchCompute(computeShader, quantizationKernel, numThreadGroupsX, numThreadGroupsY, 1);
 		context.ExecuteCommandBuffer(buffer);
