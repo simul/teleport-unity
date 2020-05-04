@@ -108,15 +108,13 @@ namespace teleport
                     return;
             }
 
+            var encoderTexture = Teleport_SceneCaptureComponent.GetRenderingSceneCapture().sceneCaptureTexture;
             // deviceHandle set in dll
-            if (camera.targetTexture)
-            {
-                paramsWrapper.videoEncodeParams.inputSurfaceResource = camera.targetTexture.GetNativeTexturePtr();
-                IntPtr paramsWrapperPtr = Marshal.AllocHGlobal(Marshal.SizeOf(new EncodeVideoParamsWrapper()));
-                Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);
+            paramsWrapper.videoEncodeParams.inputSurfaceResource = encoderTexture.GetNativeTexturePtr();
+            IntPtr paramsWrapperPtr = Marshal.AllocHGlobal(Marshal.SizeOf(new EncodeVideoParamsWrapper()));
+            Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);    
 
-                commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 0, paramsWrapperPtr);
-            }
+            commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 0, paramsWrapperPtr);
         }
 
         public void Shutdown()

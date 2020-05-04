@@ -9,7 +9,7 @@
 
 	uniform sampler2D _CameraDepthTexture;
 	uniform float4 _CameraDepthTexture_TexelSize;
-	Texture2D<float4> DepthTexture;
+	uniform sampler2D DepthTexture;
 
 	int Face;
 

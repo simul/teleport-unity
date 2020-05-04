@@ -81,12 +81,15 @@ namespace teleport
 
         public static CasterMonitor GetCasterMonitor()
         {
-            if(Application.isPlaying)
-                return instance;
-            else
-                return FindObjectOfType<CasterMonitor>();
+            if (!Application.isPlaying)
+                return null;
+            //We only want one instance, so delete duplicates.
+            if (instance == null)
+            {
+                instance = FindObjectOfType<CasterMonitor>();
+            }
+            return instance;
         }
-
         //We can only use the Unity AssetDatabase while in the editor.
         private void Awake()
         {
@@ -100,13 +103,6 @@ namespace teleport
 
         private void OnEnable()
         {
-            //We only want one instance, so delete duplicates.
-            if(instance != null && instance != this)
-            {
-                Destroy(this);
-                return;
-            }
-            instance = this;
             InitializeState initializeState=new InitializeState();
             initializeState.showActor = CasterMonitor.ShowActor;
             initializeState.hideActor = HideActor;

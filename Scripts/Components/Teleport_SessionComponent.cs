@@ -43,11 +43,16 @@ namespace teleport
 		private static Quaternion latestRotation = new Quaternion();
 		private static Vector3 latestPosition = new Vector3();
 
+		static bool done = false;
 		public static bool StaticDoesSessionExist(uid clientID)
 		{
 			if(!sessions.ContainsKey(clientID))
 			{
-				Debug.LogError("No session component found for client with ID: " + clientID);
+				if (!done)
+				{
+					Debug.LogError("No session component found for client with ID: " + clientID);
+					done = true;
+				}
 				return false;
 			}
 
@@ -183,7 +188,7 @@ namespace teleport
 
 			if(Client_IsConnected(clientID))
 			{
-				if(head!=null&&(!Client_HasOrigin(clientID)||transform.hasChanged))
+				if(head!=null&&(!Client_HasOrigin(clientID)))//||transform.hasChanged))
 				{
 					Client_SetOrigin(clientID, head.transform.position);
 					transform.hasChanged = false;
