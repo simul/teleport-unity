@@ -183,7 +183,7 @@ namespace teleport
 
 			if(Client_IsConnected(clientID))
 			{
-				if(head!=null&&(!Client_HasOrigin(clientID)||transform.hasChanged))
+				if(head!=null&&(!Client_HasOrigin(clientID)))//||transform.hasChanged))
 				{
 					Client_SetOrigin(clientID, head.transform.position);
 					transform.hasChanged = false;
