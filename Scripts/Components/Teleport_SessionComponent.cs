@@ -32,7 +32,7 @@ namespace teleport
 		private static extern uid GetUnlinkedClientID();
 
 		[DllImport("SimulCasterServer")]
-		private static extern void Client_SetOrigin(uid clientID, Vector3 pos);
+		private static extern bool Client_SetOrigin(uid clientID, Vector3 pos);
 		[DllImport("SimulCasterServer")]
 		private static extern bool Client_IsConnected(uid clientID);
 		[DllImport("SimulCasterServer")]
@@ -186,9 +186,11 @@ namespace teleport
 			{
 				if(head!=null&&(!Client_HasOrigin(clientID)))//||transform.hasChanged))
 				{
-					Client_SetOrigin(clientID, head.transform.position);
-					last_sent_origin = head.transform.position;
-					transform.hasChanged = false;
+					if(Client_SetOrigin(clientID, head.transform.position))
+					{ 
+						last_sent_origin = head.transform.position;
+						transform.hasChanged = false;
+					}
 				}
 			}
 
