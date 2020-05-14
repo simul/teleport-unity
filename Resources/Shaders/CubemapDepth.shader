@@ -5,13 +5,7 @@
 	#pragma enable_d3d11_debug_symbols
 	#include "Common.cginc"
 
-	static const int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
-
-	uniform sampler2D _CameraDepthTexture;
-	uniform float4 _CameraDepthTexture_TexelSize;
-	uniform sampler2D DepthTexture;
-
-	int Face;
+	Texture2D<float4> DepthTexture;
 
 	struct v2f
 	{
@@ -25,15 +19,10 @@
 		return sqrt(1.0 + dot(diff, diff));
 	}
 
-	float GetDepth(int3 pos, int w)
+	float GetDepth(int2 pos, int w)
 	{
-		float m = PosToDistanceMultiplier(pos.xy, w);
-		//int2 inPos = pos.xy + w * FaceOffsets[pos.z];
-		//float2 uv = float2(inPos.x, inPos.y);
-		//uv *= _CameraDepthTexture_TexelSize.xy;
-		//uv.y = 1.0 - uv.y;
-		//float d = tex2D(_CameraDepthTexture, uv).r;
-		float d = Linear01Depth(DepthTexture[pos.xy].r);
+		float m = PosToDistanceMultiplier(pos, w);
+		float d = Linear01Depth(DepthTexture[pos].r);
 		d *= m;
 		return d;
 	}
@@ -86,26 +75,22 @@
 		v2f o;
 		outpos = float4(vertices[vid], 1.0);
 		o.uv = GetUv(vid);
-		o.uv.y = 1.0 - o.uv.y;
+		//o.uv.y = 1.0 - o.uv.y;
 		return o;
 	}
 
 	float4 frag(v2f i, UNITY_VPOS_TYPE screenPos : VPOS) : SV_Target
 	{
-		uint W, H;
-		DepthTexture.GetDimensions(W, H);
+		int w, h;
+		DepthTexture.GetDimensions(w, h);
 
-		//int W = _CameraDepthTexture_TexelSize.z / 3;
-
-		//int W = TexW / 3;
-
-	  int3 pos = int3(i.uv * W, 1);
+		int2 pos = int2(i.uv * float(w));
 		
-		float d00 = GetDepth(pos, W);
-		float d01 = GetDepth(pos + int3(1, 0, 0), W);
-		float d10 = GetDepth(pos + int3(0, 1, 0), W);
+		float d00 = GetDepth(pos, w);
+		float d01 = GetDepth(pos + int2(1, 0), w);
+		float d10 = GetDepth(pos + int2(0, 1), w);
 
-		float4 depth = float4(d00, d01, d10, 1.0) / 100.0 / 20.0;
+		float4 depth = float4(d00, d01, d10, 1.0);
 
 		return depth;
 	}

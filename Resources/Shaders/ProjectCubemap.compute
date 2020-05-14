@@ -99,7 +99,7 @@ void EncodeDepthCS(uint3 ThreadID : SV_DispatchThreadID)
 	float d00 = GetDepth(pos, InputW);
 	float d01 = GetDepth(pos + int3(1, 0, 0), InputW);
 	float d10 = GetDepth(pos + int3(0, 1, 0), InputW); 
-	float4 DepthValue = float4(d00, d01, d10, 1.0) / 100.0 / 20.0;
+	float4 DepthValue = float4(d00, d01, d10, 1.0);
 
 	RWOutputColorTexture[int2(ThreadID.x, ThreadID.y) + DepthOffset + InputW * FaceOffsets[pos.z] / 2] = DepthValue;
 }
