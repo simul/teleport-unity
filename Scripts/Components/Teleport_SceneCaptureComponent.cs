@@ -17,12 +17,13 @@ namespace teleport
         public RenderTexture sceneCaptureTexture = null;
         Camera cam = null;
         CasterMonitor monitor; //Cached reference to the caster monitor.   
-
+        TeleportSettings teleportSettings=null;
         private static Teleport_SceneCaptureComponent renderingSceneCapture = null;
 
         void Start()
         {
             monitor = CasterMonitor.GetCasterMonitor();
+            teleportSettings = TeleportSettings.GetOrCreateSettings();
             Initialize();
         }
 
@@ -94,10 +95,10 @@ namespace teleport
 
             cam.enabled = false;
 
-            int size = (int)monitor.casterSettings.captureCubeTextureSize * 3;
+            int size = (int)teleportSettings.casterSettings.captureCubeTextureSize * 3;
 
             RenderTextureFormat format;
-            if (monitor.casterSettings.use10BitEncoding)
+            if (teleportSettings.casterSettings.use10BitEncoding)
             {
                 format = RenderTextureFormat.ARGB64;
             }

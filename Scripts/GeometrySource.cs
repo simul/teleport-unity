@@ -536,7 +536,8 @@ namespace teleport
 
 			string basisFileLocation = "";
 			//Basis Universal compression won't be used if the file location is left empty.
-			if(CasterMonitor.GetCasterMonitor().casterSettings.useCompressedTextures)
+			TeleportSettings teleportSettings=TeleportSettings.GetOrCreateSettings();
+			if (teleportSettings.casterSettings.useCompressedTextures)
 			{
 				string folderPath = compressedTexturesFolderPath;
 				//Create directiory if it doesn't exist.
@@ -1067,7 +1068,8 @@ namespace teleport
 
 		private uid AddTexture(Texture texture)
 		{
-			if(!texture) return 0;
+			if(!texture)
+				return 0;
 
 			if(!processedResources.TryGetValue(texture, out uid textureID))
 			{

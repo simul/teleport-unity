@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using SCServer;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -16,7 +17,14 @@ namespace teleport
 		public const string k_TeleportSettingsPath = "TeleportVR/TeleportSettings";
 		//! Objects with this tag will be streamed; leaving it blank will cause it to just use the layer mask.
 		public string TagToStream = "TeleportStreamable";
-		//! Mask of the physics layers the user can choose to stream.
+
+		[Header("Connections")]
+		public uint listenPort = 10500u;
+		public uint discoveryPort = 10600u;
+		public int connectionTimeout = 5; //How many seconds to wait before automatically disconnecting from the client.
+										  //! Mask of the physics layers the user can choose to stream.
+
+		public CasterSettings casterSettings =new CasterSettings();
 		public LayerMask LayersToStream;
 		public static TeleportSettings GetOrCreateSettings()
 		{

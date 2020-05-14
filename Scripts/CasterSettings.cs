@@ -19,7 +19,6 @@ namespace SCServer
 		public Int32 detectionSphereBufferDistance = 200;
 		public Int32 expectedLag = 0;
 		public Int64 throttleKpS = 0;
-		public IntPtr handActor;
 
 		[Header("Geometry")]
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingGeometry = true;

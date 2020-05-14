@@ -56,10 +56,11 @@ public partial class TeleportCameraRenderer
 	int encodeCamKernel;
 	int quantizationKernel;
 	int encodeDepthKernel;
+	TeleportSettings teleportSettings = null;
 
 	public TeleportCameraRenderer()
 	{
-
+		teleportSettings = TeleportSettings.GetOrCreateSettings();
 	}
 
 	void ExecuteBuffer(ScriptableRenderContext context, CommandBuffer buffer)
@@ -274,7 +275,7 @@ public partial class TeleportCameraRenderer
 
 		if (!cubemapTexture)
 		{
-			int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
+			int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
 
 			cubemapTexture = new RenderTexture(faceSize, faceSize, 24, sceneCaptureTexture.format, RenderTextureReadWrite.Default);
 			cubemapTexture.name = "Video Encoder Texture";
@@ -295,7 +296,7 @@ public partial class TeleportCameraRenderer
 
 		FinalizeSceneCaptureTexture(context, camera);
 
-		if (clientID != 0 && monitor && monitor.casterSettings.isStreamingVideo)
+		if (clientID != 0 && monitor && teleportSettings.casterSettings.isStreamingVideo)
 		{
 			Teleport_SceneCaptureComponent.videoEncoders[clientID].CreateEncodeCommands(context, camera);
 		}
@@ -304,7 +305,7 @@ public partial class TeleportCameraRenderer
 	void DrawCubemapFace(ScriptableRenderContext context, Camera camera, int face)
 	{
 		CasterMonitor monitor = CasterMonitor.GetCasterMonitor();
-		int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
+		int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
 		int halfFaceSize = faceSize / 2;
 
 		Color [] direction_colours = { new Color(.01F,0.0F,0.0F), new Color(.01F, 0.0F, 0.0F), new Color(0.0F, .005F, 0.0F), new Color(0.0F, .005F, 0.0F), new Color(0.0F, 0.0F, 0.01F), new Color(0.0F, 0.0F, 0.01F) };
@@ -360,7 +361,7 @@ public partial class TeleportCameraRenderer
 	void QuantizeColor(ScriptableRenderContext context, Camera camera, int face)
 	{
 		var monitor = CasterMonitor.GetCasterMonitor();
-		int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
+		int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
 
 		const int THREADGROUP_SIZE = 32;
 		int numThreadGroupsX = faceSize / THREADGROUP_SIZE;
@@ -381,7 +382,7 @@ public partial class TeleportCameraRenderer
 	void EncodeDepth(ScriptableRenderContext context, Camera camera)
 	{
 		var monitor = CasterMonitor.GetCasterMonitor();
-		int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
+		int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
 
 		const int THREADGROUP_SIZE = 32;
 		int numThreadGroupsX = (faceSize / 2) / THREADGROUP_SIZE;
@@ -406,7 +407,7 @@ public partial class TeleportCameraRenderer
 	{
 		var monitor = CasterMonitor.GetCasterMonitor();
 
-		int faceSize = (int)monitor.casterSettings.captureCubeTextureSize;
+		int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
 		int size = faceSize * 3;
 
 		var camTransform = camera.transform;

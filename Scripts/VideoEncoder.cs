@@ -87,7 +87,8 @@ namespace teleport
             var paramsWrapper = new EncodeVideoParamsWrapper();
             paramsWrapper.clientID = clientID;
             paramsWrapper.videoEncodeParams = new SCServer.VideoEncodeParams();
-            paramsWrapper.videoEncodeParams.encodeWidth = paramsWrapper.videoEncodeParams.encodeHeight = (int)monitor.casterSettings.captureCubeTextureSize * 3;
+            var teleportSettings = TeleportSettings.GetOrCreateSettings();
+            paramsWrapper.videoEncodeParams.encodeWidth = paramsWrapper.videoEncodeParams.encodeHeight = (int)teleportSettings.casterSettings.captureCubeTextureSize * 3;
 
             switch(SystemInfo.graphicsDeviceType)
             {

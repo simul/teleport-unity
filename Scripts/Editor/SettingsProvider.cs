@@ -57,7 +57,16 @@ namespace teleport
 			teleportSettings=TeleportSettings.GetOrCreateSettings();
 			return teleportSettings != null;
 		}
-
+		Tuple<int, string, bool>[] headers =
+		{
+			Tuple.Create(1, "SRT", false),
+			Tuple.Create(7, "General", false),
+			Tuple.Create(4, "Geometry", false),
+			Tuple.Create(18, "Encoding", false),
+			Tuple.Create(5, "Debugging", false),
+			Tuple.Create(3, "Compression", false),
+			Tuple.Create(1, "Camera", false),
+		};
 		public override void OnGUI(string searchContext)
 		{
 			if (teleportSettings == null)
@@ -65,7 +74,71 @@ namespace teleport
 			// Use IMGUI to display UI:
 			teleportSettings.TagToStream = EditorGUILayout.TextField("Tag to Stream",teleportSettings.TagToStream);
 			teleportSettings.LayersToStream = LayerMaskField("Layers", teleportSettings.LayersToStream);
+			teleportSettings.discoveryPort = (uint)EditorGUILayout.IntField("Discovery Port", (int)teleportSettings.discoveryPort);
+			teleportSettings.listenPort = (uint)EditorGUILayout.IntField("Listen Port", (int)teleportSettings.listenPort);
+			teleportSettings.connectionTimeout = EditorGUILayout.IntField("Timeout", teleportSettings.connectionTimeout);
 			//EditorGUILayout.PropertyField(m_TeleportSettings.FindProperty("TagToStream"));
+			
+
+			foreach (var prop in typeof(SCServer.CasterSettings).GetProperties())
+			{
+				EditorGUILayout.LabelField(prop.Name);
+			}
+			var orderedFields = typeof(SCServer.CasterSettings).GetFields()
+														 .OrderBy(field => field.MetadataToken).ToArray<System.Reflection.FieldInfo>();
+		
+			int row = 0;
+			for(int i=0;i< headers.Length;i++)
+			{
+				var section =headers[i];
+				bool res=EditorGUILayout.BeginFoldoutHeaderGroup(section.Item3, section.Item2);
+				if (res != section.Item3)
+				{
+					section=headers[i]= Tuple.Create(section.Item1, section.Item2, res);
+				}
+				if (section.Item3)
+				{
+					for (int r = row; r < row + section.Item1; r++)
+					{
+						var field = orderedFields[r];
+						if (field.FieldType == typeof(Int32))
+						{
+							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.IntField(field.Name, (Int32)field.GetValue(teleportSettings.casterSettings)));
+						}
+						else if (field.FieldType == typeof(Int64))
+						{
+							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.LongField(field.Name, (Int64)field.GetValue(teleportSettings.casterSettings)));
+						}
+						else if (field.FieldType == typeof(byte))
+						{
+							int ival=(int)((byte)field.GetValue(teleportSettings.casterSettings));
+							byte bval = (byte)EditorGUILayout.IntField(field.Name, ival);
+							field.SetValue(teleportSettings.casterSettings,bval);
+						}
+						else if (field.FieldType == typeof(float))
+						{
+							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.FloatField(field.Name, (float)field.GetValue(teleportSettings.casterSettings)));
+						}
+						else if (field.FieldType == typeof(string))
+						{
+							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.TextField(field.Name, field.GetValue(teleportSettings.casterSettings).ToString()));
+						}
+						else if (field.FieldType == typeof(bool))
+						{
+							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.Toggle(field.Name, (bool)field.GetValue(teleportSettings.casterSettings)));
+						}
+						else if (field.FieldType == typeof(object))
+						{
+						//	field.SetValue(teleportSettings.casterSettings, EditorGUILayout.ObjectField(field.Name, (bool)field.GetValue(teleportSettings.casterSettings)));
+						}
+						else
+							EditorGUILayout.LabelField(field.Name, field.FieldType.ToString() + " " + field.GetValue(teleportSettings.casterSettings).ToString());
+
+					}
+				}
+				row += section.Item1;
+				EditorGUILayout.EndFoldoutHeaderGroup();
+			}
 			// Force it to save:
 			EditorUtility.SetDirty(teleportSettings);
 		}

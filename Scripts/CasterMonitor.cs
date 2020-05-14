@@ -2,25 +2,19 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine;
-
+using System.Collections.Generic;
 using uid = System.UInt64;
 
 namespace teleport
 {
     public class CasterMonitor : MonoBehaviour
     {
-        public SCServer.CasterSettings casterSettings = new SCServer.CasterSettings();
-        
         // Reference to the global (per-project) TeleportSettings asset.
         private TeleportSettings teleportSettings= null;
 
         private GeometrySource geometrySource = null;
 
-        [Header("Connections")]
-        public uint listenPort = 10500u;
-        public uint discoveryPort = 10607u;
-        public int connectionTimeout = 5; //How many seconds to wait before automatically disconnecting from the client.
-
+		private static bool ok = false;
         private static CasterMonitor instance; //There should only be one CasterMonitor instance at a time.
 
         //StringBuilders used for constructing log messages from libavstream.
@@ -67,7 +61,7 @@ namespace teleport
             public uint SERVICE_PORT;
         };
         [DllImport("SimulCasterServer")]
-        private static extern void Initialise(InitializeState initializeState);
+		private static extern bool Initialise(InitializeState initializeState);
         [DllImport("SimulCasterServer")]
         private static extern void UpdateCasterSettings(SCServer.CasterSettings newSettings);
 
@@ -79,16 +73,16 @@ namespace teleport
         private static extern void Shutdown();
         #endregion
 
+		private GUIStyle overlayFont = new GUIStyle();
+        private GUIStyle clientFont = new GUIStyle();
         public static CasterMonitor GetCasterMonitor()
-        {
-            if (!Application.isPlaying)
-                return null;
-            //We only want one instance, so delete duplicates.
-            if (instance == null)
-            {
-                instance = FindObjectOfType<CasterMonitor>();
-            }
-            return instance;
+		{
+			// We only want one instance, so delete duplicates.
+			if (instance == null)
+			{
+				instance = FindObjectOfType<CasterMonitor>();
+			}
+			return instance;
         }
         //We can only use the Unity AssetDatabase while in the editor.
         private void Awake()
@@ -99,38 +93,63 @@ namespace teleport
             {
                 geometrySource = GeometrySource.GetGeometrySource();
             }
+			overlayFont.normal.textColor = Color.yellow;
+			overlayFont.fontSize = 14;
+            clientFont.fontSize = 14;
+            clientFont.normal.textColor = Color.white;
         }
 
         private void OnEnable()
         {
             InitializeState initializeState=new InitializeState();
             initializeState.showActor = CasterMonitor.ShowActor;
-            initializeState.hideActor = HideActor;
-            initializeState.headPoseSetter = Teleport_SessionComponent.StaticSetHeadPose;
-            initializeState.controllerPoseSetter = Teleport_SessionComponent.StaticSetControllerPose;
-            initializeState.newInputProcessing = Teleport_SessionComponent.StaticProcessInput;
-            initializeState.disconnect = Teleport_SessionComponent.StaticDisconnect;
-            initializeState.messageHandler=LogMessageHandler;
-            initializeState.SERVICE_PORT = listenPort;
-            initializeState.DISCOVERY_PORT = discoveryPort;
-            Initialise(initializeState);
+            initializeState.hideActor           = HideActor;
+            initializeState.headPoseSetter      =Teleport_SessionComponent.StaticSetHeadPose;
+            initializeState.controllerPoseSetter=Teleport_SessionComponent.StaticSetControllerPose;
+            initializeState.newInputProcessing  =Teleport_SessionComponent.StaticProcessInput;
+            initializeState.disconnect          =Teleport_SessionComponent.StaticDisconnect;
+            initializeState.messageHandler      =LogMessageHandler;
+			initializeState.SERVICE_PORT        =teleportSettings.listenPort;
+			initializeState.DISCOVERY_PORT      =teleportSettings.discoveryPort;
+			ok=Initialise(initializeState);
         }
-
+		List<Teleport_SessionComponent> sessions=new List<Teleport_SessionComponent>();
+		public void AddSession(Teleport_SessionComponent s)
+		{
+			if(sessions.Contains(s))
+				return;
+			sessions.Add(s);
+		}
         private void Update()
         {
-            Tick(Time.deltaTime);
+			if(ok)
+               Tick(Time.deltaTime);
         }
+		void OnGUI()
+        {
+            int x = 10;
+            int y = 20;
+            GUI.Label(new Rect(x,y+=14, 100, 20), "Teleport", overlayFont);
+            GUI.Label(new Rect(x,y+=14, 100, 20), string.Format("Discovering on port {0}", teleportSettings.discoveryPort), overlayFont);
+			foreach(var s in sessions)
+			{
+				s.ShowOverlay(x,y, clientFont);
+			}
+		}
+
 
         private void OnValidate()
         {
             if(Application.isPlaying)
             {
-                UpdateCasterSettings(casterSettings);
+                teleportSettings = TeleportSettings.GetOrCreateSettings();
+                UpdateCasterSettings(teleportSettings.casterSettings);
             }
         }
 
         private void OnDisable()
         {
+			sessions.Clear();
             Shutdown();
         }
 

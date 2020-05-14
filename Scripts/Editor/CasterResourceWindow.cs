@@ -131,10 +131,9 @@ namespace teleport
 
 		private void FindStreamedObjects()
 		{
-			CasterMonitor monitor = CasterMonitor.GetCasterMonitor();
-			if (monitor)
+			var teleportSettings = TeleportSettings.GetOrCreateSettings();
+			if (teleportSettings)
 			{
-				var teleportSettings = TeleportSettings.GetOrCreateSettings();
 				streamedObjects = GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream);
 				streamedObjects = streamedObjects.Where(x => (teleportSettings.LayersToStream & (1 << x.layer)) != 0).ToArray();
 			}
@@ -158,7 +157,8 @@ namespace teleport
 			//According to the Unity docs, we need to call Release() on any render textures we are done with.
 			for(int i = geometrySource.texturesWaitingForExtraction.Count; i < renderTextures.Length; i++)
 			{
-				if(renderTextures[i]) renderTextures[i].Release();
+				if(renderTextures[i])
+					renderTextures[i].Release();
 			}
 			//Resize the array, instead of simply creating a new one, as we want to keep the same render textures for quicker debugging.
 			Array.Resize(ref renderTextures, geometrySource.texturesWaitingForExtraction.Count);

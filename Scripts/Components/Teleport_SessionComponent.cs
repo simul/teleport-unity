@@ -32,7 +32,7 @@ namespace teleport
 		private static extern uid GetUnlinkedClientID();
 
 		[DllImport("SimulCasterServer")]
-		private static extern void Client_SetOrigin(uid clientID, Vector3 pos);
+		private static extern bool Client_SetOrigin(uid clientID, Vector3 pos);
 		[DllImport("SimulCasterServer")]
 		private static extern bool Client_IsConnected(uid clientID);
 		[DllImport("SimulCasterServer")]
@@ -162,7 +162,8 @@ namespace teleport
 		private void Start()
 		{
 			casterMonitor = CasterMonitor.GetCasterMonitor();
-			teleportSettings= TeleportSettings.GetOrCreateSettings();
+			casterMonitor.AddSession(this);
+			teleportSettings = TeleportSettings.GetOrCreateSettings();
 			Teleport_Head[] heads = GetComponentsInChildren<Teleport_Head>();
 			if (heads.Length != 1)
 			{
@@ -170,7 +171,7 @@ namespace teleport
 			}
 			head = heads[0];
 		}
-
+		Vector3 last_sent_origin = new Vector3(0, 0, 0);
 		private void LateUpdate()
 		{
 			if(clientID == 0)
@@ -190,17 +191,27 @@ namespace teleport
 			{
 				if(head!=null&&(!Client_HasOrigin(clientID)))//||transform.hasChanged))
 				{
-					Client_SetOrigin(clientID, head.transform.position);
-					transform.hasChanged = false;
+					if(Client_SetOrigin(clientID, head.transform.position))
+					{ 
+						last_sent_origin = head.transform.position;
+						transform.hasChanged = false;
+					}
 				}
 			}
 
-			if(casterMonitor.casterSettings.isStreamingGeometry)
+			if(teleportSettings.casterSettings.isStreamingGeometry)
 			{
 				UpdateGeometryStreaming();
 			}
 		}
-
+		public void ShowOverlay(int x, int y, GUIStyle font)
+		{
+			string str=string.Format("Client {0}", clientID);
+			int dy = 14;
+			GUI.Label(new Rect(x, y+=dy, 300, 20), str, font);
+			GUI.Label(new Rect(x, y+=dy, 300, 20), string.Format("sent origin   {0},{1},{2}", last_sent_origin.x, last_sent_origin.y, last_sent_origin.z), font);
+			GUI.Label(new Rect(x, y+=dy, 300, 20), string.Format("head position {0},{1},{2}", head.transform.position.x, head.transform.position.y, head.transform.position.z), font);
+		}
 		private void OnDestroy()
 		{
 			if(clientID != 0)
@@ -211,8 +222,8 @@ namespace teleport
 		{
 			if(teleportSettings.LayersToStream != 0)
 			{
-				List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius, teleportSettings.LayersToStream));
-				List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, casterMonitor.casterSettings.detectionSphereRadius + casterMonitor.casterSettings.detectionSphereBufferDistance, teleportSettings.LayersToStream));
+				List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, teleportSettings.casterSettings.detectionSphereRadius, teleportSettings.LayersToStream));
+				List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, teleportSettings.casterSettings.detectionSphereRadius + teleportSettings.casterSettings.detectionSphereBufferDistance, teleportSettings.LayersToStream));
 
 				List<Collider> gainedColliders = new List<Collider>(innerSphereCollisions.Except(streamedObjects));
 				List<Collider> lostColliders = new List<Collider>(streamedObjects.Except(outerSphereCollisions));
