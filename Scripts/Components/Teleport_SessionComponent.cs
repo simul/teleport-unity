@@ -157,7 +157,8 @@ namespace teleport
 		private void Start()
 		{
 			casterMonitor = CasterMonitor.GetCasterMonitor();
-			teleportSettings= TeleportSettings.GetOrCreateSettings();
+			casterMonitor.AddSession(this);
+			teleportSettings = TeleportSettings.GetOrCreateSettings();
 			Teleport_Head[] heads = GetComponentsInChildren<Teleport_Head>();
 			if (heads.Length != 1)
 			{
@@ -165,7 +166,7 @@ namespace teleport
 			}
 			head = heads[0];
 		}
-
+		Vector3 last_sent_origin = new Vector3(0, 0, 0);
 		private void LateUpdate()
 		{
 			if(clientID == 0)
@@ -186,6 +187,7 @@ namespace teleport
 				if(head!=null&&(!Client_HasOrigin(clientID)))//||transform.hasChanged))
 				{
 					Client_SetOrigin(clientID, head.transform.position);
+					last_sent_origin = head.transform.position;
 					transform.hasChanged = false;
 				}
 			}
@@ -195,7 +197,14 @@ namespace teleport
 				UpdateGeometryStreaming();
 			}
 		}
-
+		public void ShowOverlay(int x, int y, GUIStyle font)
+		{
+			string str=string.Format("Client {0}", clientID);
+			int dy = 14;
+			GUI.Label(new Rect(x, y+=dy, 200, 20), str, font);
+			GUI.Label(new Rect(x, y+=dy, 200, 20), string.Format("sent origin   {0} {1} {2}", last_sent_origin.x, last_sent_origin.y, last_sent_origin.z));
+			GUI.Label(new Rect(x, y+=dy, 200, 20), string.Format("head position {0} {1} {2}", head.transform.position.x, head.transform.position.y, head.transform.position.z));
+		}
 		private void OnDestroy()
 		{
 			if(clientID != 0)

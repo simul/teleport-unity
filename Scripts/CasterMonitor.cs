@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine;
-
+using System.Collections.Generic;
 using uid = System.UInt64;
 
 namespace teleport
@@ -75,6 +75,7 @@ namespace teleport
 		private static extern void Shutdown();
 		#endregion
 
+		private GUIStyle overlayFont = new GUIStyle();
 		public static CasterMonitor GetCasterMonitor()
 		{
 			// We only want one instance, so delete duplicates.
@@ -97,6 +98,8 @@ namespace teleport
 			{
 				geometrySource = GeometrySource.GetGeometrySource();
 			}
+			overlayFont.normal.textColor = Color.yellow;
+			overlayFont.fontSize = 14;
 		}
 
 		private void OnEnable()
@@ -120,12 +123,29 @@ namespace teleport
 			initializeState.DISCOVERY_PORT = teleportSettings.discoveryPort;
 			ok=Initialise(initializeState);
 		}
-
+		List<Teleport_SessionComponent> sessions=new List<Teleport_SessionComponent>();
+		public void AddSession(Teleport_SessionComponent s)
+		{
+			if(sessions.Contains(s))
+				return;
+			sessions.Add(s);
+		}
 		private void Update()
 		{
 			if(ok)
 				Tick(Time.deltaTime);
 		}
+		void OnGUI()
+		{
+			GUI.Label(new Rect(10, 10, 100, 20), "Teleport", overlayFont);
+			int x = 10;
+			int y = 20;
+			foreach(var s in sessions)
+			{
+				s.ShowOverlay(x,y, overlayFont);
+			}
+		}
+
 
 		private void OnValidate()
 		{
@@ -137,6 +157,7 @@ namespace teleport
 
 		private void OnDisable()
 		{
+			sessions.Clear();
 			Shutdown();
 		}
 
