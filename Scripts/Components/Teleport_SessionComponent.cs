@@ -75,7 +75,8 @@ namespace teleport
 
 		public static void StaticDisconnect(uid clientID)
 		{
-			sessions[clientID].Disconnect();
+			if (sessions.ContainsKey(clientID))
+				sessions[clientID].Disconnect();
 		}
 
 		public static void StaticSetHeadPose(uid clientID, in avs.HeadPose newHeadPose)

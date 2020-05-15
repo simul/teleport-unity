@@ -152,7 +152,7 @@ public class TeleportLighting
 		{
 			unimportant_LightPositions[index] = -light.localToWorldMatrix.GetColumn(2);
 		}
-		else
+		else if(index< maxUnimportantLights)
 		{
 			unimportant_LightPositions[index] = light.localToWorldMatrix.GetColumn(3);
 			if (light.lightType == LightType.Spot)

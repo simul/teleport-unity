@@ -23,23 +23,14 @@ public partial class TeleportCameraRenderer
 	static int NumFaces = 6;
 	static int[,] faceOffsets = new int[6, 2] { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } };
 
-	// To align with Unreal Engine
-	static Quaternion frontFaceRot = Quaternion.Euler(0, 0, 0);
-	static Quaternion backFaceRot = Quaternion.Euler(0, 0, 0);
-	static Quaternion rightFaceRot = Quaternion.identity;
-	static Quaternion leftFaceRot = Quaternion. Euler(0, 0, 180);
-	static Quaternion upFaceRot = Quaternion.Euler(0, 0, -90);
-	static Quaternion downFaceRot = Quaternion.Euler(0, 0, -90); 
-
-	static Quaternion[] faceRotations = new Quaternion[] { frontFaceRot, backFaceRot, rightFaceRot, leftFaceRot, upFaceRot, downFaceRot };
 
 	// Switch back and front because Unity view matrices have -z for forward
-	static CamView frontCamView = new CamView(Vector3.back, Vector3.left);
-	static CamView backCamView = new CamView(Vector3.forward, Vector3.right);
-	static CamView rightCamView = new CamView(Vector3.right, Vector3.up);
+	static CamView frontCamView = new CamView(Vector3.forward, Vector3.right);
+	static CamView backCamView = new CamView(Vector3.back, Vector3.right); 
+	static CamView rightCamView = new CamView(Vector3.right, Vector3.down);
 	static CamView leftCamView = new CamView(Vector3.left, Vector3.up);
-	static CamView upCamView = new CamView(Vector3.up, Vector3.back);
-	static CamView downCamView = new CamView(Vector3.down, Vector3.forward);
+	static CamView upCamView = new CamView(Vector3.up, Vector3.right);
+	static CamView downCamView = new CamView(Vector3.down, Vector3.right);
 
 	static CamView[] faceCamViews = new CamView[] { frontCamView, backCamView, rightCamView, leftCamView, upCamView, downCamView };
 
@@ -172,8 +163,6 @@ public partial class TeleportCameraRenderer
 			}
 			context.DrawRenderers(	cullingResults, ref drawingSettings, ref filteringSettings);
 		}
-
-		//
 	}
 	void DrawTransparentGeometry(ScriptableRenderContext context, Camera camera)
 	{
@@ -235,6 +224,7 @@ public partial class TeleportCameraRenderer
 	{
 		var buffer = new CommandBuffer();
 		buffer.ClearRenderTarget(true, true, color);
+		buffer.SetInvertCulling(false);
 		context.ExecuteCommandBuffer(buffer);
 		buffer.Release();
 	}
@@ -308,18 +298,27 @@ public partial class TeleportCameraRenderer
 		int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
 		int halfFaceSize = faceSize / 2;
 
-		Color [] direction_colours = { new Color(.01F,0.0F,0.0F), new Color(.01F, 0.0F, 0.0F), new Color(0.0F, .005F, 0.0F), new Color(0.0F, .005F, 0.0F), new Color(0.0F, 0.0F, 0.01F), new Color(0.0F, 0.0F, 0.01F) };
+		Color [] direction_colours = { new Color(.5F,0.0F,0.0F), new Color(.01F, 0.0F, 0.0F), new Color(0.0F, .5F, 0.0F), new Color(0.0F, .005F, 0.0F), new Color(0.0F, 0.0F, 0.5F), new Color(0.0F, 0.0F, 0.01F) };
 		int offsetX = faceOffsets[face, 0];
 		int offsetY = faceOffsets[face, 1];
 
 		var depthViewport = new Rect(offsetX * halfFaceSize, (faceSize * 2) + (offsetY * halfFaceSize), halfFaceSize, halfFaceSize);
 
-		CamView view = faceCamViews[face];
-		Vector3 to = view.forward;
+		CamView camView = faceCamViews[face];
+		Vector3 to = camView.forward;
 		Vector3 pos=camera.transform.position;
 
-		camera.worldToCameraMatrix = Matrix4x4.Rotate(faceRotations[face]) * Matrix4x4.LookAt(Vector3.zero, to, view.up)* Matrix4x4.Translate(-pos);
-		Matrix4x4 proj=camera.projectionMatrix;
+		camera.transform.position = pos;
+		camera.transform.LookAt(pos + to, camView.up);
+		Matrix4x4 view = camera.transform.localToWorldMatrix;// new Matrix4x4(camera.transform.position, camera.transform.rotation, Vector4.one); //no scale...
+		view = Matrix4x4.Inverse(view);
+		view.m20 *= -1f;
+		view.m21 *= -1f;
+		view.m22 *= -1f;
+		view.m23 *= -1f;
+
+		camera.worldToCameraMatrix = view;
+		//Render(context, camera);
 		BeginCamera(context, camera);
 
 		string samplename = camera.gameObject.name + " Face " + face;

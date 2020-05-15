@@ -104,7 +104,7 @@ public class TeleportRenderPipeline : RenderPipeline
 			Render(context, camera);
 		}
 	}
-
+	Matrix4x4 viewmat = new Matrix4x4();
 	void Render(ScriptableRenderContext context, Camera camera)
 	{
 		if (camera.name.Contains(CUBEMAP_CAM_PREFIX))
@@ -116,11 +116,13 @@ public class TeleportRenderPipeline : RenderPipeline
 			}
 			string clientIDStr = camera.name.Remove(index, CUBEMAP_CAM_PREFIX.Length);
 			uid clientID = uid.Parse(clientIDStr);
+			 camera.worldToCameraMatrix= viewmat ;
 			renderer.RenderToCubemap(context, camera, clientID);
 		}
 		else
 		{
 			renderer.Render(context, camera);
+			viewmat=camera.worldToCameraMatrix;
 		}
 	}
 }

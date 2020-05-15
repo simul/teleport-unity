@@ -55,8 +55,8 @@ void QuantizationCS(uint2 ThreadID : SV_DispatchThreadID)
 		return;
 
 	int2 pos = int2(ThreadID);
-
-	float4 SceneColor = InputColorTexture[pos];
+	int2 ipos=int2(pos.x,InputH-1-pos.y);
+	float4 SceneColor = InputColorTexture[ipos];
 	SceneColor.x = sqrt(SceneColor.x);
 	SceneColor.y = sqrt(SceneColor.y);
 	SceneColor.z = sqrt(SceneColor.z);
