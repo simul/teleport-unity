@@ -14,7 +14,7 @@
 
 	float PosToDistanceMultiplier(int2 pos, int w)
 	{
-		float h = (w + 1.0) / 2.0;
+		float h = (w + 1) / 2.0;
 		vec2 diff = (vec2(pos) - vec2(h, h)) * 2.0 / vec2(w, w);
 		return sqrt(1.0 + dot(diff, diff));
 	}
@@ -75,7 +75,7 @@
 		v2f o;
 		outpos = float4(vertices[vid], 1.0);
 		o.uv = GetUv(vid);
-		//o.uv.y = 1.0 - o.uv.y;
+		o.uv.y = 1.0 - o.uv.y;
 		return o;
 	}
 
@@ -84,7 +84,7 @@
 		int w, h;
 		DepthTexture.GetDimensions(w, h);
 
-		int2 pos = int2(i.uv * float(w));
+		int2 pos = int2(i.uv * float(w)) - 1;
 		
 		float d00 = GetDepth(pos, w);
 		float d01 = GetDepth(pos + int2(1, 0), w);

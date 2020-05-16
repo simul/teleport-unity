@@ -36,7 +36,6 @@ public partial class TeleportCameraRenderer
 
 	// End cubemap members
 
-
 	TeleportLighting teleportLighting = new TeleportLighting();
 
 	RenderTexture cubemapTexture = null;
@@ -46,7 +45,7 @@ public partial class TeleportCameraRenderer
 	ComputeShader computeShader = null;
 	int encodeCamKernel;
 	int quantizationKernel;
-	int encodeDepthKernel;
+
 	TeleportSettings teleportSettings = null;
 
 	public TeleportCameraRenderer()
@@ -82,7 +81,6 @@ public partial class TeleportCameraRenderer
 
 	bool Cull(ScriptableRenderContext context, Camera camera, out CullingResults cullingResults)
 	{
-		//ScriptableCullingParameters p
 		if (camera.TryGetCullingParameters(out ScriptableCullingParameters p))
 		{
 			cullingResults = context.Cull(ref p);
@@ -318,7 +316,7 @@ public partial class TeleportCameraRenderer
 		view.m23 *= -1f;
 
 		camera.worldToCameraMatrix = view;
-		//Render(context, camera);
+
 		BeginCamera(context, camera);
 
 		string samplename = camera.gameObject.name + " Face " + face;
@@ -354,7 +352,6 @@ public partial class TeleportCameraRenderer
 		}
 		encodeCamKernel = computeShader.FindKernel("EncodeCameraPositionCS");
 		quantizationKernel = computeShader.FindKernel("QuantizationCS");
-		encodeDepthKernel = computeShader.FindKernel("EncodeDepthCS");
 	}
 
 	void QuantizeColor(ScriptableRenderContext context, Camera camera, int face)
@@ -378,30 +375,6 @@ public partial class TeleportCameraRenderer
 		buffer.Release();
 	}
 
-	void EncodeDepth(ScriptableRenderContext context, Camera camera)
-	{
-		var monitor = CasterMonitor.GetCasterMonitor();
-		int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
-
-		const int THREADGROUP_SIZE = 32;
-		int numThreadGroupsX = (faceSize / 2) / THREADGROUP_SIZE;
-		int numThreadGroupsY = (faceSize / 2) / THREADGROUP_SIZE;
-
-		var buffer = new CommandBuffer();
-
-		buffer.SetGlobalTexture("DepthTexture", camera.targetTexture.depthBuffer);
-
-		computeShader.SetTexture(encodeDepthKernel, "RWOutputColorTexture", camera.targetTexture);
-		//computeShader.SetTextureFromGlobal(encodeDepthKernel, "DepthTexture", "_CameraDepthTexture");
-		
-		computeShader.SetInts("DepthOffset", new Int32[2] { 0, faceSize * 2 });
-
-		buffer.name = "Encode Depth";
-		buffer.DispatchCompute(computeShader, encodeDepthKernel, numThreadGroupsX, numThreadGroupsY, 6);
-		context.ExecuteCommandBuffer(buffer);
-		buffer.Release();
-	}
-
 	void EncodeCameraPosition(ScriptableRenderContext context, Camera camera)
 	{
 		var monitor = CasterMonitor.GetCasterMonitor();
@@ -417,7 +390,6 @@ public partial class TeleportCameraRenderer
 		computeShader.SetInts("CamPosOffset", new Int32[2] { size - (32 * 4), size - (3 * 8) });
 		computeShader.SetFloats("CubemapCameraPositionMetres", camPos);
 		var buffer = new CommandBuffer();
-		buffer.SetGlobalTexture("RWOutputColorTexture", Graphics.activeColorBuffer);
 		buffer.name = "Encode Camera Position";
 		buffer.DispatchCompute(computeShader, encodeCamKernel, 4, 1, 1);
 		context.ExecuteCommandBuffer(buffer);
