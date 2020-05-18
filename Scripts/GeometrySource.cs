@@ -19,7 +19,8 @@ namespace avs
 		Camera,
 		Scene,
 		ShadowMap,
-		Hand
+		Hand,
+		Light
 	};
 
 	public enum PrimitiveMode
@@ -413,6 +414,13 @@ namespace teleport
 			ClearGeometryStore();
 		}
 
+		public uid FindNode(GameObject node)
+		{
+			if (!node)
+				return 0;
+			processedResources.TryGetValue(node, out uid nodeID);
+			return nodeID;
+		}
 		public uid AddNode(GameObject node, bool forceUpdate = false)
 		{
 			if(!node)
@@ -435,7 +443,15 @@ namespace teleport
 				}
 				else
 				{
-					Debug.LogWarning(node.name + " was marked as streamable, but has no streamable component attached.");
+					Light light= node.GetComponent<Light>();
+					if (light)
+					{
+						nodeID = AddLightNode(light, nodeID, forceUpdate);
+					}
+					else
+					{
+						Debug.LogWarning(node.name + " was marked as streamable, but has no streamable component attached.");
+					}
 				}
 			}
 
@@ -457,7 +473,22 @@ namespace teleport
 
 			return meshID;
 		}
+		public uid AddLight(Light light)
+		{
+			if (!light)
+				return 0;
 
+			if (!processedResources.TryGetValue(light, out uid lightID))
+			{
+				lightID = GenerateID();
+				processedResources[light] = lightID;
+
+				ExtractLightData(light, lightID);
+			}
+
+			return lightID;
+
+		}
 		public uid AddMaterial(Material material, bool forceUpdate = false)
 		{
 			if(!material) return 0;
@@ -572,7 +603,50 @@ namespace teleport
 			UnityEditor.EditorUtility.ClearProgressBar();
 #endif
 		}
+		private uid AddLightNode(Light light,uid oldID,bool forceUpdate=false)
+		{
+			GameObject node = light.gameObject;
+			avs.Node extractedNode = new avs.Node();
 
+			//Extract mesh used on node.
+			extractedNode.dataID = AddLight(light);
+			extractedNode.dataType = avs.NodeDataType.Light;
+
+			//Can't create a node with no data.
+			if (extractedNode.dataID == 0)
+			{
+				Debug.LogError("Failed to extract light data from game object: " + node.name);
+				return 0;
+			}
+
+			//Extract children of node, through transform hierarchy.
+			List<uid> childIDs = new List<uid>();
+			for (int i = 0; i < node.transform.childCount; i++)
+			{
+				uid childID = AddNode(node.transform.GetChild(i).gameObject);
+
+				if (childID == 0)
+					Debug.LogWarning("Received 0 for ID of child on game object: " + node.name);
+				else
+					childIDs.Add(childID);
+			}
+			extractedNode.childAmount = (ulong)childIDs.Count;
+			extractedNode.childIDs = childIDs.ToArray();
+
+			extractedNode.transform = new avs.Transform
+			{
+				position = node.transform.position,
+				rotation = node.transform.rotation,
+				scale = node.transform.localScale
+			};
+
+			//Store extracted node.
+			uid nodeID = oldID == 0 ? GenerateID() : oldID;
+			processedResources[node] = nodeID;
+			StoreNode(nodeID, extractedNode);
+
+			return nodeID;
+		}
 		private uid AddMeshNode(MeshFilter meshFilter, uid oldID, bool forceUpdate = false)
 		{
 			GameObject node = meshFilter.gameObject;
@@ -595,8 +669,10 @@ namespace teleport
 			{
 				uid materialID = AddMaterial(material, forceUpdate);
 
-				if(materialID == 0) Debug.LogWarning("Received 0 for ID of material on game object: " + node.name);
-				else materialIDs.Add(materialID);
+				if(materialID == 0)
+					Debug.LogWarning("Received 0 for ID of material on game object: " + node.name);
+				else
+					materialIDs.Add(materialID);
 			}
 			extractedNode.materialAmount = (ulong)materialIDs.Count;
 			extractedNode.materialIDs = materialIDs.ToArray();
@@ -607,8 +683,10 @@ namespace teleport
 			{
 				uid childID = AddNode(node.transform.GetChild(i).gameObject);
 
-				if(childID == 0) Debug.LogWarning("Received 0 for ID of child on game object: " + node.name);
-				else childIDs.Add(childID);
+				if(childID == 0)
+					Debug.LogWarning("Received 0 for ID of child on game object: " + node.name);
+				else
+					childIDs.Add(childID);
 			}
 			extractedNode.childAmount = (ulong)childIDs.Count;
 			extractedNode.childIDs = childIDs.ToArray();
@@ -627,7 +705,9 @@ namespace teleport
 
 			return nodeID;
 		}
-
+		private void ExtractLightData(Light light,uid lightID)
+		{
+		}
 		private void ExtractMeshData(avs.AxesStandard extractToBasis, Mesh mesh, uid meshID)
 		{
 			avs.PrimitiveArray[] primitives = new avs.PrimitiveArray[mesh.subMeshCount];
@@ -858,10 +938,10 @@ namespace teleport
 
 			//Get byte data from each int, and copy into buffer.
 			//We are changing the indexes into counter-clockwise winding, as it is what the Simul rendering SDK uses.
-			for(int i = 0; i < (data.Length / 2); i++)
+			for(int i = 0; i < (data.Length ); i++)
 			{
-				BitConverter.GetBytes((ushort)data[i]).CopyTo(newBuffer.data, (data.Length - 1 - i) * stride);
-				BitConverter.GetBytes((ushort)data[data.Length - 1 - i]).CopyTo(newBuffer.data, i * stride);
+				BitConverter.GetBytes((ushort)data[i]).CopyTo(newBuffer.data, (i) * stride);
+		//		BitConverter.GetBytes((ushort)data[data.Length - 1 - i]).CopyTo(newBuffer.data, i * stride);
 			}
 
 			uid bufferID = GenerateID();

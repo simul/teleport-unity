@@ -39,6 +39,17 @@ public partial class TeleportCameraRenderer
 
 	TeleportLighting teleportLighting = new TeleportLighting();
 
+	static int _CameraColorTexture = Shader.PropertyToID("_CameraColorTexture"),
+				_CameraDepthAttachment = Shader.PropertyToID("_CameraDepthAttachment"),
+				_CameraDepthTexture = Shader.PropertyToID("_CameraDepthTexture"),
+				_CameraOpaqueTexture = Shader.PropertyToID("_CameraOpaqueTexture"),
+				_AfterPostProcessTexture = Shader.PropertyToID("_AfterPostProcessTexture"),
+				_InternalGradingLut = Shader.PropertyToID("_InternalGradingLut"),
+				_GrabTexture= Shader.PropertyToID("_GrabTexture"),
+				_GrabTexture_HDR = Shader.PropertyToID("_GrabTexture_HDR"),
+				_GrabTexture_TexelSize = Shader.PropertyToID("_GrabTexture_TexelSize"),
+				_GrabTexture_ST = Shader.PropertyToID("_GrabTexture_ST");
+
 	RenderTexture cubemapTexture = null;
 	static Shader depthShader = null;
 	static Material depthMaterial = null;
@@ -82,7 +93,6 @@ public partial class TeleportCameraRenderer
 
 	bool Cull(ScriptableRenderContext context, Camera camera, out CullingResults cullingResults)
 	{
-		//ScriptableCullingParameters p
 		if (camera.TryGetCullingParameters(out ScriptableCullingParameters p))
 		{
 			cullingResults = context.Cull(ref p);
@@ -112,6 +122,22 @@ public partial class TeleportCameraRenderer
 	}
 	void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera)
 	{
+		// The generic textures accessible from all default shaders...
+		var buffer = new CommandBuffer();
+		buffer.SetGlobalTexture(_CameraColorTexture, Texture2D.whiteTexture);
+		buffer.SetGlobalTexture(_CameraDepthAttachment, Texture2D.whiteTexture);
+		buffer.SetGlobalTexture(_CameraDepthTexture, Texture2D.whiteTexture);
+		buffer.SetGlobalTexture(_CameraOpaqueTexture, Texture2D.whiteTexture);
+		buffer.SetGlobalTexture(_AfterPostProcessTexture, Texture2D.whiteTexture);
+		buffer.SetGlobalTexture(_InternalGradingLut, Texture2D.whiteTexture);
+
+		buffer.SetGlobalTexture(_GrabTexture, Texture2D.whiteTexture);
+		//buffer.SetGlobalTexture(_GrabTexture_HDR, Texture2D.whiteTexture);
+		//buffer.SetGlobalTexture(_GrabTexture_ST, Texture2D.whiteTexture);
+		//_GrabTexture_TexelSize = Shader.PropertyToID("_GrabTexture_TexelSize"),
+		context.ExecuteCommandBuffer(buffer);
+		buffer.Release();
+
 		var sortingSettings = new SortingSettings(camera)
 		{
 			criteria = SortingCriteria.CommonOpaque
@@ -278,7 +304,8 @@ public partial class TeleportCameraRenderer
 		}
 
 		camera.targetTexture = cubemapTexture;
-
+		if (clientID != 0)
+			UpdateStreamables(context, clientID, camera);
 		for (int i = 0; i < NumFaces; ++i)
 		{
 			DrawCubemapFace(context, camera, i);
@@ -291,7 +318,28 @@ public partial class TeleportCameraRenderer
 			Teleport_SceneCaptureComponent.videoEncoders[clientID].CreateEncodeCommands(context, camera);
 		}
 	}
-
+	// This function leverages the Unity rendering pipeline functionality to get information about what lights etc should be visible to the client.
+	void UpdateStreamables(ScriptableRenderContext context, uid clientID, Camera camera)
+	{
+		camera.fieldOfView = 180.0F;
+		camera.aspect = 2.0F;
+		camera.farClipPlane = 10.0F;
+		ScriptableCullingParameters p;
+		if (camera.TryGetCullingParameters(out p))
+		{
+			CasterMonitor monitor = CasterMonitor.GetCasterMonitor();
+			CullingResults cullingResults = context.Cull(ref p);
+			Light[] lights = new Light[cullingResults.visibleLights.Length];
+			for (int i = 0; i < lights.Length; i++)
+			{
+				lights[i] = cullingResults.visibleLights[i].light;
+			}
+			Teleport_SessionComponent.sessions[clientID].SetVisibleLights(lights);
+		}
+		camera.fieldOfView = 90.0F;
+		camera.farClipPlane = 1000.0F;
+		camera.aspect = 1.0F;
+	}
 	void DrawCubemapFace(ScriptableRenderContext context, Camera camera, int face)
 	{
 		CasterMonitor monitor = CasterMonitor.GetCasterMonitor();

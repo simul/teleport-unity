@@ -6,6 +6,7 @@ using UnityEngine.Rendering;
 using Unity.Collections;
 
 using uid = System.UInt64;
+using teleport;
 
 public class TeleportRenderPipeline : RenderPipeline
 {
@@ -107,17 +108,10 @@ public class TeleportRenderPipeline : RenderPipeline
 	Matrix4x4 viewmat = new Matrix4x4();
 	void Render(ScriptableRenderContext context, Camera camera)
 	{
-		if (camera.name.Contains(CUBEMAP_CAM_PREFIX))
+		var sc = camera.gameObject.GetComponent<Teleport_SceneCaptureComponent>();
+		if (sc!=null)
 		{
-			int index = camera.name.IndexOf(CUBEMAP_CAM_PREFIX, System.StringComparison.Ordinal);
-			if (index < 0)
-			{
-				Debug.LogError("Cubemap camera name does not contain the client id!");
-			}
-			string clientIDStr = camera.name.Remove(index, CUBEMAP_CAM_PREFIX.Length);
-			uid clientID = uid.Parse(clientIDStr);
-			 camera.worldToCameraMatrix= viewmat ;
-			renderer.RenderToCubemap(context, camera, clientID);
+			renderer.RenderToCubemap(context, camera, sc.clientID);
 		}
 		else
 		{

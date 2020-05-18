@@ -103,7 +103,7 @@ namespace teleport
 		}
 		#endregion
 
-		private static Dictionary<uid, Teleport_SessionComponent> sessions = new Dictionary<uid, Teleport_SessionComponent>();
+		public static Dictionary<uid, Teleport_SessionComponent> sessions = new Dictionary<uid, Teleport_SessionComponent>();
 
 		private CasterMonitor casterMonitor; //Cached reference to the caster monitor.
 		private TeleportSettings teleportSettings = null;
@@ -113,15 +113,16 @@ namespace teleport
 		private Teleport_Head head = null;
 		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
 
-		private GeometryStreamingService geometryStreamingService = new GeometryStreamingService();
 		private List<Collider> streamedObjects = new List<Collider>();
+		private List<Light> streamedLights = new List<Light>();
 
 		public void Disconnect()
 		{
 			sessions.Remove(clientID);
 
-			geometryStreamingService.RemoveAllActors(clientID);
+			casterMonitor.geometryStreamingService.RemoveAllActors(clientID);
 			streamedObjects.Clear();
+			streamedLights.Clear();
 
 			clientID = 0;
 		}
@@ -132,7 +133,7 @@ namespace teleport
 				return;
 
 			head.transform.rotation = newRotation;
-			head.transform.localPosition = newPosition;
+			head.transform.position = newPosition;
 		}
 		public void SetControllerPose(int index, Quaternion newRotation, Vector3 newPosition)
 		{
@@ -163,7 +164,6 @@ namespace teleport
 		private void Start()
 		{
 			casterMonitor = CasterMonitor.GetCasterMonitor();
-			casterMonitor.AddSession(this);
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
 			Teleport_Head[] heads = GetComponentsInChildren<Teleport_Head>();
 			if (heads.Length != 1)
@@ -212,6 +212,9 @@ namespace teleport
 			GUI.Label(new Rect(x, y+=dy, 300, 20), str, font);
 			GUI.Label(new Rect(x, y+=dy, 300, 20), string.Format("sent origin   {0},{1},{2}", last_sent_origin.x, last_sent_origin.y, last_sent_origin.z), font);
 			GUI.Label(new Rect(x, y+=dy, 300, 20), string.Format("head position {0},{1},{2}", head.transform.position.x, head.transform.position.y, head.transform.position.z), font);
+
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Actors {0}", streamedObjects.Count()));
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", streamedLights.Count()));
 		}
 		private void OnDestroy()
 		{
@@ -219,6 +222,15 @@ namespace teleport
 				StopSession(clientID);
 		}
 
+		public void SetVisibleLights( Light[] lights)
+		{
+			foreach (var l in lights)
+			{
+				uid actorID = casterMonitor.geometryStreamingService.AddActor(clientID, l.gameObject);
+				if(!streamedLights.Contains(l))
+					streamedLights.Add(l);
+			}
+		}
 		private void UpdateGeometryStreaming()
 		{
 			if(teleportSettings.LayersToStream != 0)
@@ -234,9 +246,7 @@ namespace teleport
 					//Skip game objects without the streaming tag.
 					if(collider.tag != teleportSettings.TagToStream)
 						continue;
-
-					uid actorID = geometryStreamingService.AddActor(clientID, collider.gameObject);
-
+					uid actorID = casterMonitor.geometryStreamingService.AddActor(clientID, collider.gameObject);
 					if(actorID != 0)
 					{
 						streamedObjects.Add(collider);
@@ -247,12 +257,11 @@ namespace teleport
 						Debug.LogWarning("Failed to add game object to stream: " + collider.gameObject.name);
 					}
 				}
-
 				foreach(Collider collider in lostColliders)
 				{
 					streamedObjects.Remove(collider);
 
-					uid actorID = geometryStreamingService.RemoveActor(clientID, collider.gameObject);
+					uid actorID = casterMonitor.geometryStreamingService.RemoveActor(clientID, collider.gameObject);
 					if(actorID != 0)
 					{
 						ActorLeftBounds(clientID, actorID);
@@ -265,7 +274,7 @@ namespace teleport
 			}
 			else
 			{
-				Debug.LogError("Teleport geometry streaming physics layer is not defined! Please assign layer masks under \"Layers To Stream\".");
+				Debug.LogError("Teleport geometry streaming layer is not defined! Please assign layer masks under \"Layers To Stream\".");
 			}
 		}
 	}
