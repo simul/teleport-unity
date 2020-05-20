@@ -1,8 +1,13 @@
-﻿using System;
+﻿using ProBuilder2.Common;
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace teleport
 {
@@ -11,9 +16,10 @@ namespace teleport
 		//References to assets.
 		private GeometrySource geometrySource;
 		private ComputeShader textureShader;
+		private TeleportSettings teleportSettings;
 
 		//List of found/extracted data.
-		private GameObject[] streamedObjects = new GameObject[0];
+		private GameObject[] streamedSceneObjects = new GameObject[0];
 		private RenderTexture[] renderTextures = new RenderTexture[0];
 
 		//GUI variables that control user-changeable properties.
@@ -26,6 +32,7 @@ namespace teleport
 		public static void OpenResourceWindow()
 		{
 			CasterResourceWindow window = GetWindow<CasterResourceWindow>(false, "TeleportVR Resource Manager");
+			window.minSize = new Vector2(600, 200);
 			window.Show();
 		}
 
@@ -35,16 +42,18 @@ namespace teleport
 
 			string shaderGUID = AssetDatabase.FindAssets("ExtractTextureData t:ComputeShader")[0];
 			textureShader = AssetDatabase.LoadAssetAtPath<ComputeShader>(UnityEditor.AssetDatabase.GUIDToAssetPath(shaderGUID));
+
+			teleportSettings = TeleportSettings.GetOrCreateSettings();
 		}
 
-		private void OnGUI()
+        private void OnGUI()
 		{
-			foldout_gameObjects = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_gameObjects, "GameObjects (" + streamedObjects.Length + ")");
+			foldout_gameObjects = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_gameObjects, "GameObjects (" + streamedSceneObjects.Length + ")");
 			if(foldout_gameObjects)
 			{
 				scrollPosition_gameObjects = EditorGUILayout.BeginScrollView(scrollPosition_gameObjects);
 
-				foreach(GameObject gameObject in streamedObjects)
+				foreach(GameObject gameObject in streamedSceneObjects)
 				{
 					EditorGUILayout.BeginHorizontal();
 
@@ -85,10 +94,9 @@ namespace teleport
 
 			EditorGUILayout.BeginHorizontal();
 
-			if(GUILayout.Button("Find Streamed Objects"))
-				FindStreamedObjects();
-			if(GUILayout.Button("Extract Object Data"))
-				ExtractGeometryData();
+			if(GUILayout.Button("Find Scene Streamables")) FindSceneStreamables();
+			if(GUILayout.Button("Extract Scene Geometry")) ExtractSceneGeometry();
+			if(GUILayout.Button("Extract Project Geometry")) ExtractProjectGeometry();
 
 			EditorGUILayout.EndHorizontal();
 
@@ -99,7 +107,7 @@ namespace teleport
 			if(GUILayout.Button("Clear Cached Data"))
 			{
 				geometrySource.ClearData();
-				streamedObjects = new GameObject[0];
+				streamedSceneObjects = new GameObject[0];
 
 				foreach(RenderTexture texture in renderTextures)
 				{
@@ -118,7 +126,7 @@ namespace teleport
 			if(GUILayout.Button("Force Extract"))
 			{
 				geometrySource.ClearData();
-				ExtractGeometryData();
+				ExtractSceneGeometry();
 			}
 
 			EditorGUILayout.EndHorizontal();
@@ -129,21 +137,24 @@ namespace teleport
 			}
 		}
 
-		private void FindStreamedObjects()
-		{
-			var teleportSettings = TeleportSettings.GetOrCreateSettings();
-			if (teleportSettings)
-			{
-				streamedObjects = GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream);
-				streamedObjects = streamedObjects.Where(x => (teleportSettings.LayersToStream & (1 << x.layer)) != 0).ToArray();
-			}
+		private GameObject[] GetStreamedObjects()
+        {
+			GameObject[] foundStreamedObjects = GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream);
+			foundStreamedObjects = foundStreamedObjects.Where(x => (teleportSettings.LayersToStream & (1 << x.layer)) != 0).ToArray();
+
+			return foundStreamedObjects;
 		}
 
-		private void ExtractGeometryData()
+		private void FindSceneStreamables()
 		{
-			FindStreamedObjects();
+			streamedSceneObjects = GetStreamedObjects();
+		}
 
-			foreach(GameObject gameObject in streamedObjects)
+		private void ExtractSceneGeometry()
+		{
+			GameObject[] foundStreamables = GetStreamedObjects();
+
+			foreach(GameObject gameObject in foundStreamables)
 			{
 				geometrySource.AddNode(gameObject, true);
 			}
@@ -152,13 +163,37 @@ namespace teleport
 			geometrySource.SaveToDisk();
 		}
 
+		private void ExtractProjectGeometry()
+        {
+			string[] originalScenes = new string[SceneManager.sceneCount];
+			//Store scenes that were originally open.
+			for(int i = 0; i < SceneManager.sceneCount; i++)
+			{
+				originalScenes[i] = SceneManager.GetSceneAt(i).path;
+			}
+
+			//Open each scene in the build settings and extract the data from them.
+			foreach(EditorBuildSettingsScene buildScene in EditorBuildSettings.scenes)
+			{
+				EditorSceneManager.OpenScene(buildScene.path, OpenSceneMode.Single);
+
+				ExtractSceneGeometry();
+			}
+
+			//Re-open scenes that were originally open.
+			EditorSceneManager.OpenScene(originalScenes[0]);
+			for(int i = 1; i < originalScenes.Length; i++)
+			{
+				EditorSceneManager.OpenScene(originalScenes[i], OpenSceneMode.Additive);
+			}
+		}
+
 		private void ExtractTextures()
 		{
 			//According to the Unity docs, we need to call Release() on any render textures we are done with.
 			for(int i = geometrySource.texturesWaitingForExtraction.Count; i < renderTextures.Length; i++)
 			{
-				if(renderTextures[i])
-					renderTextures[i].Release();
+				if(renderTextures[i]) renderTextures[i].Release();
 			}
 			//Resize the array, instead of simply creating a new one, as we want to keep the same render textures for quicker debugging.
 			Array.Resize(ref renderTextures, geometrySource.texturesWaitingForExtraction.Count);
