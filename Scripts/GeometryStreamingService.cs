@@ -49,7 +49,7 @@ namespace teleport
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 			uid actorID = geometrySource.AddNode(actor);
 
-			if(actorID != 0)
+			if(actorID != 0 && !gameObjectHandles.ContainsKey(actor))
 			{
 				GCHandle actorHandle = GCHandle.Alloc(actor, GCHandleType.Pinned);
 
