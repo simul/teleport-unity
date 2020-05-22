@@ -46,19 +46,17 @@ namespace teleport
 
 		public uid AddActor(uid clientID, GameObject actor)
 		{
-			var geometrySource = GeometrySource.GetGeometrySource();
-			uid actorID = geometrySource.FindNode(actor);
-			if (actorID==0)
-			{
-				actorID = geometrySource.AddNode(actor);
-				if (actorID != 0)
-				{
-					GCHandle actorHandle = GCHandle.Alloc(actor, GCHandleType.Pinned);
+			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+			uid actorID = geometrySource.AddNode(actor);
 
-					AddActor(clientID, GCHandle.ToIntPtr(actorHandle), actorID);
-					gameObjectHandles.Add(actor, actorHandle);
-				}
+			if(actorID != 0)
+			{
+				GCHandle actorHandle = GCHandle.Alloc(actor, GCHandleType.Pinned);
+
+				AddActor(clientID, GCHandle.ToIntPtr(actorHandle), actorID);
+				gameObjectHandles.Add(actor, actorHandle);
 			}
+
 			return actorID;
 		}
 
