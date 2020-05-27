@@ -67,7 +67,7 @@ namespace teleport
             IntPtr paramsWrapperPtr = Marshal.AllocHGlobal(Marshal.SizeOf(new TransformWrapper()));
             Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);
 
-            commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 1, paramsWrapperPtr);
+            commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 2, paramsWrapperPtr);
 
             context.ExecuteCommandBuffer(commandBuffer);
             ReleaseCommandbuffer(camera);
