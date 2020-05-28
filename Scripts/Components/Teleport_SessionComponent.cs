@@ -207,11 +207,13 @@ namespace teleport
 		}
 		public void ShowOverlay(int x, int y, GUIStyle font)
 		{
+			Vector3 headPosition = head ? head.transform.position : new Vector3();
+
 			string str=string.Format("Client {0}", clientID);
 			int dy = 14;
 			GUI.Label(new Rect(x, y+=dy, 300, 20), str, font);
-			GUI.Label(new Rect(x, y+=dy, 300, 20), string.Format("sent origin   {0},{1},{2}", last_sent_origin.x, last_sent_origin.y, last_sent_origin.z), font);
-			GUI.Label(new Rect(x, y+=dy, 300, 20), string.Format("head position {0},{1},{2}", head.transform.position.x, head.transform.position.y, head.transform.position.z), font);
+			GUI.Label(new Rect(x, y+=dy, 300, 20), string.Format("sent origin\t{0}", last_sent_origin), font);
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("head position\t{0}", headPosition), font);
 
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Actors {0}", streamedObjects.Count()));
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", streamedLights.Count()));
