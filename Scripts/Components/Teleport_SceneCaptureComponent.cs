@@ -81,7 +81,7 @@ namespace teleport
 		void Initialize()
 		{
 			GameObject obj = gameObject;// new GameObject(TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID, typeof(Camera));
-			obj.hideFlags = HideFlags.DontSave;
+			//obj.hideFlags = HideFlags.DontSave; //If you use HideFlags.DontSave, you need to delete the object manually. Alternatively, use DontDestroyOnLoad.
 			obj.transform.position = transform.position;
 			obj.transform.rotation = Quaternion.identity;
 			cam = gameObject.GetComponent<Camera>();
@@ -111,7 +111,7 @@ namespace teleport
 
 			sceneCaptureTexture = new RenderTexture(size, size, 0, format, RenderTextureReadWrite.Default);
 			sceneCaptureTexture.name = "Scene Capture Texture";
-			sceneCaptureTexture.hideFlags = HideFlags.DontSave;
+			//sceneCaptureTexture.hideFlags = HideFlags.DontSave; //If you use HideFlags.DontSave, you need to delete the object manually. Alternatively, use DontDestroyOnLoad.
 			sceneCaptureTexture.dimension = TextureDimension.Tex2D;
 			sceneCaptureTexture.useMipMap = false;
 			sceneCaptureTexture.autoGenerateMips = false;
