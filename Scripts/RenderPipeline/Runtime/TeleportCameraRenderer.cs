@@ -428,6 +428,7 @@ public partial class TeleportCameraRenderer
 	{
 		camera.fieldOfView = 180.0F;
 		camera.aspect = 2.0F;
+		float farClipPlane = camera.farClipPlane;
 		camera.farClipPlane = 10.0F;
 		ScriptableCullingParameters p;
 		if (camera.TryGetCullingParameters(out p))
@@ -442,7 +443,7 @@ public partial class TeleportCameraRenderer
 			Teleport_SessionComponent.sessions[clientID].SetVisibleLights(lights);
 		}
 		camera.fieldOfView = 90.0F;
-		camera.farClipPlane = 1000.0F;
+		camera.farClipPlane = farClipPlane;
 		camera.aspect = 1.0F;
 	}
 	void DrawCubemapFace(ScriptableRenderContext context, Camera camera, int face)
