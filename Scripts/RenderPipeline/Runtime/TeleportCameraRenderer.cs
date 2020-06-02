@@ -9,9 +9,11 @@ using Conditional = System.Diagnostics.ConditionalAttribute;
 using teleport;
 
 using uid = System.UInt64;
+using System.Security.AccessControl;
 
 public partial class TeleportCameraRenderer
 {
+	public TeleportRenderSettings renderSettings=null;
 	// Start cubemap members
 	struct CamView
 	{
@@ -41,23 +43,26 @@ public partial class TeleportCameraRenderer
 	static int _CameraColorTexture = Shader.PropertyToID("_CameraColorTexture"),
 				_CameraDepthAttachment = Shader.PropertyToID("_CameraDepthAttachment"),
 				_CameraDepthTexture = Shader.PropertyToID("_CameraDepthTexture"),
+				_ShadowMapTexture = Shader.PropertyToID("_ShadowMapTexture"),
 				_CameraOpaqueTexture = Shader.PropertyToID("_CameraOpaqueTexture"),
 				_AfterPostProcessTexture = Shader.PropertyToID("_AfterPostProcessTexture"),
 				_InternalGradingLut = Shader.PropertyToID("_InternalGradingLut"),
 				_GrabTexture= Shader.PropertyToID("_GrabTexture"),
 				_GrabTexture_HDR = Shader.PropertyToID("_GrabTexture_HDR"),
 				_GrabTexture_TexelSize = Shader.PropertyToID("_GrabTexture_TexelSize"),
-				_GrabTexture_ST = Shader.PropertyToID("_GrabTexture_ST");
-
+				_GrabTexture_ST = Shader.PropertyToID("_GrabTexture_ST"),
+				unity_LightShadowBias= Shader.PropertyToID("unity_LightShadowBias");
 	RenderTexture cubemapTexture = null;
 	static Shader depthShader = null;
 	static Material depthMaterial = null;
+	static Shader shadowShader = null;
+	static Material shadowMaterial = null;
 
 	ComputeShader computeShader = null;
 	int encodeCamKernel;
 	int quantizationKernel;
 
-	TeleportSettings teleportSettings = null;
+	public TeleportSettings teleportSettings = null;
 
 	public TeleportCameraRenderer()
 	{
@@ -73,11 +78,9 @@ public partial class TeleportCameraRenderer
 	void BeginCamera(ScriptableRenderContext context, Camera camera)
 	{
 		context.SetupCameraProperties(camera);
-		//buffer.BeginSample(buffer.name);
 		if (camera.clearFlags != CameraClearFlags.Nothing )
 		{
-			var buffer = new CommandBuffer { name = camera.name + " TeleportCameraRenderer BeginCamera" };
-		
+			var buffer = new CommandBuffer { name = camera.name + " Teleport BeginCamera" };
 			buffer.ClearRenderTarget(
 				camera.clearFlags == CameraClearFlags.Depth || camera.clearFlags == CameraClearFlags.Color || camera.clearFlags == CameraClearFlags.Skybox,
 				camera.clearFlags == CameraClearFlags.Color, camera.backgroundColor.linear, 1.0f);
@@ -94,12 +97,16 @@ public partial class TeleportCameraRenderer
 	{
 		if (camera.TryGetCullingParameters(out ScriptableCullingParameters p))
 		{
+			p.shadowDistance = renderSettings.maxShadowDistance;
+			p.shadowDistance = Mathf.Min(p.shadowDistance, camera.farClipPlane);
 			cullingResults = context.Cull(ref p);
 			return true;
 		}
 		cullingResults = new CullingResults();
 		return false;
 	}
+	// A ShaderTagId is ACTUALLY the Tag "LightMode" in the .shader file.
+	// It allows us to render all shaders that have a specific Pass defined with that tag.
 	static ShaderTagId unlitShaderTagId = new ShaderTagId("SRPDefaultUnlit");
 	static ShaderTagId[] legacyShaderTagIds = {
 		new ShaderTagId("Always"),
@@ -114,18 +121,92 @@ public partial class TeleportCameraRenderer
 		new ShaderTagId("SRPDefaultUnlit")
 };
 	static ShaderTagId[] addLightShaderTagIds = {
-		new ShaderTagId("ForwardAdd"),
-};
-	void SetupLighting(ScriptableRenderContext context, CullingResults cullingResults, ref DrawingSettings drawingSettings)
+			new ShaderTagId("ForwardAdd"),
+	};
+	static ShaderTagId[] depthShaderTagIds = {
+			new ShaderTagId("ShadowCaster"),
+	};
+	void DrawDepthPass(ScriptableRenderContext context, Camera camera)
 	{
+		context.SetupCameraProperties(camera);
+		CommandBuffer buffer = CommandBufferPool.Get("Depth Pass");
+		buffer.BeginSample("Depth");
+		buffer.GetTemporaryRT(_CameraDepthTexture, camera.pixelWidth, camera.pixelHeight, 32, FilterMode.Bilinear, RenderTextureFormat.Depth);
+		buffer.SetRenderTarget(_CameraDepthTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+		buffer.ClearRenderTarget(true, true, Color.clear);
+
+		var sortingSettings = new SortingSettings(camera)
+		{
+			criteria = SortingCriteria.CommonOpaque
+		};
+		var filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
+		CullingResults cullingResults;
+		if (!Cull(context, camera, out cullingResults))
+		{
+			return;
+		}
+		var drawingSettings = new DrawingSettings(depthShaderTagIds[0], sortingSettings);
+		TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults.visibleLights);
+		//teleportLighting.SetupForwardBasePass(context, cullingResults, lightingOrder);
+		CoreUtils.SetKeyword(buffer, "SHADOWS_DEPTH", true);
+		Vector4 lightShadowBias = new Vector4(0F,0F,0F,0F);
+		//Vector4 lightShadowBias = new Vector4(-0.001553151F, 1.0F, 0.032755F, 0F);
+		buffer.SetGlobalVector(unity_LightShadowBias, lightShadowBias);
+		for (int i = 1; i < depthShaderTagIds.Length; i++)
+		{
+			drawingSettings.SetShaderPassName(i, depthShaderTagIds[i]);
+		}
+		buffer.EndSample("Depth");
+		context.ExecuteCommandBuffer(buffer);
+		context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
+
+		CommandBufferPool.Release(buffer);
 	}
+	void DrawShadowPass(ScriptableRenderContext context, Camera camera)
+	{
+		context.SetupCameraProperties(camera);
+		CommandBuffer buffer = CommandBufferPool.Get("Shadow Pass");
+		buffer.BeginSample("Shadow");
+	
+		buffer.GetTemporaryRT(_ShadowMapTexture, camera.pixelWidth, camera.pixelHeight, 32, FilterMode.Bilinear, RenderTextureFormat.BGRA32);
+		buffer.SetRenderTarget(_ShadowMapTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+		buffer.ClearRenderTarget(false, true, Color.clear);
+		buffer.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+		Vector4 lightShadowBias = new Vector4(-0.001553151F, 1.0F, 0.032755F, 0F);
+		buffer.SetGlobalVector(unity_LightShadowBias, lightShadowBias);
+		//buffer.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_ScreenSpaceShadowsMaterial);
+
+		if (shadowMaterial == null)
+		{
+			shadowShader = Resources.Load("Hidden/Internal-ScreenSpaceShadows", typeof(Shader)) as Shader;
+			if (depthShader != null)
+			{
+				shadowMaterial = new Material(shadowShader);
+			}
+			else
+			{
+				Debug.LogError("shadowMaterial.shader resource not found!");
+				return;
+			}
+		}
+		shadowMaterial.SetTexture("_ShadowMapTexture", teleportLighting.shadows.shadowAtlasTexture, RenderTextureSubElement.Depth);
+
+		buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 0, MeshTopology.Triangles, 6);
+
+
+		//buffer.DrawProcedural(Matrix4x4.identity, material, 0, MeshTopology.Triangles, 3, 1, properties);
+		buffer.EndSample("Shadow");
+		context.ExecuteCommandBuffer(buffer);
+		CommandBufferPool.Release(buffer);
+	}
+
 	void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera)
 	{
 		// The generic textures accessible from all default shaders...
 		var buffer = new CommandBuffer();
 		buffer.SetGlobalTexture(_CameraColorTexture, Texture2D.whiteTexture);
 		buffer.SetGlobalTexture(_CameraDepthAttachment, Texture2D.whiteTexture);
-		buffer.SetGlobalTexture(_CameraDepthTexture, Texture2D.whiteTexture);
+		//buffer.SetGlobalTexture(_CameraDepthTexture, Texture2D.whiteTexture);
 		buffer.SetGlobalTexture(_CameraOpaqueTexture, Texture2D.whiteTexture);
 		buffer.SetGlobalTexture(_AfterPostProcessTexture, Texture2D.whiteTexture);
 		buffer.SetGlobalTexture(_InternalGradingLut, Texture2D.whiteTexture);
@@ -147,47 +228,59 @@ public partial class TeleportCameraRenderer
 		{
 			return;
 		}
-		TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetMainLightIndex(cullingResults.visibleLights);
-		{
-			var drawingSettings = new DrawingSettings(legacyShaderTagIds[0], sortingSettings);
-			drawingSettings.mainLightIndex = lightingOrder.MainLightIndex;
+		teleportLighting.renderSettings = renderSettings;
+		//nity.Collections.NativeArray<VisibleLight> visibleLights = renderingData.lightData.visibleLights;
+		//or (int i = 0; i < visibleLights.Length; ++i)
+		//
+		//	// Skip main directional light as it is not packed into the shadow atlas
+		//	if (i == renderingData.lightData.mainLightIndex)
+		//	{
+		//		continue;
+		//	}
+		//	renderingData.cullResults.GetShadowCasterBounds(i, out var bounds);
+		//
+		TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults.visibleLights);
+		
+		var drawingSettings = new DrawingSettings(legacyShaderTagIds[0], sortingSettings);
+		drawingSettings.mainLightIndex = lightingOrder.MainLightIndex;
 
-			//drawingSettings.enableDynamicBatching = true;
-			//drawingSettings.enableInstancing = true;
-			if (cullingResults.visibleLights.Length > 0)
-			{
-				drawingSettings.perObjectData |= PerObjectData.LightProbe
-						| PerObjectData.ReflectionProbes
-						| PerObjectData.LightProbeProxyVolume
-						| PerObjectData.Lightmaps
-						| PerObjectData.LightData
-						| PerObjectData.MotionVectors
-						| PerObjectData.LightIndices
-						| PerObjectData.ReflectionProbeData
-						| PerObjectData.OcclusionProbe
-						| PerObjectData.OcclusionProbeProxyVolume
-						| PerObjectData.ShadowMask;
-			}
-			teleportLighting.SetupForwardBasePass(context, cullingResults, lightingOrder);
-			for (int i = 1; i < legacyShaderTagIds.Length; i++)
-			{
-				drawingSettings.SetShaderPassName(i, legacyShaderTagIds[i]);
-			}
-			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
+		//drawingSettings.enableDynamicBatching = true;
+		//drawingSettings.enableInstancing = true;
+		if (cullingResults.visibleLights.Length > 0)
+		{
+			drawingSettings.perObjectData |= PerObjectData.LightProbe
+											| PerObjectData.ReflectionProbes
+											| PerObjectData.LightProbeProxyVolume
+											| PerObjectData.Lightmaps
+											| PerObjectData.LightData
+											| PerObjectData.MotionVectors
+											| PerObjectData.LightIndices
+											| PerObjectData.ReflectionProbeData
+											| PerObjectData.OcclusionProbe
+											| PerObjectData.OcclusionProbeProxyVolume
+											| PerObjectData.ShadowMask;
 		}
+		teleportLighting.SetupForwardBasePass(context, cullingResults, lightingOrder);
+		for (int i = 1; i < legacyShaderTagIds.Length; i++)
+		{
+			drawingSettings.SetShaderPassName(i, legacyShaderTagIds[i]);
+		}
+		context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
+		
 		if(cullingResults.visibleLights.Length>1||lightingOrder.SecondLightIndex>=0)
 		{
-			var drawingSettings = new DrawingSettings(addLightShaderTagIds[0], sortingSettings);
-			drawingSettings.mainLightIndex = 0;
-			drawingSettings.enableDynamicBatching = true;
-			drawingSettings.enableInstancing= true;
+			var drawingSettings2 = new DrawingSettings(addLightShaderTagIds[0], sortingSettings);
+			drawingSettings2.mainLightIndex = 0;
+			drawingSettings2.enableDynamicBatching = true;
+			drawingSettings2.enableInstancing= true;
 			teleportLighting.SetupForwardAddPass(context, cullingResults, lightingOrder);
 			for (int i = 0; i < addLightShaderTagIds.Length; i++)
 			{
-				drawingSettings.SetShaderPassName(i, addLightShaderTagIds[i]);
+				drawingSettings2.SetShaderPassName(i, addLightShaderTagIds[i]);
 			}
-			context.DrawRenderers(	cullingResults, ref drawingSettings, ref filteringSettings);
+			context.DrawRenderers(	cullingResults, ref drawingSettings2, ref filteringSettings);
 		}
+		teleportLighting.Cleanup(context);
 	}
 	void DrawTransparentGeometry(ScriptableRenderContext context, Camera camera)
 	{
@@ -254,13 +347,26 @@ public partial class TeleportCameraRenderer
 		buffer.Release();
 	}
 
+	void RenderShadows(ScriptableRenderContext context, Camera camera)
+	{
+		var filteringSettings = new FilteringSettings(RenderQueueRange.all);
+		CullingResults cullingResults;
+		if (!Cull(context, camera, out cullingResults))
+		{
+			return;
+		}
+		TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults.visibleLights);
+		teleportLighting.renderSettings = renderSettings;
+		teleportLighting.RenderShadows(context, cullingResults, lightingOrder);
+	}
 	public void Render(ScriptableRenderContext context, Camera camera)
 	{
-		BeginCamera(context, camera);
-		
 		string samplename = camera.gameObject.name + " sample";
 		StartSample(context, samplename);
+		DrawDepthPass(context, camera);
+		RenderShadows(context, camera);
 
+		BeginCamera(context, camera);
 		PrepareForSceneWindow(context, camera);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
@@ -272,7 +378,7 @@ public partial class TeleportCameraRenderer
 		EndCamera(context, camera);
 	}
 
-	public void RenderToCubemap(ScriptableRenderContext context, Camera camera, uid clientID)
+	public void RenderToCubemap(ScriptableRenderContext context,Camera camera, uid clientID)
 	{
 		CasterMonitor monitor = CasterMonitor.GetCasterMonitor();
 		RenderTexture sceneCaptureTexture = Teleport_SceneCaptureComponent.GetRenderingSceneCapture().sceneCaptureTexture;

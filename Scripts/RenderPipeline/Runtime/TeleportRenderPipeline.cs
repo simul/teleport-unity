@@ -16,9 +16,11 @@ public class TeleportRenderPipeline : RenderPipeline
 	public const string CUBEMAP_CAM_PREFIX = "TeleportCubemapCam";
 
 	TeleportCameraRenderer renderer = new TeleportCameraRenderer();
-
-	public TeleportRenderPipeline(bool useDynamicBatching = false, bool useGPUInstancing = false, bool useSRPBatcher = false)
+	TeleportRenderSettings renderSettings = null;
+	public TeleportRenderPipeline(TeleportRenderSettings renderSettings,bool useDynamicBatching = false, bool useGPUInstancing = false, bool useSRPBatcher = false)
 	{
+		this.renderSettings = renderSettings;
+		renderer.renderSettings = renderSettings;
 		this.useDynamicBatching = useDynamicBatching;
 		this.useGPUInstancing = useGPUInstancing;
 		GraphicsSettings.useScriptableRenderPipelineBatching = useSRPBatcher;
@@ -32,7 +34,7 @@ public class TeleportRenderPipeline : RenderPipeline
 	};
 
 	// Main Light is always a directional light
-	static public LightingOrder GetMainLightIndex( NativeArray<VisibleLight> visibleLights)
+	static public LightingOrder GetLightingOrder( NativeArray<VisibleLight> visibleLights)
 	{
 		LightingOrder lightingOrder=new LightingOrder();
 		lightingOrder.MainLightIndex = -1;

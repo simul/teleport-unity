@@ -8,6 +8,8 @@ public class TeleportRenderPipelineAsset : RenderPipelineAsset
 {
 	protected override RenderPipeline CreatePipeline()
 	{
-		return new TeleportRenderPipeline();
+		return new TeleportRenderPipeline(renderSettings);
 	}
+	[SerializeField]
+	TeleportRenderSettings renderSettings = default;
 }

@@ -5,7 +5,8 @@ using System;
 
 public class TeleportLighting
 {
-
+	public TeleportRenderSettings renderSettings=null;
+	public TeleportShadows shadows = new TeleportShadows();
 	const int maxUnimportantLights = 4;
 	static int
 		_LightColor0 = Shader.PropertyToID("_LightColor0"),
@@ -54,15 +55,50 @@ public class TeleportLighting
 	static Vector4 nonImportantZ = Vector4.zero;
 	static Vector4 nonImportantAtten = Vector4.one;
 	const string k_SetupLightConstants = "Setup Light Constants";
+	const string k_SetupShadowConstants = "Setup Shadow Constants";
 
 	const string bufferName = "Lighting";
+	public void Cleanup(ScriptableRenderContext context)
+	{
+		shadows.Cleanup( context);
+	}
+	public void RenderShadows(ScriptableRenderContext context, CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
+	{
+		CommandBuffer buffer = CommandBufferPool.Get(k_SetupShadowConstants);
+		shadows.renderSettings = renderSettings;
+		shadows.Setup(context, cullingResults);
+		NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
+
+		if (lightingOrder.MainLightIndex >= 0)
+		{
+			for (int i = 0; i < visibleLights.Length; i++)
+			{
+				if (lightingOrder.MainLightIndex == i || lightingOrder.SecondLightIndex == i)
+				{
+					VisibleLight light = visibleLights[i];
+					shadows.ReserveDirectionalShadows(cullingResults, light.light, i);
+				}
+				if (lightingOrder.MainLightIndex == i)
+				{
+					SetupMainLight(buffer, visibleLights[i]);
+				}
+				else
+				{
+					SetupAddLight(buffer, visibleLights[i]);
+				}
+				shadows.RenderDirectionalShadows(context, cullingResults,visibleLights[i].light,4);
+			}
+		}
+	}
 	public void SetupForwardBasePass(ScriptableRenderContext context,CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
 	{
 		CommandBuffer buffer = CommandBufferPool.Get(k_SetupLightConstants);
 		buffer.BeginSample(bufferName);
 		NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
 		if (lightingOrder.MainLightIndex >= 0)
-			SetupMainLight(buffer,visibleLights[lightingOrder.MainLightIndex]);
+		{
+			SetupMainLight(buffer, visibleLights[lightingOrder.MainLightIndex]);
+		}
 		nonImportantX = Vector4.zero;
 		nonImportantY = Vector4.zero;
 		nonImportantZ = Vector4.zero;
@@ -82,11 +118,15 @@ public class TeleportLighting
 			unimportant_LightColours[i] = Vector3.zero;
 		}
 		// We want to use keywords to choose the correct shader variants.
-		CoreUtils.SetKeyword(buffer, "VERTEXLIGHT_ON", lightingOrder.NumUnimportantLights > 0);
+		CoreUtils.SetKeyword(buffer, "DIRECTIONAL", true);
 		CoreUtils.SetKeyword(buffer, "LIGHTPROBE_SH",true);
+		CoreUtils.SetKeyword(buffer, "SHADOWS_SCREEN", true);
+		CoreUtils.SetKeyword(buffer, "VERTEXLIGHT_ON", lightingOrder.NumUnimportantLights > 0);
 		CoreUtils.SetKeyword(buffer, "_ALPHATEST_ON", false);
-		CoreUtils.SetKeyword(buffer, "_METALLICGLOSSMAP", false);
 		CoreUtils.SetKeyword(buffer, "_NORMALMAP", true);
+
+
+		//DIRECTIONAL LIGHTPROBE_SH SHADOWS_SCREEN VERTEXLIGHT_ON _METALLICGLOSSMAP _NORMALMAP _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
 	//	CoreUtils.SetKeyword(buffer, "LIGHTMAP_ON", numUnimportantLights == 0);
 	//	CoreUtils.SetKeyword(buffer, "UNITY_SHOULD_SAMPLE_SH", true);
 	//Standard, SubShader #0
