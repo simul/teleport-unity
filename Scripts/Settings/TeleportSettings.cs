@@ -24,6 +24,9 @@ namespace teleport
 		public int connectionTimeout = 5; //How many seconds to wait before automatically disconnecting from the client.
 										  //! Mask of the physics layers the user can choose to stream.
 
+		[Header("Geometry")]
+		public uint moveUpdatesPerSecond = 20;
+
 		public CasterSettings casterSettings =new CasterSettings();
 		public LayerMask LayersToStream;
 		public static TeleportSettings GetOrCreateSettings()

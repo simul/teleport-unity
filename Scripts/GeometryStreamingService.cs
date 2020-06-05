@@ -1,4 +1,5 @@
-﻿using System;
+﻿using JetBrains.Annotations;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEditor.PackageManager;
@@ -29,10 +30,15 @@ namespace teleport
 		public static extern bool HasResource(uid clientID, uid resourceID);
 		[DllImport("SimulCasterServer")]
 		private static extern void AddLight(uid clientID, IntPtr newLight, uid lightID);
+
+		[DllImport("SimulCasterServer")]
+		private static extern void UpdateActorMovement(uid clientID, avs.MovementUpdate[] updates, int updateAmount);
 		#endregion
 
 		//Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
 		Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
+
+		Dictionary<uid, avs.MovementUpdate> previousMovements = new Dictionary<uid, avs.MovementUpdate>();
 
 		public void RemoveAllActors(uid clientID)
 		{
@@ -77,5 +83,48 @@ namespace teleport
 		{
 			return IsStreamingActor(clientID, GCHandle.ToIntPtr(gameObjectHandles[actor]));
 		}
+
+		public void SendPositionUpdates(uid clientID)
+        {
+			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+			if(teleportSettings == null) return;
+
+			avs.MovementUpdate[] updates = new avs.MovementUpdate[gameObjectHandles.Count];
+			long timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+			int i = 0;
+			foreach(GameObject node in gameObjectHandles.Keys)
+            {
+				GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+				uid nodeID = geometrySource.FindNode(node);
+
+				if(nodeID == 0) return;
+
+				updates[i].timestamp = timestamp;
+				updates[i].nodeID = nodeID;
+				updates[i].position = node.transform.position;
+				updates[i].rotation = node.transform.rotation;
+
+				if(previousMovements.TryGetValue(nodeID, out avs.MovementUpdate previousMovement))
+                {
+					Quaternion oldRotation = previousMovement.rotation;
+
+					//We cast to the unity engine types to take advantage of the existing vector subtraction operators.
+					//We multiply by the amount of move updates per second to get the movement per second, rather than per update.
+					updates[i].velocity = ((Vector3)updates[i].position - previousMovement.position) * teleportSettings.moveUpdatesPerSecond;
+
+					(node.transform.rotation * Quaternion.Inverse(oldRotation)).ToAngleAxis(out updates[i].angularVelocityAngle, out Vector3 angularVelocityAxis);
+					updates[i].angularVelocityAxis = angularVelocityAxis;
+					//Angle needs to be inverted, for some reason.
+					updates[i].angularVelocityAngle *= teleportSettings.moveUpdatesPerSecond * -Mathf.Deg2Rad;
+				}
+
+				previousMovements[nodeID] = updates[i];
+
+				++i;
+            }
+
+			UpdateActorMovement(clientID, updates, updates.Length);
+        }
 	}
 }

@@ -116,6 +116,9 @@ namespace teleport
 		private List<Collider> streamedObjects = new List<Collider>();
 		private List<Light> streamedLights = new List<Light>();
 
+		private Vector3 last_sent_origin = new Vector3(0, 0, 0);
+		private float timeSincePositionUpdate = 0;
+
 		public void Disconnect()
 		{
 			sessions.Remove(clientID);
@@ -161,6 +164,7 @@ namespace teleport
 				sessions.Remove(clientID);
 			}
 		}
+
 		private void Start()
 		{
 			casterMonitor = CasterMonitor.GetCasterMonitor();
@@ -171,15 +175,16 @@ namespace teleport
 				Debug.LogError("Precisely ONE Teleport_Head should be found.");
 			}
 			head = heads[0];
+
+			timeSincePositionUpdate = 1 / teleportSettings.moveUpdatesPerSecond;
 		}
-		Vector3 last_sent_origin = new Vector3(0, 0, 0);
+
 		private void LateUpdate()
 		{
 			if(clientID == 0)
 			{
 				clientID = GetUnlinkedClientID();
-				if(clientID == 0)
-				return;
+				if(clientID == 0) return;
 
 				if(sessions.ContainsKey(clientID))
 				{
@@ -190,10 +195,10 @@ namespace teleport
 
 			if(Client_IsConnected(clientID))
 			{
-				if(head!=null&&(!Client_HasOrigin(clientID)))//||transform.hasChanged))
+				if(head != null && (!Client_HasOrigin(clientID)))//||transform.hasChanged))
 				{
 					if(Client_SetOrigin(clientID, head.transform.position))
-					{ 
+					{
 						last_sent_origin = head.transform.position;
 						transform.hasChanged = false;
 					}
@@ -204,7 +209,15 @@ namespace teleport
 			{
 				UpdateGeometryStreaming();
 			}
+
+			timeSincePositionUpdate += Time.deltaTime;
+			if(Client_IsConnected(clientID) && timeSincePositionUpdate >= 1.0f / teleportSettings.moveUpdatesPerSecond)
+			{
+				casterMonitor.geometryStreamingService.SendPositionUpdates(clientID);
+				timeSincePositionUpdate = 0;
+			}
 		}
+
 		public void ShowOverlay(int x, int y, GUIStyle font)
 		{
 			Vector3 headPosition = head ? head.transform.position : new Vector3();
