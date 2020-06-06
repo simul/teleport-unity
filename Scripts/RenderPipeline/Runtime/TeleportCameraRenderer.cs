@@ -13,7 +13,7 @@ using System.Security.AccessControl;
 
 public partial class TeleportCameraRenderer
 {
-	public TeleportRenderSettings renderSettings=null;
+	public TeleportRenderSettings renderSettings =null;
 	// Start cubemap members
 	struct CamView
 	{
@@ -52,7 +52,6 @@ public partial class TeleportCameraRenderer
 				_GrabTexture_TexelSize = Shader.PropertyToID("_GrabTexture_TexelSize"),
 				_GrabTexture_ST = Shader.PropertyToID("_GrabTexture_ST"),
 				unity_LightShadowBias= Shader.PropertyToID("unity_LightShadowBias");
-	RenderTexture cubemapTexture = null;
 	static Shader depthShader = null;
 	static Material depthMaterial = null;
 	static Shader shadowShader = null;
@@ -60,7 +59,7 @@ public partial class TeleportCameraRenderer
 
 	ComputeShader computeShader = null;
 	int encodeCamKernel;
-	int quantizationKernel;
+	int encodeColorKernel;
 
 	public TeleportSettings teleportSettings = null;
 
@@ -321,11 +320,12 @@ public partial class TeleportCameraRenderer
 			}
 		}
 
-		depthMaterial.SetTexture("DepthTexture", cubemapTexture, RenderTextureSubElement.Depth);
+		var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.RendererTexture;
+		depthMaterial.SetTexture("DepthTexture", captureTexture, RenderTextureSubElement.Depth);
 
 		var buffer = new CommandBuffer();
 		buffer.name = "Custom Depth CB";
-		buffer.SetRenderTarget(Teleport_SceneCaptureComponent.GetRenderingSceneCapture().sceneCaptureTexture);
+		buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture);
 		buffer.SetViewport(viewport);
 		buffer.BeginSample(buffer.name);
 		buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 0, MeshTopology.Triangles, 6);
@@ -378,37 +378,43 @@ public partial class TeleportCameraRenderer
 		EndCamera(context, camera);
 	}
 
-	public void RenderToCubemap(ScriptableRenderContext context,Camera camera, uid clientID)
+	public void RenderSceneCapturePerspective(ScriptableRenderContext context, Camera camera)
 	{
-		CasterMonitor monitor = CasterMonitor.GetCasterMonitor();
-		RenderTexture sceneCaptureTexture = Teleport_SceneCaptureComponent.GetRenderingSceneCapture().sceneCaptureTexture;
+		RenderTexture sceneCaptureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
 
 		if (!sceneCaptureTexture)
 		{
-			Debug.LogError("The camera needs a target texture for rendering the cubemap");
+			Debug.LogError("The video encoder texture must not be null");
 			return;
 		}
 
-		if (!computeShader)
+		PrepareForSceneCaptureRender();
+
+		Render(context, camera);
+		EncodeColor(context, camera, 0);
+		context.Submit();
+
+		var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
+		if (teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
 		{
-			InitShaders();
+			videoEncoder.CreateEncodeCommands(context, camera);
+		}
+	}
+
+	public void RenderToCubemap(ScriptableRenderContext context,Camera camera)
+	{
+		RenderTexture sceneCaptureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
+
+		if (!sceneCaptureTexture)
+		{
+			Debug.LogError("The video encoder texture must not be null");
+			return;
 		}
 
-		if (!cubemapTexture)
-		{
-			int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
+		PrepareForSceneCaptureRender();
 
-			cubemapTexture = new RenderTexture(faceSize, faceSize, 24, sceneCaptureTexture.format, RenderTextureReadWrite.Default);
-			cubemapTexture.name = "Video Encoder Texture";
-			cubemapTexture.hideFlags = HideFlags.DontSave;
-			cubemapTexture.dimension = TextureDimension.Tex2D;
-			cubemapTexture.useMipMap = false;
-			cubemapTexture.autoGenerateMips = false;
-			cubemapTexture.enableRandomWrite = false;
-			cubemapTexture.Create();
-		}
-
-		camera.targetTexture = cubemapTexture;
+		camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.RendererTexture; 
+		uid clientID = Teleport_SceneCaptureComponent.RenderingSceneCapture.clientID;
 		if (clientID != 0)
 			UpdateStreamables(context, clientID, camera);
 		for (int i = 0; i < NumFaces; ++i)
@@ -418,11 +424,21 @@ public partial class TeleportCameraRenderer
 
 		FinalizeSceneCaptureTexture(context, camera);
 
-		if (clientID != 0 && monitor && teleportSettings.casterSettings.isStreamingVideo)
+		var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
+		if (teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
 		{
-			Teleport_SceneCaptureComponent.videoEncoders[clientID].CreateEncodeCommands(context, camera);
+			videoEncoder.CreateEncodeCommands(context, camera);
 		}
 	}
+
+	void PrepareForSceneCaptureRender()
+	{
+		if (!computeShader)
+		{
+			InitShaders();
+		}
+	}
+
 	// This function leverages the Unity rendering pipeline functionality to get information about what lights etc should be visible to the client.
 	void UpdateStreamables(ScriptableRenderContext context, uid clientID, Camera camera)
 	{
@@ -486,7 +502,6 @@ public partial class TeleportCameraRenderer
 #if UNITY_EDITOR
 		DrawUnsupportedShaders(context, camera);
 #endif
-		QuantizeColor(context, camera, face);
 		EndSample(context, samplename);
 		EndCamera(context, camera);
 	}
@@ -507,10 +522,10 @@ public partial class TeleportCameraRenderer
 			Debug.Log("Shader not found at path " + shaderPath + ".compute");
 		}
 		encodeCamKernel = computeShader.FindKernel("EncodeCameraPositionCS");
-		quantizationKernel = computeShader.FindKernel("QuantizationCS");
+		encodeColorKernel = computeShader.FindKernel("EncodeColorCS");
 	}
 
-	void QuantizeColor(ScriptableRenderContext context, Camera camera, int face)
+	void EncodeColor(ScriptableRenderContext context, Camera camera, int face)
 	{
 		var monitor = CasterMonitor.GetCasterMonitor();
 		int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
@@ -519,14 +534,15 @@ public partial class TeleportCameraRenderer
 		int numThreadGroupsX = faceSize / THREADGROUP_SIZE;
 		int numThreadGroupsY = faceSize / THREADGROUP_SIZE;
 
-		var outputTexture = Teleport_SceneCaptureComponent.GetRenderingSceneCapture().sceneCaptureTexture;
-		computeShader.SetTexture(quantizationKernel, "InputColorTexture", cubemapTexture);
-		computeShader.SetTexture(quantizationKernel, "RWOutputColorTexture", outputTexture);
+		var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
+		var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.RendererTexture;
+		computeShader.SetTexture(encodeColorKernel, "InputColorTexture", captureTexture);
+		computeShader.SetTexture(encodeColorKernel, "RWOutputColorTexture", outputTexture);
 		computeShader.SetInt("Face", face);
 
 		var buffer = new CommandBuffer();
-		buffer.name = "Quantize Colour";
-		buffer.DispatchCompute(computeShader, quantizationKernel, numThreadGroupsX, numThreadGroupsY, 1);
+		buffer.name = "Encode Color";
+		buffer.DispatchCompute(computeShader, encodeColorKernel, numThreadGroupsX, numThreadGroupsY, 1);
 		context.ExecuteCommandBuffer(buffer);
 		buffer.Release();
 	}
@@ -541,7 +557,7 @@ public partial class TeleportCameraRenderer
 		var camTransform = camera.transform;
 		float[] camPos = new float[3] { camTransform.position.x, camTransform.position.z, camTransform.position.y };
 
-		var outputTexture = Teleport_SceneCaptureComponent.GetRenderingSceneCapture().sceneCaptureTexture;
+		var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
 		computeShader.SetTexture(encodeCamKernel, "RWOutputColorTexture", outputTexture);
 		computeShader.SetInts("CamPosOffset", new Int32[2] { size - (32 * 4), size - (3 * 8) });
 		computeShader.SetFloats("CubemapCameraPositionMetres", camPos);

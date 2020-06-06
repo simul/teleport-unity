@@ -2,7 +2,7 @@
 // (c) 2020 Simul.co
 
 #pragma kernel EncodeCameraPositionCS
-#pragma kernel QuantizationCS
+#pragma kernel EncodeColorCS
 #pragma kernel EncodeDepthCS
 
 #include "Common.cginc"
@@ -46,7 +46,7 @@ void EncodeCameraPositionCS(uint2 ThreadID : SV_DispatchThreadID)
 }
 
 [numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
-void QuantizationCS(uint2 ThreadID : SV_DispatchThreadID)
+void EncodeColorCS(uint2 ThreadID : SV_DispatchThreadID)
 {
 	uint InputW, InputH;
 	InputColorTexture.GetDimensions(InputW, InputH);

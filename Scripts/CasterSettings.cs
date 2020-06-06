@@ -45,6 +45,11 @@ namespace SCServer
 		[MarshalAs(UnmanagedType.U1)] public bool useAsyncEncoding = true;
 		[MarshalAs(UnmanagedType.U1)] public bool use10BitEncoding = false;
 		[MarshalAs(UnmanagedType.U1)] public bool useYUV444Decoding = false;
+		[MarshalAs(UnmanagedType.U1)] public bool usePerspectiveRendering = false;
+		public Int32 sceneCaptureWidth = 1920;
+		public Int32 sceneCaptureHeight = 1080;
+		[MarshalAs(UnmanagedType.U1)] public bool useDynamicQuality = false;
+		public Int32 bandwidthCalculationInterval = 5000;
 
 		[Header("Debugging")]
 		public Int32 debugStream = 0;

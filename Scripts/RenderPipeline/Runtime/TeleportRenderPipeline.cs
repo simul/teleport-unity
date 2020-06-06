@@ -113,7 +113,7 @@ public class TeleportRenderPipeline : RenderPipeline
 		var sc = camera.gameObject.GetComponent<Teleport_SceneCaptureComponent>();
 		if (sc!=null)
 		{
-			renderer.RenderToCubemap(context, camera, sc.clientID);
+			renderer.RenderToCubemap(context, camera);
 		}
 		else
 		{

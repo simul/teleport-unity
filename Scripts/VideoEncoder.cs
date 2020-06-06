@@ -15,16 +15,6 @@ namespace teleport
         static extern System.IntPtr GetRenderEventWithDataCallback();
         #endregion
 
-        //Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
-        Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
-
-        uid clientID;
-        CasterMonitor monitor;
-
-        CommandBuffer commandBuffer = null;
-
-        bool initalized = false;
-
         [StructLayout(LayoutKind.Sequential)]
         struct EncodeVideoParamsWrapper
         {
@@ -39,6 +29,23 @@ namespace teleport
             public avs.Transform transform;
         };
 
+        //Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
+        Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
+
+        uid clientID;
+        CasterMonitor monitor;
+
+        CommandBuffer commandBuffer = null;
+
+        bool initalized = false;
+        bool _reconfigure = false;
+
+     
+        public bool Reconfigure
+        {
+            set; get;
+        }
+
         public VideoEncoder(uid clientID)
         {
             this.clientID = clientID;
@@ -49,13 +56,9 @@ namespace teleport
         public void CreateEncodeCommands(ScriptableRenderContext context, Camera camera)
         {     
             commandBuffer = new CommandBuffer();
-            commandBuffer.name = "Video Encoder";
+            commandBuffer.name = "Video Encoder " + this.clientID;
 
-            if (!initalized)
-            {
-                InitEncoder(camera);
-                initalized = true;
-            }
+            ConfigureEncoder(camera);
 
             var paramsWrapper = new TransformWrapper();
             paramsWrapper.clientID = clientID;
@@ -82,15 +85,28 @@ namespace teleport
             }
         }
 
-        void InitEncoder(Camera camera)
+        void ConfigureEncoder(Camera camera)
         {
+            if (initalized && !_reconfigure)
+            {
+                return;
+            }
+
             var paramsWrapper = new EncodeVideoParamsWrapper();
             paramsWrapper.clientID = clientID;
             paramsWrapper.videoEncodeParams = new SCServer.VideoEncodeParams();
             var teleportSettings = TeleportSettings.GetOrCreateSettings();
-            paramsWrapper.videoEncodeParams.encodeWidth = paramsWrapper.videoEncodeParams.encodeHeight = (int)teleportSettings.casterSettings.captureCubeTextureSize * 3;
-
-            switch(SystemInfo.graphicsDeviceType)
+            if (teleportSettings.casterSettings.usePerspectiveRendering)
+            {
+                paramsWrapper.videoEncodeParams.encodeWidth = paramsWrapper.videoEncodeParams.encodeHeight = (int)teleportSettings.casterSettings.captureCubeTextureSize * 3;
+            }
+            else
+            {
+                paramsWrapper.videoEncodeParams.encodeWidth = teleportSettings.casterSettings.sceneCaptureWidth;
+                paramsWrapper.videoEncodeParams.encodeHeight = teleportSettings.casterSettings.sceneCaptureHeight;
+            }
+           
+            switch (SystemInfo.graphicsDeviceType)
             {
                 case (GraphicsDeviceType.Direct3D11):
                     paramsWrapper.videoEncodeParams.deviceType = SCServer.GraphicsDeviceType.Direct3D11;
@@ -109,13 +125,22 @@ namespace teleport
                     return;
             }
 
-            var encoderTexture = Teleport_SceneCaptureComponent.GetRenderingSceneCapture().sceneCaptureTexture;
+            var encoderTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
             // deviceHandle set in dll
             paramsWrapper.videoEncodeParams.inputSurfaceResource = encoderTexture.GetNativeTexturePtr();
             IntPtr paramsWrapperPtr = Marshal.AllocHGlobal(Marshal.SizeOf(new EncodeVideoParamsWrapper()));
-            Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);    
+            Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);
 
-            commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 0, paramsWrapperPtr);
+            if (!initalized)
+            {
+                commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 0, paramsWrapperPtr);
+                initalized = false;
+            }
+            else
+            {
+                commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 1, paramsWrapperPtr);
+            }
+            _reconfigure = false;
         }
 
         public void Shutdown()
