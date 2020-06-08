@@ -12,3 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd1feaa2afedf9547b8cddfcff4af45c, type: 3}
   m_Name: Teleport Render Pipeline Asset
   m_EditorClassIdentifier: 
+  renderSettings:
+    directional:
+      atlasSize: 1024

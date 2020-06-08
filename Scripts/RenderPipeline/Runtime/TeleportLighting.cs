@@ -2,11 +2,26 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using System;
+using System.Collections.Generic;
 
+public struct PerFrameShadowCascadeProperties
+{
+	public Matrix4x4 viewMatrix;
+	public Matrix4x4 projectionMatrix;
+	public ShadowSplitData splitData;
+}
+
+public class PerFrameLightProperties
+{
+	public VisibleLight visibleLight;
+	// One of these for each cascade.
+	public PerFrameShadowCascadeProperties[] cascades=new PerFrameShadowCascadeProperties[4];
+};
 public class TeleportLighting
 {
 	public TeleportRenderSettings renderSettings=null;
 	public TeleportShadows shadows = new TeleportShadows();
+	static Dictionary<VisibleLight, PerFrameLightProperties> perFrameLightProperties=new Dictionary<VisibleLight, PerFrameLightProperties>();
 	const int maxUnimportantLights = 4;
 	static int
 		_LightColor0 = Shader.PropertyToID("_LightColor0"),
@@ -33,8 +48,6 @@ public class TeleportLighting
 		unimportant_LightAtten = Shader.PropertyToID("unity_LightAtten"),
 		unimportant_SpotDirection = Shader.PropertyToID("unity_SpotDirection"),
 
-		unity_WorldToShadow = Shader.PropertyToID("unity_WorldToShadow"),
-		unity_WorldToShadow0 = Shader.PropertyToID("unity_WorldToShadow0"),
 		unity_AmbientSky = Shader.PropertyToID("unity_AmbientSky"),
 		unity_AmbientEquator = Shader.PropertyToID("unity_AmbientEquator"),
 		unity_AmbientGround = Shader.PropertyToID("unity_AmbientGround"),
@@ -73,9 +86,9 @@ public class TeleportLighting
 		{
 			for (int i = 0; i < visibleLights.Length; i++)
 			{
+				VisibleLight light = visibleLights[i];
 				if (lightingOrder.MainLightIndex == i || lightingOrder.SecondLightIndex == i)
 				{
-					VisibleLight light = visibleLights[i];
 					shadows.ReserveDirectionalShadows(cullingResults, light.light, i);
 				}
 				if (lightingOrder.MainLightIndex == i)
@@ -86,8 +99,23 @@ public class TeleportLighting
 				{
 					SetupAddLight(buffer, visibleLights[i]);
 				}
-				shadows.RenderDirectionalShadows(context, cullingResults,visibleLights[i].light,4);
+				if (!perFrameLightProperties.ContainsKey(light))
+				{
+					perFrameLightProperties.Add(light, new PerFrameLightProperties());
+					perFrameLightProperties[light].visibleLight = light;
+				}
+				PerFrameLightProperties perFrame =perFrameLightProperties[light];
+				shadows.RenderDirectionalShadows(context, cullingResults, ref perFrame, 4);
 			}
+		}
+	}
+	public void RenderScreenspaceShadows(ScriptableRenderContext context, Camera camera,CullingResults cullingResults)
+	{
+		TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults.visibleLights);
+		if (lightingOrder.MainLightIndex >= 0)
+		{
+			var visibleLight= cullingResults.visibleLights[lightingOrder.MainLightIndex];
+			shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[visibleLight], 4);
 		}
 	}
 	public void SetupForwardBasePass(ScriptableRenderContext context,CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
@@ -239,56 +267,44 @@ public class TeleportLighting
 	void SetupMainLight(CommandBuffer buffer, VisibleLight light)
 	{
 		//LightRenderMode mode =light.light.renderMode;
-		Vector4 lightPos = light.localToWorldMatrix.GetColumn(3);
-		lightPos.w = 1.0F;
-		Vector4 lightDir = -light.localToWorldMatrix.GetColumn(2);
-		lightDir.w = 0.0F;
 		Vector4 atten = new Vector4();
 		if (light.lightType != LightType.Directional)
 		{
 			if (light.lightType == LightType.Spot)
 			{
-				atten.x=Mathf.Cos(light.spotAngle / 2.0f);
-				atten.y =1.0f / Mathf.Cos(light.spotAngle / 4.0f);
+				atten.x = Mathf.Cos(light.spotAngle / 2.0f);
+				atten.y = 1.0f / Mathf.Cos(light.spotAngle / 4.0f);
 				atten.z = 1.0f;
-				atten.w = Mathf.Pow(light.range,2.0f);
+				atten.w = Mathf.Pow(light.range, 2.0f);
 				//Light attenuation factors.x is cos(spotAngle / 2) or –1 for non - spot lights;
 				// y is 1 / cos(spotAngle / 4) or 1 for non - spot lights;
 				// z is quadratic attenuation;
 				//w is squared light range.
 			}
 		}
-		{
-			Matrix4x4[] WorldToShadow = new Matrix4x4[4];
-			WorldToShadow[0] = Matrix4x4.identity;
-			buffer.SetGlobalVector(_LightColor0, light.finalColor);
-			if (light.lightType == LightType.Directional)
-				buffer.SetGlobalVector(_WorldSpaceLightPos0, lightDir);
-			else
-				buffer.SetGlobalVector(_WorldSpaceLightPos0, lightPos);
-			buffer.SetGlobalMatrix(_LightMatrix0, light.localToWorldMatrix);
-			if (light.lightType == LightType.Spot)
-			{
-				buffer.SetGlobalTexture(_LightTexture0, light.light.cookie);
-				Matrix4x4 lightToWorld = light.localToWorldMatrix;
-				Vector3 matScale = new Vector3(light.range, light.range, light.range);
-				lightToWorld *= Matrix4x4.Scale(matScale);
-				Matrix4x4 worldToLight = lightToWorld.inverse;
-				Vector4 spotDir = worldToLight.GetRow(2);
-				float tanVal = (float)(Math.Tan(3.1415926536F / 180.0F * light.spotAngle / 2.0F));
-				spotDir *= 2.0F*tanVal;
-				Vector4 spotRow = new Vector4(spotDir.x, spotDir.y, spotDir.z, spotDir.w);
-				worldToLight.SetRow(3, spotRow);
-				buffer.SetGlobalMatrix(unity_WorldToLight, worldToLight);
+		if (light.lightType == LightType.Spot)
+			buffer.SetGlobalTexture(_LightTexture0, light.light.cookie);
 
-				spotRow *= 2.0F;
-				worldToLight.SetRow(3, spotRow);
-				WorldToShadow[0] = worldToLight;
-			}
-			else
-				buffer.SetGlobalMatrix(unity_WorldToLight, light.localToWorldMatrix.inverse);
-			buffer.SetGlobalMatrixArray(unity_WorldToShadow, WorldToShadow);
-			buffer.SetGlobalMatrix(unity_WorldToShadow0, WorldToShadow[0]); 
+		Matrix4x4 worldToShadow = teleport.ShadowUtils.CalcShadowMatrix( light);
+		if (light.lightType == LightType.Spot)
+			buffer.SetGlobalMatrix(unity_WorldToLight, worldToShadow);
+		else
+			buffer.SetGlobalMatrix(unity_WorldToLight, worldToShadow);
+
+
+		Vector4 lightPos = light.localToWorldMatrix.GetColumn(3);
+		lightPos.w = 1.0F;
+		Vector4 lightDir = -light.localToWorldMatrix.GetColumn(2);
+		lightDir.w = 0.0F;
+		buffer.SetGlobalVector(_LightColor0, light.finalColor);
+		if (light.lightType == LightType.Directional)
+			buffer.SetGlobalVector(_WorldSpaceLightPos0, lightDir);
+		else
+			buffer.SetGlobalVector(_WorldSpaceLightPos0, lightPos);
+		buffer.SetGlobalMatrix(_LightMatrix0, light.localToWorldMatrix);
+		if (light.lightType == LightType.Spot)
+		{
+			buffer.SetGlobalTexture(_LightTexture0, light.light.cookie);
 		}
 	}
 }

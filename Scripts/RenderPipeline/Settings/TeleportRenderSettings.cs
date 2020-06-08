@@ -5,8 +5,8 @@ using UnityEngine;
 [System.Serializable]
 public class TeleportRenderSettings
 {
-	[Min(0f)]
-	public float maxShadowDistance = 100f;
+	//[Min(0f)]
+	//public float maxShadowDistance = 100f;
 	public enum TextureSize
 	{
 		_256 = 256, _512 = 512, _1024 = 1024,

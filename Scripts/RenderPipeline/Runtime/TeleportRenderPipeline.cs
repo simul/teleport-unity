@@ -17,7 +17,7 @@ public class TeleportRenderPipeline : RenderPipeline
 
 	TeleportCameraRenderer renderer = new TeleportCameraRenderer();
 	TeleportRenderSettings renderSettings = null;
-	public TeleportRenderPipeline(TeleportRenderSettings renderSettings,bool useDynamicBatching = false, bool useGPUInstancing = false, bool useSRPBatcher = false)
+	public TeleportRenderPipeline(TeleportRenderSettings renderSettings,bool useDynamicBatching = true, bool useGPUInstancing = true, bool useSRPBatcher = true)
 	{
 		this.renderSettings = renderSettings;
 		renderer.renderSettings = renderSettings;
