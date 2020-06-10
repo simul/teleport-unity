@@ -304,35 +304,6 @@ public partial class TeleportCameraRenderer
 			cullingResults, ref drawingSettings, ref filteringSettings
 		);
 	}
-	void DrawDepth(ScriptableRenderContext context, Camera camera, Rect viewport, int face)
-	{
-		if (depthMaterial == null)
-		{
-			depthShader = Resources.Load("Shaders/CubemapDepth", typeof(Shader)) as Shader;
-			if (depthShader != null)
-			{
-				depthMaterial = new Material(depthShader);
-			}
-			else
-			{
-				Debug.LogError("ComputeDepth.shader resource not found!");
-				return;
-			}
-		}
-
-		var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.RendererTexture;
-		depthMaterial.SetTexture("DepthTexture", captureTexture, RenderTextureSubElement.Depth);
-
-		var buffer = new CommandBuffer();
-		buffer.name = "Custom Depth CB";
-		buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture);
-		buffer.SetViewport(viewport);
-		buffer.BeginSample(buffer.name);
-		buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 0, MeshTopology.Triangles, 6);
-		buffer.EndSample(buffer.name);
-		context.ExecuteCommandBuffer(buffer);
-		buffer.Release();
-	}
 	
 	void EndCamera(ScriptableRenderContext context, Camera camera)
 	{
@@ -378,7 +349,19 @@ public partial class TeleportCameraRenderer
 		EndCamera(context, camera);
 	}
 
-	public void RenderSceneCapturePerspective(ScriptableRenderContext context, Camera camera)
+	public void RenderToSceneCapture(ScriptableRenderContext context, Camera camera)
+	{
+		if (teleportSettings.casterSettings.usePerspectiveRendering)
+		{
+			RenderToSceneCapture2D(context, camera);
+		}
+		else
+		{
+			RenderToSceneCaptureCubemap(context, camera);
+		}
+	}
+
+	public void RenderToSceneCapture2D(ScriptableRenderContext context, Camera camera)
 	{
 		RenderTexture sceneCaptureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
 
@@ -388,8 +371,7 @@ public partial class TeleportCameraRenderer
 			return;
 		}
 
-		PrepareForSceneCaptureRender();
-
+		PrepareForRenderToSceneCapture();
 		Render(context, camera);
 		EncodeColor(context, camera, 0);
 		context.Submit();
@@ -401,7 +383,7 @@ public partial class TeleportCameraRenderer
 		}
 	}
 
-	public void RenderToCubemap(ScriptableRenderContext context,Camera camera)
+	public void RenderToSceneCaptureCubemap(ScriptableRenderContext context,Camera camera)
 	{
 		RenderTexture sceneCaptureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
 
@@ -411,7 +393,7 @@ public partial class TeleportCameraRenderer
 			return;
 		}
 
-		PrepareForSceneCaptureRender();
+		PrepareForRenderToSceneCapture();
 
 		camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.RendererTexture; 
 		uid clientID = Teleport_SceneCaptureComponent.RenderingSceneCapture.clientID;
@@ -431,7 +413,7 @@ public partial class TeleportCameraRenderer
 		}
 	}
 
-	void PrepareForSceneCaptureRender()
+	void PrepareForRenderToSceneCapture()
 	{
 		if (!computeShader)
 		{
@@ -498,7 +480,8 @@ public partial class TeleportCameraRenderer
 		Clear(context,0*direction_colours[face]);
 		DrawOpaqueGeometry(context, camera);
 		DrawTransparentGeometry(context, camera);
-		DrawDepth(context, camera, depthViewport, face);
+		EncodeColor(context, camera, face);
+		EncodeDepth(context, camera, depthViewport, face);
 #if UNITY_EDITOR
 		DrawUnsupportedShaders(context, camera);
 #endif
@@ -543,6 +526,36 @@ public partial class TeleportCameraRenderer
 		var buffer = new CommandBuffer();
 		buffer.name = "Encode Color";
 		buffer.DispatchCompute(computeShader, encodeColorKernel, numThreadGroupsX, numThreadGroupsY, 1);
+		context.ExecuteCommandBuffer(buffer);
+		buffer.Release();
+	}
+
+	void EncodeDepth(ScriptableRenderContext context, Camera camera, Rect viewport, int face)
+	{
+		if (depthMaterial == null)
+		{
+			depthShader = Resources.Load("Shaders/CubemapDepth", typeof(Shader)) as Shader;
+			if (depthShader != null)
+			{
+				depthMaterial = new Material(depthShader);
+			}
+			else
+			{
+				Debug.LogError("ComputeDepth.shader resource not found!");
+				return;
+			}
+		}
+
+		var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.RendererTexture;
+		depthMaterial.SetTexture("DepthTexture", captureTexture, RenderTextureSubElement.Depth);
+
+		var buffer = new CommandBuffer();
+		buffer.name = "Custom Depth CB";
+		buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture);
+		buffer.SetViewport(viewport);
+		buffer.BeginSample(buffer.name);
+		buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 0, MeshTopology.Triangles, 6);
+		buffer.EndSample(buffer.name);
 		context.ExecuteCommandBuffer(buffer);
 		buffer.Release();
 	}
