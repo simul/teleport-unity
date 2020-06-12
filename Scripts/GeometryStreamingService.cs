@@ -102,8 +102,8 @@ namespace teleport
 
 				updates[i].timestamp = timestamp;
 				updates[i].nodeID = nodeID;
-				updates[i].position = node.transform.position;
-				updates[i].rotation = node.transform.rotation;
+				updates[i].position = node.transform.localPosition;
+				updates[i].rotation = node.transform.localRotation;
 
 				if(previousMovements.TryGetValue(nodeID, out avs.MovementUpdate previousMovement))
                 {
@@ -113,7 +113,7 @@ namespace teleport
 					//We multiply by the amount of move updates per second to get the movement per second, rather than per update.
 					updates[i].velocity = ((Vector3)updates[i].position - previousMovement.position) * teleportSettings.moveUpdatesPerSecond;
 
-					(node.transform.rotation * Quaternion.Inverse(oldRotation)).ToAngleAxis(out updates[i].angularVelocityAngle, out Vector3 angularVelocityAxis);
+					(node.transform.localRotation * Quaternion.Inverse(oldRotation)).ToAngleAxis(out updates[i].angularVelocityAngle, out Vector3 angularVelocityAxis);
 					updates[i].angularVelocityAxis = angularVelocityAxis;
 					//Angle needs to be inverted, for some reason.
 					updates[i].angularVelocityAngle *= teleportSettings.moveUpdatesPerSecond * -Mathf.Deg2Rad;
