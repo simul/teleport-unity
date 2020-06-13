@@ -134,7 +134,7 @@ namespace teleport
             if (!initalized)
             {
                 commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 0, paramsWrapperPtr);
-                initalized = false;
+                initalized = true;
             }
             else
             {
