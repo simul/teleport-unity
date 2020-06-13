@@ -693,8 +693,8 @@ namespace teleport
 
 			extractedNode.transform = new avs.Transform
 			{
-				position = node.transform.position,
-				rotation = node.transform.rotation,
+				position = node.transform.localPosition,
+				rotation = node.transform.localRotation,
 				scale = node.transform.localScale
 			};
 
