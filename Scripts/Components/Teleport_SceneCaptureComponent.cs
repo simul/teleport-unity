@@ -25,7 +25,7 @@ namespace teleport
 		List<float> bandwidths = new List<float>();
 		float settingsDuration = 0.0f;
 
-		public RenderTexture RendererTexture
+		public RenderTexture RendererTexture 
 		{
 			get; private set;
 		}
@@ -71,15 +71,13 @@ namespace teleport
 	 
 			if (id != clientID)
 			{
-				if (id != 0)
+				clientID = id;
+				if (clientID != 0)
 				{
-					clientID = id;
-
 					VideoEncoder = new VideoEncoder(clientID);
 				}
 				else
 				{
-					clientID = 0;
 					VideoEncoder = null;
 				}
 				bandwidths.Clear();
@@ -137,6 +135,7 @@ namespace teleport
 			{
 				float bandwidth = GetMedianBandwidth();
 				bandwidths.Clear();
+				settingsDuration = 0.0f;
 
 				if (settings.usePerspectiveRendering)
 				{

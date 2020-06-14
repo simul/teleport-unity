@@ -124,4 +124,25 @@ namespace teleport
 			}
 		}
 	}
+	protected override void Render(ScriptableRenderContext context, Camera[] cameras)
+	{
+		foreach (var camera in cameras)
+		{
+			Render(context, camera);
+		}
+	}
+	Matrix4x4 viewmat = new Matrix4x4();
+	void Render(ScriptableRenderContext context, Camera camera)
+	{
+		var sc = camera.gameObject.GetComponent<Teleport_SceneCaptureComponent>();
+		if (sc!=null)
+		{
+			renderer.RenderToSceneCapture(context, camera);
+		}
+		else
+		{
+			renderer.Render(context, camera);
+			viewmat=camera.worldToCameraMatrix;
+		}
+	}
 }

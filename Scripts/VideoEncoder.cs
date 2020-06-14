@@ -56,7 +56,7 @@ namespace teleport
         public void CreateEncodeCommands(ScriptableRenderContext context, Camera camera)
         {     
             commandBuffer = new CommandBuffer();
-            commandBuffer.name = "Video Encoder " + this.clientID;
+            commandBuffer.name = "Video Encoder " + clientID;
 
             ConfigureEncoder(camera);
 
@@ -98,12 +98,12 @@ namespace teleport
             var teleportSettings = TeleportSettings.GetOrCreateSettings();
             if (teleportSettings.casterSettings.usePerspectiveRendering)
             {
-                paramsWrapper.videoEncodeParams.encodeWidth = paramsWrapper.videoEncodeParams.encodeHeight = (int)teleportSettings.casterSettings.captureCubeTextureSize * 3;
+                paramsWrapper.videoEncodeParams.encodeWidth = teleportSettings.casterSettings.sceneCaptureWidth;
+                paramsWrapper.videoEncodeParams.encodeHeight = teleportSettings.casterSettings.sceneCaptureHeight;
             }
             else
             {
-                paramsWrapper.videoEncodeParams.encodeWidth = teleportSettings.casterSettings.sceneCaptureWidth;
-                paramsWrapper.videoEncodeParams.encodeHeight = teleportSettings.casterSettings.sceneCaptureHeight;
+                paramsWrapper.videoEncodeParams.encodeWidth = paramsWrapper.videoEncodeParams.encodeHeight = (int)teleportSettings.casterSettings.captureCubeTextureSize * 3;
             }
            
             switch (SystemInfo.graphicsDeviceType)
@@ -134,7 +134,7 @@ namespace teleport
             if (!initalized)
             {
                 commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 0, paramsWrapperPtr);
-                initalized = false;
+                initalized = true;
             }
             else
             {
