@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
+using uid = System.UInt64;
+
 namespace avs
 {
     public enum LogSeverity
@@ -68,6 +70,11 @@ namespace avs
         public Vector3(System.Numerics.Vector3 netVector) => (x, y, z) = (netVector.X, netVector.Y, netVector.Z);
         public Vector3(UnityEngine.Vector3 unityVector) => (x, y, z) = (unityVector.x, unityVector.y, unityVector.z);
 
+        public override string ToString()
+        {
+            return string.Format("({0:0.0}, {1:0.0}, {2:0.0})", x, y, z);
+        }
+
         public static implicit operator Vector3(System.Numerics.Vector3 netVector) => new Vector3(netVector.X, netVector.Y, netVector.Z);
         public static implicit operator Vector3(UnityEngine.Vector3 unityVector) => new Vector3(unityVector.x, unityVector.y, unityVector.z);
         public static implicit operator Vector3(UnityEngine.Color unityColour) => new Vector3(unityColour.r, unityColour.g, unityColour.b);
@@ -84,6 +91,11 @@ namespace avs
         public Vector4(float x, float y, float z, float w) => (this.x, this.y, this.z, this.w) = (x, y, z, w);
         public Vector4(System.Numerics.Vector4 netVector) => (x, y, z, w) = (netVector.X, netVector.Y, netVector.Z, netVector.W);
         public Vector4(UnityEngine.Vector4 unityVector) => (x, y, z, w) = (unityVector.x, unityVector.y, unityVector.z, unityVector.w);
+
+        public override string ToString()
+        {
+            return string.Format("({0:0.0}, {1:0.0}, {2:0.0}, {3:0.0})", x, y, z, w);
+        }
 
         public static implicit operator Vector4(System.Numerics.Vector4 netVector) => new Vector4(netVector.X, netVector.Y, netVector.Z, netVector.W);
         public static implicit operator Vector4(UnityEngine.Vector4 unityVector) => new Vector4(unityVector.x, unityVector.y, unityVector.z, unityVector.w);
@@ -118,6 +130,19 @@ namespace avs
     {
         public Vector4 orientation;
         public Vector3 position;
+    }
+
+    public struct MovementUpdate
+    {
+        public long timestamp;
+
+        public uid nodeID;
+        public avs.Vector3 position;
+        public avs.Vector4 rotation;
+
+        public avs.Vector3 velocity;
+        public avs.Vector3 angularVelocityAxis;
+        public float angularVelocityAngle;
     }
 }
 

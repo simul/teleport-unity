@@ -18,19 +18,34 @@ namespace teleport
 			get
 			{
 				if (s_FullscreenMesh == null)
-					s_FullscreenMesh = CreateFullscreenMesh(90.0F,90.0F,1.0F);
+				{
+					FullScreenMeshStruct fullScreenMeshStruct = new FullScreenMeshStruct();
+					fullScreenMeshStruct.horizontal_fov_degrees = 90.0F;
+					fullScreenMeshStruct.vertical_fov_degrees = 90.0F;
+					fullScreenMeshStruct.far_plane_distance=1.0F;
+					
+					s_FullscreenMesh = CreateFullscreenMesh(fullScreenMeshStruct);
+				}
 
 				return s_FullscreenMesh;
 			}
 		}
-		public static Mesh CreateFullscreenMesh(float horizontal_fov_degrees, float vertical_fov_degrees, float far_plane_distance)
+		public struct FullScreenMeshStruct
+		{
+			public float horizontal_fov_degrees ;
+			public float vertical_fov_degrees ;
+			public float far_plane_distance ;
+			
+		}
+	
+		public static Mesh CreateFullscreenMesh(FullScreenMeshStruct fullScreenMeshStruct)
 		{
 			float topV = 1.0f;
 			float bottomV = 0.0f;
-			float horizontal_fov_radians	= Mathf.PI / 180.0F*horizontal_fov_degrees;
-			float vertical_fov_radians		= Mathf.PI / 180.0F * vertical_fov_degrees;
-			float htan = far_plane_distance*Mathf.Tan(horizontal_fov_radians/2.0F);
-			float vtan = far_plane_distance * Mathf.Tan(vertical_fov_radians/2.0F);
+			float horizontal_fov_radians	= Mathf.PI / 180.0F* fullScreenMeshStruct.horizontal_fov_degrees;
+			float vertical_fov_radians		= Mathf.PI / 180.0F * fullScreenMeshStruct.vertical_fov_degrees;
+			float htan = fullScreenMeshStruct.far_plane_distance *Mathf.Tan(horizontal_fov_radians/2.0F);
+			float vtan = fullScreenMeshStruct.far_plane_distance * Mathf.Tan(vertical_fov_radians/2.0F);
 			float s = 0.5f;
 			float u = 0.5f;
 			s_FullscreenMesh = new Mesh { name = "Fullscreen Quad" };
@@ -51,10 +66,10 @@ namespace teleport
 			});
 			s_FullscreenMesh.SetUVs(1, new List<Vector3>
 			{
-				new Vector3(-htan, -vtan,far_plane_distance),
-				new Vector3(-htan,  vtan, far_plane_distance),
-				new Vector3(htan, -vtan, far_plane_distance),
-				new Vector3(htan,  vtan, far_plane_distance)
+				new Vector3(-htan, -vtan, fullScreenMeshStruct.far_plane_distance),
+				new Vector3(-htan,  vtan, fullScreenMeshStruct.far_plane_distance),
+				new Vector3(htan, -vtan, fullScreenMeshStruct.far_plane_distance),
+				new Vector3(htan,  vtan, fullScreenMeshStruct.far_plane_distance)
 			});
 			s_FullscreenMesh.SetIndices(new[] { 0, 1, 2, 2, 1, 3 }, MeshTopology.Triangles, 0, false);
 			s_FullscreenMesh.UploadMeshData(true);

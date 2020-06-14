@@ -252,7 +252,8 @@ fixed4 frag_hard (v2f i) : SV_Target
     fixed4 res = shadow;
 	//res= fixed4(shadow, shadow, shadow, shadow);
     //res= cascadeWeights+ cascadeWeights.a*fixed4(0.5,0.5,0.5,0);
-	//res= shadowCoord;
+	//float zdepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv.xy);
+	//res=wpos;
 	return res;
 }
 
@@ -349,6 +350,22 @@ SubShader {
         }
         ENDCG
     }
+	// Add a second pass because Unity provides NO way to access the other SubShaders!
+	Pass{
+		ZWrite Off ZTest Always Cull Off
+
+		CGPROGRAM
+		#pragma vertex vert
+		#pragma fragment frag_pcfSoft
+		#pragma multi_compile_shadowcollector
+		#pragma target 3.0
+
+		inline float3 computeCameraSpacePosFromDepth(v2f i)
+		{
+			return computeCameraSpacePosFromDepthAndVSInfo(i);
+		}
+		ENDCG
+	}
 }
 
 // ----------------------------------------------------------------------------------------

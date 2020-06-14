@@ -3,13 +3,16 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-[CreateAssetMenu(menuName = "Rendering/Teleport Render Pipeline Asset")]
-public class TeleportRenderPipelineAsset : RenderPipelineAsset
+namespace teleport
 {
-	protected override RenderPipeline CreatePipeline()
+	[CreateAssetMenu(menuName = "Rendering/Teleport Render Pipeline Asset")]
+	public class TeleportRenderPipelineAsset : RenderPipelineAsset
 	{
-		return new TeleportRenderPipeline(renderSettings);
+		protected override RenderPipeline CreatePipeline()
+		{
+			return new TeleportRenderPipeline(renderSettings);
+		}
+		[SerializeField]
+		TeleportRenderSettings renderSettings = default;
 	}
-	[SerializeField]
-	TeleportRenderSettings renderSettings = default;
 }
