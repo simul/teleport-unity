@@ -43,16 +43,11 @@ namespace teleport
 		private static Quaternion latestRotation = new Quaternion();
 		private static Vector3 latestPosition = new Vector3();
 
-		static bool done = false;
 		public static bool StaticDoesSessionExist(uid clientID)
 		{
 			if(!sessions.ContainsKey(clientID))
 			{
-				if (!done)
-				{
-					Debug.LogError("No session component found for client with ID: " + clientID);
-					done = true;
-				}
+				teleport.TeleportLog.LogErrorOnce("No session component found for client with ID: " + clientID);
 				return false;
 			}
 
@@ -289,7 +284,7 @@ namespace teleport
 			}
 			else
 			{
-				Debug.LogError("Teleport geometry streaming layer is not defined! Please assign layer masks under \"Layers To Stream\".");
+				teleport.TeleportLog.LogErrorOnce("Teleport geometry streaming layer is not defined! Please assign layer masks under \"Layers To Stream\".");
 			}
 		}
 	}

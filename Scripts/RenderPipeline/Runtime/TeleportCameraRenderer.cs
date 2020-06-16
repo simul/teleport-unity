@@ -42,7 +42,6 @@ namespace teleport
 		static int _CameraColorTexture = Shader.PropertyToID("_CameraColorTexture"),
 					_CameraDepthAttachment = Shader.PropertyToID("_CameraDepthAttachment"),
 					_CameraDepthTexture = Shader.PropertyToID("_CameraDepthTexture"),
-					_ShadowMapTexture = Shader.PropertyToID("_ShadowMapTexture"),
 					_CameraOpaqueTexture = Shader.PropertyToID("_CameraOpaqueTexture"),
 					_AfterPostProcessTexture = Shader.PropertyToID("_AfterPostProcessTexture"),
 					_InternalGradingLut = Shader.PropertyToID("_InternalGradingLut"),
@@ -107,23 +106,23 @@ namespace teleport
 		// It allows us to render all shaders that have a specific Pass defined with that tag.
 		static ShaderTagId unlitShaderTagId = new ShaderTagId("SRPDefaultUnlit");
 		static ShaderTagId[] legacyShaderTagIds = {
-		new ShaderTagId("Always"),
-		new ShaderTagId("Forward"),
-		new ShaderTagId("ForwardOnly"),
-		new ShaderTagId("ForwardBase"),
-		new ShaderTagId("PrepassBase"),
-		new ShaderTagId("Vertex"),
-		new ShaderTagId("VertexLMRGBM"),
-		new ShaderTagId("VertexLM"),
-		new ShaderTagId("SRPDefaultLit"),
-		new ShaderTagId("SRPDefaultUnlit")
-	};
+			new ShaderTagId("Always"),
+			new ShaderTagId("Forward"),
+			new ShaderTagId("ForwardOnly"),
+			new ShaderTagId("ForwardBase"),
+			new ShaderTagId("PrepassBase"),
+			new ShaderTagId("Vertex"),
+			new ShaderTagId("VertexLMRGBM"),
+			new ShaderTagId("VertexLM"),
+			new ShaderTagId("SRPDefaultLit"),
+			new ShaderTagId("SRPDefaultUnlit")
+		};
 		static ShaderTagId[] addLightShaderTagIds = {
-			new ShaderTagId("ForwardAdd"),
-	};
+				new ShaderTagId("ForwardAdd"),
+		};
 		static ShaderTagId[] depthShaderTagIds = {
-			new ShaderTagId("ShadowCaster"),
-	};
+				new ShaderTagId("ShadowCaster"),
+		};
 		void DrawDepthPass(ScriptableRenderContext context, Camera camera)
 		{
 			context.SetupCameraProperties(camera);
@@ -317,29 +316,21 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
-		context.DrawRenderers(
-			cullingResults, ref drawingSettings, ref filteringSettings
-		);
-	}
-	
-	void EndCamera(ScriptableRenderContext context, Camera camera)
-	{
-		context.Submit();
-	}
-	void Clear(ScriptableRenderContext context,Color color)
-	{
-		var buffer = new CommandBuffer();
-		buffer.ClearRenderTarget(true, true, color);
-		buffer.SetInvertCulling(false);
-		context.ExecuteCommandBuffer(buffer);
-		buffer.Release();
-	}
 
-	void RenderShadows(ScriptableRenderContext context, Camera camera)
-	{
-		var filteringSettings = new FilteringSettings(RenderQueueRange.all);
-		CullingResults cullingResults;
-		if (!Cull(context, camera, out cullingResults))
+		void RenderShadows(ScriptableRenderContext context, Camera camera)
+		{
+			var filteringSettings = new FilteringSettings(RenderQueueRange.all);
+			CullingResults cullingResults;
+			if (!Cull(context, camera, out cullingResults))
+			{
+				return;
+			}
+			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults.visibleLights);
+			teleportLighting.renderSettings = renderSettings;
+			teleportLighting.RenderShadows(context, cullingResults, lightingOrder);
+			DrawShadowPass(context, camera, cullingResults, lightingOrder);
+		}
+		public void Render(ScriptableRenderContext context, Camera camera)
 		{
 			string samplename = camera.gameObject.name + " sample";
 			StartSample(context, samplename);
@@ -357,29 +348,28 @@ namespace teleport
 			EndSample(context, samplename);
 			EndCamera(context, camera);
 		}
-
-	public void RenderToSceneCapture(ScriptableRenderContext context, Camera camera)
-	{
-		if (teleportSettings.casterSettings.usePerspectiveRendering)
+		public void RenderToSceneCapture(ScriptableRenderContext context, Camera camera)
 		{
-			RenderToSceneCapture2D(context, camera);
+			if (teleportSettings.casterSettings.usePerspectiveRendering)
+			{
+				RenderToSceneCapture2D(context, camera);
+			}
+			else
+			{
+				RenderToSceneCaptureCubemap(context, camera);
+			}
 		}
-		else
-		{
-			RenderToSceneCaptureCubemap(context, camera);
-		}
-	}
 
-	public void RenderToSceneCapture2D(ScriptableRenderContext context, Camera camera)
-	{
-		RenderTexture sceneCaptureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
-
-		if (!sceneCaptureTexture)
+		public void RenderToSceneCapture2D(ScriptableRenderContext context, Camera camera)
 		{
 			RenderTexture sceneCaptureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
 
-		PrepareForRenderToSceneCapture();
-			PrepareForSceneCaptureRender();
+			if (!sceneCaptureTexture)
+			{
+				Debug.LogError("The video encoder texture must not be null");
+				return;
+			}
+			PrepareForRenderToSceneCapture();
 
 			Render(context, camera);
 			EncodeColor(context, camera, 0);
@@ -391,18 +381,17 @@ namespace teleport
 				videoEncoder.CreateEncodeCommands(context, camera);
 			}
 		}
-
-	public void RenderToSceneCaptureCubemap(ScriptableRenderContext context,Camera camera)
-	{
-		RenderTexture sceneCaptureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
-
-		if (!sceneCaptureTexture)
+		public void RenderToSceneCaptureCubemap(ScriptableRenderContext context, Camera camera)
 		{
 			RenderTexture sceneCaptureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
 
-		PrepareForRenderToSceneCapture();
+			if (!sceneCaptureTexture)
+			{
+				Debug.LogError("The video encoder texture must not be null");
+				return;
+			}
 
-			PrepareForSceneCaptureRender();
+			PrepareForRenderToSceneCapture();
 
 			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.RendererTexture;
 			uid clientID = Teleport_SceneCaptureComponent.RenderingSceneCapture.clientID;
@@ -421,17 +410,13 @@ namespace teleport
 				videoEncoder.CreateEncodeCommands(context, camera);
 			}
 		}
-
-	void PrepareForRenderToSceneCapture()
-	{
-		if (!computeShader)
+		void PrepareForRenderToSceneCapture()
 		{
 			if (!computeShader)
 			{
 				InitShaders();
 			}
 		}
-
 		// This function leverages the Unity rendering pipeline functionality to get information about what lights etc should be visible to the client.
 		void UpdateStreamables(ScriptableRenderContext context, uid clientID, Camera camera)
 		{
@@ -482,20 +467,24 @@ namespace teleport
 
 			camera.worldToCameraMatrix = view;
 
-			BeginCamera(context, camera);
-
 			string samplename = camera.gameObject.name + " Face " + face;
 			StartSample(context, samplename);
+			{
+				DrawDepthPass(context, camera);
+				RenderShadows(context, camera);
 
-		PrepareForSceneWindow(context, camera);
-		Clear(context,0*direction_colours[face]);
-		DrawOpaqueGeometry(context, camera);
-		DrawTransparentGeometry(context, camera);
-		EncodeColor(context, camera, face);
-		EncodeDepth(context, camera, depthViewport, face);
+				BeginCamera(context, camera);
+
+				PrepareForSceneWindow(context, camera);
+				Clear(context, 0 * direction_colours[face]);
+				DrawOpaqueGeometry(context, camera);
+				DrawTransparentGeometry(context, camera);
+				EncodeColor(context, camera, face);
+				EncodeDepth(context, camera, depthViewport, face);
 #if UNITY_EDITOR
-			DrawUnsupportedShaders(context, camera);
+				DrawUnsupportedShaders(context, camera);
 #endif
+			}
 			EndSample(context, samplename);
 			EndCamera(context, camera);
 		}
@@ -541,39 +530,39 @@ namespace teleport
 			buffer.Release();
 		}
 
-	void EncodeDepth(ScriptableRenderContext context, Camera camera, Rect viewport, int face)
-	{
-		if (depthMaterial == null)
+		void EncodeDepth(ScriptableRenderContext context, Camera camera, Rect viewport, int face)
 		{
-			depthShader = Resources.Load("Shaders/CubemapDepth", typeof(Shader)) as Shader;
-			if (depthShader != null)
+			if (depthMaterial == null)
 			{
-				depthMaterial = new Material(depthShader);
+				depthShader = Resources.Load("Shaders/CubemapDepth", typeof(Shader)) as Shader;
+				if (depthShader != null)
+				{
+					depthMaterial = new Material(depthShader);
+				}
+				else
+				{
+					Debug.LogError("ComputeDepth.shader resource not found!");
+					return;
+				}
 			}
-			else
-			{
-				Debug.LogError("ComputeDepth.shader resource not found!");
-				return;
-			}
+
+			var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.RendererTexture;
+			depthMaterial.SetTexture("DepthTexture", captureTexture, RenderTextureSubElement.Depth);
+
+			var buffer = new CommandBuffer();
+			buffer.name = "Custom Depth CB";
+			buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture);
+			buffer.SetViewport(viewport);
+			buffer.BeginSample(buffer.name);
+			buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 0, MeshTopology.Triangles, 6);
+			buffer.EndSample(buffer.name);
+			context.ExecuteCommandBuffer(buffer);
+			buffer.Release();
 		}
 
-		var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.RendererTexture;
-		depthMaterial.SetTexture("DepthTexture", captureTexture, RenderTextureSubElement.Depth);
-
-		var buffer = new CommandBuffer();
-		buffer.name = "Custom Depth CB";
-		buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture);
-		buffer.SetViewport(viewport);
-		buffer.BeginSample(buffer.name);
-		buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 0, MeshTopology.Triangles, 6);
-		buffer.EndSample(buffer.name);
-		context.ExecuteCommandBuffer(buffer);
-		buffer.Release();
-	}
-
-	void EncodeCameraPosition(ScriptableRenderContext context, Camera camera)
-	{
-		var monitor = CasterMonitor.GetCasterMonitor();
+		void EncodeCameraPosition(ScriptableRenderContext context, Camera camera)
+		{
+			var monitor = CasterMonitor.GetCasterMonitor();
 
 			int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
 			int size = faceSize * 3;
@@ -591,7 +580,5 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
-
 	}
-
 }

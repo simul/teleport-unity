@@ -19,8 +19,9 @@ namespace teleport
 		partial void StartSample(ScriptableRenderContext context, string name)
 		{
 			var buffer = new CommandBuffer();
-			Profiler.BeginSample("Editor Only");
 			buffer.name = name;
+			Profiler.BeginSample("Editor Only");
+			buffer.BeginSample(name);
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Clear();
 			Profiler.EndSample();
@@ -29,11 +30,10 @@ namespace teleport
 		partial void EndSample(ScriptableRenderContext context, string name)
 		{
 			var buffer = new CommandBuffer();
-			Profiler.BeginSample("Editor Only");
 			buffer.name = name;
+			buffer.EndSample(name);
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Clear();
-			Profiler.EndSample();
 			buffer.Release();
 		}
 		partial void PrepareForSceneWindow(ScriptableRenderContext context, Camera camera)

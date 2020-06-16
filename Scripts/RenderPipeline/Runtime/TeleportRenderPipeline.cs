@@ -17,16 +17,32 @@ namespace teleport
 
 		public const string CUBEMAP_CAM_PREFIX = "TeleportCubemapCam";
 
-		TeleportCameraRenderer renderer = new TeleportCameraRenderer();
+		Dictionary<Camera,TeleportCameraRenderer> renderers = new Dictionary<Camera, TeleportCameraRenderer>();
 		TeleportRenderSettings renderSettings = null;
 		public TeleportRenderPipeline(TeleportRenderSettings renderSettings, bool useDynamicBatching = true, bool useGPUInstancing = true, bool useSRPBatcher = true)
 		{
 			this.renderSettings = renderSettings;
-			renderer.renderSettings = renderSettings;
 			this.useDynamicBatching = useDynamicBatching;
 			this.useGPUInstancing = useGPUInstancing;
 			GraphicsSettings.useScriptableRenderPipelineBatching = useSRPBatcher;
 			GraphicsSettings.lightsUseLinearIntensity = true;
+		}
+		TeleportCameraRenderer AddRenderer(Camera c)
+		{
+			TeleportCameraRenderer renderer = new TeleportCameraRenderer();
+			renderers.Add(c, renderer);
+			renderer = renderers[c];
+			renderer.renderSettings = renderSettings;
+			return renderer;
+		}
+		TeleportCameraRenderer GetTeleportCameraRenderer(Camera c)
+		{
+			TeleportCameraRenderer renderer = null;
+			if (renderers.TryGetValue(c,out renderer))
+			{
+				return renderer;
+			}
+			return AddRenderer(c);
 		}
 		public struct LightingOrder
 		{
@@ -112,37 +128,17 @@ namespace teleport
 		Matrix4x4 viewmat = new Matrix4x4();
 		void Render(ScriptableRenderContext context, Camera camera)
 		{
+			TeleportCameraRenderer renderer = GetTeleportCameraRenderer(camera);
 			var sc = camera.gameObject.GetComponent<Teleport_SceneCaptureComponent>();
 			if (sc != null)
 			{
-				renderer.RenderToCubemap(context, camera);
+				renderer.RenderToSceneCapture(context, camera);
 			}
 			else
 			{
 				renderer.Render(context, camera);
 				viewmat = camera.worldToCameraMatrix;
 			}
-		}
-	}
-	protected override void Render(ScriptableRenderContext context, Camera[] cameras)
-	{
-		foreach (var camera in cameras)
-		{
-			Render(context, camera);
-		}
-	}
-	Matrix4x4 viewmat = new Matrix4x4();
-	void Render(ScriptableRenderContext context, Camera camera)
-	{
-		var sc = camera.gameObject.GetComponent<Teleport_SceneCaptureComponent>();
-		if (sc!=null)
-		{
-			renderer.RenderToSceneCapture(context, camera);
-		}
-		else
-		{
-			renderer.Render(context, camera);
-			viewmat=camera.worldToCameraMatrix;
 		}
 	}
 }
