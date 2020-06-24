@@ -16,7 +16,6 @@ namespace teleport
 
 		private static bool ok = false;
 		private static CasterMonitor instance; //There should only be one CasterMonitor instance at a time.
-		public GeometryStreamingService geometryStreamingService = new GeometryStreamingService();
 
 		//StringBuilders used for constructing log messages from libavstream.
 		private static StringBuilder logInfo = new StringBuilder();
@@ -49,7 +48,7 @@ namespace teleport
 
 		#region DLLImport
 
-		struct InitializeState
+		struct InitialiseState
 		{
 			public OnShowActor showActor;
 			public OnHideActor hideActor;
@@ -62,7 +61,7 @@ namespace teleport
 			public uint SERVICE_PORT;
 		};
 		[DllImport("SimulCasterServer")]
-		private static extern bool Initialise(InitializeState initializeState);
+		private static extern bool Initialise(InitialiseState initialiseState);
 		[DllImport("SimulCasterServer")]
 		private static extern void UpdateCasterSettings(SCServer.CasterSettings newSettings);
 
@@ -109,18 +108,19 @@ namespace teleport
 
 		private void OnEnable()
 		{
-			InitializeState initializeState=new InitializeState();
-			initializeState.showActor = CasterMonitor.ShowActor;
-			initializeState.hideActor		   = HideActor;
-			initializeState.headPoseSetter	  =Teleport_SessionComponent.StaticSetHeadPose;
-			initializeState.controllerPoseSetter=Teleport_SessionComponent.StaticSetControllerPose;
-			initializeState.newInputProcessing  =Teleport_SessionComponent.StaticProcessInput;
-			initializeState.disconnect		  =Teleport_SessionComponent.StaticDisconnect;
-			initializeState.messageHandler	  =LogMessageHandler;
-			initializeState.SERVICE_PORT		=teleportSettings.listenPort;
-			initializeState.DISCOVERY_PORT	  =teleportSettings.discoveryPort;
-			ok=Initialise(initializeState);
+			InitialiseState initialiseState = new InitialiseState();
+			initialiseState.showActor = ShowActor;
+			initialiseState.hideActor = HideActor;
+			initialiseState.headPoseSetter = Teleport_SessionComponent.StaticSetHeadPose;
+			initialiseState.controllerPoseSetter = Teleport_SessionComponent.StaticSetControllerPose;
+			initialiseState.newInputProcessing = Teleport_SessionComponent.StaticProcessInput;
+			initialiseState.disconnect = Teleport_SessionComponent.StaticDisconnect;
+			initialiseState.messageHandler = LogMessageHandler;
+			initialiseState.SERVICE_PORT = teleportSettings.listenPort;
+			initialiseState.DISCOVERY_PORT = teleportSettings.discoveryPort;
+			ok = Initialise(initialiseState);
 		}
+
 		private void Update()
 		{
 			if(ok)

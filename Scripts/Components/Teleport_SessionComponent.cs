@@ -13,11 +13,6 @@ namespace teleport
 		#region DLLImports
 		[DllImport("SimulCasterServer")]
 		public static extern void StopSession(uid clientID);
-		
-		[DllImport("SimulCasterServer")]
-		public static extern void ActorEnteredBounds(uid clientID, uid actorID);
-		[DllImport("SimulCasterServer")]
-		public static extern void ActorLeftBounds(uid clientID, uid actorID);
 		[DllImport("SimulCasterServer")]
 		public static extern bool HasHost(uid clientID);
 		[DllImport("SimulCasterServer")]
@@ -55,7 +50,7 @@ namespace teleport
 		}
 
 		// Aidan: This is temporary for the capture component
-		public static uid GetClientID()
+		public static uid GetLastClientID()
 		{
 			if (sessions.Count > 0)
 			{
@@ -100,27 +95,28 @@ namespace teleport
 
 		public static Dictionary<uid, Teleport_SessionComponent> sessions = new Dictionary<uid, Teleport_SessionComponent>();
 
-		private CasterMonitor casterMonitor; //Cached reference to the caster monitor.
 		private TeleportSettings teleportSettings = null;
+
+		//One per session, as we stream geometry on a per-client basis.
+		private GeometryStreamingService geometryStreamingService;
 
 		private uid clientID = 0;
 
 		private Teleport_Head head = null;
 		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
 
-		private List<Collider> streamedObjects = new List<Collider>();
-		private List<Light> streamedLights = new List<Light>();
-
 		private Vector3 last_sent_origin = new Vector3(0, 0, 0);
-		private float timeSincePositionUpdate = 0;
+
+		public bool IsConnected()
+        {
+			return Client_IsConnected(clientID);
+        }
 
 		public void Disconnect()
 		{
 			sessions.Remove(clientID);
 
-			casterMonitor.geometryStreamingService.RemoveAllActors(clientID);
-			streamedObjects.Clear();
-			streamedLights.Clear();
+			geometryStreamingService.Clear();
 
 			clientID = 0;
 		}
@@ -162,16 +158,16 @@ namespace teleport
 
 		private void Start()
 		{
-			casterMonitor = CasterMonitor.GetCasterMonitor();
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
+
+			geometryStreamingService = new GeometryStreamingService(this);
+
 			Teleport_Head[] heads = GetComponentsInChildren<Teleport_Head>();
 			if (heads.Length != 1)
 			{
 				Debug.LogError("Precisely ONE Teleport_Head should be found.");
 			}
 			head = heads[0];
-
-			timeSincePositionUpdate = 1 / teleportSettings.moveUpdatesPerSecond;
 		}
 
 		private void LateUpdate()
@@ -202,15 +198,13 @@ namespace teleport
 
 			if(teleportSettings.casterSettings.isStreamingGeometry)
 			{
-				UpdateGeometryStreaming();
+				geometryStreamingService.UpdateGeometryStreaming();
 			}
+		}
 
-			timeSincePositionUpdate += Time.deltaTime;
-			if(Client_IsConnected(clientID) && timeSincePositionUpdate >= 1.0f / teleportSettings.moveUpdatesPerSecond)
-			{
-				casterMonitor.geometryStreamingService.SendPositionUpdates(clientID);
-				timeSincePositionUpdate = 0;
-			}
+		public uid GetClientID()
+		{
+			return clientID;
 		}
 
 		public void ShowOverlay(int x, int y, GUIStyle font)
@@ -223,69 +217,17 @@ namespace teleport
 			GUI.Label(new Rect(x, y+=dy, 300, 20), string.Format("sent origin\t{0}", last_sent_origin), font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("head position\t{0}", headPosition), font);
 
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Actors {0}", streamedObjects.Count()));
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", streamedLights.Count()));
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Actors {0}", geometryStreamingService.GetStreamedObjectCount()));
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", geometryStreamingService.GetStreamedLightCount()));
 		}
 		private void OnDestroy()
 		{
-			if(clientID != 0)
-				StopSession(clientID);
+			if(clientID != 0) StopSession(clientID);
 		}
 
-		public void SetVisibleLights( Light[] lights)
+		public void SetVisibleLights(Light[] lights)
 		{
-			foreach (var l in lights)
-			{
-				uid actorID = casterMonitor.geometryStreamingService.AddActor(clientID, l.gameObject);
-				if(!streamedLights.Contains(l))
-					streamedLights.Add(l);
-			}
-		}
-		private void UpdateGeometryStreaming()
-		{
-			if(teleportSettings.LayersToStream != 0)
-			{
-				List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, teleportSettings.casterSettings.detectionSphereRadius, teleportSettings.LayersToStream));
-				List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(transform.position, teleportSettings.casterSettings.detectionSphereRadius + teleportSettings.casterSettings.detectionSphereBufferDistance, teleportSettings.LayersToStream));
-
-				List<Collider> gainedColliders = new List<Collider>(innerSphereCollisions.Except(streamedObjects));
-				List<Collider> lostColliders = new List<Collider>(streamedObjects.Except(outerSphereCollisions));
-
-				foreach(Collider collider in gainedColliders)
-				{
-					//Skip game objects without the streaming tag.
-					if(collider.tag != teleportSettings.TagToStream)
-						continue;
-					uid actorID = casterMonitor.geometryStreamingService.AddActor(clientID, collider.gameObject);
-					if(actorID != 0)
-					{
-						streamedObjects.Add(collider);
-						ActorEnteredBounds(clientID, actorID);
-					}
-					else
-					{
-						Debug.LogWarning("Failed to add game object to stream: " + collider.gameObject.name);
-					}
-				}
-				foreach(Collider collider in lostColliders)
-				{
-					streamedObjects.Remove(collider);
-
-					uid actorID = casterMonitor.geometryStreamingService.RemoveActor(clientID, collider.gameObject);
-					if(actorID != 0)
-					{
-						ActorLeftBounds(clientID, actorID);
-					}
-					else
-					{
-						Debug.LogWarning("Attempted to remove actor that was not being streamed: " + collider.gameObject.name);
-					}
-				}
-			}
-			else
-			{
-				teleport.TeleportLog.LogErrorOnce("Teleport geometry streaming layer is not defined! Please assign layer masks under \"Layers To Stream\".");
-			}
+			geometryStreamingService.SetVisibleLights(lights);
 		}
 	}
 }

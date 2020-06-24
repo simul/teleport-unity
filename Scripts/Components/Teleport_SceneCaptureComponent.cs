@@ -67,7 +67,7 @@ namespace teleport
 		void LateUpdate()
 		{
 			// for now just get latest client
-			uid id = Teleport_SessionComponent.GetClientID();
+			uid id = Teleport_SessionComponent.GetLastClientID();
 	 
 			if (id != clientID)
 			{

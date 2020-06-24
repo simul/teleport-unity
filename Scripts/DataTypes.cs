@@ -135,6 +135,7 @@ namespace avs
     public struct MovementUpdate
     {
         public long timestamp;
+        public bool isGlobal;
 
         public uid nodeID;
         public avs.Vector3 position;
