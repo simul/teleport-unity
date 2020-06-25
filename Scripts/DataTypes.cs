@@ -144,6 +144,21 @@ namespace avs
         public avs.Vector3 angularVelocityAxis;
         public float angularVelocityAngle;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public class SceneCapture2DTagData
+    {
+        public uint id;
+        public avs.Transform cameraTransform;
+    };
+
+    [StructLayout(LayoutKind.Sequential)]
+    public class SceneCaptureCubeTagData
+    {
+        public uint id;
+        public avs.Transform cameraTransform;
+        // Roderick add shadow stuff here
+    };
 }
 
 namespace SCServer

@@ -12,6 +12,8 @@ namespace teleport
     {
         #region DLLImports
         [DllImport("SimulCasterServer")]
+        static extern void ConvertTransform(ref avs.Transform transform); 
+        [DllImport("SimulCasterServer")]
         static extern System.IntPtr GetRenderEventWithDataCallback();
         #endregion
 
@@ -23,17 +25,29 @@ namespace teleport
         };
 
         [StructLayout(LayoutKind.Sequential)]
-        struct TransformWrapper
+        public class SceneCapture2DTagDataWrapper
         {
             public uid clientID;
-            public avs.Transform transform;
+            public UInt64 tagDataSize;
+            public avs.SceneCapture2DTagData tagData;
+        };
+
+        [StructLayout(LayoutKind.Sequential)]
+        public class SceneCaptureCubeTagDataWrapper
+        {
+            public uid clientID;
+            public UInt64 tagDataSize;
+            public avs.SceneCaptureCubeTagData tagData;
         };
 
         //Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
         Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
 
         uid clientID;
+        UInt32 currentTagID = 0;
+
         CasterMonitor monitor;
+       
 
         CommandBuffer commandBuffer = null;
 
@@ -60,29 +74,11 @@ namespace teleport
 
             ConfigureEncoder(camera);
 
-            var paramsWrapper = new TransformWrapper();
-            paramsWrapper.clientID = clientID;
-            paramsWrapper.transform = new avs.Transform();
-            paramsWrapper.transform.position = camera.transform.position;
-            paramsWrapper.transform.rotation = camera.transform.rotation;
-            paramsWrapper.transform.scale = new avs.Vector3(1, 1, 1);
-
-            IntPtr paramsWrapperPtr = Marshal.AllocHGlobal(Marshal.SizeOf(new TransformWrapper()));
-            Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);
-
-            commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 2, paramsWrapperPtr);
+            CreateEncodeCommand(camera);
 
             context.ExecuteCommandBuffer(commandBuffer);
             ReleaseCommandbuffer(camera);
             context.Submit();
-        }
-
-        public void ReleaseCommandbuffer(Camera camera)
-        {
-            if (commandBuffer != null)
-            {
-                commandBuffer.Release();
-            }
         }
 
         void ConfigureEncoder(Camera camera)
@@ -141,6 +137,66 @@ namespace teleport
                 commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 1, paramsWrapperPtr);
             }
             _reconfigure = false;
+            currentTagID = 0;
+        }
+
+        void CreateEncodeCommand(Camera camera)
+        {
+            if (!initalized || _reconfigure)
+            {
+                return;
+            }
+
+            IntPtr paramsWrapperPtr;
+
+            var teleportSettings = TeleportSettings.GetOrCreateSettings();
+            if (teleportSettings.casterSettings.usePerspectiveRendering)
+            {
+                var paramsWrapper = new SceneCapture2DTagDataWrapper();
+                paramsWrapper.clientID = clientID;
+                paramsWrapper.tagDataSize = (UInt64)Marshal.SizeOf(typeof(avs.SceneCapture2DTagData));
+                paramsWrapper.tagData = new avs.SceneCapture2DTagData();
+                paramsWrapper.tagData.id = currentTagID;
+                paramsWrapper.tagData.cameraTransform.position = camera.transform.position;
+                paramsWrapper.tagData.cameraTransform.rotation = camera.transform.parent.rotation;
+                paramsWrapper.tagData.cameraTransform.scale = new avs.Vector3(1, 1, 1);
+
+                GCHandle handle = GCHandle.Alloc(paramsWrapper, GCHandleType.Pinned);
+                ConvertTransform(ref paramsWrapper.tagData.cameraTransform);
+
+                paramsWrapperPtr = Marshal.AllocHGlobal(Marshal.SizeOf(new SceneCapture2DTagDataWrapper()));
+                Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);
+            }
+            else
+            {
+                var paramsWrapper = new SceneCaptureCubeTagDataWrapper();
+                paramsWrapper.clientID = clientID;
+                paramsWrapper.tagDataSize = (UInt64)Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData));
+                paramsWrapper.tagData = new avs.SceneCaptureCubeTagData();
+                paramsWrapper.tagData.id = currentTagID;
+                paramsWrapper.tagData.cameraTransform.position = camera.transform.position;
+                paramsWrapper.tagData.cameraTransform.rotation = camera.transform.rotation;
+                paramsWrapper.tagData.cameraTransform.scale = new avs.Vector3(1, 1, 1);
+
+                GCHandle handle = GCHandle.Alloc(paramsWrapper, GCHandleType.Pinned);
+                ConvertTransform(ref paramsWrapper.tagData.cameraTransform);
+
+                paramsWrapperPtr = Marshal.AllocHGlobal(Marshal.SizeOf(new SceneCaptureCubeTagDataWrapper()));
+                Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);
+            }
+            
+
+            commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 2, paramsWrapperPtr);
+
+            currentTagID %= 32;
+        }
+
+        void ReleaseCommandbuffer(Camera camera)
+        {
+            if (commandBuffer != null)
+            {
+                commandBuffer.Release();
+            }
         }
 
         public void Shutdown()
