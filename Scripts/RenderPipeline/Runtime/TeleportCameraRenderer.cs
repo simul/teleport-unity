@@ -581,6 +581,7 @@ namespace teleport
 			buffer.Release();
 		}
 
+		// Encodes the id of the video tag data in 4x4 blocks of monochrome colour.
 		void EncodeTagID(ScriptableRenderContext context, Camera camera)
 		{
 			var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
@@ -591,9 +592,10 @@ namespace teleport
 				int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
 				int size = faceSize * 3;
 
+
 				var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
 				computeShader.SetTexture(encodeTagIdKernel, "RWOutputColorTexture", outputTexture);
-				computeShader.SetInts("TagDataIdOffset", new Int32[2] { size - (32 * 4), size - 1 });
+				computeShader.SetInts("TagDataIdOffset", new Int32[2] { size - (32 * 4), size - 4 });
 				computeShader.SetFloats("TagDataId", videoEncoder.CurrentTagID);
 				var buffer = new CommandBuffer();
 				buffer.name = "Encode Camera Position";

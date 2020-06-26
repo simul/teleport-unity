@@ -15,8 +15,8 @@ int2 TagDataIdOffset;
 int TagDataId;
 int Face;
 
-// Here. we will encode the uid of the video tag data in blocks of monochrome colour.
-[numthreads(32, 1, 1)]
+// Here. we will encode the id of the video tag data in 4x4 blocks of monochrome colour.
+[numthreads(32, 4, 1)]
 void EncodeTagDataIdCS(uint2 ThreadID : SV_DispatchThreadID)
 {
 	uint OutputW, OutputH;
@@ -29,11 +29,8 @@ void EncodeTagDataIdCS(uint2 ThreadID : SV_DispatchThreadID)
 
 	// We will use the thread x as the bit index.
 	uint3 masked_bits = (raw_uint >> (ThreadID.x / 4))& uint(1);		// 1 or 0
-	int2 Pos = TagDataIdOffset;
-	Pos.x += int(ThreadID.x);
-	// y will always stay the same
-	float4 X = masked_bits.xxxx;
-	RWOutputColorTexture[Pos] = X;
+	int2 Pos = TagDataIdOffset + int2(ThreadID);
+	RWOutputColorTexture[Pos] = masked_bits.xxxx;
 }
 
 [numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
