@@ -44,7 +44,11 @@ namespace teleport
         Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
 
         uid clientID;
-        UInt32 currentTagID = 0;
+
+        public UInt32 CurrentTagID
+        {
+            get; set;
+        }
 
         CasterMonitor monitor;
        
@@ -64,7 +68,8 @@ namespace teleport
         {
             this.clientID = clientID;
 
-            monitor = CasterMonitor.GetCasterMonitor();    
+            monitor = CasterMonitor.GetCasterMonitor();
+            CurrentTagID = 0;
         }
 
         public void CreateEncodeCommands(ScriptableRenderContext context, Camera camera)
@@ -137,7 +142,7 @@ namespace teleport
                 commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 1, paramsWrapperPtr);
             }
             _reconfigure = false;
-            currentTagID = 0;
+            CurrentTagID = 0;
         }
 
         void CreateEncodeCommand(Camera camera)
@@ -156,7 +161,8 @@ namespace teleport
                 paramsWrapper.clientID = clientID;
                 paramsWrapper.tagDataSize = (UInt64)Marshal.SizeOf(typeof(avs.SceneCapture2DTagData));
                 paramsWrapper.tagData = new avs.SceneCapture2DTagData();
-                paramsWrapper.tagData.id = currentTagID;
+                paramsWrapper.tagData.id = CurrentTagID;
+                paramsWrapper.tagData.cameraTransform = new avs.Transform();
                 paramsWrapper.tagData.cameraTransform.position = camera.transform.position;
                 paramsWrapper.tagData.cameraTransform.rotation = camera.transform.parent.rotation;
                 paramsWrapper.tagData.cameraTransform.scale = new avs.Vector3(1, 1, 1);
@@ -173,13 +179,11 @@ namespace teleport
                 paramsWrapper.clientID = clientID;
                 paramsWrapper.tagDataSize = (UInt64)Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData));
                 paramsWrapper.tagData = new avs.SceneCaptureCubeTagData();
-                paramsWrapper.tagData.id = currentTagID;
+                paramsWrapper.tagData.id = CurrentTagID;
+                paramsWrapper.tagData.cameraTransform = new avs.Transform();
                 paramsWrapper.tagData.cameraTransform.position = camera.transform.position;
                 paramsWrapper.tagData.cameraTransform.rotation = camera.transform.rotation;
                 paramsWrapper.tagData.cameraTransform.scale = new avs.Vector3(1, 1, 1);
-
-                GCHandle handle = GCHandle.Alloc(paramsWrapper, GCHandleType.Pinned);
-                ConvertTransform(ref paramsWrapper.tagData.cameraTransform);
 
                 paramsWrapperPtr = Marshal.AllocHGlobal(Marshal.SizeOf(new SceneCaptureCubeTagDataWrapper()));
                 Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);
@@ -188,7 +192,7 @@ namespace teleport
 
             commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 2, paramsWrapperPtr);
 
-            currentTagID %= 32;
+            CurrentTagID = (CurrentTagID + 1) % 32;
         }
 
         void ReleaseCommandbuffer(Camera camera)

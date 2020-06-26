@@ -56,7 +56,7 @@ namespace teleport
 		static Material shadowMaterial = null;
 
 		ComputeShader computeShader = null;
-		int encodeCamKernel;
+		int encodeTagIdKernel;
 		int encodeColorKernel;
 
 		public TeleportSettings teleportSettings = null;
@@ -504,7 +504,7 @@ namespace teleport
 			{
 				Debug.Log("Shader not found at path " + shaderPath + ".compute");
 			}
-			encodeCamKernel = computeShader.FindKernel("EncodeCameraPositionCS");
+			encodeTagIdKernel = computeShader.FindKernel("EncodeTagDataIdCS");
 			encodeColorKernel = computeShader.FindKernel("EncodeColorCS");
 		}
 
@@ -571,14 +571,36 @@ namespace teleport
 			float[] camPos = new float[3] { camTransform.position.x, camTransform.position.z, camTransform.position.y };
 
 			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
-			computeShader.SetTexture(encodeCamKernel, "RWOutputColorTexture", outputTexture);
+			computeShader.SetTexture(encodeTagIdKernel, "RWOutputColorTexture", outputTexture);
 			computeShader.SetInts("CamPosOffset", new Int32[2] { size - (32 * 4), size - (3 * 8) });
 			computeShader.SetFloats("CubemapCameraPositionMetres", camPos);
 			var buffer = new CommandBuffer();
 			buffer.name = "Encode Camera Position";
-			buffer.DispatchCompute(computeShader, encodeCamKernel, 4, 1, 1);
+			buffer.DispatchCompute(computeShader, encodeTagIdKernel, 4, 1, 1);
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
+		}
+
+		void EncodeTagID(ScriptableRenderContext context, Camera camera)
+		{
+			var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
+			if (videoEncoder != null)
+			{
+				var monitor = CasterMonitor.GetCasterMonitor();
+
+				int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
+				int size = faceSize * 3;
+
+				var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
+				computeShader.SetTexture(encodeTagIdKernel, "RWOutputColorTexture", outputTexture);
+				computeShader.SetInts("TagDataIdOffset", new Int32[2] { size - (32 * 4), size - 1 });
+				computeShader.SetFloats("TagDataId", videoEncoder.CurrentTagID);
+				var buffer = new CommandBuffer();
+				buffer.name = "Encode Camera Position";
+				buffer.DispatchCompute(computeShader, encodeTagIdKernel, 4, 1, 1);
+				context.ExecuteCommandBuffer(buffer);
+				buffer.Release();
+			}		
 		}
 	}
 }

@@ -1,48 +1,39 @@
 ﻿
 // (c) 2020 Simul.co
 
-#pragma kernel EncodeCameraPositionCS
+#pragma kernel EncodeTagDataIdCS
 #pragma kernel EncodeColorCS
-#pragma kernel EncodeDepthCS
 
 #include "Common.cginc"
 
 static const int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
 
-// The input texture, but as an array of 6 2d faces.
-RWTexture2DArray<float4> RWInputCubeAsArray;
 Texture2D<float4> InputColorTexture;
 RWTexture2D<float4> RWOutputColorTexture;
-Texture2D<float4> DepthTexture;
 
-int2 CamPosOffset;
-int2 DepthOffset;
-float3 CubemapCameraPositionMetres;
+int2 TagDataIdOffset;
+int TagDataId;
 int Face;
 
-// Here. we will encode the camera position CubemapCameraPositionMetres in blocks of monochrome colour.
-[numthreads(32, 4, 1)]
-void EncodeCameraPositionCS(uint2 ThreadID : SV_DispatchThreadID)
+// Here. we will encode the uid of the video tag data in blocks of monochrome colour.
+[numthreads(32, 1, 1)]
+void EncodeTagDataIdCS(uint2 ThreadID : SV_DispatchThreadID)
 {
 	uint OutputW, OutputH;
 	RWOutputColorTexture.GetDimensions(OutputW, OutputH);
 
-	// We want to encode three 32-bit numbers with the minimum possible loss.
-	// Therefore we will encode them in...
+	// We want to encode one 32-bit number with the minimum possible loss.
+	// Therefore we will encode it in...
 	// Binary.
-	uint3 raw_uint = asuint(CubemapCameraPositionMetres);
+	uint raw_uint = asuint(TagDataId);
 
 	// We will use the thread x as the bit index.
-	uint3 masked_bits = (raw_uint >> (ThreadID.x / 4))& uint(1);		// 1 or 0, 1 or 0, 1 or 0
-	int2 Pos = CamPosOffset;
+	uint3 masked_bits = (raw_uint >> (ThreadID.x / 4))& uint(1);		// 1 or 0
+	int2 Pos = TagDataIdOffset;
 	Pos.x += int(ThreadID.x);
-	Pos.y += int(ThreadID.y);
+	// y will always stay the same
 	float4 X = masked_bits.xxxx;
-	float4 Y = masked_bits.yyyy;
-	float4 Z = masked_bits.zzzz;
 	RWOutputColorTexture[Pos] = X;
-	RWOutputColorTexture[Pos + int2(0, 8)] = Y; 
-	RWOutputColorTexture[Pos + int2(0, 16)] = Z;
 }
 
 [numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
@@ -61,46 +52,9 @@ void EncodeColorCS(uint2 ThreadID : SV_DispatchThreadID)
 	SceneColor.y = sqrt(SceneColor.y);
 	SceneColor.z = sqrt(SceneColor.z);
 
-	int2 outPos = pos + FaceOffsets[Face] * InputW;
+	pos += FaceOffsets[Face] * InputW;
 
-	RWOutputColorTexture[outPos] = SceneColor;
+	RWOutputColorTexture[pos] = SceneColor;
 }
 
-float PosToDistanceMultiplier(int2 pos, int w)
-{
-	float h = (w + 1.0) / 2.0;
-	vec2 diff = (vec2(pos) - vec2(h, h)) * 2.0 / vec2(w, w);
-	return sqrt(1.0 + dot(diff, diff));
-}
-
-float GetDepth(int3 pos, int w)
-{
-	float m = PosToDistanceMultiplier(pos.xy, w);
-	int2 inPos = pos.xy + w * FaceOffsets[pos.z];
-	float d = Linear01Depth(DepthTexture[inPos].r);
-	d *= m;
-	return d;
-}
-
-[numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
-void EncodeDepthCS(uint3 ThreadID : SV_DispatchThreadID)
-{
-	uint OutputW, OutputH;
-	RWOutputColorTexture.GetDimensions(OutputW, OutputH);
-
-	if (ThreadID.x >= OutputW || ThreadID.y >= OutputH)
-		return;
-
-	int3 pos = int3(ThreadID);
-	pos.xy *= 2;
-
-	uint InputW = OutputW / 3;
-
-	float d00 = GetDepth(pos, InputW);
-	float d01 = GetDepth(pos + int3(1, 0, 0), InputW);
-	float d10 = GetDepth(pos + int3(0, 1, 0), InputW); 
-	float4 DepthValue = float4(d00, d01, d10, 1.0);
-
-	RWOutputColorTexture[int2(ThreadID.x, ThreadID.y) + DepthOffset + InputW * FaceOffsets[pos.z] / 2] = DepthValue;
-}
 
