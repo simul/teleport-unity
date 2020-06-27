@@ -6,8 +6,8 @@ namespace teleport
 	public class TeleportShadows
 	{
 		public TeleportRenderSettings renderSettings = null;
-		//static int dirShadowAtlasId = Shader.PropertyToID("_DirectionalShadowAtlas");
 		public RenderTexture shadowAtlasTexture = null;
+		public RenderTexture screenspaceShadowTexture = null;
 		const int maxShadowedDirectionalLightCount = 4;
 		int ShadowedDirectionalLightCount = 0;
 		int tileSize = 0;
@@ -17,8 +17,8 @@ namespace teleport
 		{
 			public int visibleLightIndex;
 		}
-
 		static int _ShadowMapTexture = Shader.PropertyToID("_ShadowMapTexture"),
+					_CameraDepthTexture=Shader.PropertyToID("_CameraDepthTexture"),
 					unity_ShadowSplitSpheres0 = Shader.PropertyToID("unity_ShadowSplitSpheres0"),
 					unity_ShadowSplitSpheres1 = Shader.PropertyToID("unity_ShadowSplitSpheres1"),
 					unity_ShadowSplitSpheres2 = Shader.PropertyToID("unity_ShadowSplitSpheres2"),
@@ -80,7 +80,7 @@ namespace teleport
 			);
 		}
 		Vector4 shadowFadeCenterAndType = new Vector4();
-		public void RenderDirectionalShadows(ScriptableRenderContext context, CullingResults cullingResults, ref PerFrameLightProperties perFrameLightProperties, int cascadeCount, int index)
+		public void RenderDirectionalShadows(ScriptableRenderContext context, CullingResults cullingResults, ref PerFramePerCameraLightProperties perFrameLightProperties, int cascadeCount, int index)
 		{
 			if (ShadowedDirectionalLightCount == 0)
 				return;
@@ -118,7 +118,7 @@ namespace teleport
 
 			}
 		}
-		public void RenderDirectionalShadows(ScriptableRenderContext context, CullingResults cullingResults, ref PerFrameLightProperties perFrameLightProperties, int cascadeCount)
+		public void RenderDirectionalShadows(ScriptableRenderContext context, CullingResults cullingResults, ref PerFramePerCameraLightProperties perFrameLightProperties, int cascadeCount)
 		{
 			buffer.BeginSample("Shadows");
 			int atlasSize = (int)renderSettings.directional.atlasSize;
@@ -145,7 +145,7 @@ namespace teleport
 		static Shader shadowShader = null;
 		static Material shadowMaterial = null;
 		Vector4 lightShadowData = new Vector4();
-		public static void GetShadowTransforms(ref Matrix4x4[] WorldToShadow, PerFrameLightProperties perFrameLightProperties, int atlasSize, int numCascades)
+		public static void GetShadowTransforms(ref Matrix4x4[] WorldToShadow, PerFramePerCameraLightProperties perFrameLightProperties, int atlasSize, int numCascades)
 		{
 			for (int i = 0; i < 4; i++)
 			{
@@ -156,13 +156,21 @@ namespace teleport
 		}
 		teleport.RenderingUtils.FullScreenMeshStruct fullScreenMeshStruct = new teleport.RenderingUtils.FullScreenMeshStruct();
 		teleport.RenderingUtils.FullScreenMeshStruct newMeshStruct = new teleport.RenderingUtils.FullScreenMeshStruct();
-		public void RenderScreenspaceShadows(ScriptableRenderContext context, Camera camera, CullingResults cullingResults, PerFrameLightProperties perFrameLightProperties, int cascadeCount)
+		public void RenderScreenspaceShadows(ScriptableRenderContext context, Camera camera, CullingResults cullingResults, PerFrameLightProperties perFrameLightProperties, int cascadeCount
+				, RenderTexture depthTexture)
 		{
-			CommandBuffer buffer = CommandBufferPool.Get("Shadow Pass");
+			PerFramePerCameraLightProperties perFramePerCameraLightProperties = perFrameLightProperties.perFramePerCameraLightProperties[camera];
+			CommandBuffer buffer = CommandBufferPool.Get("RenderScreenspaceShadows");
 			buffer.BeginSample("Shadow");
 			context.SetupCameraProperties(camera);
-			buffer.GetTemporaryRT(_ShadowMapTexture, camera.pixelWidth, camera.pixelHeight, 32, FilterMode.Bilinear, RenderTextureFormat.BGRA32);
-			buffer.SetRenderTarget(_ShadowMapTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+			if (screenspaceShadowTexture == null || screenspaceShadowTexture.width != camera.pixelWidth || screenspaceShadowTexture.height != camera.pixelHeight)
+			{
+				screenspaceShadowTexture = new RenderTexture(camera.pixelWidth, camera.pixelHeight,1, RenderTextureFormat.BGRA32);
+			}
+			buffer.SetGlobalTexture(_CameraDepthTexture, depthTexture);
+			buffer.SetRenderTarget(screenspaceShadowTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store); 
+			//buffer.GetTemporaryRT(_ShadowMapTexture, camera.pixelWidth, camera.pixelHeight, 32, FilterMode.Bilinear, RenderTextureFormat.BGRA32);
+			//buffer.SetRenderTarget(_ShadowMapTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
 			buffer.ClearRenderTarget(false, true, Color.clear);
 			buffer.SetViewMatrix(Matrix4x4.identity);
 			// Unclear what Unity's logic is about needing this proj matrix:
@@ -192,16 +200,16 @@ namespace teleport
 			}
 			shadowMaterial.SetTexture("_ShadowMapTexture", shadowAtlasTexture, RenderTextureSubElement.Depth);
 
-			GetShadowTransforms(ref WorldToShadow, perFrameLightProperties, (int)renderSettings.directional.atlasSize, 4);
+			GetShadowTransforms(ref WorldToShadow, perFramePerCameraLightProperties, (int)renderSettings.directional.atlasSize, 4);
 
-			buffer.SetGlobalVector(unity_ShadowSplitSpheres0, perFrameLightProperties.cascades[0].splitData.cullingSphere);
-			buffer.SetGlobalVector(unity_ShadowSplitSpheres1, perFrameLightProperties.cascades[1].splitData.cullingSphere);
-			buffer.SetGlobalVector(unity_ShadowSplitSpheres2, perFrameLightProperties.cascades[2].splitData.cullingSphere);
-			buffer.SetGlobalVector(unity_ShadowSplitSpheres3, perFrameLightProperties.cascades[3].splitData.cullingSphere);
-			Vector4 sqr_rad = new Vector4(perFrameLightProperties.cascades[0].splitData.cullingSphere.w
-										, perFrameLightProperties.cascades[1].splitData.cullingSphere.w
-										, perFrameLightProperties.cascades[2].splitData.cullingSphere.w
-										, perFrameLightProperties.cascades[3].splitData.cullingSphere.w);
+			buffer.SetGlobalVector(unity_ShadowSplitSpheres0, perFramePerCameraLightProperties.cascades[0].splitData.cullingSphere);
+			buffer.SetGlobalVector(unity_ShadowSplitSpheres1, perFramePerCameraLightProperties.cascades[1].splitData.cullingSphere);
+			buffer.SetGlobalVector(unity_ShadowSplitSpheres2, perFramePerCameraLightProperties.cascades[2].splitData.cullingSphere);
+			buffer.SetGlobalVector(unity_ShadowSplitSpheres3, perFramePerCameraLightProperties.cascades[3].splitData.cullingSphere);
+			Vector4 sqr_rad = new Vector4(perFramePerCameraLightProperties.cascades[0].splitData.cullingSphere.w
+										, perFramePerCameraLightProperties.cascades[1].splitData.cullingSphere.w
+										, perFramePerCameraLightProperties.cascades[2].splitData.cullingSphere.w
+										, perFramePerCameraLightProperties.cascades[3].splitData.cullingSphere.w);
 			buffer.SetGlobalVector(unity_ShadowSplitSqRadii, sqr_rad);
 			//buffer.SetGlobalVector(unity_LightShadowBias, new Vector4(perFrameLightProperties.visibleLight.light.shadowBias,0,0,0));
 			//buffer.SetGlobalMatrixArray(unity_WorldToShadow, WorldToShadow);

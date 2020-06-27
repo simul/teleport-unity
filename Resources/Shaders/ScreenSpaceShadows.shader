@@ -253,7 +253,7 @@ fixed4 frag_hard (v2f i) : SV_Target
 	//res= fixed4(shadow, shadow, shadow, shadow);
     //res= cascadeWeights+ cascadeWeights.a*fixed4(0.5,0.5,0.5,0);
 	//float zdepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv.xy);
-	//res=wpos;
+	//res= shadowCoord;
 	return res;
 }
 

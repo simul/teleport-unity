@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace teleport
 {
@@ -12,12 +13,16 @@ namespace teleport
 		public Matrix4x4 projectionMatrix;
 		public ShadowSplitData splitData;
 	}
-
+	public class PerFramePerCameraLightProperties
+	{
+		// One of these for each cascade.
+		public PerFrameShadowCascadeProperties[] cascades = new PerFrameShadowCascadeProperties[4];
+	};
 	public class PerFrameLightProperties
 	{
 		public VisibleLight visibleLight;
 		// One of these for each cascade.
-		public PerFrameShadowCascadeProperties[] cascades = new PerFrameShadowCascadeProperties[4];
+		public Dictionary<Camera, PerFramePerCameraLightProperties> perFramePerCameraLightProperties = new Dictionary<Camera, PerFramePerCameraLightProperties>();
 	};
 	public class TeleportLighting
 	{
@@ -77,7 +82,7 @@ namespace teleport
 		{
 			shadows.Cleanup(context);
 		}
-		public void RenderShadows(ScriptableRenderContext context, CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
+		public void RenderShadows(ScriptableRenderContext context, Camera camera, CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
 		{
 			CommandBuffer buffer = CommandBufferPool.Get(k_SetupShadowConstants);
 			shadows.renderSettings = renderSettings;
@@ -107,17 +112,23 @@ namespace teleport
 						perFrameLightProperties[light].visibleLight = light;
 					}
 					PerFrameLightProperties perFrame = perFrameLightProperties[light];
-					shadows.RenderDirectionalShadows(context, cullingResults, ref perFrame, 4);
+					if(!perFrame.perFramePerCameraLightProperties.ContainsKey(camera))
+					{
+						perFrame.perFramePerCameraLightProperties.Add(camera, new PerFramePerCameraLightProperties());
+					}
+					PerFramePerCameraLightProperties perFramePerCamera = perFrame.perFramePerCameraLightProperties[camera];
+					shadows.RenderDirectionalShadows(context, cullingResults, ref perFramePerCamera, 4);
 				}
 			}
 		}
-		public void RenderScreenspaceShadows(ScriptableRenderContext context, Camera camera, CullingResults cullingResults)
+		public void RenderScreenspaceShadows(ScriptableRenderContext context, Camera camera, CullingResults cullingResults,RenderTexture depthTexture)
 		{
 			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults.visibleLights);
-			if (lightingOrder.MainLightIndex >= 0)
+			if (lightingOrder.MainLightIndex >= 0 && lightingOrder.MainLightIndex<cullingResults.visibleLights.Count())
 			{
 				var visibleLight = cullingResults.visibleLights[lightingOrder.MainLightIndex];
-				shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[visibleLight], 4);
+				if (perFrameLightProperties.ContainsKey(visibleLight))
+					shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[visibleLight], 4, depthTexture);
 			}
 		}
 		public void SetupForwardBasePass(ScriptableRenderContext context, CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
