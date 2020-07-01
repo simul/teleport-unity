@@ -37,7 +37,7 @@ namespace teleport
 			if (teleportSettings == null)
 			{
 				teleportSettings = ScriptableObject.CreateInstance<TeleportSettings>();
-				AssetDatabase.CreateAsset(teleportSettings, "Assets/Resources/" + k_TeleportSettingsPath+".asset");
+				AssetDatabase.CreateAsset(teleportSettings, "Assets/Resources/" + k_TeleportSettingsPath + ".asset");
 				AssetDatabase.SaveAssets();
 			}
 #endif

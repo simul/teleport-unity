@@ -14,7 +14,7 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void AddLight(uid clientID, IntPtr newLight, uid lightID);
 		[DllImport("SimulCasterServer")]
-		private static extern void AddActor(uid clientID, IntPtr newActor, uid actorID);
+		private static extern void AddActor(uid clientID, IntPtr newActor, uid actorID, avs.Transform currentTransform);
 		[DllImport("SimulCasterServer")]
 		private static extern uid RemoveActor(uid clientID, IntPtr oldActor);
 		[DllImport("SimulCasterServer")]
@@ -94,7 +94,7 @@ namespace teleport
 			{
 				GCHandle actorHandle = GCHandle.Alloc(actor, GCHandleType.Pinned);
 
-				AddActor(session.GetClientID(), GCHandle.ToIntPtr(actorHandle), actorID);
+				AddActor(session.GetClientID(), GCHandle.ToIntPtr(actorHandle), actorID, (avs.Transform)actor.transform);
 				gameObjectHandles.Add(actor, actorHandle);
 			}
 

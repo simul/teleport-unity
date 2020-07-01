@@ -114,6 +114,16 @@ namespace avs
         public Vector3 position = new Vector3(0, 0, 0);
         public Vector4 rotation = new Vector4(0, 0, 0, 1);
         public Vector3 scale = new Vector3(1, 1, 1);
+
+        //Converts a UnityEngine transform to a libavstream transform using the global transform data.
+        public static explicit operator Transform(UnityEngine.Transform unityTransform)
+        {
+            Transform transform = new Transform();
+            transform.position = unityTransform.position;
+            transform.rotation = unityTransform.rotation;
+            transform.scale = unityTransform.lossyScale;
+            return transform;
+        }
     }
 
     public struct InputState
