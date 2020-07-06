@@ -283,35 +283,6 @@ namespace teleport
 				cullingResults, ref drawingSettings, ref filteringSettings
 			);
 		}
-		void DrawDepth(ScriptableRenderContext context, Camera camera, Rect viewport, int face)
-		{
-			if (depthMaterial == null)
-			{
-				depthShader = Resources.Load("Shaders/CubemapDepth", typeof(Shader)) as Shader;
-				if (depthShader != null)
-				{
-					depthMaterial = new Material(depthShader);
-				}
-				else
-				{
-					Debug.LogError("ComputeDepth.shader resource not found!");
-					return;
-				}
-			}
-
-			var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.RendererTexture;
-			depthMaterial.SetTexture("DepthTexture", captureTexture, RenderTextureSubElement.Depth);
-
-			var buffer = new CommandBuffer();
-			buffer.name = "Custom Depth CB";
-			buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture);
-			buffer.SetViewport(viewport);
-			buffer.BeginSample(buffer.name);
-			buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 0, MeshTopology.Triangles, 6);
-			buffer.EndSample(buffer.name);
-			context.ExecuteCommandBuffer(buffer);
-			buffer.Release();
-		}
 
 		void EndCamera(ScriptableRenderContext context, Camera camera)
 		{
@@ -512,7 +483,7 @@ namespace teleport
 
 		private void FinalizeSceneCaptureTexture(ScriptableRenderContext context, Camera camera)
 		{
-			EncodeCameraPosition(context, camera);
+			EncodeTagID(context, camera);
 			context.Submit();
 		}
 
@@ -581,38 +552,14 @@ namespace teleport
 			buffer.Release();
 		}
 
-		void EncodeCameraPosition(ScriptableRenderContext context, Camera camera)
-		{
-			var monitor = CasterMonitor.GetCasterMonitor();
-
-			int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
-			int size = faceSize * 3;
-
-			var camTransform = camera.transform;
-			float[] camPos = new float[3] { camTransform.position.x, camTransform.position.z, camTransform.position.y };
-
-			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
-			computeShader.SetTexture(encodeTagIdKernel, "RWOutputColorTexture", outputTexture);
-			computeShader.SetInts("CamPosOffset", new Int32[2] { size - (32 * 4), size - (3 * 8) });
-			computeShader.SetFloats("CubemapCameraPositionMetres", camPos);
-			var buffer = new CommandBuffer();
-			buffer.name = "Encode Camera Position";
-			buffer.DispatchCompute(computeShader, encodeTagIdKernel, 4, 1, 1);
-			context.ExecuteCommandBuffer(buffer);
-			buffer.Release();
-		}
-
 		// Encodes the id of the video tag data in 4x4 blocks of monochrome colour.
 		void EncodeTagID(ScriptableRenderContext context, Camera camera)
 		{
 			var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
 			if (videoEncoder != null)
 			{
-				var monitor = CasterMonitor.GetCasterMonitor();
-
 				int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
 				int size = faceSize * 3;
-
 
 				var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
 				computeShader.SetTexture(encodeTagIdKernel, "RWOutputColorTexture", outputTexture);
