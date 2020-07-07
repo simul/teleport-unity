@@ -28,9 +28,9 @@ void EncodeTagDataIdCS(uint2 ThreadID : SV_DispatchThreadID)
 	uint raw_uint = asuint(TagDataId);
 
 	// We will use the thread x as the bit index.
-	uint3 masked_bits = (raw_uint >> (ThreadID.x / 4))& uint(1);		// 1 or 0
+	uint masked_bits = (raw_uint >> (ThreadID.x / 4))& uint(1);		// 1 or 0
 	int2 Pos = TagDataIdOffset + int2(ThreadID);
-	RWOutputColorTexture[Pos] = masked_bits.xxxx;
+	RWOutputColorTexture[Pos] = float4(masked_bits.x, masked_bits.x, masked_bits.x, masked_bits.x);
 }
 
 [numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]

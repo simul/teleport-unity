@@ -45,11 +45,6 @@ namespace teleport
 
         uid clientID;
 
-        public UInt32 CurrentTagID
-        {
-            get; set;
-        }
-
         CasterMonitor monitor;
        
 
@@ -69,17 +64,16 @@ namespace teleport
             this.clientID = clientID;
 
             monitor = CasterMonitor.GetCasterMonitor();
-            CurrentTagID = 0;
         }
 
-        public void CreateEncodeCommands(ScriptableRenderContext context, Camera camera)
+        public void CreateEncodeCommands(ScriptableRenderContext context, Camera camera, UInt32 tagDataID = 0)
         {     
             commandBuffer = new CommandBuffer();
             commandBuffer.name = "Video Encoder " + clientID;
 
             ConfigureEncoder(camera);
 
-            CreateEncodeCommand(camera);
+            CreateEncodeCommand(camera, tagDataID);
 
             context.ExecuteCommandBuffer(commandBuffer);
             ReleaseCommandbuffer(camera);
@@ -142,10 +136,9 @@ namespace teleport
                 commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 1, paramsWrapperPtr);
             }
             _reconfigure = false;
-            CurrentTagID = 0;
         }
 
-        void CreateEncodeCommand(Camera camera)
+        void CreateEncodeCommand(Camera camera, UInt32 tagDataID)
         {
             if (!initalized || _reconfigure)
             {
@@ -161,7 +154,7 @@ namespace teleport
                 paramsWrapper.clientID = clientID;
                 paramsWrapper.tagDataSize = (UInt64)Marshal.SizeOf(typeof(avs.SceneCapture2DTagData));
                 paramsWrapper.tagData = new avs.SceneCapture2DTagData();
-                paramsWrapper.tagData.id = CurrentTagID;
+                paramsWrapper.tagData.id = tagDataID;
                 paramsWrapper.tagData.cameraTransform = new avs.Transform();
                 paramsWrapper.tagData.cameraTransform.position = camera.transform.position;
                 paramsWrapper.tagData.cameraTransform.rotation = camera.transform.parent.rotation;
@@ -179,7 +172,7 @@ namespace teleport
                 paramsWrapper.clientID = clientID;
                 paramsWrapper.tagDataSize = (UInt64)Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData));
                 paramsWrapper.tagData = new avs.SceneCaptureCubeTagData();
-                paramsWrapper.tagData.id = CurrentTagID;
+                paramsWrapper.tagData.id = tagDataID;
                 paramsWrapper.tagData.cameraTransform = new avs.Transform();
                 paramsWrapper.tagData.cameraTransform.position = camera.transform.position;
                 paramsWrapper.tagData.cameraTransform.rotation = camera.transform.rotation;
@@ -192,7 +185,7 @@ namespace teleport
 
             commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 2, paramsWrapperPtr);
 
-            CurrentTagID = (CurrentTagID + 1) % 32;
+            
         }
 
         void ReleaseCommandbuffer(Camera camera)

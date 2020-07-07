@@ -35,6 +35,11 @@ namespace teleport
 			get; private set;
 		}
 
+		public UInt32 CurrentTagID
+		{
+			get; set;
+		}
+
 		public static Teleport_SceneCaptureComponent RenderingSceneCapture
 		{
 			get; private set;
@@ -74,6 +79,7 @@ namespace teleport
 				clientID = id;
 				if (clientID != 0)
 				{
+					CurrentTagID = 0;
 					VideoEncoder = new VideoEncoder(clientID);
 				}
 				else
@@ -93,6 +99,8 @@ namespace teleport
 
 		void Initialize()
 		{
+			CurrentTagID = 0;
+
 			GameObject obj = gameObject;
 			obj.transform.position = transform.position;
 			obj.transform.rotation = Quaternion.identity;
@@ -105,13 +113,14 @@ namespace teleport
 			cam.farClipPlane = 1000;
 			if (teleportSettings.casterSettings.usePerspectiveRendering)
 			{
-				cam.fieldOfView = 110;
+				cam.fieldOfView = teleportSettings.casterSettings.perspectiveFOV;
+				cam.aspect = (float)teleportSettings.casterSettings.sceneCaptureWidth / (float)teleportSettings.casterSettings.sceneCaptureHeight;
 			}
 			else
 			{
 				cam.fieldOfView = 90;
+				cam.aspect = 1;
 			}
-			cam.aspect = 1;
 			cam.depthTextureMode |= DepthTextureMode.Depth;
 
 			cam.enabled = false;
@@ -239,14 +248,16 @@ namespace teleport
 			cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
 			RenderingSceneCapture = this;
 			cam.Render();
+
+			CurrentTagID = (CurrentTagID + 1) % 32;
 		}
 
 		void CreateResources()
 		{
 			var settings = teleportSettings.casterSettings;
 			if (settings.usePerspectiveRendering)
-			{
-				CreateTextures(settings.sceneCaptureWidth, settings.sceneCaptureHeight, settings.sceneCaptureWidth, settings.sceneCaptureHeight, 0);
+			{	// Add 4 to the scene capture texture height for the tag data id
+				CreateTextures(settings.sceneCaptureWidth, settings.sceneCaptureHeight + 4, settings.sceneCaptureWidth, settings.sceneCaptureHeight, 0);
 			}
 			else
 			{

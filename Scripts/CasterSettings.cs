@@ -48,6 +48,7 @@ namespace SCServer
 		[MarshalAs(UnmanagedType.U1)] public bool usePerspectiveRendering = false;
 		public Int32 sceneCaptureWidth = 1920;
 		public Int32 sceneCaptureHeight = 1080;
+		public float perspectiveFOV = 110;
 		[MarshalAs(UnmanagedType.U1)] public bool useDynamicQuality = false;
 		public Int32 bandwidthCalculationInterval = 5000;
 

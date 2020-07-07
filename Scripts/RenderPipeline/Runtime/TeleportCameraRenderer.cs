@@ -349,12 +349,14 @@ namespace teleport
 
 			Render(context, camera);
 			EncodeColor(context, camera, 0);
-			context.Submit();
+
+			FinalizeSceneCaptureTexture(context, camera);
 
 			var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
 			if (teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
 			{
-				videoEncoder.CreateEncodeCommands(context, camera);
+				var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
+				videoEncoder.CreateEncodeCommands(context, camera, tagDataID);
 			}
 		}
 		public void RenderToSceneCaptureCubemap(ScriptableRenderContext context, Camera camera)
@@ -393,7 +395,8 @@ namespace teleport
 			var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
 			if (teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
 			{
-				videoEncoder.CreateEncodeCommands(context, camera);
+				var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
+				videoEncoder.CreateEncodeCommands(context, camera, tagDataID);
 			}
 		}
 		void PrepareForRenderToSceneCapture()
@@ -555,22 +558,17 @@ namespace teleport
 		// Encodes the id of the video tag data in 4x4 blocks of monochrome colour.
 		void EncodeTagID(ScriptableRenderContext context, Camera camera)
 		{
-			var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
-			if (videoEncoder != null)
-			{
-				int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
-				int size = faceSize * 3;
+			var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
 
-				var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
-				computeShader.SetTexture(encodeTagIdKernel, "RWOutputColorTexture", outputTexture);
-				computeShader.SetInts("TagDataIdOffset", new Int32[2] { size - (32 * 4), size - 4 });
-				computeShader.SetInt("TagDataId", (int)videoEncoder.CurrentTagID);
-				var buffer = new CommandBuffer();
-				buffer.name = "Encode Camera Position";
-				buffer.DispatchCompute(computeShader, encodeTagIdKernel, 4, 1, 1);
-				context.ExecuteCommandBuffer(buffer);
-				buffer.Release();
-			}		
+			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
+			computeShader.SetTexture(encodeTagIdKernel, "RWOutputColorTexture", outputTexture);
+			computeShader.SetInts("TagDataIdOffset", new Int32[2] { outputTexture.width - (32 * 4), outputTexture.height - 4 });
+			computeShader.SetInt("TagDataId", (int)tagDataID);
+			var buffer = new CommandBuffer();
+			buffer.name = "Encode Camera Position";
+			buffer.DispatchCompute(computeShader, encodeTagIdKernel, 4, 1, 1);
+			context.ExecuteCommandBuffer(buffer);
+			buffer.Release();	
 		}
 	}
 }
