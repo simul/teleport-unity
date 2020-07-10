@@ -28,7 +28,7 @@ namespace teleport
 	{
 		public TeleportRenderSettings renderSettings = null;
 		public TeleportShadows shadows = new TeleportShadows();
-		static Dictionary<VisibleLight, PerFrameLightProperties> perFrameLightProperties = new Dictionary<VisibleLight, PerFrameLightProperties>();
+		public static Dictionary<VisibleLight, PerFrameLightProperties> perFrameLightProperties = new Dictionary<VisibleLight, PerFrameLightProperties>();
 		const int maxUnimportantLights = 4;
 		static int
 			_LightColor0 = Shader.PropertyToID("_LightColor0"),

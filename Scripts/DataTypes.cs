@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-
+using UnityEngine;
 using uid = System.UInt64;
 
 namespace avs
@@ -124,6 +124,16 @@ namespace avs
             transform.scale = unityTransform.lossyScale;
             return transform;
         }
+
+        //Converts a UnityEngine Matrix4x4 to a libavstream transform 
+        public static implicit operator Transform(UnityEngine.Matrix4x4 m)
+        {
+            Transform transform = new Transform();
+            transform.position = m.GetPosition();
+            transform.rotation = m.GetRotation();
+            transform.scale = m.GetScale();
+            return transform;
+        }
     }
 
     public struct InputState
@@ -157,18 +167,30 @@ namespace avs
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public class SceneCapture2DTagData
+    public struct SceneCapture2DTagData
     {
         public uint id;
-        public avs.Transform cameraTransform;
+        public Transform cameraTransform;
     };
 
     [StructLayout(LayoutKind.Sequential)]
-    public class SceneCaptureCubeTagData
+    public struct SceneCaptureCubeTagData
     {
         public uint id;
-        public avs.Transform cameraTransform;
-        // Roderick add shadow stuff here
+        public Transform cameraTransform;
+        public uint lightCount;
+    };
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct LightData
+    {
+        public Transform worldTransform;
+        public Vector4 color;
+        public float range;
+        public float spotAngle;
+        public LightType lightType;
+        public Matrix4x4 shadowViewMatrix;
+        public Matrix4x4 shadowProjectionMatrix;
     };
 }
 
