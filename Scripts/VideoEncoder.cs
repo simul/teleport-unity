@@ -14,7 +14,9 @@ namespace teleport
         [DllImport("SimulCasterServer")]
         static extern System.IntPtr GetRenderEventWithDataCallback();
         [DllImport("SimulCasterServer")]
-        static extern void AddVideoTagData(uid clientID, IntPtr data, UInt64 dataSize);
+        static extern void ClearVideoTagData(uid clientID, uint tagDataID);
+        [DllImport("SimulCasterServer")]
+        static extern void AddVideoTagData(uid clientID, uint tagDataID, IntPtr data, UInt64 dataSize);
         #endregion
 
         [StructLayout(LayoutKind.Sequential)]
@@ -28,6 +30,7 @@ namespace teleport
         public struct ClientIDWrapper
         {
             public uid clientID;
+            public uint tagDataID;
         };
 
         //Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
@@ -140,6 +143,7 @@ namespace teleport
 
             var wrapper = new ClientIDWrapper();
             wrapper.clientID = clientID;
+            wrapper.tagDataID = tagDataID;
 
             IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(new ClientIDWrapper()));
             Marshal.StructureToPtr(wrapper, ptr, true);
@@ -149,6 +153,8 @@ namespace teleport
 
         void SendTagData(Camera camera, UInt32 tagDataID)
         {
+            ClearVideoTagData(clientID, tagDataID);
+
             var teleportSettings = TeleportSettings.GetOrCreateSettings();
             if (teleportSettings.casterSettings.usePerspectiveRendering)
             {
@@ -163,7 +169,7 @@ namespace teleport
                 IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(new avs.SceneCapture2DTagData()));
                 Marshal.StructureToPtr(tagData, ptr, true);
 
-                AddVideoTagData(clientID, ptr, tagDataSize);
+                AddVideoTagData(clientID, tagDataID, ptr, tagDataSize);
 
                 Marshal.FreeHGlobal(ptr);
             }
@@ -187,7 +193,7 @@ namespace teleport
                 var tagDataSize = (UInt64)Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData));
 
                 // Send fixed size tag data
-                AddVideoTagData(clientID, ptr, tagDataSize);
+                AddVideoTagData(clientID, tagDataID, ptr, tagDataSize);
 
                 Marshal.FreeHGlobal(ptr);
 
@@ -200,7 +206,7 @@ namespace teleport
                     Marshal.StructureToPtr(lightDataList[i], ptr, true);
 
                     // Send fixed size tag data
-                    AddVideoTagData(clientID, ptr, tagDataSize);
+                    AddVideoTagData(clientID, tagDataID, ptr, tagDataSize);
 
                     Marshal.FreeHGlobal(ptr);
                 }

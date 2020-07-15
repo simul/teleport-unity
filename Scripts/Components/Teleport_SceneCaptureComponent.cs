@@ -114,7 +114,7 @@ namespace teleport
 			if (teleportSettings.casterSettings.usePerspectiveRendering)
 			{
 				cam.fieldOfView = teleportSettings.casterSettings.perspectiveFOV;
-				cam.aspect = (float)teleportSettings.casterSettings.sceneCaptureWidth / (float)teleportSettings.casterSettings.sceneCaptureHeight;
+				cam.aspect = (float)teleportSettings.casterSettings.sceneCaptureWidth  / (float)(teleportSettings.casterSettings.sceneCaptureHeight - 4);
 			}
 			else
 			{
@@ -151,20 +151,21 @@ namespace teleport
 					int prevWidth = settings.sceneCaptureWidth;
 					int prevHeight = settings.sceneCaptureHeight;
 
+					// Add 4 pixels to height for tag id
 					if (bandwidth > 50)
 					{
 						settings.sceneCaptureWidth = 3840;
-						settings.sceneCaptureHeight = 2160;
+						settings.sceneCaptureHeight = 2164;
 					}
 					else if (bandwidth > 25)
 					{
 						settings.sceneCaptureWidth = 1920;
-						settings.sceneCaptureHeight = 1080;
+						settings.sceneCaptureHeight = 1084;
 					}
 					else
 					{
 						settings.sceneCaptureWidth = 1280;
-						settings.sceneCaptureHeight = 720;
+						settings.sceneCaptureHeight = 724;
 					}
 
 					if (prevWidth != settings.sceneCaptureWidth || prevHeight != settings.sceneCaptureHeight)
@@ -256,8 +257,8 @@ namespace teleport
 		{
 			var settings = teleportSettings.casterSettings;
 			if (settings.usePerspectiveRendering)
-			{	// Add 4 to the scene capture texture height for the tag data id
-				CreateTextures(settings.sceneCaptureWidth, settings.sceneCaptureHeight + 4, settings.sceneCaptureWidth, settings.sceneCaptureHeight, 0);
+			{	// Minus 4 used for tag data id from renderer texture height
+				CreateTextures(settings.sceneCaptureWidth, settings.sceneCaptureHeight, settings.sceneCaptureWidth, settings.sceneCaptureHeight - 4, 0);
 			}
 			else
 			{

@@ -47,7 +47,7 @@ namespace SCServer
 		[MarshalAs(UnmanagedType.U1)] public bool useYUV444Decoding = false;
 		[MarshalAs(UnmanagedType.U1)] public bool usePerspectiveRendering = false;
 		public Int32 sceneCaptureWidth = 1920;
-		public Int32 sceneCaptureHeight = 1080;
+		public Int32 sceneCaptureHeight = 1084; // 4 pixels Added for tag id
 		public float perspectiveFOV = 110;
 		[MarshalAs(UnmanagedType.U1)] public bool useDynamicQuality = false;
 		public Int32 bandwidthCalculationInterval = 5000;
