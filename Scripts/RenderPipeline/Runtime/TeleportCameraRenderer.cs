@@ -312,7 +312,6 @@ namespace teleport
 			DrawDepthPass(context, camera);
 			DrawShadowPass(context, camera, cullingResultsAll, lightingOrder);
 			
-
 			BeginCamera(context, camera);
 			PrepareForSceneWindow(context, camera);
 			DrawOpaqueGeometry(context, camera);
@@ -347,6 +346,11 @@ namespace teleport
 			}
 			PrepareForRenderToSceneCapture();
 
+			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
+			//uid clientID = Teleport_SceneCaptureComponent.RenderingSceneCapture.clientID;
+			//if (clientID != 0)
+				//UpdateStreamables(context, clientID, camera);
+
 			Render(context, camera);
 			EncodeColor(context, camera, 0);
 
@@ -359,6 +363,7 @@ namespace teleport
 				videoEncoder.CreateEncodeCommands(context, camera, tagDataID);
 			}
 		}
+
 		public void RenderToSceneCaptureCubemap(ScriptableRenderContext context, Camera camera)
 		{
 			RenderTexture sceneCaptureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
@@ -371,7 +376,7 @@ namespace teleport
 
 			PrepareForRenderToSceneCapture();
 
-			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.RendererTexture;
+			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
 			uid clientID = Teleport_SceneCaptureComponent.RenderingSceneCapture.clientID;
 			if (clientID != 0)
 				UpdateStreamables(context, clientID, camera);
@@ -505,15 +510,13 @@ namespace teleport
 
 		void EncodeColor(ScriptableRenderContext context, Camera camera, int face)
 		{
-			var monitor = CasterMonitor.GetCasterMonitor();
-			int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
+			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
+			var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
 
 			const int THREADGROUP_SIZE = 32;
-			int numThreadGroupsX = faceSize / THREADGROUP_SIZE;
-			int numThreadGroupsY = faceSize / THREADGROUP_SIZE;
+			int numThreadGroupsX = captureTexture.width / THREADGROUP_SIZE;
+			int numThreadGroupsY = captureTexture.height / THREADGROUP_SIZE;
 
-			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
-			var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.RendererTexture;
 			computeShader.SetTexture(encodeColorKernel, "InputColorTexture", captureTexture);
 			computeShader.SetTexture(encodeColorKernel, "RWOutputColorTexture", outputTexture);
 			computeShader.SetInt("Face", face);
@@ -541,7 +544,7 @@ namespace teleport
 				}
 			}
 
-			var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.RendererTexture;
+			var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
 			depthMaterial.SetTexture("DepthTexture", captureTexture, RenderTextureSubElement.Depth);
 
 			var buffer = new CommandBuffer();

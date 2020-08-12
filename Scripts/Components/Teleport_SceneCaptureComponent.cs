@@ -25,10 +25,8 @@ namespace teleport
 		List<float> bandwidths = new List<float>();
 		float settingsDuration = 0.0f;
 
-		public RenderTexture RendererTexture 
-		{
-			get; private set;
-		}
+		public RenderTexture rendererTexture = null;
+		
 
 		public VideoEncoder VideoEncoder
 		{
@@ -65,7 +63,7 @@ namespace teleport
 		{
 			cam = null;
 			sceneCaptureTexture = null;
-			RendererTexture = null;
+			rendererTexture = null;
 			VideoEncoder = null;
 		}
 
@@ -258,7 +256,7 @@ namespace teleport
 			var settings = teleportSettings.casterSettings;
 			if (settings.usePerspectiveRendering)
 			{	// Minus 4 used for tag data id from renderer texture height
-				CreateTextures(settings.sceneCaptureWidth, settings.sceneCaptureHeight, settings.sceneCaptureWidth, settings.sceneCaptureHeight - 4, 0);
+				CreateTextures(settings.sceneCaptureWidth, settings.sceneCaptureHeight, settings.sceneCaptureWidth, settings.sceneCaptureHeight - 4, 24);
 			}
 			else
 			{
@@ -287,13 +285,13 @@ namespace teleport
 			sceneCaptureTexture.enableRandomWrite = true;
 			sceneCaptureTexture.Create();
 
-			RendererTexture = new RenderTexture(rendererTexWidth, rendererTexHeight, rendererTexDepth, format, RenderTextureReadWrite.Default);
-			RendererTexture.name = "Scene Capture Renderer Texture";
-			RendererTexture.dimension = TextureDimension.Tex2D;
-			RendererTexture.useMipMap = false;
-			RendererTexture.autoGenerateMips = false;
-			RendererTexture.enableRandomWrite = false;
-			RendererTexture.Create();
+			rendererTexture = new RenderTexture(rendererTexWidth, rendererTexHeight, rendererTexDepth, format, RenderTextureReadWrite.Default);
+			rendererTexture.name = "Scene Capture Renderer Texture";
+			rendererTexture.dimension = TextureDimension.Tex2D;
+			rendererTexture.useMipMap = false;
+			rendererTexture.autoGenerateMips = false;
+			rendererTexture.enableRandomWrite = false;
+			rendererTexture.Create();
 		}
 	}
 }
