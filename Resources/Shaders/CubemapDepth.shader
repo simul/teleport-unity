@@ -22,7 +22,7 @@
 	float GetDepth(int2 pos, int w)
 	{
 		float m = PosToDistanceMultiplier(pos, w);
-		float d = Linear01Depth(DepthTexture[pos].r);
+		float d = LinearEyeDepth(DepthTexture[pos].r)/20.0;
 		d *= m;
 		return d;
 	}

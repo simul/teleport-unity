@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -90,6 +91,10 @@ namespace teleport
 
 		public static void StaticProcessInput(uid clientID, in avs.InputState newInput)
 		{
+			if (!StaticDoesSessionExist(clientID))
+				return;
+			int index = 1;
+			sessions[clientID].SetControllerInput(index, newInput.buttonsPressed);
 		}
 		#endregion
 
@@ -98,7 +103,7 @@ namespace teleport
 		private TeleportSettings teleportSettings = null;
 
 		//One per session, as we stream geometry on a per-client basis.
-		private GeometryStreamingService geometryStreamingService;
+		private GeometryStreamingService geometryStreamingService=null;
 
 		private uid clientID = 0;
 
@@ -128,6 +133,14 @@ namespace teleport
 
 			head.transform.rotation = newRotation;
 			head.transform.position = newPosition;
+		}
+		public void SetControllerInput(int index,UInt32 buttons)
+		{
+			if (controllers.ContainsKey(index))
+			{
+				var controller = controllers[index];
+				controller.SetButtons(buttons);
+			}
 		}
 		public void SetControllerPose(int index, Quaternion newRotation, Vector3 newPosition)
 		{
@@ -198,7 +211,8 @@ namespace teleport
 
 			if(teleportSettings.casterSettings.isStreamingGeometry)
 			{
-				geometryStreamingService.UpdateGeometryStreaming();
+				if(geometryStreamingService!=null)
+					geometryStreamingService.UpdateGeometryStreaming();
 			}
 		}
 

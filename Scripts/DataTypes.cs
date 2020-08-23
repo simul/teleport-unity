@@ -139,7 +139,6 @@ namespace avs
     public struct InputState
     {
         public UInt32 buttonsPressed;
-        public UInt32 buttonsReleased;
         public float trackpadAxisX;
         public float trackpadAxisY;
         public float joystickAxisX;

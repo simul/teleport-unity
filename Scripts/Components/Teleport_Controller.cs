@@ -1,12 +1,15 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class Teleport_Controller : MonoBehaviour
 {
-    public int Index = 0;
-    // Start is called before the first frame update
-    void Start()
+    public uint Index = 0;
+	public Vector2 triggerAxis = new Vector2();
+	public UInt32 buttons=0;
+	// Start is called before the first frame update
+	void Start()
     {
         
     }
@@ -16,4 +19,9 @@ public class Teleport_Controller : MonoBehaviour
     {
         
     }
+
+	public void SetButtons(UInt32 b)
+	{
+		buttons = b;
+	}
 }

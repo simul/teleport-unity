@@ -152,7 +152,8 @@ namespace teleport
 				foreach(Collider collider in gainedColliders)
 				{
 					//Skip game objects without the streaming tag.
-					if(!collider.CompareTag(teleportSettings.TagToStream)) continue;
+					if(teleportSettings.TagToStream.Length>0)
+						if(!collider.CompareTag(teleportSettings.TagToStream)) continue;
 
 					uid actorID = AddActor(collider.gameObject);
 					if(actorID != 0)

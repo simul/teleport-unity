@@ -23,7 +23,7 @@ public class TeleportMouseLook : MonoBehaviour
 {
 	public enum RotationAxes { MouseXAndY = 0, MouseX = 1, MouseY = 2 }
 	public RotationAxes axes = RotationAxes.MouseXAndY;
-	public bool workWhenPlaying = true;
+	public bool workWhenPlaying = false;
 	public float sensitivityX = 0.15F;
 	public float sensitivityY = 0.15F;
     public float translationSpeed = 10.0F;

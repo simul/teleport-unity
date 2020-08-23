@@ -115,7 +115,6 @@ namespace teleport
 				buffer.SetGlobalVector(unity_LightShadowBias, shadowBias);
 				ExecuteBuffer(context);
 				context.DrawShadows(ref shadowSettings);
-
 			}
 		}
 		public void RenderDirectionalShadows(ScriptableRenderContext context, CullingResults cullingResults, ref PerFramePerCameraLightProperties perFrameLightProperties, int cascadeCount)
@@ -159,6 +158,10 @@ namespace teleport
 		public void RenderScreenspaceShadows(ScriptableRenderContext context, Camera camera, CullingResults cullingResults, PerFrameLightProperties perFrameLightProperties, int cascadeCount
 				, RenderTexture depthTexture)
 		{
+			if (!perFrameLightProperties.perFramePerCameraLightProperties.ContainsKey(camera))
+			{
+				return;
+			}
 			PerFramePerCameraLightProperties perFramePerCameraLightProperties = perFrameLightProperties.perFramePerCameraLightProperties[camera];
 			CommandBuffer buffer = CommandBufferPool.Get("RenderScreenspaceShadows");
 			buffer.BeginSample("Shadow");

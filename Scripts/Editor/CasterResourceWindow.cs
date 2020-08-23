@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEditor;
@@ -91,9 +92,12 @@ namespace teleport
 
 			EditorGUILayout.BeginHorizontal();
 
-			if(GUILayout.Button("Find Scene Streamables")) FindSceneStreamables();
-			if(GUILayout.Button("Extract Scene Geometry")) ExtractSceneGeometry();
-			if(GUILayout.Button("Extract Project Geometry")) ExtractProjectGeometry();
+			if(GUILayout.Button("Find Scene Streamables"))
+				FindSceneStreamables();
+			if(GUILayout.Button("Extract Scene Geometry"))
+				ExtractSceneGeometry();
+			if(GUILayout.Button("Extract Project Geometry"))
+				ExtractProjectGeometry();
 
 			EditorGUILayout.EndHorizontal();
 
@@ -133,10 +137,30 @@ namespace teleport
 				geometrySource.LoadFromDisk();
 			}
 		}
-
+		void AddChildren(ref HashSet<GameObject> objSet, GameObject gameObject)
+		{
+			objSet.Add(gameObject);
+			for (int i=0;i< gameObject.transform.childCount;i++)
+			{
+				var o = gameObject.transform.GetChild(i).gameObject;
+				AddChildren(ref objSet, o);
+			}
+		}
 		private GameObject[] GetStreamedObjects()
-        {
-			GameObject[] foundStreamedObjects = GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream);
+		{
+			GameObject[] foundStreamedObjects= { };
+			if (teleportSettings.TagToStream.Length > 0)
+				foundStreamedObjects = GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream);
+			else
+			{
+				foundStreamedObjects = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
+				HashSet<GameObject> objSet = new HashSet<GameObject>();
+				foreach (var o in foundStreamedObjects)
+				{
+					AddChildren(ref objSet, o);
+				}
+				foundStreamedObjects = objSet.ToArray();
+			}
 			foundStreamedObjects = foundStreamedObjects.Where(x => (teleportSettings.LayersToStream & (1 << x.layer)) != 0).ToArray();
 
 			return foundStreamedObjects;
