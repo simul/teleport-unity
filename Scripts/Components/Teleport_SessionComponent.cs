@@ -114,6 +114,8 @@ namespace teleport
 
 		public void Disconnect()
 		{
+			//StopSession(clientID);
+
 			sessions.Remove(clientID);
 
 			geometryStreamingService.Clear();
