@@ -84,6 +84,7 @@ namespace avs
         public static implicit operator UnityEngine.Color(Vector3 vector) => new UnityEngine.Color(vector.x, vector.y, vector.z);
     }
 
+    [StructLayout(LayoutKind.Sequential)]
     public struct Vector4
     {
         public float x, y, z, w;

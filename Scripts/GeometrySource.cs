@@ -167,11 +167,13 @@ namespace avs
 		public float roughnessFactor = 1.0f;
 	}
 
+	[StructLayout(LayoutKind.Sequential)]
 	public struct Node
 	{
 		public Transform transform;
 		public uid dataID;
 		public NodeDataType dataType;
+		public Vector4 lightColour;
 
 		public UInt64 materialAmount;
 		public uid[] materialIDs;
@@ -596,8 +598,10 @@ namespace teleport
 			{
 				string compressionMessage = GetMessageForNextCompressedTexture(i, totalTexturesToCompress);
 
-				UnityEditor.EditorUtility.DisplayProgressBar("Compressing Textures", compressionMessage, i / (float)totalTexturesToCompress);
+				bool cancelled=UnityEditor.EditorUtility.DisplayCancelableProgressBar("Compressing Textures", compressionMessage, i / (float)totalTexturesToCompress);
 				CompressNextTexture();
+				if (cancelled)
+					break;
 			}
 
 			UnityEditor.EditorUtility.ClearProgressBar();
@@ -611,7 +615,7 @@ namespace teleport
 			//Extract mesh used on node.
 			extractedNode.dataID = AddLight(light);
 			extractedNode.dataType = avs.NodeDataType.Light;
-
+			extractedNode.lightColour = light.color*light.intensity;
 			//Can't create a node with no data.
 			if (extractedNode.dataID == 0)
 			{

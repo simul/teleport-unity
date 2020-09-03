@@ -18,6 +18,8 @@ namespace teleport
 
 		public uid clientID = 0; // This needs to be set by a session component instance after start
 		public RenderTexture sceneCaptureTexture = null;
+		public RenderTexture rendererTexture = null;
+		public RenderTexture cubemapTexture = null;
 		public Camera cam = null;
 
 		TeleportSettings teleportSettings=null;
@@ -25,7 +27,6 @@ namespace teleport
 		List<float> bandwidths = new List<float>();
 		float settingsDuration = 0.0f;
 
-		public RenderTexture rendererTexture = null;
 		
 
 		public VideoEncoder VideoEncoder
@@ -64,6 +65,7 @@ namespace teleport
 			cam = null;
 			sceneCaptureTexture = null;
 			rendererTexture = null;
+			cubemapTexture = null;
 			VideoEncoder = null;
 		}
 
@@ -278,7 +280,7 @@ namespace teleport
 			}
 
 			sceneCaptureTexture = new RenderTexture(captureTexWidth, captureTexHeight, 0, format, RenderTextureReadWrite.Default);
-			sceneCaptureTexture.name = "Scene Capture Texture";
+			sceneCaptureTexture.name = "Video Texture";
 			sceneCaptureTexture.dimension = TextureDimension.Tex2D;
 			sceneCaptureTexture.useMipMap = false;
 			sceneCaptureTexture.autoGenerateMips = false;
@@ -292,6 +294,14 @@ namespace teleport
 			rendererTexture.autoGenerateMips = false;
 			rendererTexture.enableRandomWrite = false;
 			rendererTexture.Create();
+
+			cubemapTexture = new RenderTexture(32, 32, 1, format, RenderTextureReadWrite.Default);
+			cubemapTexture.name = "Reflections Cubemap";
+			cubemapTexture.dimension = TextureDimension.Cube;
+			cubemapTexture.useMipMap = true;
+			cubemapTexture.autoGenerateMips = true;
+			cubemapTexture.enableRandomWrite = true;
+			cubemapTexture.Create();
 		}
 	}
 }

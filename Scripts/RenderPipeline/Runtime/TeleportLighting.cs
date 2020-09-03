@@ -15,12 +15,17 @@ namespace teleport
 	}
 	public class PerFramePerCameraLightProperties
 	{
+		// The texture that we render shadows into for this light and camera.
+		public RenderTexture screenspaceShadowTexture = null;
 		// One of these for each cascade.
 		public PerFrameShadowCascadeProperties[] cascades = new PerFrameShadowCascadeProperties[4];
+		public Vector4 shadowFadeCenterAndType = new Vector4();
+		public Matrix4x4[] WorldToShadow = new Matrix4x4[4];
 	};
 	public class PerFrameLightProperties
 	{
 		public VisibleLight visibleLight;
+		public RenderTexture shadowAtlasTexture = null;
 		// One of these for each cascade.
 		public Dictionary<Camera, PerFramePerCameraLightProperties> perFramePerCameraLightProperties = new Dictionary<Camera, PerFramePerCameraLightProperties>();
 	};
@@ -28,7 +33,9 @@ namespace teleport
 	{
 		public TeleportRenderSettings renderSettings = null;
 		public TeleportShadows shadows = new TeleportShadows();
-		public static Dictionary<VisibleLight, PerFrameLightProperties> perFrameLightProperties = new Dictionary<VisibleLight, PerFrameLightProperties>();
+		// Recreate Unity's unityAttenuation 1024x1 R16 texture, because Unity doesn't expose it.
+		public static RenderTexture unityAttenuationTexture = null; 
+		public static Dictionary<Light, PerFrameLightProperties> perFrameLightProperties = new Dictionary<Light, PerFrameLightProperties>();
 		const int maxUnimportantLights = 4;
 		static int
 			_LightColor0 = Shader.PropertyToID("_LightColor0"),
@@ -62,7 +69,14 @@ namespace teleport
 			unity_FogColor = Shader.PropertyToID("unity_FogColor"),
 			unity_FogParams = Shader.PropertyToID("unity_FogParams"),
 			unity_OcclusionMaskSelector = Shader.PropertyToID("unity_OcclusionMaskSelector"),
-			unity_WorldToLight = Shader.PropertyToID("unity_WorldToLight");
+			unity_WorldToLight = Shader.PropertyToID("unity_WorldToLight"),
+			
+			_ShadowMapTexture = Shader.PropertyToID("_ShadowMapTexture"),
+			_LightShadowData = Shader.PropertyToID("_LightShadowData"),
+			unity_ShadowFadeCenterAndType = Shader.PropertyToID("unity_ShadowFadeCenterAndType"),
+
+			unity_SpecCube0 = Shader.PropertyToID("unity_SpecCube0"),
+			unity_SpecCube1 = Shader.PropertyToID("unity_SpecCube1");
 
 		static Vector4[] unimportant_LightColours = new Vector4[maxUnimportantLights];
 		static Vector4[] unimportant_LightColours8 = new Vector4[8];
@@ -77,26 +91,56 @@ namespace teleport
 		const string k_SetupLightConstants = "Setup Light Constants";
 		const string k_SetupShadowConstants = "Setup Shadow Constants";
 
-		const string bufferName = "Lighting";
-		public void Cleanup(ScriptableRenderContext context)
+		static Shader attenuationShader = null;
+		static Material attenuationMaterial = null;
+		static void EnsureAttenuationTexture(ScriptableRenderContext context)
 		{
-			shadows.Cleanup(context);
+			if (unityAttenuationTexture == null)
+			{
+				unityAttenuationTexture = new RenderTexture(1024, 1, 1, RenderTextureFormat.R16);
+			}
+			CommandBuffer buffer = CommandBufferPool.Get("unityAttenuationTexture");
+			buffer.SetRenderTarget(unityAttenuationTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+
+			if (attenuationMaterial == null)
+			{
+				attenuationShader = Shader.Find("Teleport/StandardAttenuation");
+				if (attenuationShader != null)
+				{
+					attenuationMaterial = new Material(attenuationShader);
+				}
+				else
+				{
+					Debug.LogError("attenuationMaterial.shader resource not found!");
+					return;
+				}
+			}
+			buffer.Blit(Texture2D.whiteTexture, unityAttenuationTexture, attenuationMaterial);
+			context.ExecuteCommandBuffer(buffer);
+		}
+		const string bufferName = "Lighting";
+		public void Cleanup(ScriptableRenderContext context,CommandBuffer buffer)
+		{
+			shadows.Cleanup(context,buffer);
 		}
 		public void RenderShadows(ScriptableRenderContext context, Camera camera, CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
 		{
+			EnsureAttenuationTexture(context);
 			CommandBuffer buffer = CommandBufferPool.Get(k_SetupShadowConstants);
 			shadows.renderSettings = renderSettings;
 			shadows.Setup(context, cullingResults);
 			NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
 
-			if (lightingOrder.MainLightIndex >= 0)
+			if (lightingOrder.MainLightIndex >= 0|| (lightingOrder.AdditionalLightIndices != null&&lightingOrder.AdditionalLightIndices.Length>0))
 			{
 				for (int i = 0; i < visibleLights.Length; i++)
 				{
-					VisibleLight light = visibleLights[i];
-					if (lightingOrder.MainLightIndex == i || lightingOrder.SecondLightIndex == i)
+					VisibleLight visibleLight = visibleLights[i];
+					Light light = visibleLight.light;
+					int cascadeCount = light.type==LightType.Directional?4:1;
+					if (lightingOrder.MainLightIndex == i )//|| lightingOrder.SecondLightIndex == i)
 					{
-						shadows.ReserveDirectionalShadows(cullingResults, light.light, i);
+						shadows.ReserveDirectionalShadows(cullingResults, light, i);
 					}
 					if (lightingOrder.MainLightIndex == i)
 					{
@@ -109,37 +153,80 @@ namespace teleport
 					if (!perFrameLightProperties.ContainsKey(light))
 					{
 						perFrameLightProperties.Add(light, new PerFrameLightProperties());
-						perFrameLightProperties[light].visibleLight = light;
+						perFrameLightProperties[light].visibleLight = visibleLight;
 					}
 					PerFrameLightProperties perFrame = perFrameLightProperties[light];
 					if(!perFrame.perFramePerCameraLightProperties.ContainsKey(camera))
 					{
 						perFrame.perFramePerCameraLightProperties.Add(camera, new PerFramePerCameraLightProperties());
 					}
+					if (lightingOrder.MainLightIndex == i )//|| lightingOrder.SecondLightIndex == i)
+					{
+						PerFramePerCameraLightProperties perFramePerCamera = perFrame.perFramePerCameraLightProperties[camera];
+						shadows.RenderShadowsForLight(context, cullingResults, light, i, camera, ref perFrame, ref perFramePerCamera, cascadeCount);
+					}
+				}
+				if(lightingOrder.AdditionalLightIndices!=null)
+				for(int i=0;i< lightingOrder.AdditionalLightIndices.Length;i++)
+				{
+					var visibleLightIndex = lightingOrder.AdditionalLightIndices[i];
+					VisibleLight visibleLight = visibleLights[visibleLightIndex];
+					Light light = visibleLight.light;
+					PerFrameLightProperties perFrame = perFrameLightProperties[light];
 					PerFramePerCameraLightProperties perFramePerCamera = perFrame.perFramePerCameraLightProperties[camera];
-					shadows.RenderDirectionalShadows(context, cullingResults, ref perFramePerCamera, 4);
+					int cascadeCount = light.type == LightType.Directional ? 4 : 1;
+					shadows.RenderShadowsForLight(context, cullingResults, light, visibleLightIndex, camera, ref perFrame, ref perFramePerCamera, cascadeCount);
 				}
 			}
 		}
-		public void RenderScreenspaceShadows(ScriptableRenderContext context, Camera camera, CullingResults cullingResults,RenderTexture depthTexture)
+		/// <summary>
+		/// Render in screenspace the shadowing value from 0 to 1 for each pixel, for a given light.
+		/// </summary>
+		public void RenderScreenspaceShadows(ScriptableRenderContext context, Camera camera, TeleportRenderPipeline.LightingOrder lightingOrder, CullingResults cullingResults,RenderTexture depthTexture)
 		{
-			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults.visibleLights);
 			if (lightingOrder.MainLightIndex >= 0 && lightingOrder.MainLightIndex<cullingResults.visibleLights.Count())
 			{
 				var visibleLight = cullingResults.visibleLights[lightingOrder.MainLightIndex];
-				if (perFrameLightProperties.ContainsKey(visibleLight))
-					shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[visibleLight], 4, depthTexture);
+				var light = visibleLight.light;
+				if (perFrameLightProperties.ContainsKey(light))
+					shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[light], 4, depthTexture);
+			}
+			if(lightingOrder.AdditionalLightIndices!=null)
+			for(int i=0;i<lightingOrder.AdditionalLightIndices.Length;i++)
+			{
+				var visibleLight = cullingResults.visibleLights[lightingOrder.AdditionalLightIndices[i]];
+				var light = visibleLight.light;
+				if (perFrameLightProperties.ContainsKey(light))
+					shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[light], 1, depthTexture);
 			}
 		}
-		public void SetupForwardBasePass(ScriptableRenderContext context, CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
+		public void SetupForwardBasePass(ScriptableRenderContext context, Camera camera,CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
 		{
 			CommandBuffer buffer = CommandBufferPool.Get(k_SetupLightConstants);
 			buffer.BeginSample(bufferName);
 			NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
+			RenderTexture screenspaceShadowTexture = null;
 			if (lightingOrder.MainLightIndex >= 0)
 			{
-				SetupMainLight(buffer, visibleLights[lightingOrder.MainLightIndex]);
+				var visibleLight = visibleLights[lightingOrder.MainLightIndex];
+				var light = visibleLight.light;
+				SetupMainLight(buffer, visibleLight);
+				// Which light do we want the shadows for?
+				if (perFrameLightProperties.ContainsKey(light)&& perFrameLightProperties[light].perFramePerCameraLightProperties.ContainsKey(camera))
+				{
+					screenspaceShadowTexture = perFrameLightProperties[light].perFramePerCameraLightProperties[camera].screenspaceShadowTexture;
+					buffer.SetGlobalTexture(_ShadowMapTexture, screenspaceShadowTexture, RenderTextureSubElement.Color);
+				}
+				shadows.ApplyShadowConstants(context,buffer, camera, cullingResults, perFrameLightProperties[light]);
 			}
+			else
+			{
+				ClearMainLight(buffer);
+			}
+			if(screenspaceShadowTexture!=null)
+				buffer.SetGlobalTexture(_ShadowMapTexture, screenspaceShadowTexture, RenderTextureSubElement.Color);
+			else
+				buffer.SetGlobalTexture(_ShadowMapTexture, Texture2D.whiteTexture);
 			nonImportantX = Vector4.zero;
 			nonImportantY = Vector4.zero;
 			nonImportantZ = Vector4.zero;
@@ -147,7 +234,7 @@ namespace teleport
 			int n = 0;
 			for (int i = 0; i < visibleLights.Length; i++)
 			{
-				if (i != lightingOrder.MainLightIndex && i != lightingOrder.SecondLightIndex)
+				if (i != lightingOrder.MainLightIndex && !lightingOrder.AdditionalLightIndices.Contains(i))
 				{
 					VisibleLight visibleLight = visibleLights[i];
 					SetupUnimportantLight(buffer, n, visibleLight);
@@ -173,6 +260,10 @@ namespace teleport
 			//Standard, SubShader #0
 			//DIRECTIONAL LIGHTPROBE_SH VERTEXLIGHT_ON _NORMALMAP
 			//buffer.SetGlobalVectorArray(unimportant_LightColor, unimportant_LightColours);
+
+			// Use the skybox as the DEFAULT reflection cube. This SHOULD get overriden per-object later.
+			//buffer.SetGlobalTexture(unity_SpecCube0, RenderSettings.skybox.GetTexture(""));
+
 			buffer.SetGlobalVectorArray(unimportant_LightPosition, unimportant_LightPositions);
 			buffer.SetGlobalVectorArray(unimportant_LightAtten, unimportant_lightAttenuations);
 			buffer.SetGlobalVectorArray(unimportant_SpotDirection, unimportant_SpotDirections);
@@ -203,23 +294,32 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			CommandBufferPool.Release(buffer);
 		}
-		public bool SetupForwardAddPass(ScriptableRenderContext context, CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
+		public bool SetupForwardAddPass(ScriptableRenderContext context, Camera camera,CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder,int additionalLightIndex)
 		{
 			CommandBuffer buffer = CommandBufferPool.Get(k_SetupLightConstants);
 			buffer.BeginSample(bufferName);
 			NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
-			if (lightingOrder.SecondLightIndex < 0)
+			if (additionalLightIndex < 0|| additionalLightIndex>= visibleLights.Length)
 				return false;
-			VisibleLight visibleLight = visibleLights[lightingOrder.SecondLightIndex];
+			VisibleLight visibleLight = visibleLights[additionalLightIndex];
+			Light light = visibleLight.light;
 			SetupAddLight(buffer, visibleLight);
+			buffer.SetGlobalTexture(_ShadowMapTexture, perFrameLightProperties[light].shadowAtlasTexture, RenderTextureSubElement.Depth);
+			Vector4 lightShadowData = new Vector4(0.1F, 66.66666F, 0.33333333F, -2.66667F);
+			buffer.SetGlobalVector(_LightShadowData, lightShadowData);
+			shadows.ApplyShadowConstants(context, buffer, camera, cullingResults, perFrameLightProperties[light]);
 
 			CoreUtils.SetKeyword(buffer, "POINT", visibleLight.lightType == LightType.Point);
+			CoreUtils.SetKeyword(buffer, "DIRECTIONAL", visibleLight.lightType == LightType.Directional);
 			CoreUtils.SetKeyword(buffer, "SPOT", visibleLight.lightType == LightType.Spot);
-			CoreUtils.SetKeyword(buffer, "SHADOWS_DEPTH", visibleLight.light.shadows == LightShadows.Hard);
+			CoreUtils.SetKeyword(buffer, "SHADOWS_DEPTH", visibleLight.light.shadows != LightShadows.None);
+			CoreUtils.SetKeyword(buffer, "_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A", true);
 
 			//buffer.SetGlobalVectorArray(_VisibleLightColors, visibleLightColors);
 			//buffer.SetGlobalVectorArray(_VisibleLightDirectionsOrPositions, visibleLightDirectionsOrPositions);
 
+			PerFramePerCameraLightProperties perFramePerCamera = perFrameLightProperties[light].perFramePerCameraLightProperties[camera];
+			buffer.SetGlobalVector(unity_ShadowFadeCenterAndType, perFramePerCamera.shadowFadeCenterAndType);
 			buffer.EndSample(bufferName);
 			context.ExecuteCommandBuffer(buffer);
 			CommandBufferPool.Release(buffer);
@@ -273,14 +373,18 @@ namespace teleport
 				nonImportantAtten[index] = atten;
 			}
 		}
+		void ClearMainLight(CommandBuffer buffer)
+		{
+			buffer.SetGlobalVector(_LightColor0, Vector4.zero);
+			buffer.SetGlobalVector(_WorldSpaceLightPos0, Vector3.zero);
+		}
 		void SetupAddLight(CommandBuffer buffer, VisibleLight light)
 		{
 			SetupMainLight(buffer, light);
 		}
 		void SetupMainLight(CommandBuffer buffer, VisibleLight light)
 		{
-			//LightRenderMode mode =light.light.renderMode;
-			Vector4 atten = new Vector4();
+				Vector4 atten = new Vector4();
 			if (light.lightType != LightType.Directional)
 			{
 				if (light.lightType == LightType.Spot)
@@ -297,7 +401,8 @@ namespace teleport
 			}
 			if (light.lightType == LightType.Spot)
 				buffer.SetGlobalTexture(_LightTexture0, light.light.cookie);
-
+			else if (light.lightType == LightType.Point)
+				buffer.SetGlobalTexture(_LightTexture0, unityAttenuationTexture);
 			Matrix4x4 worldToShadow = teleport.ShadowUtils.CalcShadowMatrix(light);
 			if (light.lightType == LightType.Spot)
 				buffer.SetGlobalMatrix(unity_WorldToLight, worldToShadow);
@@ -314,7 +419,8 @@ namespace teleport
 				buffer.SetGlobalVector(_WorldSpaceLightPos0, lightDir);
 			else
 				buffer.SetGlobalVector(_WorldSpaceLightPos0, lightPos);
-			buffer.SetGlobalMatrix(_LightMatrix0, light.localToWorldMatrix);
+			if(_LightMatrix0!= unity_WorldToLight)
+				buffer.SetGlobalMatrix(_LightMatrix0, light.localToWorldMatrix);
 			if (light.lightType == LightType.Spot)
 			{
 				buffer.SetGlobalTexture(_LightTexture0, light.light.cookie);

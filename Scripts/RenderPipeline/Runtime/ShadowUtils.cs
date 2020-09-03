@@ -67,6 +67,7 @@ namespace teleport
 				return Vector4.zero;
 			}
 			Vector4 outputBias = new Vector4(0, 0, 0, 0);
+			float yval = 1.0f;
 			float frustumSize;
 			float clipSize;
 			if (shadowLight.lightType == LightType.Directional)
@@ -86,6 +87,8 @@ namespace teleport
 				// Depending on how big the light range is, it will be good enough with some tweaks in bias
 				frustumSize = Mathf.Tan(shadowLight.spotAngle * 0.5f * Mathf.Deg2Rad) * shadowLight.range;
 				clipSize = lightProjectionMatrix.m22 / 2.0f;
+				yval = 0.0f;
+				frustumSize = 0.0f;
 			}
 			else
 			{
@@ -112,7 +115,7 @@ namespace teleport
 				normalBias *= kernelRadius;
 			}
 			outputBias.x = depthBias;
-			outputBias.y = 1.0F;
+			outputBias.y = yval;
 			outputBias.z = normalBias;
 			outputBias.w = 0.0F;
 			return outputBias;
@@ -125,20 +128,23 @@ namespace teleport
 			lightDir.w = 0.0F;
 			Matrix4x4 worldToShadow = new Matrix4x4();
 			worldToShadow = light.localToWorldMatrix.inverse;
-			if (light.lightType == LightType.Spot)
+			if (light.lightType == LightType.Spot|| light.lightType == LightType.Point)
 			{
 				Matrix4x4 lightToWorld = light.localToWorldMatrix;
 				Vector3 matScale = new Vector3(light.range, light.range, light.range);
 				lightToWorld *= Matrix4x4.Scale(matScale);
 				Matrix4x4 worldToLight = lightToWorld.inverse;
-				Vector4 spotDir = worldToLight.GetRow(2);
-				float tanVal = (float)(System.Math.Tan(3.1415926536F / 180.0F * light.spotAngle / 2.0F));
-				spotDir *= 2.0F * tanVal;
-				Vector4 spotRow = new Vector4(spotDir.x, spotDir.y, spotDir.z, spotDir.w);
-				worldToLight.SetRow(3, spotRow);
+				if (light.lightType == LightType.Spot)
+				{
+					Vector4 spotDir = worldToLight.GetRow(2);
+					float tanVal = (float)(System.Math.Tan(3.1415926536F / 180.0F * light.spotAngle / 2.0F));
+					spotDir *= 2.0F * tanVal;
+					Vector4 spotRow = new Vector4(spotDir.x, spotDir.y, spotDir.z, spotDir.w);
+					worldToLight.SetRow(3, spotRow);
 
-				spotRow *= 2.0F;
-				worldToLight.SetRow(3, spotRow);
+					spotRow *= 2.0F;
+					worldToLight.SetRow(3, spotRow);
+				}
 				worldToShadow = worldToLight;
 			}
 			return worldToShadow;

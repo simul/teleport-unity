@@ -172,7 +172,6 @@ namespace teleport
 		private void Start()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
-
 			geometryStreamingService = new GeometryStreamingService(this);
 
 			Teleport_Head[] heads = GetComponentsInChildren<Teleport_Head>();
@@ -188,9 +187,14 @@ namespace teleport
 			if(clientID == 0)
 			{
 				clientID = GetUnlinkedClientID();
-				if(clientID == 0) return;
-
-				if(sessions.ContainsKey(clientID))
+				if(clientID == 0)
+					return;
+				// Make sure we have a Teleport Render Pipeline, or we won't get a video stream.
+				if (UnityEngine.Rendering.RenderPipelineManager.currentPipeline == null || UnityEngine.Rendering.RenderPipelineManager.currentPipeline.GetType() != typeof(TeleportRenderPipeline))
+				{
+					Debug.LogError("currentPipeline is not TeleportRenderPipeline.");
+				}
+				if (sessions.ContainsKey(clientID))
 				{
 					Debug.LogError("Session duplicate key!");
 				}
@@ -230,13 +234,20 @@ namespace teleport
 			GUI.Label(new Rect(x, y+=dy, 300, 20), str, font);
 			GUI.Label(new Rect(x, y+=dy, 300, 20), string.Format("sent origin\t{0}", last_sent_origin), font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("head position\t{0}", headPosition), font);
-
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Actors {0}", geometryStreamingService.GetStreamedObjectCount()));
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", geometryStreamingService.GetStreamedLightCount()));
+			if (geometryStreamingService != null)
+			{
+				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Actors {0}", geometryStreamingService.GetStreamedObjectCount()));
+				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", geometryStreamingService.GetStreamedLightCount()));
+			}
+			foreach (var c in controllers)
+			{
+				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Controller {0}, buttons: {1}", c.Key,c.Value.buttons));
+			}
 		}
 		private void OnDestroy()
 		{
-			if(clientID != 0) StopSession(clientID);
+			if(clientID != 0)
+				StopSession(clientID);
 		}
 
 		public void SetVisibleLights(Light[] lights)

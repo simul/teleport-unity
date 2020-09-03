@@ -24,6 +24,7 @@ public class TeleportMouseLook : MonoBehaviour
 	public enum RotationAxes { MouseXAndY = 0, MouseX = 1, MouseY = 2 }
 	public RotationAxes axes = RotationAxes.MouseXAndY;
 	public bool workWhenPlaying = false;
+	public bool EnableTranslation = false;
 	public float sensitivityX = 0.15F;
 	public float sensitivityY = 0.15F;
     public float translationSpeed = 10.0F;
@@ -116,6 +117,8 @@ public class TeleportMouseLook : MonoBehaviour
 #endif
     void ApplyTranslation(Vector3 speed)
     {
+		if (!EnableTranslation)
+			return;
         Vector3 up = transform.up;
         Vector3 right = transform.right;
         Vector3 forward = transform.forward;

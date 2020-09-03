@@ -124,7 +124,8 @@ namespace teleport
 			foreach(var l in lights)
 			{
 				uid actorID = AddActor(l.gameObject);
-				if(!streamedLights.Contains(l)) streamedLights.Add(l);
+				if(!streamedLights.Contains(l))
+					streamedLights.Add(l);
 			}
 		}
 
@@ -152,13 +153,13 @@ namespace teleport
 				foreach(Collider collider in gainedColliders)
 				{
 					//Skip game objects without the streaming tag.
-					if(teleportSettings.TagToStream.Length>0)
-						if(!collider.CompareTag(teleportSettings.TagToStream)) continue;
-
+					if(teleportSettings.TagToStream.Length>0 && !collider.CompareTag(teleportSettings.TagToStream))
+						continue;
+					// Add to the list without first checking if it can be added. So it won't spam failure messages.
+					streamedObjects.Add(collider);
 					uid actorID = AddActor(collider.gameObject);
 					if(actorID != 0)
 					{
-						streamedObjects.Add(collider);
 						ActorEnteredBounds(session.GetClientID(), actorID);
 					}
 					else

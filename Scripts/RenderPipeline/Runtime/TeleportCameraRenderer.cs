@@ -50,7 +50,6 @@ namespace teleport
 					_GrabTexture_HDR = Shader.PropertyToID("_GrabTexture_HDR"),
 					_GrabTexture_TexelSize = Shader.PropertyToID("_GrabTexture_TexelSize"),
 					_GrabTexture_ST = Shader.PropertyToID("_GrabTexture_ST"),
-					_ShadowMapTexture=Shader.PropertyToID("_ShadowMapTexture"),
 					unity_LightShadowBias = Shader.PropertyToID("unity_LightShadowBias");
 		static Shader depthShader = null;
 		static Material depthMaterial = null;
@@ -74,9 +73,9 @@ namespace teleport
 			buffer.Clear();
 		}
 
-		void BeginCamera(ScriptableRenderContext context, Camera camera)
+		/// <summary>Clear the background based on the clearFlags.</summary>
+		void Clear(ScriptableRenderContext context, Camera camera)
 		{
-			context.SetupCameraProperties(camera);
 			if (camera.clearFlags != CameraClearFlags.Nothing)
 			{
 				var buffer = new CommandBuffer { name = camera.name + " Teleport BeginCamera" };
@@ -112,7 +111,7 @@ namespace teleport
 			new ShaderTagId("Forward"),
 			new ShaderTagId("ForwardOnly"),
 			new ShaderTagId("ForwardBase"),
-			new ShaderTagId("PrepassBase"),
+			//new ShaderTagId("PrepassBase"),
 			new ShaderTagId("Vertex"),
 			new ShaderTagId("VertexLMRGBM"),
 			new ShaderTagId("VertexLM"),
@@ -152,8 +151,8 @@ namespace teleport
 			var drawingSettings = new DrawingSettings(depthShaderTagIds[0], sortingSettings);
 			drawingSettings.enableDynamicBatching = true;
 			drawingSettings.enableInstancing = true;
-			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults.visibleLights);
-			//teleportLighting.SetupForwardBasePass(context, cullingResults, lightingOrder);
+			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults);
+		
 			CoreUtils.SetKeyword(buffer, "SHADOWS_DEPTH", true);
 			Vector4 lightShadowBias = new Vector4(0F, 0F, 0F, 0F);
 			//Vector4 lightShadowBias = new Vector4(-0.001553151F, 1.0F, 0.032755F, 0F);
@@ -170,10 +169,6 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			CommandBufferPool.Release(buffer);
 		}
-		void DrawShadowPass(ScriptableRenderContext context, Camera camera, CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
-		{
-			teleportLighting.RenderScreenspaceShadows(context, camera, cullingResults,depthTexture);
-		}
 
 		void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera)
 		{
@@ -187,7 +182,6 @@ namespace teleport
 			buffer.SetGlobalTexture(_InternalGradingLut, Texture2D.whiteTexture);
 
 			buffer.SetGlobalTexture(_GrabTexture, Texture2D.whiteTexture);
-			buffer.SetGlobalTexture(_ShadowMapTexture, teleportLighting.shadows.screenspaceShadowTexture, RenderTextureSubElement.Color);
 			//buffer.SetGlobalTexture(_GrabTexture_HDR, Texture2D.whiteTexture);
 			//buffer.SetGlobalTexture(_GrabTexture_ST, Texture2D.whiteTexture);
 			//_GrabTexture_TexelSize = Shader.PropertyToID("_GrabTexture_TexelSize"),
@@ -215,16 +209,26 @@ namespace teleport
 			//	}
 			//	renderingData.cullResults.GetShadowCasterBounds(i, out var bounds);
 			//
-			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults.visibleLights);
+			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults);
 
-			var drawingSettings = new DrawingSettings(legacyShaderTagIds[0], sortingSettings);
+			var drawingSettings = new DrawingSettings(legacyShaderTagIds[0], sortingSettings)
+			{
+				enableDynamicBatching = true,
+				enableInstancing = true,
+				perObjectData =
+					PerObjectData.ReflectionProbes |
+					PerObjectData.Lightmaps | PerObjectData.ShadowMask |
+					PerObjectData.LightProbe | PerObjectData.OcclusionProbe |
+					PerObjectData.LightProbeProxyVolume |
+												PerObjectData.LightData |
+					PerObjectData.OcclusionProbeProxyVolume
+			};
 			drawingSettings.mainLightIndex = lightingOrder.MainLightIndex;
 
-			drawingSettings.enableDynamicBatching = true;
-			drawingSettings.enableInstancing = true;
 			if (cullingResults.visibleLights.Length > 0)
 			{
-				drawingSettings.perObjectData |= PerObjectData.LightProbe
+
+			/*	drawingSettings.perObjectData |= PerObjectData.LightProbe
 												| PerObjectData.ReflectionProbes
 												| PerObjectData.LightProbeProxyVolume
 												| PerObjectData.Lightmaps
@@ -234,29 +238,32 @@ namespace teleport
 												| PerObjectData.ReflectionProbeData
 												| PerObjectData.OcclusionProbe
 												| PerObjectData.OcclusionProbeProxyVolume
-												| PerObjectData.ShadowMask;
+												| PerObjectData.ShadowMask
+												;*/
 			}
-			teleportLighting.SetupForwardBasePass(context, cullingResults, lightingOrder);
+			teleportLighting.SetupForwardBasePass(context, camera, cullingResults, lightingOrder);
 			for (int i = 1; i < legacyShaderTagIds.Length; i++)
 			{
 				drawingSettings.SetShaderPassName(i, legacyShaderTagIds[i]);
 			}
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
-
-			if (cullingResults.visibleLights.Length > 1 || lightingOrder.SecondLightIndex >= 0)
+			if(lightingOrder.AdditionalLightIndices!=null)
+			for(int i=0;i< lightingOrder.AdditionalLightIndices.Length;i++)
 			{
+				int visibleLightIndex = lightingOrder.AdditionalLightIndices[i];
 				var drawingSettings2 = new DrawingSettings(addLightShaderTagIds[0], sortingSettings);
+				drawingSettings2.perObjectData = drawingSettings.perObjectData;
 				drawingSettings2.mainLightIndex = 0;
 				drawingSettings2.enableDynamicBatching = true;
 				drawingSettings2.enableInstancing = true;
-				teleportLighting.SetupForwardAddPass(context, cullingResults, lightingOrder);
-				for (int i = 0; i < addLightShaderTagIds.Length; i++)
+				teleportLighting.SetupForwardAddPass(context, camera, cullingResults, lightingOrder, visibleLightIndex);
+				for (int j = 0;j < addLightShaderTagIds.Length; j++)
 				{
-					drawingSettings2.SetShaderPassName(i, addLightShaderTagIds[i]);
+					drawingSettings2.SetShaderPassName(j, addLightShaderTagIds[j]);
 				}
 				context.DrawRenderers(cullingResults, ref drawingSettings2, ref filteringSettings);
 			}
-			teleportLighting.Cleanup(context);
+			teleportLighting.Cleanup(context,buffer);
 		}
 		void DrawTransparentGeometry(ScriptableRenderContext context, Camera camera)
 		{
@@ -306,13 +313,13 @@ namespace teleport
 			}
 			string samplename = camera.gameObject.name + " sample";
 			StartSample(context, samplename);
-			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll.visibleLights);
+			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
 			teleportLighting.renderSettings = renderSettings;
 			teleportLighting.RenderShadows(context, camera, cullingResultsAll, lightingOrder);
 			DrawDepthPass(context, camera);
-			DrawShadowPass(context, camera, cullingResultsAll, lightingOrder);
-			
-			BeginCamera(context, camera);
+			teleportLighting.RenderScreenspaceShadows(context, camera, lightingOrder, cullingResultsAll, depthTexture);
+			context.SetupCameraProperties(camera);
+			Clear(context, camera);
 			PrepareForSceneWindow(context, camera);
 			DrawOpaqueGeometry(context, camera);
 			DrawTransparentGeometry(context, camera);
@@ -386,13 +393,13 @@ namespace teleport
 			{
 				return;
 			}
-			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll.visibleLights);
+			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
 			teleportLighting.renderSettings = renderSettings;
 			teleportLighting.RenderShadows(context, camera, cullingResultsAll, lightingOrder);
 
 			for (int i = 0; i < NumFaces; ++i)
 			{
-				DrawCubemapFace(context, camera, i);
+				DrawCubemapFace(context, camera, lightingOrder, i);
 			}
 
 			FinalizeSceneCaptureTexture(context, camera);
@@ -434,7 +441,7 @@ namespace teleport
 			camera.farClipPlane = farClipPlane;
 			camera.aspect = 1.0F;
 		}
-		void DrawCubemapFace(ScriptableRenderContext context, Camera camera, int face)
+		void DrawCubemapFace(ScriptableRenderContext context, Camera camera, TeleportRenderPipeline.LightingOrder lightingOrder, int face)
 		{
 			CullingResults cullingResultsAll;
 			if (!Cull(context, camera, out cullingResultsAll))
@@ -465,15 +472,14 @@ namespace teleport
 			view.m23 *= -1f;
 
 			camera.worldToCameraMatrix = view;
-			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll.visibleLights);
 			string samplename = camera.gameObject.name + " Face " + face;
 			StartSample(context, samplename);
 			{
 				DrawDepthPass(context, camera);
-				DrawShadowPass(context, camera, cullingResultsAll, lightingOrder);
-				
+				teleportLighting.RenderScreenspaceShadows(context, camera, lightingOrder, cullingResultsAll, depthTexture);
 
-				BeginCamera(context, camera);
+				context.SetupCameraProperties(camera);
+				Clear(context, camera);
 
 				PrepareForSceneWindow(context, camera);
 				Clear(context, 0 * direction_colours[face]);

@@ -6,13 +6,9 @@ namespace teleport
 	public class TeleportShadows
 	{
 		public TeleportRenderSettings renderSettings = null;
-		public RenderTexture shadowAtlasTexture = null;
-		public RenderTexture screenspaceShadowTexture = null;
 		const int maxShadowedDirectionalLightCount = 4;
 		int ShadowedDirectionalLightCount = 0;
 		int tileSize = 0;
-		int split = 0;
-		Matrix4x4[] WorldToShadow = new Matrix4x4[4];
 		struct ShadowedDirectionalLight
 		{
 			public int visibleLightIndex;
@@ -34,7 +30,6 @@ namespace teleport
 					_LightShadowData = Shader.PropertyToID("_LightShadowData"),
 					unity_ShadowFadeCenterAndType = Shader.PropertyToID("unity_ShadowFadeCenterAndType"),
 					something_nonexistent = Shader.PropertyToID("something_nonexistent");
-		ShadowedDirectionalLight[] ShadowedDirectionalLights = new ShadowedDirectionalLight[maxShadowedDirectionalLightCount];
 		Mesh fullscreenMesh = null;
 		public void ReserveDirectionalShadows(CullingResults cullingResults, Light light, int visibleLightIndex)
 		{
@@ -42,32 +37,22 @@ namespace teleport
 					light.shadows != LightShadows.None && light.shadowStrength > 0f &&
 					cullingResults.GetShadowCasterBounds(visibleLightIndex, out Bounds b))
 			{
-				ShadowedDirectionalLights[ShadowedDirectionalLightCount++] =
-					new ShadowedDirectionalLight
-					{
-						visibleLightIndex = visibleLightIndex
-					};
 			}
 		}
-
-		CommandBuffer buffer = new CommandBuffer
-		{
-			name = "Shadows"
-		};
 
 		public void Setup(ScriptableRenderContext context, CullingResults cullingResults)
 		{
 			ShadowedDirectionalLightCount = 0;
 		}
-		public void Cleanup(ScriptableRenderContext context)
+		public void Cleanup(ScriptableRenderContext context, CommandBuffer buffer)
 		{
 			if (ShadowedDirectionalLightCount > 0)
 			{
 				//	buffer.ReleaseTemporaryRT(dirShadowAtlasId);
-				ExecuteBuffer(context);
+				ExecuteBuffer(context,buffer);
 			}
 		}
-		void ExecuteBuffer(ScriptableRenderContext context)
+		void ExecuteBuffer(ScriptableRenderContext context,CommandBuffer buffer)
 		{
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Clear();
@@ -79,25 +64,43 @@ namespace teleport
 				offset.x * tileSize, offset.y * tileSize, tileSize, tileSize
 			);
 		}
-		Vector4 shadowFadeCenterAndType = new Vector4();
-		public void RenderDirectionalShadows(ScriptableRenderContext context, CullingResults cullingResults, ref PerFramePerCameraLightProperties perFrameLightProperties, int cascadeCount, int index)
+		public void RenderShadowCascadeForLight(ScriptableRenderContext context,CommandBuffer buffer,CullingResults cullingResults, Light light, int visibleLightIndex, ref PerFramePerCameraLightProperties perFrameLightProperties, int cascadeCount, int index)
 		{
-			if (ShadowedDirectionalLightCount == 0)
+			if (index >= cascadeCount)
 				return;
-			if (index >= 4)
-				return;
-			ShadowedDirectionalLight sdl = ShadowedDirectionalLights[0];
+			int split = cascadeCount <= 1 ? 1 : 2;
 
-			var shadowSettings = new ShadowDrawingSettings(cullingResults, sdl.visibleLightIndex);
+			var shadowSettings = new ShadowDrawingSettings(cullingResults, visibleLightIndex);
 
 			Vector3 ratios = QualitySettings.shadowCascade4Split;
-			if (cullingResults.ComputeDirectionalShadowMatricesAndCullingPrimitives(
-				sdl.visibleLightIndex, index, 4, ratios, tileSize, QualitySettings.shadowNearPlaneOffset,//+perFrameLightProperties.visibleLight.light.shadowNearPlane
-				out perFrameLightProperties.cascades[index].viewMatrix, out perFrameLightProperties.cascades[index].projectionMatrix,
-				out perFrameLightProperties.cascades[index].splitData
-				))
+			bool result = false;
+			if (light.type == LightType.Directional)
 			{
-				VisibleLight visibleLight = cullingResults.visibleLights[sdl.visibleLightIndex];
+				result = cullingResults.ComputeDirectionalShadowMatricesAndCullingPrimitives(
+					visibleLightIndex, index, cascadeCount, ratios, tileSize, QualitySettings.shadowNearPlaneOffset,//+perFrameLightProperties.visibleLight.light.shadowNearPlane
+					out perFrameLightProperties.cascades[index].viewMatrix, out perFrameLightProperties.cascades[index].projectionMatrix,
+					out perFrameLightProperties.cascades[index].splitData
+				);
+			}
+			else if (light.type == LightType.Spot)
+			{
+				Debug.Assert(index == 0);
+				result = cullingResults.ComputeSpotShadowMatricesAndCullingPrimitives(
+					visibleLightIndex, out perFrameLightProperties.cascades[index].viewMatrix, out perFrameLightProperties.cascades[index].projectionMatrix,
+					out perFrameLightProperties.cascades[index].splitData
+				);
+			}
+			else if (light.type == LightType.Point)
+			{
+				Debug.Assert(index == 0);
+				result = cullingResults.ComputePointShadowMatricesAndCullingPrimitives(
+					visibleLightIndex, CubemapFace.Unknown,0.0F,out perFrameLightProperties.cascades[index].viewMatrix, out perFrameLightProperties.cascades[index].projectionMatrix,
+					out perFrameLightProperties.cascades[index].splitData
+				);
+			}
+			if(result)
+			{
+				VisibleLight visibleLight = cullingResults.visibleLights[visibleLightIndex];
 				Rect vp = GetTileViewport(index, tileSize, split);
 				Vector4 sph = perFrameLightProperties.cascades[index].splitData.cullingSphere;
 				sph.w *= sph.w;
@@ -109,52 +112,80 @@ namespace teleport
 				//			new Vector4(visibleLight.light.shadowBias, visibleLight.light.shadowBias, visibleLight.light.shadowBias, visibleLight.light.shadowBias);
 
 				Vector4 shadowBias = new Vector4(0, 0, 0, 0);
-				shadowBias = teleport.ShadowUtils.GetShadowBias(ref visibleLight, sdl.visibleLightIndex, bias4, visibleLight.light.shadows == LightShadows.Soft, perFrameLightProperties.cascades[index].projectionMatrix, tileSize);
+				shadowBias = teleport.ShadowUtils.GetShadowBias(ref visibleLight, visibleLightIndex, bias4, visibleLight.light.shadows == LightShadows.Soft, perFrameLightProperties.cascades[index].projectionMatrix, tileSize);
 
 				//Vector4 lightShadowBias = new Vector4(-0.001484548F, 1.0F, 0.017146875F, 0F);
 				buffer.SetGlobalVector(unity_LightShadowBias, shadowBias);
-				ExecuteBuffer(context);
+				ExecuteBuffer(context,buffer);
 				context.DrawShadows(ref shadowSettings);
 			}
 		}
-		public void RenderDirectionalShadows(ScriptableRenderContext context, CullingResults cullingResults, ref PerFramePerCameraLightProperties perFrameLightProperties, int cascadeCount)
+		public void RenderShadowsForLight(ScriptableRenderContext context, CullingResults cullingResults, Light light, int visibleLightIndex, Camera camera, ref PerFrameLightProperties perFrameLightProperties, ref PerFramePerCameraLightProperties perFramePerCameraLightProperties, int cascadeCount)
 		{
-			buffer.BeginSample("Shadows");
+			string sampleName = "RenderShadowsForLight " +light.name+ "("+light.type.ToString()+")";
+			CommandBuffer buffer = CommandBufferPool.Get(sampleName);
 			int atlasSize = (int)renderSettings.directional.atlasSize;
-			split = cascadeCount <= 1 ? 1 : 2;
+			int split = cascadeCount <= 1 ? 1 : 2;
 			tileSize = atlasSize / split;
-			if (shadowAtlasTexture == null || shadowAtlasTexture.width != atlasSize)
+			if (perFrameLightProperties.shadowAtlasTexture == null || perFrameLightProperties.shadowAtlasTexture.width != atlasSize)
 			{
-				shadowAtlasTexture = new RenderTexture(atlasSize, atlasSize, 1, RenderTextureFormat.Shadowmap);
+				perFrameLightProperties.shadowAtlasTexture = new RenderTexture(atlasSize, atlasSize, 1, RenderTextureFormat.Shadowmap);
 			}
-			buffer.SetRenderTarget(shadowAtlasTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+			buffer.SetRenderTarget(perFrameLightProperties.shadowAtlasTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
 			buffer.ClearRenderTarget(true, true, Color.clear);
-			ExecuteBuffer(context);
-			shadowFadeCenterAndType.x = shadowFadeCenterAndType.y = shadowFadeCenterAndType.z = 0;
-			for (int i = 0; i < 4; i++)
+			ExecuteBuffer(context, buffer);
+			float invCount = 1.0F / (float)cascadeCount;
+			perFramePerCameraLightProperties.shadowFadeCenterAndType.x = perFramePerCameraLightProperties.shadowFadeCenterAndType.y = perFramePerCameraLightProperties.shadowFadeCenterAndType.z = 0;
+			for (int i = 0; i <cascadeCount; i++)
 			{
-				RenderDirectionalShadows(context, cullingResults, ref perFrameLightProperties, cascadeCount, i);
-				shadowFadeCenterAndType.x += 0.25F * perFrameLightProperties.cascades[i].splitData.cullingSphere.x;
-				shadowFadeCenterAndType.y += 0.25F * perFrameLightProperties.cascades[i].splitData.cullingSphere.y;
-				shadowFadeCenterAndType.z += 0.25F * perFrameLightProperties.cascades[i].splitData.cullingSphere.z;
+				RenderShadowCascadeForLight(context, buffer,cullingResults, light, visibleLightIndex, ref perFramePerCameraLightProperties, cascadeCount, i);
+				perFramePerCameraLightProperties.shadowFadeCenterAndType.x += invCount * perFramePerCameraLightProperties.cascades[i].splitData.cullingSphere.x;
+				perFramePerCameraLightProperties.shadowFadeCenterAndType.y += invCount * perFramePerCameraLightProperties.cascades[i].splitData.cullingSphere.y;
+				perFramePerCameraLightProperties.shadowFadeCenterAndType.z += invCount * perFramePerCameraLightProperties.cascades[i].splitData.cullingSphere.z;
 			}
-			buffer.EndSample("Shadows");
-			ExecuteBuffer(context);
+			ExecuteBuffer(context,buffer);
+			perFramePerCameraLightProperties.shadowFadeCenterAndType.w = 1;
+			if(light.type==LightType.Spot)
+			{
+				perFramePerCameraLightProperties.shadowFadeCenterAndType = camera.transform.position;
+				perFramePerCameraLightProperties.shadowFadeCenterAndType += 4.0F*(Vector4)(camera.transform.forward);
+				perFramePerCameraLightProperties.shadowFadeCenterAndType.w = 1.0F;
+			}
+			buffer.SetGlobalVector(unity_ShadowFadeCenterAndType, perFramePerCameraLightProperties.shadowFadeCenterAndType);
+			ExecuteBuffer(context, buffer);
 		}
 		static Shader shadowShader = null;
 		static Material shadowMaterial = null;
 		Vector4 lightShadowData = new Vector4();
-		public static void GetShadowTransforms(ref Matrix4x4[] WorldToShadow, PerFramePerCameraLightProperties perFrameLightProperties, int atlasSize, int numCascades)
+		public static void GetShadowTransforms(ref PerFramePerCameraLightProperties perFrameLightProperties, int atlasSize, int cascadeCount)
 		{
-			for (int i = 0; i < 4; i++)
+			int split = cascadeCount <= 1 ? 1 : 2;
+			for (int i = 0; i < cascadeCount; i++)
 			{
 				PerFrameShadowCascadeProperties cascade = perFrameLightProperties.cascades[i];
-				WorldToShadow[i] = teleport.ShadowUtils.GetShadowTransform(cascade.projectionMatrix, cascade.viewMatrix);
-				teleport.ShadowUtils.ApplySliceTransform(ref WorldToShadow[i], i, atlasSize, 2, atlasSize / 2);
+				perFrameLightProperties.WorldToShadow[i] = teleport.ShadowUtils.GetShadowTransform(cascade.projectionMatrix, cascade.viewMatrix);
+				teleport.ShadowUtils.ApplySliceTransform(ref perFrameLightProperties.WorldToShadow[i], i, atlasSize, split, atlasSize / split);
 			}
 		}
 		teleport.RenderingUtils.FullScreenMeshStruct fullScreenMeshStruct = new teleport.RenderingUtils.FullScreenMeshStruct();
 		teleport.RenderingUtils.FullScreenMeshStruct newMeshStruct = new teleport.RenderingUtils.FullScreenMeshStruct();
+		/// <summary>
+		/// For a given camera, render the shadows into screenspace 
+		/// </summary>
+		public void ApplyShadowConstants(ScriptableRenderContext context, CommandBuffer buffer, Camera camera, CullingResults cullingResults, PerFrameLightProperties perFrameLightProperties)
+		{
+			PerFramePerCameraLightProperties perFramePerCameraLightProperties = perFrameLightProperties.perFramePerCameraLightProperties[camera];
+			//buffer.SetGlobalVector(unity_LightShadowBias, new Vector4(perFrameLightProperties.visibleLight.light.shadowBias,0,0,0));
+			//buffer.SetGlobalMatrixArray(unity_WorldToShadow, WorldToShadow);
+			// But guess what? SetGlobalMatrixArray doesn't work. At all. So we do this nonsense instead:
+			buffer.SetGlobalMatrix(unity_WorldToShadow0, perFramePerCameraLightProperties.WorldToShadow[0]);
+			buffer.SetGlobalMatrix(unity_WorldToShadow1, perFramePerCameraLightProperties.WorldToShadow[1]);
+			buffer.SetGlobalMatrix(unity_WorldToShadow2, perFramePerCameraLightProperties.WorldToShadow[2]);
+			buffer.SetGlobalMatrix(unity_WorldToShadow3, perFramePerCameraLightProperties.WorldToShadow[3]);
+		}
+		/// <summary>
+		/// For a given camera, render the shadows into screenspace 
+		/// </summary>
 		public void RenderScreenspaceShadows(ScriptableRenderContext context, Camera camera, CullingResults cullingResults, PerFrameLightProperties perFrameLightProperties, int cascadeCount
 				, RenderTexture depthTexture)
 		{
@@ -166,14 +197,12 @@ namespace teleport
 			CommandBuffer buffer = CommandBufferPool.Get("RenderScreenspaceShadows");
 			buffer.BeginSample("Shadow");
 			context.SetupCameraProperties(camera);
-			if (screenspaceShadowTexture == null || screenspaceShadowTexture.width != camera.pixelWidth || screenspaceShadowTexture.height != camera.pixelHeight)
+			if (perFramePerCameraLightProperties.screenspaceShadowTexture == null || perFramePerCameraLightProperties.screenspaceShadowTexture.width != camera.pixelWidth || perFramePerCameraLightProperties.screenspaceShadowTexture.height != camera.pixelHeight)
 			{
-				screenspaceShadowTexture = new RenderTexture(camera.pixelWidth, camera.pixelHeight,1, RenderTextureFormat.BGRA32);
+				perFramePerCameraLightProperties.screenspaceShadowTexture = new RenderTexture(camera.pixelWidth, camera.pixelHeight,1, RenderTextureFormat.BGRA32);
 			}
 			buffer.SetGlobalTexture(_CameraDepthTexture, depthTexture);
-			buffer.SetRenderTarget(screenspaceShadowTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store); 
-			//buffer.GetTemporaryRT(_ShadowMapTexture, camera.pixelWidth, camera.pixelHeight, 32, FilterMode.Bilinear, RenderTextureFormat.BGRA32);
-			//buffer.SetRenderTarget(_ShadowMapTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+			buffer.SetRenderTarget(perFramePerCameraLightProperties.screenspaceShadowTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store); 
 			buffer.ClearRenderTarget(false, true, Color.clear);
 			buffer.SetViewMatrix(Matrix4x4.identity);
 			// Unclear what Unity's logic is about needing this proj matrix:
@@ -201,10 +230,9 @@ namespace teleport
 					return;
 				}
 			}
-			shadowMaterial.SetTexture("_ShadowMapTexture", shadowAtlasTexture, RenderTextureSubElement.Depth);
+			shadowMaterial.SetTexture("_ShadowMapTexture", perFrameLightProperties.shadowAtlasTexture, RenderTextureSubElement.Depth);
 
-			GetShadowTransforms(ref WorldToShadow, perFramePerCameraLightProperties, (int)renderSettings.directional.atlasSize, 4);
-
+			GetShadowTransforms(ref perFramePerCameraLightProperties, (int)renderSettings.directional.atlasSize, cascadeCount);
 			buffer.SetGlobalVector(unity_ShadowSplitSpheres0, perFramePerCameraLightProperties.cascades[0].splitData.cullingSphere);
 			buffer.SetGlobalVector(unity_ShadowSplitSpheres1, perFramePerCameraLightProperties.cascades[1].splitData.cullingSphere);
 			buffer.SetGlobalVector(unity_ShadowSplitSpheres2, perFramePerCameraLightProperties.cascades[2].splitData.cullingSphere);
@@ -214,13 +242,7 @@ namespace teleport
 										, perFramePerCameraLightProperties.cascades[2].splitData.cullingSphere.w
 										, perFramePerCameraLightProperties.cascades[3].splitData.cullingSphere.w);
 			buffer.SetGlobalVector(unity_ShadowSplitSqRadii, sqr_rad);
-			//buffer.SetGlobalVector(unity_LightShadowBias, new Vector4(perFrameLightProperties.visibleLight.light.shadowBias,0,0,0));
-			//buffer.SetGlobalMatrixArray(unity_WorldToShadow, WorldToShadow);
-			// But guess what? SetGlobalMatrixArray doesn't work. At all. So we do this nonsense instead:
-			buffer.SetGlobalMatrix(unity_WorldToShadow0, WorldToShadow[0]);
-			buffer.SetGlobalMatrix(unity_WorldToShadow1, WorldToShadow[1]);
-			buffer.SetGlobalMatrix(unity_WorldToShadow2, WorldToShadow[2]);
-			buffer.SetGlobalMatrix(unity_WorldToShadow3, WorldToShadow[3]);
+			ApplyShadowConstants(context, buffer, camera, cullingResults, perFrameLightProperties);
 			lightShadowData = new Vector4(0.0F, 66.66666F, 0.33333333F, -3.0F);
 			buffer.SetGlobalVector(_LightShadowData, lightShadowData);
 			CoreUtils.SetKeyword(buffer, "SHADOWS_SPLIT_SPHERES", true);
@@ -242,8 +264,6 @@ namespace teleport
 			//buffer.DrawProcedural(Matrix4x4.identity, material, 0, MeshTopology.Triangles, 3, 1, properties);
 			buffer.EndSample("Shadow");
 			// for next step:
-			shadowFadeCenterAndType.w = 1;
-			buffer.SetGlobalVector(unity_ShadowFadeCenterAndType, shadowFadeCenterAndType);
 			context.ExecuteCommandBuffer(buffer);
 			CommandBufferPool.Release(buffer);
 		}
