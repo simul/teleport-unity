@@ -77,9 +77,9 @@ namespace teleport
 			if (id != clientID)
 			{
 				clientID = id;
+				CurrentTagID = 0;
 				if (clientID != 0)
 				{
-					CurrentTagID = 0;
 					VideoEncoder = new VideoEncoder(clientID);
 				}
 				else

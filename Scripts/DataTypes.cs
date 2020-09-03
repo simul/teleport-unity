@@ -46,6 +46,13 @@ namespace avs
 		HEVC /*!< HEVC (H265) */
 	};
 
+    public enum AudioCodec
+    {
+        Any = 0,
+		Invalid = 0,
+		PCM
+    };
+
     //We have to declare our own vector types, as .NET and Unity have different layouts.
     public struct Vector2
     {
@@ -214,5 +221,11 @@ namespace SCServer
         public GraphicsDeviceType deviceType;
         public IntPtr deviceHandle;
         public IntPtr inputSurfaceResource;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct AudioEncodeParams
+    {
+        public avs.AudioCodec codec;
     }
 }

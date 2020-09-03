@@ -26,7 +26,7 @@ namespace SCServer
 		public Int32 geometryBufferCutoffSize = 1048576; //Byte amount we stop encoding nodes at.
 		public float confirmationWaitTime = 15; //Seconds to wait before resending a resource.
 
-		[Header("Encoding")]
+		[Header("Video")]
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingVideo = true;
 		public float captureCubeTextureSize = 512; 
 		public Int32 videoEncodeFrequency = 2;
@@ -51,6 +51,9 @@ namespace SCServer
 		public float perspectiveFOV = 110;
 		[MarshalAs(UnmanagedType.U1)] public bool useDynamicQuality = false;
 		public Int32 bandwidthCalculationInterval = 5000;
+
+		[Header("Audio")]
+		[MarshalAs(UnmanagedType.U1)] public bool isStreamingAudio = false;
 
 		[Header("Debugging")]
 		public Int32 debugStream = 0;
