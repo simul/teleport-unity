@@ -3,18 +3,23 @@
 
 #pragma kernel EncodeTagDataIdCS
 #pragma kernel EncodeColorCS
+#pragma kernel EncodeCubemapFaceCS
 
 #include "Common.cginc"
 
 static const int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
 
 Texture2D<float4> InputColorTexture;
+TextureCube<float4> InputCubemapTexture;
+SamplerState samplerInputCubemapTexture;
 RWTexture2D<float4> RWOutputColorTexture;
+RWTexture2DArray<float4> RWOutputColorTextureArray;
 
+int2 Offset;
 int2 TagDataIdOffset;
 int TagDataId;
 int Face;
-
+mat4 FaceToWorldMatrix;
 // Here. we will encode the id of the video tag data in 4x4 blocks of monochrome colour.
 [numthreads(32, 4, 1)]
 void EncodeTagDataIdCS(uint2 ThreadID : SV_DispatchThreadID)
@@ -49,9 +54,33 @@ void EncodeColorCS(uint2 ThreadID : SV_DispatchThreadID)
 	SceneColor.y = sqrt(SceneColor.y);
 	SceneColor.z = sqrt(SceneColor.z);
 
-	pos += FaceOffsets[Face] * InputW;
+	pos += Offset+FaceOffsets[Face] * InputW;
 
 	RWOutputColorTexture[pos] = SceneColor;
 }
 
+[numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
+void EncodeCubemapFaceCS(uint2 ThreadID : SV_DispatchThreadID)
+{
+	uint InputW, InputH, numFaces;
+	InputCubemapTexture.GetDimensions(InputW, InputH);
 
+	if (ThreadID.x >= InputW || ThreadID.y >= InputH)
+		return;
+
+	int2 pos = int2(ThreadID);
+	int4 ipos = int4(pos.x, InputH - 1 - pos.y,Face,0);
+	// we must convert Face index and pos into a 3D direction, to get around Unity's API limitations.
+	float3 dir=float3(float2(ipos.xy)*2.0-float2(1.0,1.0),1.0);
+	// A MATRIX TRANSFORMATION, just to extract a pixel value that we should be able to look up directly...
+	// use FaceToWorldMatrix.
+
+	float4 SceneColor = InputCubemapTexture.SampleLevel(samplerInputCubemapTexture,normalize(dir),0);
+	SceneColor.x = sqrt(SceneColor.x);
+	SceneColor.y = sqrt(SceneColor.y);
+	SceneColor.z = sqrt(SceneColor.z);
+
+	pos += Offset+FaceOffsets[Face] * InputW;
+
+	RWOutputColorTexture[pos] = SceneColor;
+}

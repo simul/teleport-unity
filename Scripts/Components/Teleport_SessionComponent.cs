@@ -191,11 +191,6 @@ namespace teleport
 				clientID = GetUnlinkedClientID();
 				if(clientID == 0)
 					return;
-				// Make sure we have a Teleport Render Pipeline, or we won't get a video stream.
-				if (UnityEngine.Rendering.RenderPipelineManager.currentPipeline == null || UnityEngine.Rendering.RenderPipelineManager.currentPipeline.GetType() != typeof(TeleportRenderPipeline))
-				{
-					Debug.LogError("currentPipeline is not TeleportRenderPipeline.");
-				}
 				if (sessions.ContainsKey(clientID))
 				{
 					Debug.LogError("Session duplicate key!");

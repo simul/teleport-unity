@@ -130,7 +130,15 @@ namespace teleport
 		{
 			int x = 10;
 			int y = 20;
-			GUI.Label(new Rect(x,y+=14, 100, 20), "Teleport", overlayFont);
+			string title = "Teleport";
+			// Make sure we have a Teleport Render Pipeline, or we won't get a video stream.
+			if (UnityEngine.Rendering.RenderPipelineManager.currentPipeline == null || UnityEngine.Rendering.RenderPipelineManager.currentPipeline.GetType() != typeof(TeleportRenderPipeline))
+			{
+				title+= ": currentPipeline is not TeleportRenderPipeline";
+				Debug.LogError(title);
+			}
+			GUI.Label(new Rect(x, y += 14, 100, 20), title, overlayFont);
+		
 			GUI.Label(new Rect(x,y+=14, 100, 20), string.Format("Discovering on port {0}", teleportSettings.discoveryPort), overlayFont);
 			foreach(var s in Teleport_SessionComponent.sessions)
 			{

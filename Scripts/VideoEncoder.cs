@@ -113,7 +113,7 @@ namespace teleport
 					return;
 			}
 
-			var encoderTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
+			var encoderTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
 			// deviceHandle set in dll
 			paramsWrapper.videoEncodeParams.inputSurfaceResource = encoderTexture.GetNativeTexturePtr();
 			IntPtr paramsWrapperPtr = Marshal.AllocHGlobal(Marshal.SizeOf(new EncodeVideoParamsWrapper()));

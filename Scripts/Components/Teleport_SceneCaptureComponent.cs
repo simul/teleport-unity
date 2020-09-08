@@ -17,10 +17,20 @@ namespace teleport
 		#endregion
 
 		public uid clientID = 0; // This needs to be set by a session component instance after start
-		public RenderTexture sceneCaptureTexture = null;
+		public RenderTexture videoTexture = null;
 		public RenderTexture rendererTexture = null;
-		public RenderTexture cubemapTexture = null;
+		public RenderTexture DiffuseCubeTexture = null;
+		public RenderTexture UnfilteredCubeTexture = null; 
+		public RenderTexture SpecularCubeTexture = null; 
+		public RenderTexture DebugCubeTexture = null;
 		public Camera cam = null;
+		public const int specularSize = 128;
+		public const int diffuseSize = 64;
+		public const int lightSize = 64;
+		public Vector2Int specularOffset;
+		public Vector2Int diffuseOffset;
+		public Vector2Int roughOffset;
+		public Vector2Int lightOffset;
 
 		TeleportSettings teleportSettings=null;
 
@@ -38,7 +48,9 @@ namespace teleport
 		{
 			get; set;
 		}
-
+		/// <summary>
+		/// NOTE: Remove this. Can't have this as a singleton because it precludes multi-client.
+		/// </summary>
 		public static Teleport_SceneCaptureComponent RenderingSceneCapture
 		{
 			get; private set;
@@ -47,6 +59,10 @@ namespace teleport
 		void Start()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
+			specularOffset = new Vector2Int(0, 0);
+			diffuseOffset = specularOffset + new Vector2Int(specularSize * 3 / 2, specularSize * 2);
+			roughOffset = new Vector2Int(3 * specularSize, 0);
+			lightOffset = diffuseOffset + new Vector2Int(specularSize * 3 / 2, specularSize * 2);
 			Initialize();
 		}
 
@@ -63,9 +79,11 @@ namespace teleport
 		void ReleaseResources()
 		{
 			cam = null;
-			sceneCaptureTexture = null;
+			videoTexture = null;
 			rendererTexture = null;
-			cubemapTexture = null;
+			DiffuseCubeTexture = null;
+			SpecularCubeTexture = null;
+			UnfilteredCubeTexture = null;
 			VideoEncoder = null;
 		}
 
@@ -90,7 +108,7 @@ namespace teleport
 				settingsDuration = 0.0f;
 			}
 
-			if (cam && sceneCaptureTexture)
+			if (cam && videoTexture)
 			{
 				ManagePerformance();
 				RenderToTexture();
@@ -279,13 +297,13 @@ namespace teleport
 				format = RenderTextureFormat.ARGB32;
 			}
 
-			sceneCaptureTexture = new RenderTexture(captureTexWidth, captureTexHeight, 0, format, RenderTextureReadWrite.Default);
-			sceneCaptureTexture.name = "Video Texture";
-			sceneCaptureTexture.dimension = TextureDimension.Tex2D;
-			sceneCaptureTexture.useMipMap = false;
-			sceneCaptureTexture.autoGenerateMips = false;
-			sceneCaptureTexture.enableRandomWrite = true;
-			sceneCaptureTexture.Create();
+			videoTexture = new RenderTexture(captureTexWidth, captureTexHeight, 0, format, RenderTextureReadWrite.Default);
+			videoTexture.name = "Video Texture";
+			videoTexture.dimension = TextureDimension.Tex2D;
+			videoTexture.useMipMap = false;
+			videoTexture.autoGenerateMips = false;
+			videoTexture.enableRandomWrite = true;
+			videoTexture.Create();
 
 			rendererTexture = new RenderTexture(rendererTexWidth, rendererTexHeight, rendererTexDepth, format, RenderTextureReadWrite.Default);
 			rendererTexture.name = "Scene Capture Renderer Texture";
@@ -295,13 +313,29 @@ namespace teleport
 			rendererTexture.enableRandomWrite = false;
 			rendererTexture.Create();
 
-			cubemapTexture = new RenderTexture(32, 32, 1, format, RenderTextureReadWrite.Default);
-			cubemapTexture.name = "Reflections Cubemap";
-			cubemapTexture.dimension = TextureDimension.Cube;
-			cubemapTexture.useMipMap = true;
-			cubemapTexture.autoGenerateMips = true;
-			cubemapTexture.enableRandomWrite = true;
-			cubemapTexture.Create();
+			UnfilteredCubeTexture = new RenderTexture(specularSize, specularSize, 1, format, RenderTextureReadWrite.Default);
+			UnfilteredCubeTexture.name = "Unfiltered Cube";
+			UnfilteredCubeTexture.dimension = TextureDimension.Cube;
+			UnfilteredCubeTexture.useMipMap = false;
+			UnfilteredCubeTexture.autoGenerateMips = false;
+			UnfilteredCubeTexture.enableRandomWrite = true;
+			UnfilteredCubeTexture.Create();
+
+			DiffuseCubeTexture = new RenderTexture(diffuseSize, diffuseSize, 1, format, RenderTextureReadWrite.Default);
+			DiffuseCubeTexture.name = "Diffuse Cube";
+			DiffuseCubeTexture.dimension = TextureDimension.Cube;
+			DiffuseCubeTexture.useMipMap = true;
+			DiffuseCubeTexture.autoGenerateMips = false;
+			DiffuseCubeTexture.enableRandomWrite = true;
+			DiffuseCubeTexture.Create();
+
+			SpecularCubeTexture = new RenderTexture(specularSize, specularSize, 1, format, RenderTextureReadWrite.Default);
+			SpecularCubeTexture.name = "Specular Cube";
+			SpecularCubeTexture.dimension = TextureDimension.Cube;
+			SpecularCubeTexture.useMipMap = true;
+			SpecularCubeTexture.autoGenerateMips = false;
+			SpecularCubeTexture.enableRandomWrite = true;
+			SpecularCubeTexture.Create();
 		}
 	}
 }

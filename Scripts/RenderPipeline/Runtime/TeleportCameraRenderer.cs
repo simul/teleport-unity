@@ -13,6 +13,235 @@ using System.Security.AccessControl;
 
 namespace teleport
 {
+	/// <summary>
+	/// A class to handle generating the lighting and reflection cubemaps.
+	/// </summary>
+	public class VideoEncoding
+	{
+		public static Shader cubemapShader = null;
+		public static Material cubemapMaterial = null;
+		static Mesh fullscreenMesh = null;
+		static Shader depthShader = null;
+		static Material depthMaterial = null;
+		public ComputeShader computeShader = null;
+		public int encodeTagIdKernel = -1;
+		public int encodeColorKernel = -1;
+		public int encodeCubemapFaceKernel = -1;
+		//int downCopyFaceKernel = 0;
+		const int THREADGROUP_SIZE = 32;
+
+		public static int NumFaces = 6;
+		public static int[,] faceOffsets = new int[6, 2] { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } };
+
+		private void InitShaders()
+		{
+			var shaderPath = "Shaders/ProjectCubemap";
+			// NB: Do not include file extension when loading a shader
+			computeShader = Resources.Load<ComputeShader>(shaderPath);
+			if (!computeShader)
+			{
+				Debug.Log("Shader not found at path " + shaderPath + ".compute");
+			}
+			encodeTagIdKernel = computeShader.FindKernel("EncodeTagDataIdCS");
+			encodeColorKernel = computeShader.FindKernel("EncodeColorCS");
+			encodeCubemapFaceKernel = computeShader.FindKernel("EncodeCubemapFaceCS");
+			//downCopyFaceKernel = computeShader.FindKernel("DownCopyFaceCS");
+		}
+		/// <summary>
+		/// Copy from the full size texture to the cubemaps, starting with the reflection cube.
+		/// </summary>
+		public void DrawCubemaps(ScriptableRenderContext context, RenderTexture sourceTexture, RenderTexture outputTexture, int face)
+		{
+			// Ordinarily, we would use a compute shader to downcopy from the full-size cubemap face to the smaller specular cubemaps.
+			// But Unity can't handle treating a cubemap as a 2D Texture array, so we'll have to make do with a vertex/pixel shader copy.
+			// Copying from the render texture to the current face of the specular cube texture.
+			if (fullscreenMesh == null)
+			{
+				teleport.RenderingUtils.FullScreenMeshStruct fullScreenMeshStruct = new teleport.RenderingUtils.FullScreenMeshStruct();
+				fullScreenMeshStruct.horizontal_fov_degrees = 90.0F;
+				fullScreenMeshStruct.vertical_fov_degrees = 90.0F;
+				fullScreenMeshStruct.far_plane_distance = 1000.0F;
+				fullscreenMesh = teleport.RenderingUtils.CreateFullscreenMesh(fullScreenMeshStruct);
+			}
+
+			if (cubemapMaterial == null)
+			{
+				cubemapShader = Shader.Find("Teleport/CopyCubemap");
+				if (cubemapShader != null)
+				{
+					cubemapMaterial = new Material(cubemapShader);
+				}
+				else
+				{
+					Debug.LogError("CopyCubemap.shader resource not found!");
+					return;
+				}
+			}
+
+			var buffer = new CommandBuffer();
+			buffer.name = "Copy Cubemap Face";
+			buffer.SetRenderTarget(outputTexture, 0, (CubemapFace)face);
+			cubemapMaterial.SetTexture("_SourceTexture", sourceTexture);
+			buffer.DrawMesh(fullscreenMesh, Matrix4x4.identity, cubemapMaterial, 0, 0);
+			context.ExecuteCommandBuffer(buffer);
+			buffer.Release();
+		}
+		static float RoughnessFromMip(float mip, float numMips)
+		{
+			double roughness_mip_scale = 1.2;
+			return (float)Math.Pow(Math.Exp((3.0 + mip - numMips) / roughness_mip_scale), 2.0);
+		}
+
+		/// <summary>
+		/// For a specular cubemap, we render the lower-detail mipmaps to represent reflections for rougher materials.
+		/// We SHOULD here be rendering down from higher to lower detail mips of the same cubemap.
+		/// But Unity is missing the necessary API functions to render with one mip of input and one as output of the same texture.
+		/// So instead we will render directly to the video texture.
+		/// </summary>
+		public void SpecularRoughnessMip(CommandBuffer buffer, RenderTexture SourceCubeTexture, RenderTexture SpecularCubeTexture, int face, int MipIndex)
+		{
+			float roughness =  RoughnessFromMip((float)( MipIndex), (float)( SpecularCubeTexture.mipmapCount));
+			int w = SpecularCubeTexture.width << MipIndex;
+			// Render to mip MipIndex...
+			buffer.SetRenderTarget(SpecularCubeTexture, MipIndex, (CubemapFace)face);
+
+			// We WOULD be sending roughness this way...
+			// but Unity can't cope with changing the value between Draw calls...
+			//cubemapMaterial.SetFloat("Roughness", roughness);
+
+			// Instead we must user buffer.SetGlobalFloat etc.
+			buffer.SetGlobalFloat("Roughness", roughness);
+			buffer.SetGlobalInt("MipIndex", MipIndex);
+			buffer.SetGlobalInt("NumMips", SpecularCubeTexture.mipmapCount);
+			buffer.SetGlobalInt("Face", face);
+			// But SetGlobalTexture() doesn't work - we must instead put it in the material, here:
+			cubemapMaterial.SetTexture("_SourceCubemapTexture", SourceCubeTexture);
+			// 
+			buffer.DrawProcedural(Matrix4x4.identity, cubemapMaterial, 1, MeshTopology.Triangles,6);
+		}
+		public void GenerateSpecularMips(ScriptableRenderContext context, RenderTexture SourceCubeTexture, RenderTexture SpecularCubeTexture, int face)
+		{
+			var buffer = new CommandBuffer();
+			buffer.name = "Generate Specular Mips";
+			for (int i = 0; i < SpecularCubeTexture.mipmapCount; i++)
+			{
+				SpecularRoughnessMip(buffer, SourceCubeTexture, SpecularCubeTexture, face,i);
+			}
+			context.ExecuteCommandBuffer(buffer);
+			buffer.Release();
+		}
+		public void EncodeColor(ScriptableRenderContext context, Camera camera, int face)
+		{
+			if (!computeShader)
+				InitShaders();
+			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
+			var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
+
+			int numThreadGroupsX = captureTexture.width / THREADGROUP_SIZE; 
+			int numThreadGroupsY = captureTexture.height / THREADGROUP_SIZE;
+
+			computeShader.SetTexture(encodeColorKernel, "InputColorTexture", captureTexture);
+			computeShader.SetTexture(encodeColorKernel, "RWOutputColorTexture", outputTexture);
+			computeShader.SetInt("Face", face);
+			int[] offset = { 0,0 };
+			computeShader.SetInts("Offset", offset);
+
+			var buffer = new CommandBuffer();
+			buffer.name = "Encode Color";
+			buffer.DispatchCompute(computeShader, encodeColorKernel, numThreadGroupsX, numThreadGroupsY, 1);
+			context.ExecuteCommandBuffer(buffer);
+			buffer.Release();
+		}
+
+		public void EncodeDepth(ScriptableRenderContext context, Camera camera, Rect viewport, int face)
+		{
+			if (!computeShader)
+				InitShaders();
+			if (depthMaterial == null)
+			{
+				depthShader = Resources.Load("Shaders/CubemapDepth", typeof(Shader)) as Shader;
+				if (depthShader != null)
+				{
+					depthMaterial = new Material(depthShader);
+				}
+				else
+				{
+					Debug.LogError("ComputeDepth.shader resource not found!");
+					return;
+				}
+			}
+
+			var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
+
+			var buffer = new CommandBuffer();
+			depthMaterial.SetTexture("DepthTexture", captureTexture, RenderTextureSubElement.Depth);
+			buffer.name = "Custom Depth CB";
+			buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture);
+			buffer.SetViewport(viewport);
+			buffer.BeginSample(buffer.name);
+			buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 0, MeshTopology.Triangles, 6);
+			buffer.EndSample(buffer.name);
+			context.ExecuteCommandBuffer(buffer);
+			buffer.Release();
+		}
+		// Encodes the id of the video tag data in 4x4 blocks of monochrome colour.
+		public void EncodeTagID(ScriptableRenderContext context, Camera camera)
+		{
+			if (!computeShader)
+				InitShaders();
+			var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
+
+			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
+			computeShader.SetTexture(encodeTagIdKernel, "RWOutputColorTexture", outputTexture);
+			computeShader.SetInts("TagDataIdOffset", new Int32[2] { outputTexture.width - (32 * 4), outputTexture.height - 4 });
+			computeShader.SetInt("TagDataId", (int)tagDataID);
+			var buffer = new CommandBuffer();
+			buffer.name = "Encode Camera Position";
+			buffer.DispatchCompute(computeShader, encodeTagIdKernel, 4, 1, 1);
+			context.ExecuteCommandBuffer(buffer);
+			buffer.Release();
+		}
+		/// <summary>
+		/// Write the specified cubemap to the video texture.
+		/// </summary>
+		void Decompose(CommandBuffer buffer, RenderTexture cubeTexture, RenderTexture videoTexture, Vector2Int StartOffset, int face, int mips)
+		{
+			if (!computeShader)
+				InitShaders();
+			// Once again, Unity's limited rendering API has let us down. We can't access a cubemap as a texture array, so we can't use it as a source in compute shaders.
+			// and we are left with using vertex/pixel shaders to blit the cube faces to 
+			Vector2Int Offset = StartOffset;
+			int w = cubeTexture.width;
+			Rect pixelRect = new Rect(0, 0, 0, 0);
+			for (int m = 0; m < mips; m++)
+			{
+				buffer.SetRenderTarget(videoTexture);
+				pixelRect.x = (float)Offset.x+ faceOffsets[face,0]*w;
+				pixelRect.y= (float)Offset.y + faceOffsets[face,1]*w;
+				pixelRect.width=pixelRect.height=w;
+				buffer.SetViewport(pixelRect);
+				cubemapMaterial.SetTexture("_SourceCubemapTexture", cubeTexture);
+				buffer.DrawMesh(fullscreenMesh, Matrix4x4.identity, cubemapMaterial, 0, 0);
+				Offset.x+=w*3;
+				w /= 2;
+			}
+		}
+		public void EncodeLightingCubemaps(ScriptableRenderContext context, Teleport_SceneCaptureComponent sceneCaptureComponent, Vector2Int StartOffset, int face)
+		{
+			if (!computeShader)
+				InitShaders();
+			var buffer = new CommandBuffer();
+			buffer.name = "EncodeLightingCubemaps";
+			Decompose(buffer, sceneCaptureComponent.SpecularCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.specularOffset, face, sceneCaptureComponent.SpecularCubeTexture.mipmapCount);
+			//Decompose(buffer, sceneCaptureComponent.DiffuseCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.diffuseOffset, face,1);
+			//Decompose(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.RoughSpecularCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture, StartOffset + Teleport_SceneCaptureComponent.RenderingSceneCapture.roughOffset, face);
+			//Decompose(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.LightingCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture, StartOffset + Teleport_SceneCaptureComponent.RenderingSceneCapture.lightOffset, face);
+
+			context.ExecuteCommandBuffer(buffer);
+			buffer.Release();
+		}
+	}
+
 	public partial class TeleportCameraRenderer
 	{
 		public TeleportRenderSettings renderSettings = null;
@@ -22,9 +251,6 @@ namespace teleport
 			public Vector3 forward, up;
 			public CamView(Vector3 forward, Vector3 up) => (this.forward, this.up) = (forward, up);
 		}
-
-		static int NumFaces = 6;
-		static int[,] faceOffsets = new int[6, 2] { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } };
 
 		public RenderTexture depthTexture = null;
 
@@ -36,6 +262,7 @@ namespace teleport
 		static CamView upCamView = new CamView(Vector3.up, Vector3.right);
 		static CamView downCamView = new CamView(Vector3.down, Vector3.right);
 		static CamView[] faceCamViews = new CamView[] { frontCamView, backCamView, rightCamView, leftCamView, upCamView, downCamView };
+		static Matrix4x4[] faceViewMatrices = new Matrix4x4[6];
 		// End cubemap members
 
 		TeleportLighting teleportLighting = new TeleportLighting();
@@ -51,14 +278,8 @@ namespace teleport
 					_GrabTexture_TexelSize = Shader.PropertyToID("_GrabTexture_TexelSize"),
 					_GrabTexture_ST = Shader.PropertyToID("_GrabTexture_ST"),
 					unity_LightShadowBias = Shader.PropertyToID("unity_LightShadowBias");
-		static Shader depthShader = null;
-		static Material depthMaterial = null;
-		static Shader shadowShader = null;
-		static Material shadowMaterial = null;
 
-		ComputeShader computeShader = null;
-		int encodeTagIdKernel;
-		int encodeColorKernel;
+		VideoEncoding videoEncoding = new VideoEncoding();
 
 		public TeleportSettings teleportSettings = null;
 
@@ -344,14 +565,13 @@ namespace teleport
 
 		public void RenderToSceneCapture2D(ScriptableRenderContext context, Camera camera)
 		{
-			RenderTexture sceneCaptureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
+			RenderTexture videoTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
 
-			if (!sceneCaptureTexture)
+			if (!videoTexture)
 			{
 				Debug.LogError("The video encoder texture must not be null");
 				return;
 			}
-			PrepareForRenderToSceneCapture();
 
 			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
 			//uid clientID = Teleport_SceneCaptureComponent.RenderingSceneCapture.clientID;
@@ -359,9 +579,10 @@ namespace teleport
 				//UpdateStreamables(context, clientID, camera);
 
 			Render(context, camera);
-			EncodeColor(context, camera, 0);
+			videoEncoding.EncodeColor(context, camera, 0);
 
-			FinalizeSceneCaptureTexture(context, camera);
+			videoEncoding.EncodeTagID(context, camera);
+			context.Submit();
 
 			var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
 			if (teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
@@ -373,15 +594,13 @@ namespace teleport
 
 		public void RenderToSceneCaptureCubemap(ScriptableRenderContext context, Camera camera)
 		{
-			RenderTexture sceneCaptureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
+			RenderTexture videoTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
 
-			if (!sceneCaptureTexture)
+			if (!videoTexture)
 			{
 				Debug.LogError("The video encoder texture must not be null");
 				return;
 			}
-
-			PrepareForRenderToSceneCapture();
 
 			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
 			uid clientID = Teleport_SceneCaptureComponent.RenderingSceneCapture.clientID;
@@ -397,25 +616,19 @@ namespace teleport
 			teleportLighting.renderSettings = renderSettings;
 			teleportLighting.RenderShadows(context, camera, cullingResultsAll, lightingOrder);
 
-			for (int i = 0; i < NumFaces; ++i)
+			for (int i = 0; i < VideoEncoding.NumFaces; ++i)
 			{
 				DrawCubemapFace(context, camera, lightingOrder, i);
 			}
 
-			FinalizeSceneCaptureTexture(context, camera);
+			videoEncoding.EncodeTagID(context, camera);
+			context.Submit();
 
 			var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
 			if (teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
 			{
 				var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
 				videoEncoder.CreateEncodeCommands(context, camera, tagDataID);
-			}
-		}
-		void PrepareForRenderToSceneCapture()
-		{
-			if (!computeShader)
-			{
-				InitShaders();
 			}
 		}
 		// This function leverages the Unity rendering pipeline functionality to get information about what lights etc should be visible to the client.
@@ -453,8 +666,8 @@ namespace teleport
 			int halfFaceSize = faceSize / 2;
 
 			Color[] direction_colours = { new Color(.5F, 0.0F, 0.0F), new Color(.01F, 0.0F, 0.0F), new Color(0.0F, .5F, 0.0F), new Color(0.0F, .005F, 0.0F), new Color(0.0F, 0.0F, 0.5F), new Color(0.0F, 0.0F, 0.01F) };
-			int offsetX = faceOffsets[face, 0];
-			int offsetY = faceOffsets[face, 1];
+			int offsetX = VideoEncoding.faceOffsets[face, 0];
+			int offsetY = VideoEncoding.faceOffsets[face, 1];
 
 			var depthViewport = new Rect(offsetX * halfFaceSize, (faceSize * 2) + (offsetY * halfFaceSize), halfFaceSize, halfFaceSize);
 
@@ -464,12 +677,13 @@ namespace teleport
 
 			camera.transform.position = pos;
 			camera.transform.LookAt(pos + to, camView.up);
-			Matrix4x4 view = camera.transform.localToWorldMatrix;// new Matrix4x4(camera.transform.position, camera.transform.rotation, Vector4.one); //no scale...
+			Matrix4x4 view = camera.transform.localToWorldMatrix;
 			view = Matrix4x4.Inverse(view);
 			view.m20 *= -1f;
 			view.m21 *= -1f;
 			view.m22 *= -1f;
 			view.m23 *= -1f;
+			faceViewMatrices[face] = view;
 
 			camera.worldToCameraMatrix = view;
 			string samplename = camera.gameObject.name + " Face " + face;
@@ -477,107 +691,24 @@ namespace teleport
 			{
 				DrawDepthPass(context, camera);
 				teleportLighting.RenderScreenspaceShadows(context, camera, lightingOrder, cullingResultsAll, depthTexture);
-
 				context.SetupCameraProperties(camera);
 				Clear(context, camera);
-
 				PrepareForSceneWindow(context, camera);
 				Clear(context, 0 * direction_colours[face]);
 				DrawOpaqueGeometry(context, camera);
 				DrawTransparentGeometry(context, camera);
-				EncodeColor(context, camera, face);
-				EncodeDepth(context, camera, depthViewport, face);
+				videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture,
+					 face);
+				videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face);
+				videoEncoding.EncodeColor(context, camera, face);
+				videoEncoding.EncodeDepth(context, camera, depthViewport, face);
+				videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, new Vector2Int(3*(int)depthViewport.width,2* (int)faceSize), face);
 #if UNITY_EDITOR
 				DrawUnsupportedShaders(context, camera);
 #endif
 			}
 			EndSample(context, samplename);
 			EndCamera(context, camera);
-		}
-
-		private void FinalizeSceneCaptureTexture(ScriptableRenderContext context, Camera camera)
-		{
-			EncodeTagID(context, camera);
-			context.Submit();
-		}
-
-		private void InitShaders()
-		{
-			var shaderPath = "Shaders/ProjectCubemap";
-			// NB: Do not include file extension when loading a shader
-			computeShader = Resources.Load<ComputeShader>(shaderPath);
-			if (!computeShader)
-			{
-				Debug.Log("Shader not found at path " + shaderPath + ".compute");
-			}
-			encodeTagIdKernel = computeShader.FindKernel("EncodeTagDataIdCS");
-			encodeColorKernel = computeShader.FindKernel("EncodeColorCS");
-		}
-
-		void EncodeColor(ScriptableRenderContext context, Camera camera, int face)
-		{
-			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
-			var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
-
-			const int THREADGROUP_SIZE = 32;
-			int numThreadGroupsX = captureTexture.width / THREADGROUP_SIZE;
-			int numThreadGroupsY = captureTexture.height / THREADGROUP_SIZE;
-
-			computeShader.SetTexture(encodeColorKernel, "InputColorTexture", captureTexture);
-			computeShader.SetTexture(encodeColorKernel, "RWOutputColorTexture", outputTexture);
-			computeShader.SetInt("Face", face);
-
-			var buffer = new CommandBuffer();
-			buffer.name = "Encode Color";
-			buffer.DispatchCompute(computeShader, encodeColorKernel, numThreadGroupsX, numThreadGroupsY, 1);
-			context.ExecuteCommandBuffer(buffer);
-			buffer.Release();
-		}
-
-		void EncodeDepth(ScriptableRenderContext context, Camera camera, Rect viewport, int face)
-		{
-			if (depthMaterial == null)
-			{
-				depthShader = Resources.Load("Shaders/CubemapDepth", typeof(Shader)) as Shader;
-				if (depthShader != null)
-				{
-					depthMaterial = new Material(depthShader);
-				}
-				else
-				{
-					Debug.LogError("ComputeDepth.shader resource not found!");
-					return;
-				}
-			}
-
-			var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
-			depthMaterial.SetTexture("DepthTexture", captureTexture, RenderTextureSubElement.Depth);
-
-			var buffer = new CommandBuffer();
-			buffer.name = "Custom Depth CB";
-			buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture);
-			buffer.SetViewport(viewport);
-			buffer.BeginSample(buffer.name);
-			buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 0, MeshTopology.Triangles, 6);
-			buffer.EndSample(buffer.name);
-			context.ExecuteCommandBuffer(buffer);
-			buffer.Release();
-		}
-
-		// Encodes the id of the video tag data in 4x4 blocks of monochrome colour.
-		void EncodeTagID(ScriptableRenderContext context, Camera camera)
-		{
-			var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
-
-			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.sceneCaptureTexture;
-			computeShader.SetTexture(encodeTagIdKernel, "RWOutputColorTexture", outputTexture);
-			computeShader.SetInts("TagDataIdOffset", new Int32[2] { outputTexture.width - (32 * 4), outputTexture.height - 4 });
-			computeShader.SetInt("TagDataId", (int)tagDataID);
-			var buffer = new CommandBuffer();
-			buffer.name = "Encode Camera Position";
-			buffer.DispatchCompute(computeShader, encodeTagIdKernel, 4, 1, 1);
-			context.ExecuteCommandBuffer(buffer);
-			buffer.Release();	
 		}
 	}
 }
