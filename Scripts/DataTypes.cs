@@ -224,8 +224,11 @@ namespace SCServer
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct AudioEncodeParams
+    public struct AudioParams
     {
         public avs.AudioCodec codec;
+        public UInt32 sampleRate;
+        public UInt32 bitsPerSample;
+        public UInt32 numChannels;
     }
 }
