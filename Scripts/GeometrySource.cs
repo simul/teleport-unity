@@ -284,8 +284,8 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void ClearGeometryStore();
 
-		[DllImport("SimulCasterServer")]
-		private static extern void StoreNode(uid id, avs.Node node);
+		//[DllImport("SimulCasterServer")]
+		//private static extern void StoreNode(uid id, avs.Node node);
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreMesh(   uid id,
 												[MarshalAs(UnmanagedType.BStr)] string guid,
@@ -647,7 +647,7 @@ namespace teleport
 			//Store extracted node.
 			uid nodeID = oldID == 0 ? GenerateID() : oldID;
 			processedResources[node] = nodeID;
-			StoreNode(nodeID, extractedNode);
+			//StoreNode(nodeID, extractedNode);
 
 			return nodeID;
 		}
@@ -705,7 +705,7 @@ namespace teleport
 			//Store extracted node.
 			uid nodeID = oldID == 0 ? GenerateID() : oldID;
 			processedResources[node] = nodeID;
-			StoreNode(nodeID, extractedNode);
+			//StoreNode(nodeID, extractedNode);
 
 			return nodeID;
 		}

@@ -19,17 +19,17 @@ namespace teleport
         #endregion
 
         public uid clientID = 0;
-
-        TeleportSettings teleportSettings = null;
         bool running = false;
+        int sampleRate = 0;
+        TeleportSettings teleportSettings = null;
 
         void Start()
         {
             teleportSettings = TeleportSettings.GetOrCreateSettings();
-            running = false;
+      
             clientID = 0;
-            //double startTick = AudioSettings.dspTime;
-            //sampleRate = AudioSettings.outputSampleRate;
+            running = true;
+            sampleRate = AudioSettings.outputSampleRate;
         }
 
         private void OnEnable()
@@ -40,14 +40,31 @@ namespace teleport
         void OnDisable()
         {
             running = false;
+            clientID = 0;
         }
 
         void LateUpdate()
         {
-            //if (!teleportSettings.casterSettings.isStreamingAudio)
-            //{
-            //    return;
-            //}
+            
+        }
+
+        void Initialize()
+        {
+            var audioParams = new SCServer.AudioParams();
+            audioParams.codec = avs.AudioCodec.PCM;
+            audioParams.sampleRate = (UInt32)sampleRate;
+            audioParams.bitsPerSample = 16;
+            audioParams.numChannels = 2;
+            InitializeAudioEncoder(clientID, ref audioParams);
+        }
+
+        // This function is called on the audio thread
+        void OnAudioFilterRead(float[] data, int channels)
+        {
+            if (!running || data.Length <= 0) //!teleportSettings.casterSettings.isStreamingAudio)
+            {
+                return;
+            }
 
             // for now just get latest client
             uid id = Teleport_SessionComponent.GetLastClientID();
@@ -59,37 +76,18 @@ namespace teleport
                 if (clientID != 0)
                 {
                     Initialize();
-                    running = true;
-                }
-                else
-                {
-                    running = false;
                 }
             }
-        }
 
-        void Initialize()
-        {
-            var audioParams = new SCServer.AudioParams();
-            audioParams.codec = avs.AudioCodec.PCM;
-            audioParams.sampleRate = (UInt32)AudioSettings.outputSampleRate;
-            audioParams.bitsPerSample = 16;
-            audioParams.numChannels = 2;
-            InitializeAudioEncoder(clientID, ref audioParams);
-        }
-
-        // This function is called on the audio thread
-        void OnAudioFilterRead(float[] data, int channels)
-        {
-            if (!running || data.Length <= 0)
-                return;
-
-            var sizeInBytes = data.Length * 4;
-            IntPtr ptr = Marshal.AllocHGlobal(sizeInBytes);
-            Marshal.Copy(data, 0, ptr, data.Length);
-            // Send audio to the client
-            SendAudio(clientID, ptr, (UInt64)sizeInBytes);
-            Marshal.FreeHGlobal(ptr);
+            if (clientID != 0)
+            {
+                var sizeInBytes = data.Length * 4;
+                IntPtr ptr = Marshal.AllocHGlobal(sizeInBytes);
+                Marshal.Copy(data, 0, ptr, data.Length);
+                // Send audio to the client
+                SendAudio(clientID, ptr, (UInt64)sizeInBytes);
+                Marshal.FreeHGlobal(ptr);
+            }
         }
     }
 }
