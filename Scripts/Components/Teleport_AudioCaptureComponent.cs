@@ -61,7 +61,7 @@ namespace teleport
         // This function is called on the audio thread
         void OnAudioFilterRead(float[] data, int channels)
         {
-            if (!running || data.Length <= 0) //!teleportSettings.casterSettings.isStreamingAudio)
+            if (!running || !teleportSettings.casterSettings.isStreamingAudio || data.Length <= 0)
             {
                 return;
             }
