@@ -15,6 +15,8 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		public static extern void StopSession(uid clientID);
 		[DllImport("SimulCasterServer")]
+		public static extern void StopStreaming(uid clientID);
+		[DllImport("SimulCasterServer")]
 		public static extern bool HasHost(uid clientID);
 		[DllImport("SimulCasterServer")]
 		public static extern bool HasPeer(uid clientID);
@@ -59,7 +61,6 @@ namespace teleport
 			}
 			else
 			{
-				//Debug.Log("There are currently no clients");
 				return 0;
 			}
 		}
@@ -119,7 +120,7 @@ namespace teleport
 
 		public void Disconnect()
 		{
-			//StopSession(clientID);
+			StopStreaming(clientID);
 
 			sessions.Remove(clientID);
 			if(geometryStreamingService!=null)
