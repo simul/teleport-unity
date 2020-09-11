@@ -122,8 +122,8 @@ namespace teleport
 			//StopSession(clientID);
 
 			sessions.Remove(clientID);
-
-			geometryStreamingService.Clear();
+			if(geometryStreamingService!=null)
+				geometryStreamingService.Clear();
 
 			clientID = 0;
 		}

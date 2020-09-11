@@ -72,6 +72,12 @@ namespace SCServer
 		[MarshalAs(UnmanagedType.U1)] public bool willDisableMainCamera = false;
 
 		[NonSerialized]
-		public byte axesStandard = 64|2|4;
+		[MarshalAs(UnmanagedType.U8)] public byte axesStandard = 64|2|4;
+
+		[Header("Lighting")]
+		public Int32 specularCubemapSize = 64;
+		public Int32 roughCubemapSize = 64;
+		public Int32 diffuseCubemapSize = 64;
+		public Int32 lightCubemapSize = 64;
 	}
 }

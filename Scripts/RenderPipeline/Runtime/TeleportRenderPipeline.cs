@@ -94,6 +94,20 @@ namespace teleport
 					brightestDirectionalLightIndex = i;
 				}
 			}
+			// If we have found NO directional light with shadows, we can use one without.
+			for (int i = 0; i < totalVisibleLights; ++i)
+			{
+				VisibleLight currVisibleLight = cullingResults.visibleLights[i];
+				Light currLight = currVisibleLight.light;
+				if (currLight == null)
+					break;
+				// In case no shadow light is present we will return the brightest directional light
+				if (currLight == sunLight||currVisibleLight.lightType == LightType.Directional && currLight.intensity > brightestLightIntensity)
+				{
+					brightestLightIntensity = currLight.intensity;
+					brightestDirectionalLightIndex = i;
+				}
+			}
 			for (int i = 0; i < totalVisibleLights; ++i)
 			{
 				if (i == brightestDirectionalLightIndex)

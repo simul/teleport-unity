@@ -1,11 +1,5 @@
 Shader "Teleport/CopyCubemap"
 {
-    Properties
-    {
-        _SourceTexture("Texture", 2D) = "white" {}
-        _SourceCubemapTexture("Cubemap", CUBE) = "" {}
-    }
-
     CGINCLUDE
 
     #pragma enable_d3d11_debug_symbols
@@ -60,12 +54,19 @@ Shader "Teleport/CopyCubemap"
 		o.uv = GetUvFromVertexId(vid);
 		return o;
 	}
-
+    
+    
+    fixed4 copy_face_frag (v2f i) : SV_Target
+    {
+        vec3 view   =CubeFaceAndTexCoordsToView(Face,i.uv);
+        vec4 res    =CubeSampleLevel (_SourceCubemapTexture, view, (float)MipIndex) ;
+	    return res;
+    }
     fixed4 mip_frag (v2f i) : SV_Target
     {
         vec3 view   =CubeFaceAndTexCoordsToView(Face,i.uv);
-        float roughness=GetroughnessFromMip(float(MipIndex),float(NumMips),1.2);
-        vec4 res    =RoughnessMip(_SourceCubemapTexture, view, NumMips, 1.0, Roughness, false) ;
+        //float roughness=GetroughnessFromMip(float(MipIndex),float(NumMips),1.2);
+        vec4 res    =RoughnessMip(_SourceCubemapTexture, view, NumMips, 1.0, Roughness,false);
 	    return res;
     }
 
@@ -89,6 +90,15 @@ Shader "Teleport/CopyCubemap"
             CGPROGRAM
             #pragma vertex vert_from_id
             #pragma fragment mip_frag
+            ENDCG
+        }
+        Pass
+        {
+            ZWrite Off ZTest Always Cull Off
+
+            CGPROGRAM
+            #pragma vertex vert_from_id
+            #pragma fragment copy_face_frag
             ENDCG
         }
     }

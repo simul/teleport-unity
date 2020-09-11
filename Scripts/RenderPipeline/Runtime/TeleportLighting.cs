@@ -297,10 +297,10 @@ namespace teleport
 		public bool SetupForwardAddPass(ScriptableRenderContext context, Camera camera,CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder,int additionalLightIndex)
 		{
 			CommandBuffer buffer = CommandBufferPool.Get(k_SetupLightConstants);
-			buffer.BeginSample(bufferName);
 			NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
 			if (additionalLightIndex < 0|| additionalLightIndex>= visibleLights.Length)
 				return false;
+			buffer.BeginSample(bufferName);
 			VisibleLight visibleLight = visibleLights[additionalLightIndex];
 			Light light = visibleLight.light;
 			SetupAddLight(buffer, visibleLight);

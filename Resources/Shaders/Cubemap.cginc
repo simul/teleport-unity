@@ -101,7 +101,7 @@ vec4 RoughnessMip(samplerCUBE sourceCubemap,vec3 view,int numMips,float alpha,fl
 	float Weight = 0.0;
 	for (uint i = 0; i < NumSamples; i++)
 	{
-		vec2 E = Hammersley(i, NumSamples, uint2(0x8FFF,0xFFFF));
+		vec2 E = Hammersley(i, NumSamples, uint2(0x8FFF,0x3f7F));
 		vec3 L;
 		if(rough) // used for roughness > 0.99
 		{

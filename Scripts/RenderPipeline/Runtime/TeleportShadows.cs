@@ -227,6 +227,7 @@ namespace teleport
 				else
 				{
 					Debug.LogError("shadowMaterial.shader resource not found!");
+					buffer.EndSample("Shadow");
 					return;
 				}
 			}
