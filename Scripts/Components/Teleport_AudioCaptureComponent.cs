@@ -13,7 +13,7 @@ namespace teleport
     {
         #region DLLImports
         [DllImport("SimulCasterServer")]
-        static extern void InitializeAudioEncoder(uid clientID, ref SCServer.AudioEncodeParams audioEncodeParams);
+        static extern void InitializeAudioEncoder(uid clientID, ref SCServer.AudioParams audioEncodeParams);
         [DllImport("SimulCasterServer")]
         static extern void SendAudio(uid clientID, IntPtr data, UInt64 dataSize);
         #endregion
@@ -26,8 +26,10 @@ namespace teleport
         void Start()
         {
             teleportSettings = TeleportSettings.GetOrCreateSettings();
+            running = false;
+            clientID = 0;
             //double startTick = AudioSettings.dspTime;
-            // sampleRate = AudioSettings.outputSampleRate;
+            //sampleRate = AudioSettings.outputSampleRate;
         }
 
         private void OnEnable()
@@ -37,15 +39,15 @@ namespace teleport
 
         void OnDisable()
         {
-            
+            running = false;
         }
 
         void LateUpdate()
         {
-            if (!teleportSettings.casterSettings.isStreamingAudio)
-            {
-                return;
-            }
+            //if (!teleportSettings.casterSettings.isStreamingAudio)
+            //{
+            //    return;
+            //}
 
             // for now just get latest client
             uid id = Teleport_SessionComponent.GetLastClientID();
@@ -68,8 +70,11 @@ namespace teleport
 
         void Initialize()
         {
-            var audioParams = new SCServer.AudioEncodeParams();
+            var audioParams = new SCServer.AudioParams();
             audioParams.codec = avs.AudioCodec.PCM;
+            audioParams.sampleRate = (UInt32)AudioSettings.outputSampleRate;
+            audioParams.bitsPerSample = 16;
+            audioParams.numChannels = 2;
             InitializeAudioEncoder(clientID, ref audioParams);
         }
 

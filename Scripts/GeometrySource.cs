@@ -509,7 +509,9 @@ namespace teleport
 				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index = AddTexture(metallicRoughness);
 				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling = material.mainTextureScale;
 				extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : material.GetFloat("_Metallic"); //Unity doesn't use the factor when the texture is set.
-				extractedMaterial.pbrMetallicRoughness.roughnessFactor = 1 - material.GetFloat("_GlossMapScale");
+
+				float smoothness = metallicRoughness ? material.GetFloat("_GlossMapScale") : material.GetFloat("_Glossiness");
+				extractedMaterial.pbrMetallicRoughness.roughnessFactor = 1 - smoothness;
 
 				Texture normal = material.GetTexture("_BumpMap");
 				extractedMaterial.normalTexture.index = AddTexture(normal);
