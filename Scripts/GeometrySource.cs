@@ -174,6 +174,8 @@ namespace avs
 		public uid dataID;
 		public NodeDataType dataType;
 		public Vector4 lightColour;
+		public Vector4 lightRotation;
+		public byte lightType;
 
 		public UInt64 materialAmount;
 		public uid[] materialIDs;
@@ -618,6 +620,9 @@ namespace teleport
 			extractedNode.dataID = AddLight(light);
 			extractedNode.dataType = avs.NodeDataType.Light;
 			extractedNode.lightColour = light.color*light.intensity;
+			extractedNode.lightType = (byte)light.type;
+			// For Unity, lights point along the X-axis, so:
+			extractedNode.lightRotation = new avs.Vector4(0, 0.707F,0,0.707F);
 			//Can't create a node with no data.
 			if (extractedNode.dataID == 0)
 			{
