@@ -235,7 +235,13 @@ namespace teleport
 			if (geometryStreamingService != null)
 			{
 				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Actors {0}", geometryStreamingService.GetStreamedObjectCount()));
-				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", geometryStreamingService.GetStreamedLightCount()));
+				int num_lights = geometryStreamingService.GetStreamedLightCount();
+				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", num_lights));
+				for(int i=0;i<num_lights; i++)
+				{
+					var light=geometryStreamingService.GetStreamedLights()[i];
+					GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("\t{0} {1} {2} {3}", light.name, light.transform.forward.x,light.transform.forward.y, light.transform.forward.z));
+				}
 			}
 			foreach (var c in controllers)
 			{

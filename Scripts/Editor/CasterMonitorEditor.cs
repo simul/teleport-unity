@@ -9,6 +9,7 @@ public class CasterMonitorEditor : Editor
         base.OnInspectorGUI();
 
         GUILayout.Space(10);
-        if(GUILayout.Button("Open Resource Window")) teleport.CasterResourceWindow.OpenResourceWindow();
+        if(GUILayout.Button("Open Resource Window"))
+            teleport.CasterResourceWindow.OpenResourceWindow();
     }
 }

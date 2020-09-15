@@ -138,7 +138,10 @@ namespace teleport
         {
 			return streamedLights.Count;
         }
-
+		public List<Light> GetStreamedLights()
+		{
+			return streamedLights;
+		}
 		public void UpdateGeometryStreaming()
 		{
 			//Detect changes in geometry that needs to be streamed to the client.
