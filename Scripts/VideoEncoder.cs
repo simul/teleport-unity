@@ -13,10 +13,6 @@ namespace teleport
 		#region DLLImports
 		[DllImport("SimulCasterServer")]
 		static extern System.IntPtr GetRenderEventWithDataCallback();
-		[DllImport("SimulCasterServer")]
-        static extern void ClearVideoTagData(uid clientID, uint tagDataID);
-        [DllImport("SimulCasterServer")]
-        static extern void AddVideoTagData(uid clientID, uint tagDataID, IntPtr data, UInt64 dataSize);
 		#endregion
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -27,10 +23,19 @@ namespace teleport
 		};
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct ClientIDWrapper
+		public struct SceneCapture2DTagDataWrapper
 		{
 			public uid clientID;
-            public uint tagDataID;
+			public UInt64 dataSize;
+			public avs.SceneCapture2DTagData data;
+		};
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct SceneCaptureCubeTagDataWrapper
+		{
+			public uid clientID;
+			public UInt64 dataSize;
+			public avs.SceneCaptureCubeTagData data;
 		};
 
 		//Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
@@ -138,79 +143,50 @@ namespace teleport
 				return;
 			}
 
-			// Send the data to c++ plugin to be cached there (will be sent to client with video frame)
-			SendTagData(camera, tagDataID);
-
-			var wrapper = new ClientIDWrapper();
-			wrapper.clientID = clientID;
-            wrapper.tagDataID = tagDataID;
-
-			IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(new ClientIDWrapper()));
-			Marshal.StructureToPtr(wrapper, ptr, true);
-
+			IntPtr ptr;
+			CreateTagDataWarapper(camera, tagDataID, out ptr);
 			commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 2, ptr);
 		}
 
-		void SendTagData(Camera camera, UInt32 tagDataID)
+		void CreateTagDataWarapper(Camera camera, UInt32 tagDataID, out IntPtr dataPtr)
 		{
-            ClearVideoTagData(clientID, tagDataID);
-
 			var teleportSettings = TeleportSettings.GetOrCreateSettings();
 			if (teleportSettings.casterSettings.usePerspectiveRendering)
 			{
-				var tagDataSize = (UInt64)Marshal.SizeOf(typeof(avs.SceneCapture2DTagData));
-				avs.SceneCapture2DTagData tagData = new avs.SceneCapture2DTagData();
-				tagData.id = tagDataID;
-				tagData.cameraTransform = new avs.Transform();
-				tagData.cameraTransform.position = camera.transform.position;
-				tagData.cameraTransform.rotation = camera.transform.parent.rotation;
-				tagData.cameraTransform.scale = new avs.Vector3(1, 1, 1);
+				var w = new SceneCapture2DTagDataWrapper();
+				w.clientID = clientID;
+				w.dataSize = (UInt64)Marshal.SizeOf(typeof(avs.SceneCapture2DTagData));
+				w.data = new avs.SceneCapture2DTagData();
+				w.data.id = tagDataID;
+				w.data.cameraTransform = new avs.Transform();
+				w.data.cameraTransform.position = camera.transform.position;
+				w.data.cameraTransform.rotation = camera.transform.parent.rotation;
+				w.data.cameraTransform.scale = new avs.Vector3(1, 1, 1);
 
-				IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(new avs.SceneCapture2DTagData()));
-				Marshal.StructureToPtr(tagData, ptr, true);
-
-                AddVideoTagData(clientID, tagDataID, ptr, tagDataSize);
-
-				Marshal.FreeHGlobal(ptr);
+				dataPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(SceneCapture2DTagDataWrapper)));
+				Marshal.StructureToPtr(w, dataPtr, true);
 			}
 			else
 			{
-				var tagData = new avs.SceneCaptureCubeTagData();
-				tagData.id = tagDataID;
-				tagData.cameraTransform = new avs.Transform();
-				tagData.cameraTransform.position = camera.transform.position;
-				tagData.cameraTransform.rotation = camera.transform.rotation;
-				tagData.cameraTransform.scale = new avs.Vector3(1, 1, 1);
-
 				List<avs.LightData> lightDataList;
 				CreateLightingData(camera, out lightDataList);
+				var lightSizeInBytes = Marshal.SizeOf(typeof(avs.LightData)) * lightDataList.Count;
 
-				tagData.lightCount = (uint)lightDataList.Count;
+				var w = new SceneCaptureCubeTagDataWrapper();
+				w.clientID = clientID;
+				w.dataSize = (UInt64)(Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData)) + lightSizeInBytes);
+				w.data = new avs.SceneCaptureCubeTagData();
+				w.data.id = tagDataID;
+				w.data.cameraTransform = new avs.Transform();
+				w.data.cameraTransform.position = camera.transform.position;
+				w.data.cameraTransform.rotation = camera.transform.rotation;
+				w.data.cameraTransform.scale = new avs.Vector3(1, 1, 1);
+				w.data.lightCount = (uint)lightDataList.Count;
+				w.data.lights = lightDataList.ToArray();
 
-				IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(new avs.SceneCaptureCubeTagData()));
-				Marshal.StructureToPtr(tagData, ptr, true);
-
-				var tagDataSize = (UInt64)Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData));
-
-				// Send fixed size tag data
-                AddVideoTagData(clientID, tagDataID, ptr, tagDataSize);
-
-				Marshal.FreeHGlobal(ptr);
-
-				tagDataSize = (UInt64)Marshal.SizeOf(typeof(avs.LightData));
-
-				// Send light related tag data
-				for (int i = 0; i < lightDataList.Count; ++i)
-				{
-					ptr = Marshal.AllocHGlobal(Marshal.SizeOf(new avs.LightData()));
-					Marshal.StructureToPtr(lightDataList[i], ptr, true);
-
-					// Send fixed size tag data
-                    AddVideoTagData(clientID, tagDataID, ptr, tagDataSize);
-
-					Marshal.FreeHGlobal(ptr);
-				}
-
+				var wrapperSize = Marshal.SizeOf(typeof(SceneCaptureCubeTagDataWrapper)) + lightSizeInBytes;
+				dataPtr = Marshal.AllocHGlobal(wrapperSize);
+				Marshal.StructureToPtr(w, dataPtr, true);
 			}
 		}
 

@@ -186,6 +186,7 @@ namespace avs
         public uint id;
         public Transform cameraTransform;
         public uint lightCount;
+        public LightData[] lights;
     };
 
     [StructLayout(LayoutKind.Sequential)]
