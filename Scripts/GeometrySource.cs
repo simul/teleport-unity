@@ -175,6 +175,7 @@ namespace avs
 		public NodeDataType dataType;
 		public Vector4 lightColour;
 		public Vector3 lightDirection;
+		public float lightRadius;
 		public byte lightType;
 
 		public UInt64 materialAmount;
@@ -448,7 +449,7 @@ namespace teleport
 				else
 				{
 					Light light= node.GetComponent<Light>();
-					if (light)
+					if (light&&light.isActiveAndEnabled)
 					{
 						nodeID = AddLightNode(light, nodeID, forceUpdate);
 					}
@@ -510,7 +511,8 @@ namespace teleport
 				Texture metallicRoughness = material.GetTexture("_MetallicGlossMap");
 				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index = AddTexture(metallicRoughness);
 				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling = material.mainTextureScale;
-				extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : material.GetFloat("_Metallic"); //Unity doesn't use the factor when the texture is set.
+
+				extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f :(material.HasProperty("_Metallic")?material.GetFloat("_Metallic"):0.0f); //Unity doesn't use the factor when the texture is set.
 
 				float smoothness = metallicRoughness ? material.GetFloat("_GlossMapScale") : material.GetFloat("_Glossiness");
 				extractedMaterial.pbrMetallicRoughness.roughnessFactor = 1 - smoothness;
@@ -621,6 +623,7 @@ namespace teleport
 			extractedNode.dataType = avs.NodeDataType.Light;
 			extractedNode.lightColour = light.color*light.intensity;
 			extractedNode.lightType = (byte)light.type;
+			extractedNode.lightRadius = light.range / 5.0F;
 			// For Unity, lights point along the X-axis, so:
 			extractedNode.lightDirection = new avs.Vector3(0,0,1.0F);
 			//Can't create a node with no data.
@@ -890,8 +893,8 @@ namespace teleport
 				primitives[i].attributes[1] = new avs.Attribute { accessor = normalAccessorID, semantic = avs.AttributeSemantic.NORMAL };
 				primitives[i].attributes[2] = new avs.Attribute { accessor = tangentAccessorID, semantic = avs.AttributeSemantic.TANGENT };
 				primitives[i].attributes[3] = new avs.Attribute { accessor = uv0AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_0 };
-				if(mesh.uv2.Length != 0) primitives[i].attributes[4] = new avs.Attribute { accessor = uv2AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_1 };
-
+				if(mesh.uv2.Length != 0)
+					primitives[i].attributes[4] = new avs.Attribute { accessor = uv2AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_1 };
 				primitives[i].indices_accessor = GenerateID();
 				accessors.Add
 				(
@@ -899,10 +902,10 @@ namespace teleport
 					new avs.Accessor
 					{
 						type = avs.Accessor.DataType.SCALAR,
-						componentType = avs.Accessor.ComponentType.USHORT,
-						count = (ulong)mesh.triangles.Length,
+						componentType = (mesh.indexFormat == UnityEngine.Rendering.IndexFormat.UInt16)?avs.Accessor.ComponentType.USHORT: avs.Accessor.ComponentType.UINT,
+						count = (ulong)mesh.GetIndexCount(i),
 						bufferView = indexViewID,
-						byteOffset = mesh.GetIndexStart(i)
+						byteOffset =(UInt64)mesh.GetIndexStart(i)*(mesh.indexFormat==UnityEngine.Rendering.IndexFormat.UInt16? (UInt64)2 : (UInt64)4)
 					}
 				);
 			}

@@ -135,7 +135,7 @@ GameObject:
   - component: {fileID: 92996962}
   - component: {fileID: 92996961}
   m_Layer: 0
-  m_Name: Cube (1)
+  m_Name: Unlit Cube
   m_TagString: TeleportStreamable
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -509,7 +509,7 @@ GameObject:
   - component: {fileID: 260043693}
   - component: {fileID: 260043692}
   m_Layer: 17
-  m_Name: Cube (3)
+  m_Name: Plain Cube
   m_TagString: TeleportStreamable
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -601,7 +601,7 @@ GameObject:
   - component: {fileID: 270847959}
   - component: {fileID: 270847958}
   - component: {fileID: 270847957}
-  m_Layer: 0
+  m_Layer: 15
   m_Name: Sphere
   m_TagString: TeleportStreamable
   m_Icon: {fileID: 0}
@@ -1134,11 +1134,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100000, guid: f58ca41df365d1749891c419bc38c143, type: 3}
       propertyPath: m_Layer
-      value: 17
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: f58ca41df365d1749891c419bc38c143, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.39999998
+      value: -1.66
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: f58ca41df365d1749891c419bc38c143, type: 3}
       propertyPath: m_LocalPosition.y
@@ -2587,7 +2587,7 @@ GameObject:
   - component: {fileID: 1120189437}
   - component: {fileID: 1120189436}
   m_Layer: 15
-  m_Name: Cube
+  m_Name: Textured Cube
   m_TagString: TeleportStreamable
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2624,7 +2624,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: f386cc47c43c1f946806d3ccd46bde73, type: 2}
+  - {fileID: 2100000, guid: d92eac188f7d17e4eb97400e3dd13896, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2661,7 +2661,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1120189435}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.3, y: 0, z: 1.23}
+  m_LocalPosition: {x: 1.3, y: 0, z: -0.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -2838,6 +2838,25 @@ ReflectionProbe:
   m_UseOcclusionCulling: 1
   m_Importance: 1
   m_CustomBakedTexture: {fileID: 0}
+--- !u!1 &1284562759 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 100000, guid: f58ca41df365d1749891c419bc38c143,
+    type: 3}
+  m_PrefabInstance: {fileID: 526061012}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &1284562760
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1284562759}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Size: {x: 0.75996804, y: 2.9999998, z: 0.5458802}
+  m_Center: {x: -0.000000074505806, y: 0, z: -0.000000014901161}
 --- !u!1001 &1339629064
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3010,7 +3029,7 @@ GameObject:
   - component: {fileID: 1378785831}
   - component: {fileID: 1378785830}
   m_Layer: 0
-  m_Name: Cube (4)
+  m_Name: Default Cube
   m_TagString: TeleportStreamable
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3344,11 +3363,11 @@ Light:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1680549264}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 10
   m_Type: 1
   m_Shape: 0
-  m_Color: {r: 1, g: 0.9528962, b: 0.1981132, a: 1}
+  m_Color: {r: 1, g: 0.8202362, b: 0, a: 1}
   m_Intensity: 0.5
   m_Range: 10
   m_SpotAngle: 30
@@ -4220,13 +4239,13 @@ Light:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1986822158}
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 10
   m_Type: 2
   m_Shape: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Intensity: 1
-  m_Range: 10
+  m_Range: 1
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
@@ -4282,7 +4301,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1986822158}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 3.06, y: 0.416, z: 4.33}
+  m_LocalPosition: {x: 0.489, y: 1.06, z: -0.429}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}

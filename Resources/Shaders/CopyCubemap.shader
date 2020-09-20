@@ -69,6 +69,13 @@ Shader "Teleport/CopyCubemap"
         vec4 res    =RoughnessMip(_SourceCubemapTexture, view, NumMips, 1.0, Roughness,false);
 	    return res;
     }
+    fixed4 diffuse_frag (v2f i) : SV_Target
+    {
+        vec3 view   =CubeFaceAndTexCoordsToView(Face,i.uv);
+        vec4 res    =RoughnessMip(_SourceCubemapTexture, view, NumMips, 1.0, 1.0,true);
+       // vec4 res    =Diffuse(_SourceCubemapTexture, view);
+	    return res;
+    }
 
     ENDCG
     SubShader
@@ -99,6 +106,15 @@ Shader "Teleport/CopyCubemap"
             CGPROGRAM
             #pragma vertex vert_from_id
             #pragma fragment copy_face_frag
+            ENDCG
+        }
+        Pass
+        {
+            ZWrite Off ZTest Always Cull Off
+
+            CGPROGRAM
+            #pragma vertex vert_from_id
+            #pragma fragment diffuse_frag
             ENDCG
         }
     }

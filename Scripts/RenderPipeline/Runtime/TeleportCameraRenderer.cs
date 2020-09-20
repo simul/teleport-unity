@@ -150,7 +150,7 @@ namespace teleport
 			buffer.SetGlobalFloat("Roughness", 1.0F);
 			buffer.SetGlobalTexture("_SourceCubemapTexture", SourceCubeTexture);
 			// 
-			buffer.DrawProcedural(Matrix4x4.identity, createLightingCubemapMaterial, 1, MeshTopology.Triangles, 6);
+			buffer.DrawProcedural(Matrix4x4.identity, createLightingCubemapMaterial,3, MeshTopology.Triangles, 6);
 
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();

@@ -107,14 +107,14 @@ vec4 RoughnessMip(samplerCUBE sourceCubemap,vec3 view,int numMips,float alpha,fl
 		{
 			// roughness=1, GGX is constant. Use cosine distribution instead
 			L		= CosineSampleHemisphere(E).xyz;
-			L		=mul( L, TangentToWorld );
 			float NoL = L.z;
-		#ifdef CPP_GLSL
-			result	+= CubeSampleLevel (sourceCubemap, vec3(-L.x, -L.y, L.z), 0);// * NoL;
-		#else
-			result	+= CubeSampleLevel (sourceCubemap, L, 0) * NoL;
-		#endif
-			Weight	+= NoL;
+			if( NoL > 0 )
+			{
+				L			=mul( L, TangentToWorld );
+				vec4 lookup	=100.0*saturate(0.01*CubeSampleLevel(sourceCubemap, L, 0));
+				result		+= NoL*lookup;
+				Weight		+= NoL;
+			}
 		//	result+=vec4(abs(L),1.0);a
 		}
 		else
@@ -146,6 +146,32 @@ vec4 RoughnessMip(samplerCUBE sourceCubemap,vec3 view,int numMips,float alpha,fl
 	}
 	outp = result / Weight;
 	return vec4(outp.rgb, alpha);
+}
+
+vec4 Diffuse(samplerCUBE sourceCubemap,vec3 view) 
+{
+	vec4 outp;
+	const uint NumSamples =   64;
+	vec4 result = vec4(0,0,0,0);
+	mat3 TangentToWorld = GetTangentBasis(view);
+	float Weight = 0.0;
+	for (uint i = 0; i < NumSamples; i++)
+	{
+		vec2 E = Hammersley(i, NumSamples, uint2(0x8FFF,0x3f7F));
+		vec3 L;
+		// roughness=1, GGX is constant. Use cosine distribution instead
+		L		= CosineSampleHemisphere(E).xyz;
+		L		=mul( L, TangentToWorld );
+		float NoL = L.z;
+		#ifdef CPP_GLSL
+			result	+= CubeSampleLevel (sourceCubemap, vec3(-L.x, -L.y, L.z), 0) ;//* NoL;
+		#else
+			result	+= CubeSampleLevel (sourceCubemap, L, 0) * NoL;
+		#endif
+			Weight	+= NoL;
+	}
+	outp = result / Weight;
+	return vec4(outp.rgb, 1.0);
 }
 
 #endif

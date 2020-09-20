@@ -234,13 +234,21 @@ namespace teleport
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("head position\t{0}", headPosition), font);
 			if (geometryStreamingService != null)
 			{
-				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Actors {0}", geometryStreamingService.GetStreamedObjectCount()));
+				int num_actors = geometryStreamingService.GetStreamedObjectCount();
+				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Actors {0}", num_actors));
+				List<Collider> actors= geometryStreamingService.GetStreamedObjects();
+				for (int i = 0; i < num_actors; i++)
+				{
+					var actor = actors[i].gameObject;
+					uid actor_uid=geometryStreamingService.GetActorID(actor);
+					GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}", actor_uid,actor.name));
+				}
 				int num_lights = geometryStreamingService.GetStreamedLightCount();
 				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", num_lights));
-				for(int i=0;i<num_lights; i++)
+				foreach(var l in geometryStreamingService.GetStreamedLights())
 				{
-					var light=geometryStreamingService.GetStreamedLights()[i];
-					GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("\t{0} {1} {2} {3}", light.name, light.transform.forward.x,light.transform.forward.y, light.transform.forward.z));
+					var light = l.Value;
+					GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}:{2},{3},{4}", l.Key,light.name, light.transform.forward.x,light.transform.forward.y, light.transform.forward.z));
 				}
 			}
 			foreach (var c in controllers)

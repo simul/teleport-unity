@@ -364,6 +364,7 @@ namespace teleport
 			float diff = (1.0F + atten);
 
 			unimportant_LightColours8[index] = light.finalColor * diff;
+			// Fill in xyzw of these variables: e.g. index 0 is x etc.
 			if (index < 4)
 			{
 				unimportant_LightColours[index] = light.finalColor * diff;
@@ -372,6 +373,26 @@ namespace teleport
 				nonImportantZ[index] = lightPos.z;
 				nonImportantAtten[index] = atten;
 			}
+			// so the "attenuation" is 25/(range^2) - call this "a^2", so a = 5/range.
+			// Now in UnityCG.cginc shader function Shade4PointLights we have
+			// radiance=lightColour * (n.l) * 1/(1+r^2*a^2)
+			// What does this mean?
+			// radiance=lightColour * n.l * 1/(1+(r*5/range)^2)
+			//								1/(1+((5*r)/range)^2)
+			// e.g. if range was very large, it would be 1/((5r)^2).
+			// i.e. proper inv square law.
+
+			// At what range is radiance==lightColour??
+			// that would be where
+			//									1/(1+((5*r)/range)^2)=1
+			//									1+25(r^2/range^2))=1
+			// i.e. r/range -> 0 - at the light position itself, we have radiance=lightColour.
+			// nonsense of course.
+			// The real eqn that we go to at infinity would be:
+			//	radiance=lightColour*n.l / (5*r/range)^2
+			// which would mean radiance=lightColour where 5r==range, or r=range/5.
+			// The proper equation should be to treat the light as a sphere of radius range/5,
+			// and consider lightColour to be the irradiance at that surface.
 		}
 		void ClearMainLight(CommandBuffer buffer)
 		{
@@ -384,7 +405,7 @@ namespace teleport
 		}
 		void SetupMainLight(CommandBuffer buffer, VisibleLight light)
 		{
-				Vector4 atten = new Vector4();
+			Vector4 atten = new Vector4();
 			if (light.lightType != LightType.Directional)
 			{
 				if (light.lightType == LightType.Spot)

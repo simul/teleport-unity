@@ -49,7 +49,7 @@ namespace teleport
 		private readonly TeleportSettings teleportSettings;
 
 		private List<Collider> streamedObjects = new List<Collider>();
-		private List<Light> streamedLights = new List<Light>();
+		private Dictionary<uid,Light> streamedLights = new Dictionary<uid, Light>();
 
 		//Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
 		private Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
@@ -124,21 +124,36 @@ namespace teleport
 			foreach(var l in lights)
 			{
 				uid actorID = AddActor(l.gameObject);
-				if(!streamedLights.Contains(l))
-					streamedLights.Add(l);
+				if(!streamedLights.ContainsKey(actorID))
+					streamedLights[actorID]=l;
 			}
 		}
 
 		public int GetStreamedObjectCount()
         {
 			return streamedObjects.Count;
-        }
+		}
+		public List<Collider> GetStreamedObjects()
+		{
+			return streamedObjects;
+		}
+		public List<uid> GetStreamedObjectUids()
+		{
+			List<uid> uids = new List<uid>();
+			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+			foreach (var o in streamedObjects)
+			{
+				uid actorID = geometrySource.FindNode(o.gameObject);
+				uids.Add(actorID);
+			}
+			return uids;
+		}
 
 		public int GetStreamedLightCount()
         {
 			return streamedLights.Count;
         }
-		public List<Light> GetStreamedLights()
+		public Dictionary<uid,Light> GetStreamedLights()
 		{
 			return streamedLights;
 		}
