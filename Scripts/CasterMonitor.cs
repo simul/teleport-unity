@@ -7,6 +7,7 @@ using uid = System.UInt64;
 
 namespace teleport
 {
+	[ExecuteInEditMode]
 	public class CasterMonitor : MonoBehaviour
 	{
 		// Reference to the global (per-project) TeleportSettings asset.
@@ -70,6 +71,9 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void Tick(float deltaTime);
 		[DllImport("SimulCasterServer")]
+		/// Tock executes when not playing e.g in Edit Mode.
+		private static extern void Tock();
+		[DllImport("SimulCasterServer")]
 		private static extern void Shutdown();
 		#endregion
 
@@ -123,26 +127,31 @@ namespace teleport
 
 		private void Update()
 		{
-			if(ok)
-			   Tick(Time.deltaTime);
+			if (ok && Application.isPlaying)
+				Tick(Time.deltaTime);
+			else
+				Tock();
 		}
 		void OnGUI()
 		{
-			int x = 10;
-			int y = 20;
-			string title = "Teleport";
-			// Make sure we have a Teleport Render Pipeline, or we won't get a video stream.
-			if (UnityEngine.Rendering.RenderPipelineManager.currentPipeline == null || UnityEngine.Rendering.RenderPipelineManager.currentPipeline.GetType() != typeof(TeleportRenderPipeline))
+			if ( Application.isPlaying)
 			{
-				title+= ": currentPipeline is not TeleportRenderPipeline";
-				Debug.LogError(title);
-			}
-			GUI.Label(new Rect(x, y += 14, 100, 20), title, overlayFont);
+				int x = 10;
+				int y = 20;
+				string title = "Teleport";
+				// Make sure we have a Teleport Render Pipeline, or we won't get a video stream.
+				if (UnityEngine.Rendering.RenderPipelineManager.currentPipeline == null || UnityEngine.Rendering.RenderPipelineManager.currentPipeline.GetType() != typeof(TeleportRenderPipeline))
+				{
+					title+= ": currentPipeline is not TeleportRenderPipeline";
+					Debug.LogError(title);
+				}
+				GUI.Label(new Rect(x, y += 14, 100, 20), title, overlayFont);
 		
-			GUI.Label(new Rect(x,y+=14, 100, 20), string.Format("Discovering on port {0}", teleportSettings.discoveryPort), overlayFont);
-			foreach(var s in Teleport_SessionComponent.sessions)
-			{
-				s.Value.ShowOverlay(x,y, clientFont);
+				GUI.Label(new Rect(x,y+=14, 100, 20), string.Format("Discovering on port {0}", teleportSettings.discoveryPort), overlayFont);
+				foreach(var s in Teleport_SessionComponent.sessions)
+				{
+					s.Value.ShowOverlay(x,y, clientFont);
+				}
 			}
 		}
 

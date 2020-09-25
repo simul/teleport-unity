@@ -145,6 +145,12 @@ namespace avs
 		UNCOMPRESSED = 0,
 		BASIS_COMPRESSED
 	}
+	public enum RoughnessMode : byte
+	{
+		CONSTANT= 0,
+		MULTIPLY,
+		MULTIPLY_REVERSE
+	}
 
 	[StructLayout(LayoutKind.Sequential)]
 	public class TextureAccessor
@@ -165,6 +171,7 @@ namespace avs
 		public TextureAccessor metallicRoughnessTexture = new TextureAccessor();
 		public float metallicFactor = 1.0f;
 		public float roughnessFactor = 1.0f;
+		public RoughnessMode roughnessMode = RoughnessMode.MULTIPLY_REVERSE;
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -329,15 +336,17 @@ namespace teleport
 		private static GeometrySource geometrySource=null;
 		// We always store the settings in this path:
 		public const string k_GeometrySourcePath = "TeleportVR/GeometrySource";
+		public const string k_GeometryFilename = "GeometrySource";
 		public static GeometrySource GetGeometrySource()
 		{
 			if (geometrySource == null)
-				geometrySource = Resources.Load<GeometrySource>(k_GeometrySourcePath);
+				geometrySource = Resources.Load<GeometrySource>(k_GeometrySourcePath + "/" + k_GeometryFilename);
 #if UNITY_EDITOR
 			if (geometrySource == null)
 			{
 				geometrySource = CreateInstance<GeometrySource>();
-				string assetPath= "Assets/Resources/" + k_GeometrySourcePath + ".asset";
+				TeleportSettings.EnsureAssetPath("Assets/Resources/" + k_GeometrySourcePath);
+				string assetPath= "Assets/Resources/" + k_GeometrySourcePath + "/"+ k_GeometryFilename+".asset";
 				AssetDatabase.CreateAsset(geometrySource, assetPath);
 				AssetDatabase.SaveAssets();
 				ClearGeometryStore();
@@ -516,6 +525,7 @@ namespace teleport
 
 				float smoothness = metallicRoughness ? material.GetFloat("_GlossMapScale") : material.GetFloat("_Glossiness");
 				extractedMaterial.pbrMetallicRoughness.roughnessFactor = 1 - smoothness;
+				extractedMaterial.pbrMetallicRoughness.roughnessMode = avs.RoughnessMode.MULTIPLY_REVERSE;
 
 				Texture normal = material.GetTexture("_BumpMap");
 				extractedMaterial.normalTexture.index = AddTexture(normal);
@@ -621,7 +631,9 @@ namespace teleport
 			//Extract mesh used on node.
 			extractedNode.dataID = AddLight(light);
 			extractedNode.dataType = avs.NodeDataType.Light;
-			extractedNode.lightColour = light.color*light.intensity;
+			Color c = light.color;
+			
+			extractedNode.lightColour = c.linear * light.intensity;
 			extractedNode.lightType = (byte)light.type;
 			extractedNode.lightRadius = light.range / 5.0F;
 			// For Unity, lights point along the X-axis, so:

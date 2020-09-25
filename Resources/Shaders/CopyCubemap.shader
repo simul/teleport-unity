@@ -72,8 +72,8 @@ Shader "Teleport/CopyCubemap"
     fixed4 diffuse_frag (v2f i) : SV_Target
     {
         vec3 view   =CubeFaceAndTexCoordsToView(Face,i.uv);
-        vec4 res    =RoughnessMip(_SourceCubemapTexture, view, NumMips, 1.0, 1.0,true);
-       // vec4 res    =Diffuse(_SourceCubemapTexture, view);
+       // vec4 res    =RoughnessMip(_SourceCubemapTexture, view, NumMips, 1.0, 1.0,true);
+        vec4 res    =Diffuse(_SourceCubemapTexture, view);
 	    return res;
     }
 

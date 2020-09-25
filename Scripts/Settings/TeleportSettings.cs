@@ -14,7 +14,8 @@ namespace teleport
 	{
 		static private TeleportSettings teleportSettings=null;
 		// We always store the settings in this path:
-		public const string k_TeleportSettingsPath = "TeleportVR/TeleportSettings";
+		public const string k_TeleportSettingsPath = "TeleportVR";
+		public const string k_TeleportSettingsFilename = "TeleportSettings";
 		//! Objects with this tag will be streamed; leaving it blank will cause it to just use the layer mask.
 		public string TagToStream = "TeleportStreamable";
 
@@ -29,15 +30,31 @@ namespace teleport
 
 		public CasterSettings casterSettings =new CasterSettings();
 		public LayerMask LayersToStream;
+		public static void EnsureAssetPath(string requiredPath)
+		{
+			var settings_folders = requiredPath.Split('/');
+			string path = "";
+			string fullpath = "";
+			for (int i = 0; i < settings_folders.Length; i++)
+			{
+				fullpath = path + (i > 0 ? "/" : "") + settings_folders[i];
+				if (!AssetDatabase.IsValidFolder(fullpath))
+				{
+					AssetDatabase.CreateFolder(path, settings_folders[i]);
+				}
+				path = fullpath;
+			}
+		}
 		public static TeleportSettings GetOrCreateSettings()
 		{
 			if(teleportSettings==null)
-				teleportSettings=Resources.Load<TeleportSettings>(k_TeleportSettingsPath);
+				teleportSettings=Resources.Load<TeleportSettings>(k_TeleportSettingsPath + "/" + k_TeleportSettingsFilename);
 #if UNITY_EDITOR
 			if (teleportSettings == null)
 			{
 				teleportSettings = ScriptableObject.CreateInstance<TeleportSettings>();
-				AssetDatabase.CreateAsset(teleportSettings, "Assets/Resources/" + k_TeleportSettingsPath + ".asset");
+				EnsureAssetPath("Assets/Resources" + k_TeleportSettingsPath);
+				AssetDatabase.CreateAsset(teleportSettings, "Assets/Resources/" + k_TeleportSettingsPath + "/"+ k_TeleportSettingsFilename+".asset");
 				AssetDatabase.SaveAssets();
 			}
 #endif

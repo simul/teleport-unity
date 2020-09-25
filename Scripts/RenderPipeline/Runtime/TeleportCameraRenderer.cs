@@ -623,6 +623,8 @@ namespace teleport
 
 		public void RenderToSceneCaptureCubemap(ScriptableRenderContext context, Camera camera)
 		{
+			if (!Teleport_SceneCaptureComponent.RenderingSceneCapture)
+				return;
 			RenderTexture videoTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
 
 			if (!videoTexture)
@@ -730,7 +732,7 @@ namespace teleport
 					 face);
 				videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face,0);
 				videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.RoughSpecularCubeTexture, face, 3);
-				videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face);
+				videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.RoughSpecularCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face);
 				videoEncoding.EncodeColor(context, camera, face);
 				videoEncoding.EncodeDepth(context, camera, depthViewport, face);
 				videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, new Vector2Int(3*(int)depthViewport.width,2* (int)faceSize), face);

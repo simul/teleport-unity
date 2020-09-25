@@ -151,24 +151,21 @@ vec4 RoughnessMip(samplerCUBE sourceCubemap,vec3 view,int numMips,float alpha,fl
 vec4 Diffuse(samplerCUBE sourceCubemap,vec3 view) 
 {
 	vec4 outp;
-	const uint NumSamples =   64;
+	const uint NumSamples = 256;
 	vec4 result = vec4(0,0,0,0);
 	mat3 TangentToWorld = GetTangentBasis(view);
 	float Weight = 0.0;
 	for (uint i = 0; i < NumSamples; i++)
 	{
-		vec2 E = Hammersley(i, NumSamples, uint2(0x8FFF,0x3f7F));
+		vec2 E = Hammersley(i, NumSamples, uint2(253*i,i*5));
 		vec3 L;
 		// roughness=1, GGX is constant. Use cosine distribution instead
 		L		= CosineSampleHemisphere(E).xyz;
-		L		=mul( L, TangentToWorld );
 		float NoL = L.z;
-		#ifdef CPP_GLSL
-			result	+= CubeSampleLevel (sourceCubemap, vec3(-L.x, -L.y, L.z), 0) ;//* NoL;
-		#else
-			result	+= CubeSampleLevel (sourceCubemap, L, 0) * NoL;
-		#endif
-			Weight	+= NoL;
+		L		=mul( L, TangentToWorld );
+		vec4 lookup=100.0*saturate(0.01*CubeSampleLevel(sourceCubemap, L, 2));
+		result	+= NoL*lookup;
+		Weight	+= NoL;
 	}
 	outp = result / Weight;
 	return vec4(outp.rgb, 1.0);

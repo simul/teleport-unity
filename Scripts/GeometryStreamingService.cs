@@ -111,6 +111,8 @@ namespace teleport
 
 		public uid GetActorID(GameObject actor)
 		{
+			if (!gameObjectHandles.ContainsKey(actor))
+				return 0;
 			return GetActorID(session.GetClientID(), GCHandle.ToIntPtr(gameObjectHandles[actor]));
 		}
 

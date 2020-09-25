@@ -214,7 +214,8 @@ namespace teleport
 			//According to the Unity docs, we need to call Release() on any render textures we are done with.
 			for(int i = geometrySource.texturesWaitingForExtraction.Count; i < renderTextures.Length; i++)
 			{
-				if(renderTextures[i]) renderTextures[i].Release();
+				if(renderTextures[i])
+					renderTextures[i].Release();
 			}
 			//Resize the array, instead of simply creating a new one, as we want to keep the same render textures for quicker debugging.
 			Array.Resize(ref renderTextures, geometrySource.texturesWaitingForExtraction.Count);
@@ -239,7 +240,13 @@ namespace teleport
 				renderTextures[i].Create();
 
 				//Normal maps need to be extracted differently; i.e. convert from DXT5nm format.
-				UnityEditor.TextureImporterType textureType = ((UnityEditor.TextureImporter)UnityEditor.AssetImporter.GetAtPath(UnityEditor.AssetDatabase.GetAssetPath(sourceTexture))).textureType;
+				string path = UnityEditor.AssetDatabase.GetAssetPath(sourceTexture);
+				UnityEditor.TextureImporter textureImporter = (UnityEditor.TextureImporter)UnityEditor.AssetImporter.GetAtPath(path);
+				UnityEditor.TextureImporterType textureType = UnityEditor.TextureImporterType.Default;
+				if (textureImporter != null)
+				{
+					textureType = textureImporter.textureType;
+				}
 				int kernelHandle = textureShader.FindKernel((textureType == UnityEditor.TextureImporterType.NormalMap ? "ExtractNormalMap" : "ExtractTexture") + (UnityEditor.PlayerSettings.colorSpace == ColorSpace.Gamma ? "Gamma" : "Linear"));
 
 				textureShader.SetTexture(kernelHandle, "Source", sourceTexture);
