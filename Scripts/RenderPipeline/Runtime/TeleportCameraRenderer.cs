@@ -315,6 +315,10 @@ namespace teleport
 
 		public TeleportSettings teleportSettings = null;
 
+		// Culling objects that are geometry-streamed.
+		//CullingGroup cullingGroup = new CullingGroup();
+		BoundingSphere[] boundingSpheres = new BoundingSphere[2];
+
 		public TeleportCameraRenderer()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
@@ -325,10 +329,18 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Clear();
 		}
-
+		static public void CullingEvent(CullingGroupEvent cullingGroupEvent)
+		{
+		}
 		/// <summary>Clear the background based on the clearFlags.</summary>
 		void Clear(ScriptableRenderContext context, Camera camera)
 		{
+		/*	cullingGroup.targetCamera = camera;
+			boundingSpheres[0].position = camera.transform.position;
+			boundingSpheres[0].radius = 10.0F;
+			cullingGroup.SetBoundingSpheres(boundingSpheres);
+			cullingGroup.SetBoundingSphereCount(1);
+			cullingGroup.onStateChanged = CullingEvent;*/
 			if (camera.clearFlags != CameraClearFlags.Nothing)
 			{
 				var buffer = new CommandBuffer { name = camera.name + " Teleport BeginCamera" };
@@ -350,6 +362,24 @@ namespace teleport
 			{
 				p.shadowDistance = QualitySettings.shadowDistance;//renderSettings.maxShadowDistance;
 				p.shadowDistance = Mathf.Min(p.shadowDistance, camera.farClipPlane);
+				if (SessionComponent)
+				{
+					List<Collider> colliders = SessionComponent.GeometryStreamingService.GetStreamedObjects();
+					foreach (var c in colliders)
+					{
+						Renderer actorRenderer = c.gameObject.GetComponent<Renderer>();
+						if (actorRenderer)
+							actorRenderer.enabled = false;
+					}
+					cullingResults = context.Cull(ref p);
+					foreach (var c in colliders)
+					{
+						Renderer actorRenderer = c.gameObject.GetComponent<Renderer>();
+						if (actorRenderer)
+							actorRenderer.enabled = true;
+					}
+				}
+				else
 				cullingResults = context.Cull(ref p);
 				return true;
 			}
@@ -603,7 +633,6 @@ namespace teleport
 			}
 
 			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
-			//uid clientID = Teleport_SceneCaptureComponent.RenderingSceneCapture.clientID;
 			//if (clientID != 0)
 				//UpdateStreamables(context, clientID, camera);
 
@@ -620,7 +649,27 @@ namespace teleport
 				videoEncoder.CreateEncodeCommands(context, camera, tagDataID);
 			}
 		}
-
+		public uid ClientID
+		{
+			get
+			{
+				if (!Teleport_SceneCaptureComponent.RenderingSceneCapture)
+					return 0;
+				return Teleport_SceneCaptureComponent.RenderingSceneCapture.clientID;
+			}
+			set
+			{
+			}
+		}
+		public Teleport_SessionComponent SessionComponent
+		{
+			get
+			{
+				if(ClientID!=0 && Teleport_SessionComponent.sessions.ContainsKey(ClientID))
+					return Teleport_SessionComponent.sessions[ClientID];
+				return null;
+			} 
+		}
 		public void RenderToSceneCaptureCubemap(ScriptableRenderContext context, Camera camera)
 		{
 			if (!Teleport_SceneCaptureComponent.RenderingSceneCapture)
@@ -634,9 +683,8 @@ namespace teleport
 			}
 
 			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
-			uid clientID = Teleport_SceneCaptureComponent.RenderingSceneCapture.clientID;
-			if (clientID != 0)
-				UpdateStreamables(context, clientID, camera);
+			if (ClientID != 0)
+				UpdateStreamables(context, ClientID, camera);
 
 			CullingResults cullingResultsAll;
 			if (!Cull(context, camera, out cullingResultsAll))

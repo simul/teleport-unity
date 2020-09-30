@@ -370,6 +370,7 @@ namespace teleport
 				for(int i = 0; i < processedResources_keys.Length; i++)
 				{
 					processedResources[processedResources_keys[i]] = processedResources_values[i];
+					Debug.Log("Restoring resource " + processedResources_values[i] + ": " + processedResources_keys[i].name);
 				}
 			}
 		}
@@ -474,7 +475,8 @@ namespace teleport
 
 		public uid AddMesh(Mesh mesh)
 		{
-			if(!mesh) return 0;
+			if(!mesh)
+				return 0;
 
 			if(!processedResources.TryGetValue(mesh, out uid meshID))
 			{
@@ -505,10 +507,10 @@ namespace teleport
 		}
 		public uid AddMaterial(Material material, bool forceUpdate = false)
 		{
-			if(!material) return 0;
-
+			if(!material)
+				return 0;
 			processedResources.TryGetValue(material, out uid materialID);
-			if(forceUpdate || materialID == 0)
+			if (forceUpdate || materialID == 0)
 			{
 				avs.Material extractedMaterial = new avs.Material();
 				extractedMaterial.name = Marshal.StringToBSTR(material.name);
@@ -521,7 +523,7 @@ namespace teleport
 				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index = AddTexture(metallicRoughness);
 				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling = material.mainTextureScale;
 
-				extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f :(material.HasProperty("_Metallic")?material.GetFloat("_Metallic"):0.0f); //Unity doesn't use the factor when the texture is set.
+				extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : (material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 0.0f); //Unity doesn't use the factor when the texture is set.
 
 				float smoothness = metallicRoughness ? material.GetFloat("_GlossMapScale") : material.GetFloat("_Glossiness");
 				extractedMaterial.pbrMetallicRoughness.roughnessFactor = 1 - smoothness;
@@ -538,7 +540,7 @@ namespace teleport
 				extractedMaterial.occlusionTexture.strength = material.GetFloat("_OcclusionStrength");
 
 				//Extract emission properties only if emission is active.
-				if(!material.globalIlluminationFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack))
+				if (!material.globalIlluminationFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack))
 				{
 					Texture emission = material.GetTexture("_EmissionMap");
 					extractedMaterial.emissiveTexture.index = AddTexture(emission);
@@ -553,11 +555,18 @@ namespace teleport
 #if UNITY_EDITOR
 				AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long _);
 
-				if(materialID == 0) materialID = GenerateID();
+				if (materialID == 0)
+					materialID = GenerateID();
 				processedResources[material] = materialID;
 				StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)), extractedMaterial);
+				Debug.Log("Stored material " + materialID + ": " + material.name);
 #endif
 			}
+			else
+			{
+				Debug.Log("Already processed material " + materialID + ": " + material.name);
+			}
+			
 
 			return materialID;
 		}
@@ -597,7 +606,9 @@ namespace teleport
 
 				basisFileLocation = textureAssetPath; //Use editor file location as unique name; this won't work out of the Unity Editor.
 				basisFileLocation = basisFileLocation.Replace("/", "#"); //Replace forward slashes with hashes.
-				basisFileLocation = basisFileLocation.Remove(basisFileLocation.LastIndexOf('.')); //Remove file extension.
+				int idx = basisFileLocation.LastIndexOf('.');
+				if(idx>=0)
+					basisFileLocation = basisFileLocation.Remove(idx); //Remove file extension.
 				basisFileLocation = folderPath + basisFileLocation + ".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
 			}
 			
@@ -632,8 +643,10 @@ namespace teleport
 			extractedNode.dataID = AddLight(light);
 			extractedNode.dataType = avs.NodeDataType.Light;
 			Color c = light.color;
-			
-			extractedNode.lightColour = c.linear * light.intensity;
+			if(PlayerSettings.colorSpace == ColorSpace.Linear)
+				extractedNode.lightColour = c.linear * light.intensity;
+			else
+				extractedNode.lightColour = c.gamma * light.intensity;
 			extractedNode.lightType = (byte)light.type;
 			extractedNode.lightRadius = light.range / 5.0F;
 			// For Unity, lights point along the X-axis, so:
@@ -1268,6 +1281,7 @@ namespace teleport
 						uid newID = GenerateID();
 
 						reaffirmedResources.Add(new ReaffirmedResource { oldID = metaResource.oldID, newID = newID });
+						Debug.Log("Reaffirmed resource " + newID + " loaded from disk, "+ assetPath);
 						processedResources[asset] = newID;
 					}
 				}

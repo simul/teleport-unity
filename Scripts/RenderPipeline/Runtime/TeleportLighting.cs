@@ -288,7 +288,9 @@ namespace teleport
 			//buffer.SetGlobalVector(UNITY_LIGHTMODEL_AMBIENT, unityVector);
 			//buffer.SetGlobalVector(unity_FogColor, unityVector);
 			//buffer.SetGlobalVector(unity_FogParams, unityVector);
-			//buffer.SetGlobalVector(unity_OcclusionMaskSelector, unityVector);
+
+			// TODO: contains a vector for selecting the channel for the light that's currently being rendered.
+			buffer.SetGlobalVector(unity_OcclusionMaskSelector, new Vector3(1.0F,0.0F,0.0F));
 			//
 			buffer.EndSample(bufferName);
 			context.ExecuteCommandBuffer(buffer);

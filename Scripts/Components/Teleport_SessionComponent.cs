@@ -106,6 +106,13 @@ namespace teleport
 		//One per session, as we stream geometry on a per-client basis.
 		private GeometryStreamingService geometryStreamingService=null;
 
+		public GeometryStreamingService GeometryStreamingService
+		{
+			get{
+					return geometryStreamingService;
+			}
+		}
+	
 		private uid clientID = 0;
 
 		private Teleport_Head head = null;
