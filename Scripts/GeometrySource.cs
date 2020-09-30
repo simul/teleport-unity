@@ -305,6 +305,8 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreMaterial(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Material material);
 		[DllImport("SimulCasterServer")]
+		private static extern bool IsMaterialStored(uid id);
+		[DllImport("SimulCasterServer")]
 		private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture texture, string basisFileLocation);
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreShadowMap(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture shadowMap);
@@ -405,6 +407,8 @@ namespace teleport
 
 		public void LoadFromDisk()
 		{
+		// This is PRESUMABLY necessary, or we'll have a list of invalid uids...
+			processedResources.Clear();
 			//Load data from files.
 			LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 materialAmount, out IntPtr loadedMaterials);
 
@@ -565,6 +569,11 @@ namespace teleport
 			else
 			{
 				Debug.Log("Already processed material " + materialID + ": " + material.name);
+				// But do we REALLY have it?
+				if (!IsMaterialStored(materialID))
+				{
+					Debug.LogError("But material " + materialID + " is not in the store!");
+				}
 			}
 			
 
@@ -716,6 +725,11 @@ namespace teleport
 			extractedNode.materialAmount = (ulong)materialIDs.Count;
 			extractedNode.materialIDs = materialIDs.ToArray();
 
+			for(int i=0;i<extractedNode.materialIDs.Length;i++)
+			{
+				if(!IsMaterialStored(extractedNode.materialIDs[i]))
+					Debug.LogError("AddMeshNode storing material "+ extractedNode.materialIDs[i]+" which is not there.");
+			}
 			//Extract children of node, through transform hierarchy.
 			List<uid> childIDs = new List<uid>();
 			for(int i = 0; i < node.transform.childCount; i++)
@@ -1282,6 +1296,7 @@ namespace teleport
 
 						reaffirmedResources.Add(new ReaffirmedResource { oldID = metaResource.oldID, newID = newID });
 						Debug.Log("Reaffirmed resource " + newID + " loaded from disk, "+ assetPath);
+						// RK: I'm going to say it's WAY to early to put this in here when we can't be sure that the actual resource will be loaded!
 						processedResources[asset] = newID;
 					}
 				}
