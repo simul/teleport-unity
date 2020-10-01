@@ -182,6 +182,8 @@ namespace teleport
 				w.data.cameraTransform.rotation = camera.transform.rotation;
 				w.data.cameraTransform.scale = new avs.Vector3(1, 1, 1);
 				w.data.lightCount = (uint)lightDataList.Count;
+
+				// If this doesn't work, do Array.copy
 				w.data.lights = lightDataList.ToArray();
 
 				var wrapperSize = Marshal.SizeOf(typeof(SceneCaptureCubeTagDataWrapper)) + lightSizeInBytes;

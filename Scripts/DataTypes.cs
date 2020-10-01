@@ -222,6 +222,7 @@ namespace avs
         public uint id;
         public Transform cameraTransform;
         public uint lightCount;
+        [MarshalAs(UnmanagedType.ByValArray)]
         public LightData[] lights;
     };
 
