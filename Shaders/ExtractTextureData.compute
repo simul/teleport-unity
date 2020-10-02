@@ -8,16 +8,18 @@
 Texture2D<float4> Source;
 RWTexture2D<float4> Result;
 
+//Extract textures from linear space.
 [numthreads(8, 8, 1)]
 void ExtractTextureLinear(uint3 id : SV_DispatchThreadID)
 {
-    Result[id.xy].rgba = float4(LinearToGammaSpaceExact(Source[id.xy].r), LinearToGammaSpaceExact(Source[id.xy].g), LinearToGammaSpaceExact(Source[id.xy].b), Source[id.xy].a);
+    Result[id.xy].rgba = Source[id.xy];
 }
 
+//Extract textures from gamma space.
 [numthreads(8, 8, 1)]
 void ExtractTextureGamma(uint3 id : SV_DispatchThreadID)
 {
-    Result[id.xy].rgba = Source[id.xy];
+    Result[id.xy].rgba = float4(GammaToLinearSpaceExact(Source[id.xy].r), GammaToLinearSpaceExact(Source[id.xy].g), GammaToLinearSpaceExact(Source[id.xy].b), GammaToLinearSpaceExact(Source[id.xy].a));
 }
 
 [numthreads(8, 8, 1)]
