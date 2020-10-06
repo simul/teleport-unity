@@ -53,7 +53,7 @@ namespace SCServer
 		public Int32 bandwidthCalculationInterval = 5000;
 
 		[Header("Audio")]
-		[MarshalAs(UnmanagedType.U1)] public bool isStreamingAudio = false;
+		[MarshalAs(UnmanagedType.U1)] public bool isStreamingAudio = true;
 
 		[Header("Debugging")]
 		public Int32 debugStream = 0;
