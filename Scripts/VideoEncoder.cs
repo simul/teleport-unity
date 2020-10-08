@@ -208,6 +208,10 @@ namespace teleport
 
 				var lightData = new avs.LightData();
 				ref var l = ref p.visibleLight;
+				if (l.light == null)
+				{
+					continue;
+				}
 				lightData.worldTransform = l.localToWorldMatrix;
 				lightData.color = new avs.Vector4(l.light.color.r, l.light.color.g, l.light.color.b, l.light.color.a);
 				lightData.range = l.range;
