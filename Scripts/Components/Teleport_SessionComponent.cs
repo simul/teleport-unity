@@ -255,7 +255,10 @@ namespace teleport
 				foreach(var l in geometryStreamingService.GetStreamedLights())
 				{
 					var light = l.Value;
-					GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}:{2},{3},{4}", l.Key,light.name, light.transform.forward.x,light.transform.forward.y, light.transform.forward.z));
+					if (light != null)
+					{
+						GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}:{2},{3},{4}", l.Key, light.name, light.transform.forward.x, light.transform.forward.y, light.transform.forward.z));
+					}
 				}
 			}
 			foreach (var c in controllers)

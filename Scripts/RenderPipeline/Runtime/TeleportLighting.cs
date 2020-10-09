@@ -194,7 +194,12 @@ namespace teleport
 			if(lightingOrder.AdditionalLightIndices!=null)
 			for(int i=0;i<lightingOrder.AdditionalLightIndices.Length;i++)
 			{
-				var visibleLight = cullingResults.visibleLights[lightingOrder.AdditionalLightIndices[i]];
+				int vbIndex = lightingOrder.AdditionalLightIndices[i];
+				if (cullingResults.visibleLights.Length <= vbIndex)
+				{
+					continue;
+				}
+				var visibleLight = cullingResults.visibleLights[vbIndex];
 				var light = visibleLight.light;
 				if (perFrameLightProperties.ContainsKey(light))
 					shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[light], 1, depthTexture);
@@ -302,9 +307,12 @@ namespace teleport
 			NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
 			if (additionalLightIndex < 0|| additionalLightIndex>= visibleLights.Length)
 				return false;
-			buffer.BeginSample(bufferName);
+			
 			VisibleLight visibleLight = visibleLights[additionalLightIndex];
 			Light light = visibleLight.light;
+			if (light == null)
+				return false;
+			buffer.BeginSample(bufferName);
 			SetupAddLight(buffer, visibleLight);
 			buffer.SetGlobalTexture(_ShadowMapTexture, perFrameLightProperties[light].shadowAtlasTexture, RenderTextureSubElement.Depth);
 			Vector4 lightShadowData = new Vector4(0.1F, 66.66666F, 0.33333333F, -2.66667F);
