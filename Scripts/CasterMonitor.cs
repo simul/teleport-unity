@@ -79,6 +79,9 @@ namespace teleport
 
 		private GUIStyle overlayFont = new GUIStyle();
 		private GUIStyle clientFont = new GUIStyle();
+
+		private string title = "Teleport";
+
 		public static CasterMonitor GetCasterMonitor()
 		{
 			// We only want one instance, so delete duplicates.
@@ -108,6 +111,13 @@ namespace teleport
 			overlayFont.fontSize = 14;
 			clientFont.fontSize = 14;
 			clientFont.normal.textColor = Color.white;
+
+			// Make sure we have a Teleport Render Pipeline, or we won't get a video stream.
+			if(UnityEngine.Rendering.RenderPipelineManager.currentPipeline == null || UnityEngine.Rendering.RenderPipelineManager.currentPipeline.GetType() != typeof(TeleportRenderPipeline))
+			{
+				title += ": Current rendering pipeline is not TeleportRenderPipeline!";
+				Debug.LogError(title);
+			}
 		}
 
 		private void OnEnable()
@@ -138,13 +148,6 @@ namespace teleport
 			{
 				int x = 10;
 				int y = 20;
-				string title = "Teleport";
-				// Make sure we have a Teleport Render Pipeline, or we won't get a video stream.
-				if (UnityEngine.Rendering.RenderPipelineManager.currentPipeline == null || UnityEngine.Rendering.RenderPipelineManager.currentPipeline.GetType() != typeof(TeleportRenderPipeline))
-				{
-					title+= ": currentPipeline is not TeleportRenderPipeline";
-					Debug.LogError(title);
-				}
 				GUI.Label(new Rect(x, y += 14, 100, 20), title, overlayFont);
 		
 				GUI.Label(new Rect(x,y+=14, 100, 20), string.Format("Discovering on port {0}", teleportSettings.discoveryPort), overlayFont);
@@ -175,15 +178,28 @@ namespace teleport
 			GameObject actor = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
 
 			Renderer actorRenderer = actor.GetComponent<Renderer>();
-			actorRenderer.enabled = true;
+			if(actorRenderer) actorRenderer.enabled = true;
+			else
+			{
+				SkinnedMeshRenderer skinnedMeshRenderer = actor.GetComponentInChildren<SkinnedMeshRenderer>();
+				skinnedMeshRenderer.enabled = true;
+			}
 		}
 
 		public static void HideActor(uid clientID,in IntPtr actorPtr)
 		{
+			return;
+#pragma warning disable CS0162 // Unreachable code detected
 			GameObject actor = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
 
 			Renderer actorRenderer = actor.GetComponent<Renderer>();
-			//actorRenderer.enabled = false;
+			if(actorRenderer) actorRenderer.enabled = false;
+			else
+			{
+				SkinnedMeshRenderer skinnedMeshRenderer = actor.GetComponentInChildren<SkinnedMeshRenderer>();
+				skinnedMeshRenderer.enabled = false;
+			}
+#pragma warning restore CS0162 // Unreachable code detected
 		}
 
 		private static void LogMessageHandler(avs.LogSeverity Severity, string Msg, in IntPtr userData)

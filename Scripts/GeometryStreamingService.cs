@@ -94,7 +94,7 @@ namespace teleport
 			{
 				GCHandle actorHandle = GCHandle.Alloc(actor, GCHandleType.Pinned);
 
-				AddActor(session.GetClientID(), GCHandle.ToIntPtr(actorHandle), actorID, (avs.Transform)actor.transform);
+				AddActor(session.GetClientID(), GCHandle.ToIntPtr(actorHandle), actorID, avs.Transform.FromGlobalUnityTransform(actor.transform));
 				gameObjectHandles.Add(actor, actorHandle);
 			}
 
@@ -145,7 +145,7 @@ namespace teleport
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 			foreach (var o in streamedObjects)
 			{
-				uid actorID = geometrySource.FindNode(o.gameObject);
+				uid actorID = geometrySource.FindResourceID(o.gameObject);
 				uids.Add(actorID);
 			}
 			return uids;
@@ -229,9 +229,13 @@ namespace teleport
 			foreach(GameObject node in gameObjectHandles.Keys)
             {
 				GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-				uid nodeID = geometrySource.FindNode(node);
+				uid nodeID = geometrySource.FindResourceID(node);
 
-				if(nodeID == 0) return;
+				if(nodeID == 0)
+				{
+					Debug.LogWarning($"Attempted to update movement of \"{node.name}\", but it has an ID of zero.");
+					continue;
+				}
 
 				updates[i].timestamp = timestamp;
 				updates[i].nodeID = nodeID;

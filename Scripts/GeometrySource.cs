@@ -20,7 +20,8 @@ namespace avs
 		Scene,
 		ShadowMap,
 		Hand,
-		Light
+		Light,
+		Bone
 	};
 
 	public enum PrimitiveMode
@@ -31,16 +32,16 @@ namespace avs
 	//! The standard glTF attribute semantics.
 	public enum AttributeSemantic
 	{
-		//Name			  Accessor Type(s)	Component Type(s)					Description
-		POSITION,		   //"VEC3"			5126 (FLOAT)						XYZ vertex positions
+		//Name				Accessor Type(s)	Component Type(s)					Description
+		POSITION,			//"VEC3"			5126 (FLOAT)						XYZ vertex positions
 		NORMAL,				//"VEC3"			5126 (FLOAT)						Normalized XYZ vertex normals
 		TANGENT,			//"VEC4"			5126 (FLOAT)						XYZW vertex tangents where the w component is a sign value(-1 or +1) indicating handedness of the tangent basis
 		TEXCOORD_0,			//"VEC2"			5126 (FLOAT)
 							//					5121 (UNSIGNED_BYTE) normalized
-							//				  5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the first set
+							//					5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the first set
 		TEXCOORD_1,			//"VEC2"			5126 (FLOAT)
-							//				  5121 (UNSIGNED_BYTE) normalized
-							//				  5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the second set
+							//					5121 (UNSIGNED_BYTE) normalized
+							//					5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the second set
 		COLOR_0,			//"VEC3"
 							//"VEC4"			5126 (FLOAT)
 							//					5121 (UNSIGNED_BYTE) normalized
@@ -50,10 +51,10 @@ namespace avs
 		WEIGHTS_0,			//"VEC4"			5126 (FLOAT)
 							//					5121 (UNSIGNED_BYTE) normalized
 							//					5123 (UNSIGNED_SHORT) normalized
-		TANGENTNORMALXZ,	// VEC2			 UNSIGNED_INT						Simul: implements packed tangent-normal xz. Actually two VEC4's of BYTE.
+		TANGENTNORMALXZ,	//"VEC2"			UNSIGNED_INT						Simul: implements packed tangent-normal xz. Actually two VEC4's of BYTE.
 							//					SIGNED_SHORT
-		COUNT			   //													  This is the number of elements in enum class AttributeSemantic{};
-							//													  Must always be the last element in this enum class. 
+		COUNT				//														This is the number of elements in enum class AttributeSemantic{};
+							//														Must always be the last element in this enum class. 
 	};
 
 	public enum MaterialExtensionIdentifier : UInt32
@@ -147,7 +148,7 @@ namespace avs
 	}
 	public enum RoughnessMode : byte
 	{
-		CONSTANT= 0,
+		CONSTANT = 0,
 		MULTIPLY,
 		MULTIPLY_REVERSE
 	}
@@ -178,12 +179,18 @@ namespace avs
 	public struct Node
 	{
 		public Transform transform;
-		public uid dataID;
 		public NodeDataType dataType;
+		public uid parentID;
+		public uid dataID;
+		public uid skinID;
+
 		public Vector4 lightColour;
 		public Vector3 lightDirection;
 		public float lightRadius;
 		public byte lightType;
+
+		public UInt64 animationAmount;
+		public uid[] animationIDs;
 
 		public UInt64 materialAmount;
 		public uid[] materialIDs;
@@ -208,6 +215,17 @@ namespace avs
 		public Int64 bufferAmount;
 		public uid[] bufferIDs;
 		public GeometryBuffer[] buffers;
+	}
+
+	public struct Skin
+	{
+		public Int64 bindMatrixAmount;
+		public avs.Mat4x4[] inverseBindMatrices;
+
+		public Int64 jointAmount;
+		public uid[] jointIDs;
+
+		public Transform rootTransform;
 	}
 
 	public struct Texture
@@ -265,8 +283,8 @@ namespace teleport
 		//Meta data on a resource loaded from disk.
 		private struct LoadedResource
 		{
-			public uid oldID;		//ID of the resource as it was loaded from disk; needs to be replaced.
-			public IntPtr guid;		//ID string of the asset that this resource relates to.
+			public uid oldID; //ID of the resource as it was loaded from disk; needs to be replaced.
+			public IntPtr guid; //ID string of the asset that this resource relates to.
 			public Int64 lastModified;
 		}
 
@@ -297,7 +315,9 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreNode(uid id, avs.Node node);
 		[DllImport("SimulCasterServer")]
-		private static extern void StoreMesh(   uid id,
+		private static extern void StoreSkin(uid id, avs.Skin skin);
+		[DllImport("SimulCasterServer")]
+		private static extern void StoreMesh(uid id,
 												[MarshalAs(UnmanagedType.BStr)] string guid,
 												Int64 lastModified,
 												[MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(MeshMarshaler))] avs.Mesh mesh,
@@ -333,22 +353,22 @@ namespace teleport
 		public string compressedTexturesFolderPath;
 		// <GameObject, ID of extracted data in native plug-in>
 		private readonly Dictionary<UnityEngine.Object, uid> processedResources = new Dictionary<UnityEngine.Object, uid>();
-	
+
 		private bool isAwake = false;
-		private static GeometrySource geometrySource=null;
+		private static GeometrySource geometrySource = null;
 		// We always store the settings in this path:
 		public const string k_GeometrySourcePath = "TeleportVR/GeometrySource";
 		public const string k_GeometryFilename = "GeometrySource";
 		public static GeometrySource GetGeometrySource()
 		{
-			if (geometrySource == null)
+			if(geometrySource == null)
 				geometrySource = Resources.Load<GeometrySource>(k_GeometrySourcePath + "/" + k_GeometryFilename);
 #if UNITY_EDITOR
-			if (geometrySource == null)
+			if(geometrySource == null)
 			{
 				geometrySource = CreateInstance<GeometrySource>();
 				TeleportSettings.EnsureAssetPath("Assets/Resources/" + k_GeometrySourcePath);
-				string assetPath= "Assets/Resources/" + k_GeometrySourcePath + "/"+ k_GeometryFilename+".asset";
+				string assetPath = "Assets/Resources/" + k_GeometrySourcePath + "/" + k_GeometryFilename + ".asset";
 				AssetDatabase.CreateAsset(geometrySource, assetPath);
 				AssetDatabase.SaveAssets();
 				ClearGeometryStore();
@@ -373,7 +393,7 @@ namespace teleport
 				for(int i = 0; i < processedResources_keys.Length; i++)
 				{
 					processedResources[processedResources_keys[i]] = processedResources_values[i];
-					Debug.Log("Restoring resource " + processedResources_values[i] );// ;
+					Debug.Log("Restoring resource " + processedResources_values[i]);// ;
 				}
 			}
 		}
@@ -411,7 +431,7 @@ namespace teleport
 
 		public void LoadFromDisk()
 		{
-		// This is PRESUMABLY necessary, or we'll have a list of invalid uids...
+			// This is PRESUMABLY necessary, or we'll have a list of invalid uids...
 			processedResources.Clear();
 			//Load data from files.
 			LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 materialAmount, out IntPtr loadedMaterials);
@@ -437,44 +457,62 @@ namespace teleport
 			ClearGeometryStore();
 		}
 
-		public uid FindNode(GameObject node)
+		public uid FindResourceID(UnityEngine.Object resource)
 		{
-			if (!node)
-				return 0;
-			processedResources.TryGetValue(node, out uid nodeID);
+			if(!resource) return 0;
+
+			processedResources.TryGetValue(resource, out uid nodeID);
 			return nodeID;
 		}
+
+		public UnityEngine.Object FindResource(uid nodeID)
+		{
+			if(nodeID == 0) return null;
+
+			return processedResources.FirstOrDefault(x => x.Value == nodeID).Key;
+		}
+
 		public uid AddNode(GameObject node, bool forceUpdate = false)
 		{
-			if(!node)
-				return 0;
+			if(!node) return 0;
 
 			processedResources.TryGetValue(node, out uid nodeID);
 
 			if(forceUpdate || nodeID == 0)
 			{
-				MeshFilter meshFilter = node.GetComponent<MeshFilter>();
+				SkinnedMeshRenderer skinnedMeshRenderer = node.GetComponentInChildren<SkinnedMeshRenderer>();
+				MeshFilter meshFilter = node.GetComponentInChildren<MeshFilter>();
+				Light light = node.GetComponentInChildren<Light>();
 
-				if(meshFilter != null)
+				if(skinnedMeshRenderer)
+				{
+					//If the child count is zero, then this is just a child node holding the SkinnedMeshRenderer.
+					if(skinnedMeshRenderer.enabled && node.transform.childCount != 0)
+					{
+						uid skinID = AddSkin(skinnedMeshRenderer);
+
+						Animator animator = node.GetComponentInChildren<Animator>();
+						uid[] animationIDs = (animator ? AnimationExtractor.AddAnimations(animator) : null);
+
+						nodeID = AddMeshNode(node, skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, skinID, animationIDs, nodeID, forceUpdate);
+					}
+				}
+				else if(meshFilter)
 				{
 					//Only stream mesh nodes that have their mesh renderer enabled.
 					MeshRenderer meshRenderer = node.GetComponent<MeshRenderer>();
 					if(meshRenderer && meshRenderer.enabled)
 					{
-						nodeID = AddMeshNode(meshFilter, nodeID, forceUpdate);
+						nodeID = AddMeshNode(node, meshFilter.sharedMesh, meshRenderer.sharedMaterials, 0, null, nodeID, forceUpdate);
 					}
+				}
+				else if(light && light.isActiveAndEnabled)
+				{
+					nodeID = AddLightNode(light, nodeID, forceUpdate);
 				}
 				else
 				{
-					Light light= node.GetComponent<Light>();
-					if (light&&light.isActiveAndEnabled)
-					{
-						nodeID = AddLightNode(light, nodeID, forceUpdate);
-					}
-					else
-					{
-						Debug.LogWarning(node.name + " was marked as streamable, but has no streamable component attached.");
-					}
+					Debug.LogWarning(node.name + " was marked as streamable, but has no streamable component attached.");
 				}
 			}
 
@@ -499,10 +537,9 @@ namespace teleport
 		}
 		public uid AddLight(Light light)
 		{
-			if (!light)
-				return 0;
+			if(!light) return 0;
 
-			if (!processedResources.TryGetValue(light, out uid lightID))
+			if(!processedResources.TryGetValue(light, out uid lightID))
 			{
 				lightID = GenerateID();
 				processedResources[light] = lightID;
@@ -518,7 +555,7 @@ namespace teleport
 			if(!material)
 				return 0;
 			processedResources.TryGetValue(material, out uid materialID);
-			if (forceUpdate || materialID == 0)
+			if(forceUpdate || materialID == 0)
 			{
 				avs.Material extractedMaterial = new avs.Material();
 				extractedMaterial.name = Marshal.StringToBSTR(material.name);
@@ -548,7 +585,7 @@ namespace teleport
 				extractedMaterial.occlusionTexture.strength = material.GetFloat("_OcclusionStrength");
 
 				//Extract emission properties only if emission is active.
-				if (!material.globalIlluminationFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack))
+				if(!material.globalIlluminationFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack))
 				{
 					Texture emission = material.GetTexture("_EmissionMap");
 					extractedMaterial.emissiveTexture.index = AddTexture(emission);
@@ -563,7 +600,7 @@ namespace teleport
 #if UNITY_EDITOR
 				AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long _);
 
-				if (materialID == 0)
+				if(materialID == 0)
 					materialID = GenerateID();
 				processedResources[material] = materialID;
 				StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)), extractedMaterial);
@@ -574,12 +611,12 @@ namespace teleport
 			{
 				Debug.Log("Already processed material " + materialID + ": " + material.name);
 				// But do we REALLY have it?
-				if (!IsMaterialStored(materialID))
+				if(!IsMaterialStored(materialID))
 				{
 					Debug.LogError("But material " + materialID + " is not in the store!");
 				}
 			}
-			
+
 
 			return materialID;
 		}
@@ -607,8 +644,8 @@ namespace teleport
 
 			string basisFileLocation = "";
 			//Basis Universal compression won't be used if the file location is left empty.
-			TeleportSettings teleportSettings=TeleportSettings.GetOrCreateSettings();
-			if (teleportSettings.casterSettings.useCompressedTextures)
+			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+			if(teleportSettings.casterSettings.useCompressedTextures)
 			{
 				string folderPath = compressedTexturesFolderPath;
 				//Create directiory if it doesn't exist.
@@ -620,13 +657,40 @@ namespace teleport
 				basisFileLocation = textureAssetPath; //Use editor file location as unique name; this won't work out of the Unity Editor.
 				basisFileLocation = basisFileLocation.Replace("/", "#"); //Replace forward slashes with hashes.
 				int idx = basisFileLocation.LastIndexOf('.');
-				if(idx>=0)
-					basisFileLocation = basisFileLocation.Remove(idx); //Remove file extension.
+				if(idx >= 0) basisFileLocation = basisFileLocation.Remove(idx); //Remove file extension.
 				basisFileLocation = folderPath + basisFileLocation + ".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
 			}
-			
+
 			StoreTexture(textureID, guid, lastModified, textureData, basisFileLocation);
 #endif
+		}
+
+		//Extract bone and add to processed resources; will also add parent and child bones.
+		//	bone : The bone we are extracting.
+		//	boneList : Array of bones; usually taken from skinned mesh renderer.
+		public uid AddBone(Transform bone, Transform[] boneList)
+		{
+			processedResources.TryGetValue(bone, out uid boneID);
+			if(boneID != 0 || !boneList.Contains(bone)) return boneID;
+
+			boneID = GenerateID();
+			processedResources[bone] = boneID;
+
+			avs.Node boneNode = new avs.Node();
+			boneNode.parentID = AddBone(bone.parent, boneList);
+			boneNode.transform = avs.Transform.FromLocalUnityTransform(bone);
+			boneNode.dataType = avs.NodeDataType.Bone;
+
+			boneNode.childAmount = (ulong)bone.childCount;
+			boneNode.childIDs = new uid[boneNode.childAmount];
+
+			for(int i = 0; i < bone.childCount; i++)
+			{
+				boneNode.childIDs[i] = AddBone(bone.GetChild(i), boneList);
+			}
+
+			StoreNode(boneID, boneNode);
+			return boneID;
 		}
 
 		public void CompressTextures()
@@ -638,16 +702,17 @@ namespace teleport
 			{
 				string compressionMessage = GetMessageForNextCompressedTexture(i, totalTexturesToCompress);
 
-				bool cancelled=UnityEditor.EditorUtility.DisplayCancelableProgressBar("Compressing Textures", compressionMessage, i / (float)totalTexturesToCompress);
+				bool cancelled = UnityEditor.EditorUtility.DisplayCancelableProgressBar("Compressing Textures", compressionMessage, i / (float)totalTexturesToCompress);
+				if(cancelled) break;
+
 				CompressNextTexture();
-				if (cancelled)
-					break;
 			}
 
 			UnityEditor.EditorUtility.ClearProgressBar();
 #endif
 		}
-		private uid AddLightNode(Light light,uid oldID,bool forceUpdate=false)
+
+		private uid AddLightNode(Light light, uid oldID, bool forceUpdate = false)
 		{
 			GameObject node = light.gameObject;
 			avs.Node extractedNode = new avs.Node();
@@ -663,9 +728,9 @@ namespace teleport
 			extractedNode.lightType = (byte)light.type;
 			extractedNode.lightRadius = light.range / 5.0F;
 			// For Unity, lights point along the X-axis, so:
-			extractedNode.lightDirection = new avs.Vector3(0,0,1.0F);
+			extractedNode.lightDirection = new avs.Vector3(0, 0, 1.0F);
 			//Can't create a node with no data.
-			if (extractedNode.dataID == 0)
+			if(extractedNode.dataID == 0)
 			{
 				Debug.LogError("Failed to extract light data from game object: " + node.name);
 				return 0;
@@ -673,11 +738,11 @@ namespace teleport
 
 			//Extract children of node, through transform hierarchy.
 			List<uid> childIDs = new List<uid>();
-			for (int i = 0; i < node.transform.childCount; i++)
+			for(int i = 0; i < node.transform.childCount; i++)
 			{
 				uid childID = AddNode(node.transform.GetChild(i).gameObject);
 
-				if (childID == 0)
+				if(childID == 0)
 					Debug.LogWarning("Received 0 for ID of child on game object: " + node.name);
 				else
 					childIDs.Add(childID);
@@ -699,13 +764,13 @@ namespace teleport
 
 			return nodeID;
 		}
-		private uid AddMeshNode(MeshFilter meshFilter, uid oldID, bool forceUpdate = false)
+
+		private uid AddMeshNode(GameObject node, Mesh mesh, Material[] materials, uid skinID, uid[] animationIDs, uid oldID, bool forceUpdate = false)
 		{
-			GameObject node = meshFilter.gameObject;
 			avs.Node extractedNode = new avs.Node();
 
 			//Extract mesh used on node.
-			extractedNode.dataID = AddMesh(meshFilter.sharedMesh);
+			extractedNode.dataID = AddMesh(mesh);
 			extractedNode.dataType = avs.NodeDataType.Mesh;
 
 			//Can't create a node with no data.
@@ -715,56 +780,96 @@ namespace teleport
 				return 0;
 			}
 
+			uid nodeID = oldID == 0 ? GenerateID() : oldID;
+			processedResources[node] = nodeID;
+
+			extractedNode.skinID = skinID;
+
+			if(animationIDs != null)
+			{
+				extractedNode.animationAmount = (ulong)animationIDs.Length;
+				extractedNode.animationIDs = animationIDs;
+			}
+
 			//Extract materials used on node.
 			List<uid> materialIDs = new List<uid>();
-			foreach(Material material in node.GetComponent<MeshRenderer>().sharedMaterials)
+			foreach(Material material in materials)
 			{
 				uid materialID = AddMaterial(material, forceUpdate);
 
-				if(materialID == 0)
-					Debug.LogWarning("Received 0 for ID of material on game object: " + node.name);
-				else
-					materialIDs.Add(materialID);
+				if(materialID == 0) Debug.LogWarning("Received 0 for ID of material on game object: " + node.name);
+				else materialIDs.Add(materialID);
 			}
 			extractedNode.materialAmount = (ulong)materialIDs.Count;
 			extractedNode.materialIDs = materialIDs.ToArray();
 
-			for(int i=0;i<extractedNode.materialIDs.Length;i++)
+			for(int i = 0; i < extractedNode.materialIDs.Length; i++)
 			{
-				if(!IsMaterialStored(extractedNode.materialIDs[i]))
-					Debug.LogError("AddMeshNode storing material "+ extractedNode.materialIDs[i]+" which is not there.");
+				if(!IsMaterialStored(extractedNode.materialIDs[i])) Debug.LogError("AddMeshNode storing material " + extractedNode.materialIDs[i] + " which is not there.");
 			}
+
+			if(node.transform.parent) extractedNode.parentID = AddNode(node.transform.parent.gameObject);
+
 			//Extract children of node, through transform hierarchy.
 			List<uid> childIDs = new List<uid>();
 			for(int i = 0; i < node.transform.childCount; i++)
 			{
 				uid childID = AddNode(node.transform.GetChild(i).gameObject);
 
-				if(childID == 0)
-					Debug.LogWarning("Received 0 for ID of child on game object: " + node.name);
-				else
-					childIDs.Add(childID);
+				if(childID == 0) Debug.LogWarning("Received 0 for ID of child on game object: " + node.name);
+				else childIDs.Add(childID);
 			}
 			extractedNode.childAmount = (ulong)childIDs.Count;
 			extractedNode.childIDs = childIDs.ToArray();
 
-			extractedNode.transform = new avs.Transform
-			{
-				position = node.transform.localPosition,
-				rotation = node.transform.localRotation,
-				scale = node.transform.localScale
-			};
+			extractedNode.transform = avs.Transform.FromLocalUnityTransform(node.transform);
 
 			//Store extracted node.
-			uid nodeID = oldID == 0 ? GenerateID() : oldID;
-			processedResources[node] = nodeID;
 			StoreNode(nodeID, extractedNode);
 
 			return nodeID;
 		}
-		private void ExtractLightData(Light light,uid lightID)
+
+		private void ExtractLightData(Light light, uid lightID)
+		{ }
+
+		private uid AddSkin(SkinnedMeshRenderer skinnedMeshRenderer)
 		{
+			uid skinID = GenerateID();
+			avs.Skin skin = new avs.Skin();
+
+			skin.inverseBindMatrices = ExtractInverseBindMatrices(skinnedMeshRenderer);
+			skin.bindMatrixAmount = skin.inverseBindMatrices.Count();
+
+			List<uid> jointIDs = new List<uid>();
+			foreach(Transform bone in skinnedMeshRenderer.bones)
+			{
+				jointIDs.Add(AddBone(bone, skinnedMeshRenderer.bones));
+			}
+
+			skin.jointIDs = jointIDs.ToArray();
+			skin.jointAmount = jointIDs.Count;
+
+			skin.rootTransform = avs.Transform.FromGlobalUnityTransform(skinnedMeshRenderer.rootBone.parent);
+
+			StoreSkin(skinID, skin);
+			return skinID;
 		}
+
+		private avs.Mat4x4[] ExtractInverseBindMatrices(SkinnedMeshRenderer skinnedMeshRenderer)
+		{
+			Mesh mesh = skinnedMeshRenderer.sharedMesh;
+
+			avs.Mat4x4[] bindMatrices = new avs.Mat4x4[mesh.bindposes.Length];
+
+			for(int i = 0; i < mesh.bindposes.Length; i++)
+			{
+				bindMatrices[i] = mesh.bindposes[i];
+			}
+
+			return bindMatrices;
+		}
+
 		private void ExtractMeshData(avs.AxesStandard extractToBasis, Mesh mesh, uid meshID)
 		{
 			avs.PrimitiveArray[] primitives = new avs.PrimitiveArray[mesh.subMeshCount];
@@ -777,6 +882,15 @@ namespace teleport
 			uid tangentAccessorID = GenerateID();
 			uid uv0AccessorID = GenerateID();
 			uid uv2AccessorID = mesh.uv2.Length != 0 ? GenerateID() : 0;
+			uid jointAccessorID = 0;
+			uid weightAccessorID = 0;
+
+			//Generate IDs for joint and weight accessors if the model has bones.
+			if(mesh.boneWeights.Length != 0)
+			{
+				jointAccessorID = GenerateID();
+				weightAccessorID = GenerateID();
+			}
 
 			//Position Buffer:
 			{
@@ -923,12 +1037,95 @@ namespace teleport
 				}
 			}
 
+			//Joint and Weight Buffers
+			if(mesh.boneWeights.Length != 0)
+			{
+				//Four bytes per int * four ints per BoneWeight.
+				int jointStride = 4 * 4;
+				//Four bytes per float * four floats per boneweight
+				int weightStride = 4 * 4;
+
+				///Buffers
+				avs.GeometryBuffer jointBuffer = new avs.GeometryBuffer();
+				jointBuffer.byteLength = (ulong)(mesh.boneWeights.Length * jointStride);
+				jointBuffer.data = new byte[jointBuffer.byteLength];
+
+				avs.GeometryBuffer weightBuffer = new avs.GeometryBuffer();
+				weightBuffer.byteLength = (ulong)(mesh.boneWeights.Length * weightStride);
+				weightBuffer.data = new byte[weightBuffer.byteLength];
+
+				for(int i = 0; i < mesh.boneWeights.Length; i++)
+				{
+					BoneWeight boneWeight = mesh.boneWeights[i];
+
+					BitConverter.GetBytes((float)boneWeight.boneIndex0).CopyTo(jointBuffer.data, i * jointStride + 00 * 4);
+					BitConverter.GetBytes((float)boneWeight.boneIndex1).CopyTo(jointBuffer.data, i * jointStride + 01 * 4);
+					BitConverter.GetBytes((float)boneWeight.boneIndex2).CopyTo(jointBuffer.data, i * jointStride + 02 * 4);
+					BitConverter.GetBytes((float)boneWeight.boneIndex3).CopyTo(jointBuffer.data, i * jointStride + 03 * 4);
+
+					BitConverter.GetBytes(boneWeight.weight0).CopyTo(weightBuffer.data, i * weightStride + 00 * 4);
+					BitConverter.GetBytes(boneWeight.weight1).CopyTo(weightBuffer.data, i * weightStride + 01 * 4);
+					BitConverter.GetBytes(boneWeight.weight2).CopyTo(weightBuffer.data, i * weightStride + 02 * 4);
+					BitConverter.GetBytes(boneWeight.weight3).CopyTo(weightBuffer.data, i * weightStride + 03 * 4);
+				}
+
+				uid jointBufferID = GenerateID();
+				uid weightBufferID = GenerateID();
+				buffers.Add(jointBufferID, jointBuffer);
+				buffers.Add(weightBufferID, weightBuffer);
+
+				///Buffer Views
+				avs.BufferView jointBufferView = new avs.BufferView
+				{
+					buffer = jointBufferID,
+					byteOffset = 0,
+					byteLength = jointBuffer.byteLength,
+					byteStride = (ulong)jointStride
+				};
+
+				avs.BufferView weightBufferView = new avs.BufferView
+				{
+					buffer = weightBufferID,
+					byteOffset = 0,
+					byteLength = weightBuffer.byteLength,
+					byteStride = (ulong)weightStride
+				};
+
+				uid jointBufferViewID = GenerateID();
+				uid weightBufferViewID = GenerateID();
+				bufferViews.Add(jointBufferViewID, jointBufferView);
+				bufferViews.Add(weightBufferViewID, weightBufferView);
+
+				///Accessors
+				avs.Accessor jointAccessor = new avs.Accessor
+				{
+					type = avs.Accessor.DataType.VEC4,
+					componentType = avs.Accessor.ComponentType.INT,
+					count = (ulong)mesh.boneWeights.Length,
+					bufferView = jointBufferViewID,
+					byteOffset = 0
+				};
+
+				avs.Accessor weightAccessor = new avs.Accessor
+				{
+					type = avs.Accessor.DataType.VEC4,
+					componentType = avs.Accessor.ComponentType.FLOAT,
+					count = (ulong)mesh.boneWeights.Length,
+					bufferView = weightBufferViewID,
+					byteOffset = 0
+				};
+
+				accessors.Add(jointAccessorID, jointAccessor);
+				accessors.Add(weightAccessorID, weightAccessor);
+			}
+
 			//Index Buffer
 			CreateIndexBufferAndView(mesh.triangles, buffers, bufferViews, out uid indexViewID);
 
+			//Create Attributes
 			for(int i = 0; i < primitives.Length; i++)
 			{
-				primitives[i].attributeCount = (ulong)(mesh.uv2.Length != 0 ? 5 : 4);
+				primitives[i].attributeCount = (ulong)(4 + (mesh.uv2.Length != 0 ? 1 : 0) + (mesh.boneWeights.Length != 0 ? 2 : 0));
 				primitives[i].attributes = new avs.Attribute[primitives[i].attributeCount];
 				primitives[i].primitiveMode = avs.PrimitiveMode.TRIANGLES;
 
@@ -936,8 +1133,21 @@ namespace teleport
 				primitives[i].attributes[1] = new avs.Attribute { accessor = normalAccessorID, semantic = avs.AttributeSemantic.NORMAL };
 				primitives[i].attributes[2] = new avs.Attribute { accessor = tangentAccessorID, semantic = avs.AttributeSemantic.TANGENT };
 				primitives[i].attributes[3] = new avs.Attribute { accessor = uv0AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_0 };
+
+				int additionalAttributes = 0;
 				if(mesh.uv2.Length != 0)
-					primitives[i].attributes[4] = new avs.Attribute { accessor = uv2AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_1 };
+				{
+					primitives[i].attributes[4 + additionalAttributes] = new avs.Attribute { accessor = uv2AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_1 };
+					additionalAttributes += 1;
+				}
+
+				if(mesh.boneWeights.Length != 0)
+				{
+					primitives[i].attributes[4 + additionalAttributes] = new avs.Attribute { accessor = jointAccessorID, semantic = avs.AttributeSemantic.JOINTS_0 };
+					primitives[i].attributes[5 + additionalAttributes] = new avs.Attribute { accessor = weightAccessorID, semantic = avs.AttributeSemantic.WEIGHTS_0 };
+					additionalAttributes += 2;
+				}
+
 				primitives[i].indices_accessor = GenerateID();
 				accessors.Add
 				(
@@ -945,10 +1155,10 @@ namespace teleport
 					new avs.Accessor
 					{
 						type = avs.Accessor.DataType.SCALAR,
-						componentType = (mesh.indexFormat == UnityEngine.Rendering.IndexFormat.UInt16)?avs.Accessor.ComponentType.USHORT: avs.Accessor.ComponentType.UINT,
+						componentType = (mesh.indexFormat == UnityEngine.Rendering.IndexFormat.UInt16) ? avs.Accessor.ComponentType.USHORT : avs.Accessor.ComponentType.UINT,
 						count = (ulong)mesh.GetIndexCount(i),
 						bufferView = indexViewID,
-						byteOffset =(UInt64)mesh.GetIndexStart(i)*(mesh.indexFormat==UnityEngine.Rendering.IndexFormat.UInt16? (UInt64)2 : (UInt64)4)
+						byteOffset = (UInt64)mesh.GetIndexStart(i) * (mesh.indexFormat == UnityEngine.Rendering.IndexFormat.UInt16 ? (UInt64)2 : (UInt64)4)
 					}
 				);
 			}
@@ -995,10 +1205,10 @@ namespace teleport
 
 			//Get byte data from each int, and copy into buffer.
 			//We are changing the indexes into counter-clockwise winding, as it is what the Simul rendering SDK uses.
-			for(int i = 0; i < (data.Length ); i++)
+			for(int i = 0; i < (data.Length); i++)
 			{
 				BitConverter.GetBytes((ushort)data[i]).CopyTo(newBuffer.data, (i) * stride);
-		//		BitConverter.GetBytes((ushort)data[data.Length - 1 - i]).CopyTo(newBuffer.data, i * stride);
+				//BitConverter.GetBytes((ushort)data[data.Length - 1 - i]).CopyTo(newBuffer.data, i * stride);
 			}
 
 			uid bufferID = GenerateID();
@@ -1251,10 +1461,10 @@ namespace teleport
 						Debug.LogError("Passed texture was unsupported type: " + texture.GetType() + "!");
 						return 0;
 				}
-				
+
 				textureID = GenerateID();
 				processedResources[texture] = textureID;
-				texturesWaitingForExtraction.Add(new TextureExtractionData{id = textureID, unityTexture = texture, textureData = extractedTexture});
+				texturesWaitingForExtraction.Add(new TextureExtractionData { id = textureID, unityTexture = texture, textureData = extractedTexture });
 			}
 
 			return textureID;
@@ -1299,7 +1509,7 @@ namespace teleport
 						uid newID = GenerateID();
 
 						reaffirmedResources.Add(new ReaffirmedResource { oldID = metaResource.oldID, newID = newID });
-						Debug.Log("Reaffirmed resource was "+ metaResource.oldID + " now " + newID + " loaded from disk, "+ assetPath);
+						Debug.Log("Reaffirmed resource was " + metaResource.oldID + " now " + newID + " loaded from disk, " + assetPath);
 						// RK: I'm going to say it's WAY to early to put this in here when we can't be sure that the actual resource will be loaded!
 						processedResources[asset] = newID;
 					}
