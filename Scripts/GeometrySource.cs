@@ -1119,8 +1119,11 @@ namespace teleport
 				accessors.Add(weightAccessorID, weightAccessor);
 			}
 
+			//Oculus Quest OVR rendering uses USHORTs for non-instanced meshes.
+			int indexBufferStride = (extractToBasis == avs.AxesStandard.GlStyle || mesh.indexFormat == UnityEngine.Rendering.IndexFormat.UInt16) ? 2 : 4;
+
 			//Index Buffer
-			CreateIndexBufferAndView(mesh.triangles, buffers, bufferViews, out uid indexViewID);
+			CreateIndexBufferAndView(indexBufferStride, mesh.triangles, buffers, bufferViews, out uid indexViewID);
 
 			//Create Attributes
 			for(int i = 0; i < primitives.Length; i++)
@@ -1155,10 +1158,10 @@ namespace teleport
 					new avs.Accessor
 					{
 						type = avs.Accessor.DataType.SCALAR,
-						componentType = (mesh.indexFormat == UnityEngine.Rendering.IndexFormat.UInt16) ? avs.Accessor.ComponentType.USHORT : avs.Accessor.ComponentType.UINT,
-						count = (ulong)mesh.GetIndexCount(i),
+						componentType = (indexBufferStride == 2) ? avs.Accessor.ComponentType.USHORT : avs.Accessor.ComponentType.UINT,
+						count = mesh.GetIndexCount(i),
 						bufferView = indexViewID,
-						byteOffset = (UInt64)mesh.GetIndexStart(i) * (mesh.indexFormat == UnityEngine.Rendering.IndexFormat.UInt16 ? (UInt64)2 : (UInt64)4)
+						byteOffset = (UInt64)mesh.GetIndexStart(i) * (UInt64)indexBufferStride
 					}
 				);
 			}
@@ -1193,22 +1196,29 @@ namespace teleport
 #endif
 		}
 
-		private void CreateIndexBufferAndView(in int[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, out uid bufferViewID)
+		private void CreateIndexBufferAndView(int stride, in int[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, out uid bufferViewID)
 		{
-			//Two bytes per unsigned short.
-			//Right now the Oculus SDK expects USHORT indexes, if the object/surface is not instanced. 
-			int stride = 2;
-
 			avs.GeometryBuffer newBuffer = new avs.GeometryBuffer();
 			newBuffer.byteLength = (ulong)(data.Length * stride);
 			newBuffer.data = new byte[newBuffer.byteLength];
 
-			//Get byte data from each int, and copy into buffer.
-			//We are changing the indexes into counter-clockwise winding, as it is what the Simul rendering SDK uses.
-			for(int i = 0; i < (data.Length); i++)
+			//Convert to ushort for stride 2.
+			if(stride == 2)
 			{
-				BitConverter.GetBytes((ushort)data[i]).CopyTo(newBuffer.data, (i) * stride);
-				//BitConverter.GetBytes((ushort)data[data.Length - 1 - i]).CopyTo(newBuffer.data, i * stride);
+				for(int i = 0; i < data.Length; i++)
+				{
+					BitConverter.GetBytes((ushort)data[i]).CopyTo(newBuffer.data, i * stride);
+				}
+			}
+			//Convert to uint for stride 4.
+			else
+			{
+				if(stride != 4) Debug.LogError($"CreateIndexBufferAndView(...) received invalid stride of {stride}! Extracting as uint!");
+
+				for(int i = 0; i < data.Length; i++)
+				{
+					BitConverter.GetBytes((uint)data[i]).CopyTo(newBuffer.data, i * stride);
+				}
 			}
 
 			uid bufferID = GenerateID();
