@@ -113,7 +113,7 @@ namespace teleport
 			clientFont.normal.textColor = Color.white;
 
 			// Make sure we have a Teleport Render Pipeline, or we won't get a video stream.
-			if(UnityEngine.Rendering.RenderPipelineManager.currentPipeline == null || UnityEngine.Rendering.RenderPipelineManager.currentPipeline.GetType() != typeof(TeleportRenderPipeline))
+			if(UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == null || UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline.GetType() != typeof(TeleportRenderPipelineAsset))
 			{
 				title += ": Current rendering pipeline is not TeleportRenderPipeline!";
 				Debug.LogError(title);
