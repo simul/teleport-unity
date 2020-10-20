@@ -272,6 +272,32 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
+		public void EncodeShadowmaps(ScriptableRenderContext context, Camera camera,CullingResults cullingResults, Teleport_SceneCaptureComponent sceneCaptureComponent, TeleportRenderPipeline.LightingOrder lightingOrder, TeleportLighting teleportLighting, Vector2Int StartOffset)
+		{
+			// For each shadowcasting light, write the shadowmap to the video.
+			Vector2Int CurrentOffset= StartOffset;
+			if (lightingOrder.MainLightIndex< cullingResults.visibleLights.Length)
+			{
+				var l=cullingResults.visibleLights[lightingOrder.MainLightIndex].light;
+				if (TeleportLighting.perFrameLightProperties.ContainsKey(l))
+				{
+					var perFrame = TeleportLighting.perFrameLightProperties[l];
+					perFrame.sizeOnTexture = 64;
+					var viewport = new Rect(CurrentOffset.x, CurrentOffset.y, perFrame.sizeOnTexture, perFrame.sizeOnTexture);
+					var buffer = new CommandBuffer();
+					depthMaterial.SetTexture("DepthTexture", perFrame.shadowAtlasTexture);
+					buffer.name = "Shadowmap to Video";
+					buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture);
+					buffer.SetViewport(viewport);
+					buffer.BeginSample(buffer.name);
+					buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 1, MeshTopology.Triangles, 6);
+					buffer.EndSample(buffer.name);
+					context.ExecuteCommandBuffer(buffer);
+					buffer.Release();
+					perFrame.texturePosition = CurrentOffset;
+	}
+			}
+		}
 	}
 
 	public partial class TeleportCameraRenderer
@@ -335,12 +361,12 @@ namespace teleport
 		/// <summary>Clear the background based on the clearFlags.</summary>
 		void Clear(ScriptableRenderContext context, Camera camera)
 		{
-		/*	cullingGroup.targetCamera = camera;
-			boundingSpheres[0].position = camera.transform.position;
-			boundingSpheres[0].radius = 10.0F;
-			cullingGroup.SetBoundingSpheres(boundingSpheres);
-			cullingGroup.SetBoundingSphereCount(1);
-			cullingGroup.onStateChanged = CullingEvent;*/
+			/*	cullingGroup.targetCamera = camera;
+				boundingSpheres[0].position = camera.transform.position;
+				boundingSpheres[0].radius = 10.0F;
+				cullingGroup.SetBoundingSpheres(boundingSpheres);
+				cullingGroup.SetBoundingSphereCount(1);
+				cullingGroup.onStateChanged = CullingEvent;*/
 			if (camera.clearFlags != CameraClearFlags.Nothing)
 			{
 				var buffer = new CommandBuffer { name = camera.name + " Teleport BeginCamera" };
@@ -355,32 +381,38 @@ namespace teleport
 				}
 			}
 		}
-
+		
 		bool Cull(ScriptableRenderContext context, Camera camera, out CullingResults cullingResults)
 		{
 			if (camera.TryGetCullingParameters(out ScriptableCullingParameters p))
 			{
 				p.shadowDistance = QualitySettings.shadowDistance;//renderSettings.maxShadowDistance;
 				p.shadowDistance = Mathf.Min(p.shadowDistance, camera.farClipPlane);
+				int layer = 6;
 				if (SessionComponent)
+					layer = SessionComponent.Layer;
+				var SceneCaptureComponent = camera.gameObject.GetComponent<Teleport_SceneCaptureComponent>();
+				if (SceneCaptureComponent != null&&SessionComponent!=null)
 				{
+					// How do we use cullingmask to ensure that everything is drawn EXCEPT this client's local objects?
+					p.cullingMask = (uint)camera.cullingMask & (uint)(~(1 << layer));
+					// set the mask to equal only the layer for this client.
+					// Every object EXCEPT this client's objects will have this bit set.
 					List<Collider> colliders = SessionComponent.GeometryStreamingService.GetStreamedObjects();
+					Dictionary<GameObject, int> storedLayers=new Dictionary<GameObject, int>();
 					foreach (var c in colliders)
 					{
-						Renderer actorRenderer = c.gameObject.GetComponent<Renderer>();
-						if (actorRenderer)
-							actorRenderer.enabled = false;
+						storedLayers[c.gameObject]=c.gameObject.layer;
+						c.gameObject.layer= layer;
 					}
 					cullingResults = context.Cull(ref p);
 					foreach (var c in colliders)
 					{
-						Renderer actorRenderer = c.gameObject.GetComponent<Renderer>();
-						if (actorRenderer)
-							actorRenderer.enabled = true;
+						c.gameObject.layer=storedLayers[c.gameObject] ;
 					}
 				}
 				else
-				cullingResults = context.Cull(ref p);
+					cullingResults = context.Cull(ref p);
 				return true;
 			}
 			cullingResults = new CullingResults();
@@ -700,6 +732,9 @@ namespace teleport
 				DrawCubemapFace(context, camera, lightingOrder, i);
 			}
 
+			int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
+			var shadowmapOffset = new Vector2Int(3 * faceSize/2, 2 * faceSize+2* Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + Teleport_SceneCaptureComponent.RenderingSceneCapture.diffuseOffset;
+			videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, lightingOrder, teleportLighting, shadowmapOffset);
 			videoEncoding.EncodeTagID(context, camera);
 			context.Submit();
 
@@ -790,6 +825,7 @@ namespace teleport
 			}
 			EndSample(context, samplename);
 			EndCamera(context, camera);
+			camera.transform.rotation = new Quaternion();
 		}
 	}
 }

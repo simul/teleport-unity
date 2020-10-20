@@ -312,6 +312,9 @@ namespace avs
 		public LightType lightType;
 		public Matrix4x4 shadowViewMatrix;
 		public Matrix4x4 shadowProjectionMatrix;
+        public Vector2Int texturePosition;
+        public int textureSize;
+        public uint uid;
 	};
 }
 

@@ -144,11 +144,11 @@ namespace teleport
 			}
 
 			IntPtr ptr;
-			CreateTagDataWarapper(camera, tagDataID, out ptr);
+			CreateTagDataWrapper(camera, tagDataID, out ptr);
 			commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 2, ptr);
 		}
 
-		void CreateTagDataWarapper(Camera camera, UInt32 tagDataID, out IntPtr dataPtr)
+		void CreateTagDataWrapper(Camera camera, UInt32 tagDataID, out IntPtr dataPtr)
 		{
 			var teleportSettings = TeleportSettings.GetOrCreateSettings();
 			if (teleportSettings.casterSettings.usePerspectiveRendering)
@@ -195,31 +195,35 @@ namespace teleport
 		void CreateLightingData(Camera camera, out List<avs.LightData> lightDataList)
 		{
 			lightDataList = new List<avs.LightData>();
-			foreach (var keyVal in TeleportLighting.perFrameLightProperties)
+			// which lights are streamed in this session?
+			var streamedLights=Teleport_SessionComponent.sessions[clientID].GeometryStreamingService.GetStreamedLights();
+			foreach(var l in streamedLights)
 			{
-				var p = keyVal.Value;
-				PerFramePerCameraLightProperties clp;
-
-				// check if this light belongs to this camera
-				if (!p.perFramePerCameraLightProperties.TryGetValue(camera, out clp))
+				var uid=l.Key;
+				var light = l.Value;
+				PerFrameLightProperties perFrameLightProperties;
+				PerFramePerCameraLightProperties perFramePerCameraLightProperties;
+				if (!TeleportLighting.perFrameLightProperties.TryGetValue(light, out perFrameLightProperties))
+					continue;
+				if (!perFrameLightProperties.perFramePerCameraLightProperties.TryGetValue(camera, out perFramePerCameraLightProperties))
 				{
 					continue;
 				}
 
 				var lightData = new avs.LightData();
-				ref var l = ref p.visibleLight;
-				if (l.light == null)
-				{
-					continue;
-				}
+				ref var visibleLight = ref perFrameLightProperties.visibleLight;
+				lightData.uid =(uint)uid;
+				lightData.worldTransform = visibleLight.localToWorldMatrix;
+				lightData.color = new avs.Vector4(visibleLight.light.color.linear.r, visibleLight.light.color.linear.g, visibleLight.light.color.linear.b, visibleLight.light.color.linear.a);
+				lightData.range = visibleLight.range;
+				lightData.spotAngle = visibleLight.spotAngle;
+				lightData.lightType = visibleLight.lightType;
+				lightData.shadowViewMatrix = perFramePerCameraLightProperties.cascades[0].viewMatrix;
+				lightData.shadowProjectionMatrix = perFramePerCameraLightProperties.cascades[0].projectionMatrix;
+				lightData.texturePosition = perFrameLightProperties.texturePosition;
+				lightData.textureSize = perFrameLightProperties.sizeOnTexture;
 				lightData.worldTransform = l.localToWorldMatrix;
-				lightData.color = new avs.Vector4(l.light.color.r, l.light.color.g, l.light.color.b, l.light.color.a);
-				lightData.range = l.range;
-				lightData.spotAngle = l.spotAngle;
 				lightData.lightType = l.lightType;
-				lightData.shadowViewMatrix = clp.cascades[0].viewMatrix;
-				lightData.shadowProjectionMatrix = clp.cascades[0].projectionMatrix;
-
 				lightDataList.Add(lightData);
 			}
 		}
