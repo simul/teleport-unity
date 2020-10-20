@@ -272,6 +272,32 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
+		public void EncodeShadowmaps(ScriptableRenderContext context, Camera camera,CullingResults cullingResults, Teleport_SceneCaptureComponent sceneCaptureComponent, TeleportRenderPipeline.LightingOrder lightingOrder, TeleportLighting teleportLighting, Vector2Int StartOffset)
+		{
+			// For each shadowcasting light, write the shadowmap to the video.
+			Vector2Int CurrentOffset= StartOffset;
+			if (lightingOrder.MainLightIndex< cullingResults.visibleLights.Length)
+			{
+				var l=cullingResults.visibleLights[lightingOrder.MainLightIndex].light;
+				if (TeleportLighting.perFrameLightProperties.ContainsKey(l))
+				{
+					var perFrame = TeleportLighting.perFrameLightProperties[l];
+					perFrame.sizeOnTexture = 64;
+					var viewport = new Rect(CurrentOffset.x, CurrentOffset.y, perFrame.sizeOnTexture, perFrame.sizeOnTexture);
+					var buffer = new CommandBuffer();
+					depthMaterial.SetTexture("DepthTexture", perFrame.shadowAtlasTexture);
+					buffer.name = "Shadowmap to Video";
+					buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture);
+					buffer.SetViewport(viewport);
+					buffer.BeginSample(buffer.name);
+					buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 1, MeshTopology.Triangles, 6);
+					buffer.EndSample(buffer.name);
+					context.ExecuteCommandBuffer(buffer);
+					buffer.Release();
+					perFrame.texturePosition = CurrentOffset;
+	}
+			}
+		}
 	}
 
 	public partial class TeleportCameraRenderer
@@ -687,6 +713,9 @@ namespace teleport
 				DrawCubemapFace(context, camera, lightingOrder, i);
 			}
 
+			int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
+			var shadowmapOffset = new Vector2Int(3 * faceSize/2, 2 * faceSize+2* Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + Teleport_SceneCaptureComponent.RenderingSceneCapture.diffuseOffset;
+			videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, lightingOrder, teleportLighting, shadowmapOffset);
 			videoEncoding.EncodeTagID(context, camera);
 			context.Submit();
 
@@ -778,6 +807,7 @@ namespace teleport
 			}
 			EndSample(context, samplename);
 			EndCamera(context, camera);
+			camera.transform.rotation = new Quaternion();
 		}
 	}
 }

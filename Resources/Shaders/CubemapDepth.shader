@@ -6,6 +6,7 @@
 	#include "Common.cginc"
 
 	Texture2D<float4> DepthTexture;
+	SamplerState samplerDepthTexture;
 
 	struct v2f
 	{
@@ -35,7 +36,7 @@
 		return o;
 	}
 
-	float4 frag(v2f i, UNITY_VPOS_TYPE screenPos : VPOS) : SV_Target
+	float4 frag_depth(v2f i, UNITY_VPOS_TYPE screenPos : VPOS) : SV_Target
 	{
 		int w, h;
 		DepthTexture.GetDimensions(w, h);
@@ -49,6 +50,12 @@
 		float4 depth = float4(d00, d01, d10, 1.0);
 
 		return depth;
+	}
+	float4 frag_colour(v2f i, UNITY_VPOS_TYPE screenPos : VPOS) : SV_Target
+	{
+		float4 result=DepthTexture.Sample(samplerDepthTexture,i.uv) ;
+		//result.rb=1.0;
+		return result;
 	}
 
 	ENDCG
@@ -65,7 +72,20 @@
 			CGPROGRAM
 			#pragma fragmentoption ARB_precision_hint_nicest
 			#pragma vertex vert
-			#pragma fragment frag
+			#pragma fragment frag_depth
+			ENDCG
+		}
+		Pass
+		{
+			Blend Off
+
+			ZTest Always Cull Off ZWrite Off
+			Fog { Mode off }
+
+			CGPROGRAM
+			#pragma fragmentoption ARB_precision_hint_nicest
+			#pragma vertex vert
+			#pragma fragment frag_colour
 			ENDCG
 		}
 	}

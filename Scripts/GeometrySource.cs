@@ -397,11 +397,11 @@ namespace teleport
 				}
 			}
 		}
-
 		public void Awake()
 		{
 			//We only want to load from disk when the project is loaded.
-			if(Application.isPlaying) return;
+			if(Application.isPlaying)
+			return;
 
 			//Clear resources on boot.
 			processedResources.Clear();

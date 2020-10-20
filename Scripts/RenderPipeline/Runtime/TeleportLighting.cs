@@ -26,6 +26,8 @@ namespace teleport
 	{
 		public VisibleLight visibleLight;
 		public RenderTexture shadowAtlasTexture = null;
+		public Vector2Int texturePosition = new Vector2Int();
+		public int sizeOnTexture = 0;
 		// One of these for each cascade.
 		public Dictionary<Camera, PerFramePerCameraLightProperties> perFramePerCameraLightProperties = new Dictionary<Camera, PerFramePerCameraLightProperties>();
 	};
@@ -315,7 +317,7 @@ namespace teleport
 			buffer.BeginSample(bufferName);
 			SetupAddLight(buffer, visibleLight);
 			buffer.SetGlobalTexture(_ShadowMapTexture, perFrameLightProperties[light].shadowAtlasTexture, RenderTextureSubElement.Depth);
-			Vector4 lightShadowData = new Vector4(0.1F, 66.66666F, 0.33333333F, -2.66667F);
+			Vector4 lightShadowData = new Vector4(0.0F, 6.66666F, 0.033333333F, -2.66667F);
 			buffer.SetGlobalVector(_LightShadowData, lightShadowData);
 			shadows.ApplyShadowConstants(context, buffer, camera, cullingResults, perFrameLightProperties[light]);
 
@@ -440,6 +442,14 @@ namespace teleport
 			else
 				buffer.SetGlobalMatrix(unity_WorldToLight, worldToShadow);
 
+				// Supposedly:
+			//_LightShadowData.y = Appears to be unused
+			//_LightShadowData.z = 1.0 / shadow far distance
+			//_LightShadowData.w = shadow near 
+			// But actually:
+			Vector4 lightShadowData = new Vector4(1.0F - light.light.shadowStrength, 20.0F/3.0F, 1.0F / 60.0F, -8.0F/3.0F);
+			//Vector4 lightShadowData = new Vector4(1.0F-light.light.shadowStrength, 6.66666F, 1.0F/light.light.spotAngle, -light.light.shadowNearPlane);
+			buffer.SetGlobalVector(_LightShadowData, lightShadowData);
 
 			Vector4 lightPos = light.localToWorldMatrix.GetColumn(3);
 			lightPos.w = 1.0F;

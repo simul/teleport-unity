@@ -51,6 +51,8 @@ namespace teleport
 
 			return true;
 		}
+		public string ClientName = "Client1";
+		public int Layer = 6;
 
 		// Aidan: This is temporary for the capture component
 		public static uid GetLastClientID()
@@ -190,6 +192,7 @@ namespace teleport
 				Debug.LogError("Precisely ONE Teleport_Head should be found.");
 			}
 			head = heads[0];
+
 		}
 
 		private void LateUpdate()
