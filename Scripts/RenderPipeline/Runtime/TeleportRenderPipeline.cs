@@ -150,7 +150,7 @@ namespace teleport
 			}
 			else
 			{
-				renderer.Render(context, camera);
+				renderer.Render(context, camera,0xFFFFFFF,0xFFFFFFFF);
 				viewmat = camera.worldToCameraMatrix;
 			}
 		}

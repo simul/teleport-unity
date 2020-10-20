@@ -133,6 +133,17 @@ namespace teleport
 			initialiseState.SERVICE_PORT = teleportSettings.listenPort;
 			initialiseState.DISCOVERY_PORT = teleportSettings.discoveryPort;
 			ok = Initialise(initialiseState);
+
+			Renderer[] allRenderers = FindObjectsOfType<Renderer>();
+			SkinnedMeshRenderer[] allSkinnedMeshRenderers = FindObjectsOfType<SkinnedMeshRenderer>();
+			foreach(var r in allRenderers)
+			{
+				r.renderingLayerMask = 0xFFFFFFFF;
+			}
+			foreach (var r in allSkinnedMeshRenderers)
+			{
+				r.renderingLayerMask = 0xFFFFFFFF;
+			}
 		}
 
 		private void Update()
@@ -175,31 +186,33 @@ namespace teleport
 
 		private static void ShowActor(uid clientID, in IntPtr actorPtr)
 		{
-			GameObject actor = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
-
-			Renderer actorRenderer = actor.GetComponent<Renderer>();
-			if(actorRenderer) actorRenderer.enabled = true;
+			GameObject gameObject = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
+			int clientLayer = 25;
+			uint clientMask = (uint)(((int)1) << clientLayer);
+			Renderer actorRenderer = gameObject.GetComponent<Renderer>();
+			if (actorRenderer)
+				actorRenderer.renderingLayerMask |= clientMask;
 			else
 			{
-				SkinnedMeshRenderer skinnedMeshRenderer = actor.GetComponentInChildren<SkinnedMeshRenderer>();
-				skinnedMeshRenderer.enabled = true;
+				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
+				skinnedMeshRenderer.renderingLayerMask |= clientMask;
 			}
 		}
 
 		public static void HideActor(uid clientID,in IntPtr actorPtr)
 		{
-			return;
-#pragma warning disable CS0162 // Unreachable code detected
-			GameObject actor = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
-
-			Renderer actorRenderer = actor.GetComponent<Renderer>();
-			if(actorRenderer) actorRenderer.enabled = false;
+			GameObject gameObject = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
+			int clientLayer = 25;
+			uint clientMask = (uint)(((int)1) << clientLayer);
+			Renderer actorRenderer = gameObject.GetComponent<Renderer>();
+			uint invClientMask = ~clientMask;
+			if (actorRenderer)
+				actorRenderer.renderingLayerMask &= invClientMask;
 			else
 			{
-				SkinnedMeshRenderer skinnedMeshRenderer = actor.GetComponentInChildren<SkinnedMeshRenderer>();
-				skinnedMeshRenderer.enabled = false;
+				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
+				skinnedMeshRenderer.renderingLayerMask &= invClientMask;
 			}
-#pragma warning restore CS0162 // Unreachable code detected
 		}
 
 		private static void LogMessageHandler(avs.LogSeverity Severity, string Msg, in IntPtr userData)

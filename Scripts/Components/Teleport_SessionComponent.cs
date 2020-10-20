@@ -115,7 +115,7 @@ namespace teleport
 	
 		private uid clientID = 0;
 
-		private Teleport_Head head = null;
+		public Teleport_Head head = null;
 		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
 
 		private Vector3 last_sent_origin = new Vector3(0, 0, 0);

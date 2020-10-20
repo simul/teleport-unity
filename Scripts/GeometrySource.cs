@@ -1405,18 +1405,20 @@ namespace teleport
 			case TextureFormat.ASTC_HDR_10x10: return 8;
 			case TextureFormat.ASTC_HDR_12x12: return 8;
 #endif
-				case TextureFormat.ASTC_RGB_4x4: return 8;
-				case TextureFormat.ASTC_RGB_5x5: return 8;
-				case TextureFormat.ASTC_RGB_6x6: return 8;
-				case TextureFormat.ASTC_RGB_8x8: return 8;
-				case TextureFormat.ASTC_RGB_10x10: return 8;
-				case TextureFormat.ASTC_RGB_12x12: return 8;
-				case TextureFormat.ASTC_RGBA_4x4: return 8;
-				case TextureFormat.ASTC_RGBA_5x5: return 8;
-				case TextureFormat.ASTC_RGBA_6x6: return 8;
-				case TextureFormat.ASTC_RGBA_8x8: return 8;
-				case TextureFormat.ASTC_RGBA_10x10: return 8;
-				case TextureFormat.ASTC_RGBA_12x12: return 8;
+				case TextureFormat.ASTC_4x4: return 8;
+				case TextureFormat.ASTC_5x5: return 8;
+				case TextureFormat.ASTC_6x6: return 8;
+				case TextureFormat.ASTC_8x8: return 8;
+				case TextureFormat.ASTC_10x10: return 8;
+				case TextureFormat.ASTC_12x12: return 8;
+#if UNITY_2019_3_OR_OLDER
+				case TextureFormat.ASTC_4x4: return 8;
+				case TextureFormat.ASTC_5x5: return 8;
+				case TextureFormat.ASTC_6x6: return 8;
+				case TextureFormat.ASTC_8x8: return 8;
+				case TextureFormat.ASTC_10x10: return 8;
+				case TextureFormat.ASTC_12x12: return 8;
+#endif
 				default:
 					Debug.LogWarning("Defaulting to <color=red>8</color> bytes per pixel as format is unsupported: " + format);
 					return 8;

@@ -356,30 +356,13 @@ namespace teleport
 			}
 		}
 
-		bool Cull(ScriptableRenderContext context, Camera camera, out CullingResults cullingResults)
+		bool Cull(ScriptableRenderContext context, Camera camera, out CullingResults cullingResults,bool for_streaming=false)
 		{
 			if (camera.TryGetCullingParameters(out ScriptableCullingParameters p))
 			{
+				
 				p.shadowDistance = QualitySettings.shadowDistance;//renderSettings.maxShadowDistance;
 				p.shadowDistance = Mathf.Min(p.shadowDistance, camera.farClipPlane);
-				if (SessionComponent)
-				{
-					List<Collider> colliders = SessionComponent.GeometryStreamingService.GetStreamedObjects();
-					foreach (var c in colliders)
-					{
-						Renderer actorRenderer = c.gameObject.GetComponent<Renderer>();
-						if (actorRenderer)
-							actorRenderer.enabled = false;
-					}
-					cullingResults = context.Cull(ref p);
-					foreach (var c in colliders)
-					{
-						Renderer actorRenderer = c.gameObject.GetComponent<Renderer>();
-						if (actorRenderer)
-							actorRenderer.enabled = true;
-					}
-				}
-				else
 				cullingResults = context.Cull(ref p);
 				return true;
 			}
@@ -407,7 +390,7 @@ namespace teleport
 		static ShaderTagId[] depthShaderTagIds = {
 				new ShaderTagId("ShadowCaster"),
 		};
-		void DrawDepthPass(ScriptableRenderContext context, Camera camera)
+		void DrawDepthPass(ScriptableRenderContext context, Camera camera,int layerMask,uint renderingMask)
 		{
 			context.SetupCameraProperties(camera);
 			CommandBuffer buffer = CommandBufferPool.Get("Depth Pass");
@@ -424,7 +407,7 @@ namespace teleport
 			{
 				criteria = SortingCriteria.CommonOpaque
 			};
-			var filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
+			var filteringSettings = new FilteringSettings(RenderQueueRange.opaque, layerMask, renderingMask, 0);
 			CullingResults cullingResults;
 			if (!Cull(context, camera, out cullingResults))
 			{
@@ -450,7 +433,7 @@ namespace teleport
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
 		}
 
-		void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera)
+		void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask)
 		{
 			// The generic textures accessible from all default shaders...
 			var buffer = new CommandBuffer();
@@ -472,7 +455,7 @@ namespace teleport
 			{
 				criteria = SortingCriteria.CommonOpaque
 			};
-			var filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
+			var filteringSettings = new FilteringSettings(RenderQueueRange.opaque, layerMask, renderingMask, 0);
 			CullingResults cullingResults;
 			if (!Cull(context, camera, out cullingResults))
 			{
@@ -545,7 +528,7 @@ namespace teleport
 			}
 			teleportLighting.Cleanup(context,buffer);
 		}
-		void DrawTransparentGeometry(ScriptableRenderContext context, Camera camera)
+		void DrawTransparentGeometry(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask)
 		{
 			var sortingSettings = new SortingSettings(camera)
 			{
@@ -556,7 +539,7 @@ namespace teleport
 			);
 			drawingSettings.enableDynamicBatching = true;
 			drawingSettings.enableInstancing = true;
-			var filteringSettings = new FilteringSettings(RenderQueueRange.transparent);
+			var filteringSettings = new FilteringSettings(RenderQueueRange.transparent, layerMask, renderingMask, 0);
 			CullingResults cullingResults;
 			if (!Cull(context, camera, out cullingResults))
 			{
@@ -584,7 +567,7 @@ namespace teleport
 			buffer.Release();
 		}
 
-		public void Render(ScriptableRenderContext context, Camera camera)
+		public void Render(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask)
 		{
 			CullingResults cullingResultsAll;
 			if (!Cull(context, camera, out cullingResultsAll))
@@ -596,13 +579,13 @@ namespace teleport
 			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
 			teleportLighting.renderSettings = renderSettings;
 			teleportLighting.RenderShadows(context, camera, cullingResultsAll, lightingOrder);
-			DrawDepthPass(context, camera);
+			DrawDepthPass(context, camera,  layerMask,  renderingMask);
 			teleportLighting.RenderScreenspaceShadows(context, camera, lightingOrder, cullingResultsAll, depthTexture);
 			context.SetupCameraProperties(camera);
 			Clear(context, camera);
 			PrepareForSceneWindow(context, camera);
-			DrawOpaqueGeometry(context, camera);
-			DrawTransparentGeometry(context, camera);
+			DrawOpaqueGeometry(context, camera, layerMask, renderingMask);
+			DrawTransparentGeometry(context, camera, layerMask, renderingMask);
 #if UNITY_EDITOR
 			DrawUnsupportedShaders(context, camera);
 #endif
@@ -634,9 +617,11 @@ namespace teleport
 
 			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
 			//if (clientID != 0)
-				//UpdateStreamables(context, clientID, camera);
+			//UpdateStreamables(context, clientID, camera);
 
-			Render(context, camera);
+			int layerMask = 0xFFFFFFF;
+			uint renderingMask = 1 << 25;
+			Render(context, camera, layerMask, renderingMask);
 			videoEncoding.EncodeColor(context, camera, 0);
 
 			videoEncoding.EncodeTagID(context, camera);
@@ -681,13 +666,15 @@ namespace teleport
 				Debug.LogError("The video encoder texture must not be null");
 				return;
 			}
-
+			if (!Teleport_SessionComponent.sessions.ContainsKey(ClientID))
+				return;
+			camera.transform.position = Teleport_SessionComponent.sessions[ClientID].head.transform.position;
 			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
 			if (ClientID != 0)
 				UpdateStreamables(context, ClientID, camera);
 
 			CullingResults cullingResultsAll;
-			if (!Cull(context, camera, out cullingResultsAll))
+			if (!Cull(context, camera, out cullingResultsAll,true))
 			{
 				return;
 			}
@@ -763,19 +750,20 @@ namespace teleport
 			view.m22 *= -1f;
 			view.m23 *= -1f;
 			faceViewMatrices[face] = view;
-
+			int layerMask = 0xFFFFFFF;
+			uint renderingMask = 1 << 25;
 			camera.worldToCameraMatrix = view;
 			string samplename = camera.gameObject.name + " Face " + face;
 			StartSample(context, samplename);
 			{
-				DrawDepthPass(context, camera);
+				DrawDepthPass(context, camera, layerMask, renderingMask);
 				teleportLighting.RenderScreenspaceShadows(context, camera, lightingOrder, cullingResultsAll, depthTexture);
 				context.SetupCameraProperties(camera);
 				Clear(context, camera);
 				PrepareForSceneWindow(context, camera);
 				//Clear(context, 0 * direction_colours[face]);
-				DrawOpaqueGeometry(context, camera);
-				DrawTransparentGeometry(context, camera);
+				DrawOpaqueGeometry(context, camera, layerMask, renderingMask);
+				DrawTransparentGeometry(context, camera, layerMask, renderingMask);
 				videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture,
 					 face);
 				videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face,0);
