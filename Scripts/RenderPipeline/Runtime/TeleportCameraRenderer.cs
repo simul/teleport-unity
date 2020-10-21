@@ -276,7 +276,7 @@ namespace teleport
 		{
 			// For each shadowcasting light, write the shadowmap to the video.
 			Vector2Int CurrentOffset= StartOffset;
-			if (lightingOrder.MainLightIndex< cullingResults.visibleLights.Length)
+			if (lightingOrder.MainLightIndex > -1 && lightingOrder.MainLightIndex < cullingResults.visibleLights.Length)
 			{
 				var l=cullingResults.visibleLights[lightingOrder.MainLightIndex].light;
 				if (TeleportLighting.perFrameLightProperties.ContainsKey(l))
