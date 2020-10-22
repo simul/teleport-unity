@@ -26,8 +26,8 @@ public class Teleport_Controller : MonoBehaviour
 	{
 		buttons = b;
 
-        // OVR X button 0x100 and mouse left button is 0x001
-        if ((buttons & 0x00010100) != 0)
+        // OVR X button 0x100 and mouse left button released is 0x010
+        if ((buttons & 0x110) != 0)
         {
             ExecuteEvents.Execute(EventSystem.current.currentSelectedGameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
         }
