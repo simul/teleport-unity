@@ -98,11 +98,41 @@ namespace avs
 		public Vector2(System.Numerics.Vector2 netVector) => (x, y) = (netVector.X, netVector.Y);
 		public Vector2(UnityEngine.Vector2 unityVector) => (x, y) = (unityVector.x, unityVector.y);
 
+		// We should implement a hash code. The GetHashCode method provides this hash code for algorithms that need quick checks of object equality.
+		public override int GetHashCode()
+		{
+			unchecked // Overflow is fine, just wrap
+			{
+				int hash = 17;
+				// Suitable nullity checks etc, of course :)
+				hash = hash * 23 + x.GetHashCode();
+				hash = hash * 23 + y.GetHashCode();
+				return hash;
+			}
+		}
+		public override bool Equals(object obj)
+		{
+			if (!(obj is Vector2))
+			{
+				return false;
+			}
+			return (this == ((Vector2)obj));
+		}
+
 		public static implicit operator Vector2(System.Numerics.Vector2 netVector) => new Vector2(netVector.X, netVector.Y);
 		public static implicit operator Vector2(UnityEngine.Vector2 unityVector) => new Vector2(unityVector.x, unityVector.y);
 
 		public static implicit operator System.Numerics.Vector2(Vector2 vector) => new System.Numerics.Vector2(vector.x, vector.y);
 		public static implicit operator UnityEngine.Vector2(Vector2 vector) => new UnityEngine.Vector2(vector.x, vector.y);
+		public static bool operator ==(Vector2 lhs, Vector2 rhs)
+		{
+			return lhs.x == rhs.x && lhs.y == rhs.y ;
+		}
+
+		public static bool operator !=(Vector2 lhs, Vector2 rhs)
+		{
+			return lhs.x != rhs.x || lhs.y != rhs.y ;
+		}
 	}
 
 	public struct Vector3
@@ -112,6 +142,28 @@ namespace avs
 		public Vector3(float x, float y, float z) => (this.x, this.y, this.z) = (x, y, z);
 		public Vector3(System.Numerics.Vector3 netVector) => (x, y, z) = (netVector.X, netVector.Y, netVector.Z);
 		public Vector3(UnityEngine.Vector3 unityVector) => (x, y, z) = (unityVector.x, unityVector.y, unityVector.z);
+
+		// We should implement a hash code. The GetHashCode method provides this hash code for algorithms that need quick checks of object equality.
+		public override int GetHashCode()
+		{
+			unchecked // Overflow is fine, just wrap
+			{
+				int hash = 17;
+				// Suitable nullity checks etc, of course :)
+				hash = hash * 23 + x.GetHashCode();
+				hash = hash * 23 + y.GetHashCode();
+				hash = hash * 23 + z.GetHashCode();
+				return hash;
+			}
+		}
+		public override bool Equals(object obj)
+		{
+			if (!(obj is Vector3))
+			{
+				return false;
+			}
+			return (this==((Vector3)obj));
+		}
 
 		public override string ToString()
 		{
@@ -146,6 +198,29 @@ namespace avs
 		public Vector4(System.Numerics.Vector4 netVector) => (x, y, z, w) = (netVector.X, netVector.Y, netVector.Z, netVector.W);
 		public Vector4(UnityEngine.Vector4 unityVector) => (x, y, z, w) = (unityVector.x, unityVector.y, unityVector.z, unityVector.w);
 
+
+		// We should implement a hash code. The GetHashCode method provides this hash code for algorithms that need quick checks of object equality.
+		public override int GetHashCode()
+		{
+			unchecked // Overflow is fine, just wrap
+			{
+				int hash = 17;
+				// Suitable nullity checks etc, of course :)
+				hash = hash * 23 + x.GetHashCode();
+				hash = hash * 23 + y.GetHashCode();
+				hash = hash * 23 + z.GetHashCode();
+				hash = hash * 23 + w.GetHashCode();
+				return hash;
+			}
+		}
+		public override bool Equals(object obj)
+		{
+			if (!(obj is Vector4))
+			{
+				return false;
+			}
+			return (this == ((Vector4)obj));
+		}
 		public override string ToString()
 		{
 			return string.Format("({0:0.0}, {1:0.0}, {2:0.0}, {3:0.0})", x, y, z, w);
@@ -171,7 +246,7 @@ namespace avs
 			return lhs.x != rhs.x || lhs.y != rhs.y || lhs.z != rhs.z || lhs.w != rhs.w;
 		}
 	}
-
+	
 	[StructLayout(LayoutKind.Sequential)]
 	public class Transform
 	{

@@ -222,6 +222,8 @@ namespace teleport
 				lightData.shadowProjectionMatrix = perFramePerCameraLightProperties.cascades[0].projectionMatrix;
 				lightData.texturePosition = perFrameLightProperties.texturePosition;
 				lightData.textureSize = perFrameLightProperties.sizeOnTexture;
+				lightData.worldTransform = light.transform.localToWorldMatrix;
+				lightData.lightType = light.type;
 				lightDataList.Add(lightData);
 			}
 		}
