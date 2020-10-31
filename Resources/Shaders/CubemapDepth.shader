@@ -61,7 +61,7 @@
 		Moments.x = Depth; 
 		float dx = ddx(Depth);   
 		float dy = ddy(Depth);  
-		Moments.y = Depth*Depth + 0.25*(dx*dx + dy*dy);
+		Moments.y = Depth*Depth;// + 0.25*(dx*dx + dy*dy);
 		return Moments;
 	} 
 
@@ -81,16 +81,15 @@
 	{
 		float2 uv=.5*vec2(i.uv.x,1.0-i.uv.y);
 		vec4 result=vec4(0,0,0,0);
-		vec2 offset[5]={{0,0},{-1,0},{1,0},{0,1},{0,-1}};
 		float sum=0.0;
-		for(int i=-2;i<3;i++)
+		for(int i=-3;i<4;i++)
 		{
-			for(int j=-2;j<3;j++)
+			for(int j=-3;j<4;j++)
 			{
 				vec2 off=vec2(i,j);
 				float weight=exp(-dot(off,off));
-				float depth=DepthTexture.Sample(samplerDepthTexture,uv+0.00*off).x;
-				float z=1.0-depth;//0.4243;
+				float depth=1.0-DepthTexture.Sample(samplerDepthTexture,uv+0.004*off).x;
+				float z=0.8+8.0*(depth-0.8);//1.0-depth;//0.4243;
 				float2 moments=ComputeMoments(z);
 				// Square for variance shadow map.
 				result+=weight*vec4(moments.xyy,0);
