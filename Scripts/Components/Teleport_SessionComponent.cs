@@ -118,6 +118,7 @@ namespace teleport
 		private uid clientID = 0;
 
 		public Teleport_Head head = null;
+		public Teleport_SceneCaptureComponent sceneCaptureComponent= null;
 		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
 
 		private Vector3 last_sent_origin = new Vector3(0, 0, 0);
@@ -193,6 +194,12 @@ namespace teleport
 			}
 			head = heads[0];
 
+			Teleport_SceneCaptureComponent[] sceneCaptureComponents = GetComponentsInChildren<Teleport_SceneCaptureComponent>();
+			if (sceneCaptureComponents.Length != 1)
+			{
+				Debug.LogError("Precisely ONE Teleport_SceneCaptureComponent should be found.");
+			}
+			sceneCaptureComponent = sceneCaptureComponents[0];
 		}
 
 		private void LateUpdate()
@@ -255,12 +262,20 @@ namespace teleport
 				}
 				int num_lights = geometryStreamingService.GetStreamedLightCount();
 				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", num_lights));
+				int j=0;
 				foreach(var l in geometryStreamingService.GetStreamedLights())
 				{
 					var light = l.Value;
 					if (light != null)
 					{
 						GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}:{2},{3},{4}", l.Key, light.name, light.transform.forward.x, light.transform.forward.y, light.transform.forward.z));
+						if (sceneCaptureComponent.VideoEncoder!=null&&j< sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lightCount)
+						{
+							var shadow_pos=sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lights[j].position;
+							GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t\tshadow orig {0},{1},{2}", shadow_pos.x, shadow_pos.y, shadow_pos.z));
+
+						}
+						j++;
 					}
 				}
 			}

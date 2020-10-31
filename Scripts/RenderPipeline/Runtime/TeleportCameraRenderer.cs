@@ -282,20 +282,38 @@ namespace teleport
 				if (TeleportLighting.perFrameLightProperties.ContainsKey(l))
 				{
 					var perFrame = TeleportLighting.perFrameLightProperties[l];
-					perFrame.sizeOnTexture = 64;
+					perFrame.sizeOnTexture = 256;
 					var viewport = new Rect(CurrentOffset.x, CurrentOffset.y, perFrame.sizeOnTexture, perFrame.sizeOnTexture);
 					var buffer = new CommandBuffer();
-					depthMaterial.SetTexture("DepthTexture", perFrame.shadowAtlasTexture);
+					int cascadeCount = l.type == LightType.Directional ? 4 : 1;
+					int split = cascadeCount <= 1 ? 1 : 2;
 					buffer.name = "Shadowmap to Video";
+					buffer.BeginSample(buffer.name);
+					Vector4 CascadeOffsetScale = new Vector4();
+					CascadeOffsetScale.x = 0;
+					CascadeOffsetScale.y = 0;
+					CascadeOffsetScale.z = 1.0F/(float)split;
+					CascadeOffsetScale.w = 1.0F/(float)split;
+					depthMaterial.SetTexture("DepthTexture", perFrame.shadowAtlasTexture);
+					depthMaterial.SetTexture("FilteredDepthTexture", perFrame.filteredShadowTexture);
+
+					// vsm filter
+					buffer.SetGlobalVector("CascadeOffsetScale", CascadeOffsetScale);
+					buffer.SetRenderTarget(perFrame.filteredShadowTexture);
+					buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 2, MeshTopology.Triangles, 6);
+
+					// To video
+					buffer.SetGlobalVector("CascadeOffsetScale", CascadeOffsetScale);
 					buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture);
 					buffer.SetViewport(viewport);
-					buffer.BeginSample(buffer.name);
 					buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 1, MeshTopology.Triangles, 6);
+
+
 					buffer.EndSample(buffer.name);
 					context.ExecuteCommandBuffer(buffer);
 					buffer.Release();
 					perFrame.texturePosition = CurrentOffset;
-	}
+				}
 			}
 		}
 	}

@@ -5,7 +5,7 @@ namespace teleport
 {
 	public static class ShadowUtils
 	{
-		public static Matrix4x4 GetShadowTransform(Matrix4x4 proj, Matrix4x4 view)
+		public static Matrix4x4 GetShadowTransformForShader(Matrix4x4 proj, Matrix4x4 view)
 		{
 			// Currently CullResults ComputeDirectionalShadowMatricesAndCullingPrimitives doesn't
 			// apply z reversal to projection matrix. We need to do it manually here.
@@ -24,15 +24,41 @@ namespace teleport
 			textureScaleAndBias.m11 = 0.5f;
 			textureScaleAndBias.m22 = 0.5f;
 			textureScaleAndBias.m03 = 0.5f;
-			textureScaleAndBias.m23 = 0.5f;
 			textureScaleAndBias.m13 = 0.5f;
+			textureScaleAndBias.m23 = 0.5f;
 
+			// Apply texture scale and offset to save a MAD in shader.
+			return textureScaleAndBias * worldToShadow;
+		}
+		public static Matrix4x4 GetShadowTransformForRender(Matrix4x4 proj, Matrix4x4 view)
+		{
+			// Currently CullResults ComputeDirectionalShadowMatricesAndCullingPrimitives doesn't
+			// apply z reversal to projection matrix. We need to do it manually here.
+			if (SystemInfo.usesReversedZBuffer)
+			{
+				proj.m20 = -proj.m20;
+				proj.m21 = -proj.m21;
+				proj.m22 = -proj.m22;
+				proj.m23 = -proj.m23;
+			}
+			proj.m10 = -proj.m10;
+			proj.m11 = -proj.m11;
+			proj.m12 = -proj.m12;
+			proj.m13 = -proj.m13;
+			Matrix4x4 worldToShadow = proj * view;
+			var textureScaleAndBias = Matrix4x4.identity;
+			textureScaleAndBias.m00 = 0.5f;
+			textureScaleAndBias.m11 = 0.5f;
+			textureScaleAndBias.m22 = 0.5f;
+			textureScaleAndBias.m03 = 0.5f;
+			textureScaleAndBias.m13 = 0.5f;
+			textureScaleAndBias.m23 = 0.5f;
 			// Apply texture scale and offset to save a MAD in shader.
 			return textureScaleAndBias * worldToShadow;
 		}
 		public static Matrix4x4 GetShadowTransform(Matrix4x4 proj, Matrix4x4 view, int cascadeIndex, int atlasWidth, int atlasHeight, int shadowResolution)
 		{
-			Matrix4x4 shadowMatrix = GetShadowTransform(proj, view);
+			Matrix4x4 shadowMatrix = GetShadowTransformForShader(proj, view);
 			ApplySliceTransform(ref shadowMatrix, cascadeIndex, atlasWidth, atlasHeight, shadowResolution);
 			return shadowMatrix;
 		}

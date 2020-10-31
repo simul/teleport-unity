@@ -34,8 +34,6 @@ namespace teleport
 		List<float> bandwidths = new List<float>();
 		float settingsDuration = 0.0f;
 
-		
-
 		public VideoEncoder VideoEncoder
 		{
 			get; private set;

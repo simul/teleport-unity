@@ -54,6 +54,22 @@ namespace avs
 	};
 	public static class DataTypes
 	{
+		public static void ConvertViewProjectionMatrix( AxesStandard toStandard, ref Matrix4x4 m)
+		{
+			var y = m.GetColumn(1);
+			var z = m.GetColumn(2);
+			// The source has y and z messed about in the input, but converts to a correct xy position with z=depth.
+			// So we swap and flip columns to get to the correct matrix.
+			if (toStandard == AxesStandard.GlStyle)
+			{
+				m.SetColumn(2, -z);// { position.x, position.y, -position.z };
+			}
+			if (toStandard == AxesStandard.EngineeringStyle)
+			{
+				m.SetColumn(1, z);
+				m.SetColumn(2, y);// { position.x, position.z, position.y };
+			}
+		}
 		private static float copysign(float sizeval, float signval)
 		{
 			return Mathf.Sign(signval) == 1 ? Mathf.Abs(sizeval) : -Mathf.Abs(sizeval);
@@ -385,9 +401,11 @@ namespace avs
 		public float range;
 		public float spotAngle;
 		public LightType lightType;
-		public Matrix4x4 shadowViewMatrix;
+		public Vector3 position;
+		public Vector4 orientation;
 		public Matrix4x4 shadowProjectionMatrix;
-        public Vector2Int texturePosition;
+		public Matrix4x4 worldToShadowMatrix; 
+		public Vector2Int texturePosition;
         public int textureSize;
         public uint uid;
 	};

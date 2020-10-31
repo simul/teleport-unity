@@ -26,6 +26,7 @@ namespace teleport
 	{
 		public VisibleLight visibleLight;
 		public RenderTexture shadowAtlasTexture = null;
+		public RenderTexture filteredShadowTexture = null; 
 		public Vector2Int texturePosition = new Vector2Int();
 		public int sizeOnTexture = 0;
 		// One of these for each cascade.

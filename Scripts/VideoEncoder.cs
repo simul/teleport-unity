@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Rendering;
-
+using avs;
 using uid = System.UInt64;
 
 namespace teleport
@@ -148,23 +148,24 @@ namespace teleport
 			commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 2, ptr);
 		}
 
+		public SceneCapture2DTagDataWrapper t2dTagDataWrapper = new SceneCapture2DTagDataWrapper();
+		public SceneCaptureCubeTagDataWrapper cubeTagDataWrapper = new SceneCaptureCubeTagDataWrapper();
 		void CreateTagDataWrapper(Camera camera, UInt32 tagDataID, out IntPtr dataPtr)
 		{
 			var teleportSettings = TeleportSettings.GetOrCreateSettings();
 			if (teleportSettings.casterSettings.usePerspectiveRendering)
 			{
-				var w = new SceneCapture2DTagDataWrapper();
-				w.clientID = clientID;
-				w.dataSize = (UInt64)Marshal.SizeOf(typeof(avs.SceneCapture2DTagData));
-				w.data = new avs.SceneCapture2DTagData();
-				w.data.id = tagDataID;
-				w.data.cameraTransform = new avs.Transform();
-				w.data.cameraTransform.position = camera.transform.position;
-				w.data.cameraTransform.rotation = camera.transform.parent.rotation;
-				w.data.cameraTransform.scale = new avs.Vector3(1, 1, 1);
+				t2dTagDataWrapper.clientID = clientID;
+				t2dTagDataWrapper.dataSize = (UInt64)Marshal.SizeOf(typeof(avs.SceneCapture2DTagData));
+				t2dTagDataWrapper.data = new avs.SceneCapture2DTagData();
+				t2dTagDataWrapper.data.id = tagDataID;
+				t2dTagDataWrapper.data.cameraTransform = new avs.Transform();
+				t2dTagDataWrapper.data.cameraTransform.position = camera.transform.position;
+				t2dTagDataWrapper.data.cameraTransform.rotation = camera.transform.parent.rotation;
+				t2dTagDataWrapper.data.cameraTransform.scale = new avs.Vector3(1, 1, 1);
 
 				dataPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(SceneCapture2DTagDataWrapper)));
-				Marshal.StructureToPtr(w, dataPtr, true);
+				Marshal.StructureToPtr(t2dTagDataWrapper, dataPtr, true);
 			}
 			else
 			{
@@ -172,28 +173,35 @@ namespace teleport
 				CreateLightingData(camera, out lightDataList);
 				var lightSizeInBytes = Marshal.SizeOf(typeof(avs.LightData)) * lightDataList.Count;
 
-				var w = new SceneCaptureCubeTagDataWrapper();
-				w.clientID = clientID;
-				w.dataSize = (UInt64)(Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData)) + lightSizeInBytes);
-				w.data = new avs.SceneCaptureCubeTagData();
-				w.data.id = tagDataID;
-				w.data.cameraTransform = new avs.Transform();
-				w.data.cameraTransform.position = camera.transform.position;
-				w.data.cameraTransform.rotation = camera.transform.rotation;
-				w.data.cameraTransform.scale = new avs.Vector3(1, 1, 1);
-				w.data.lightCount = (uint)lightDataList.Count;
+				cubeTagDataWrapper.clientID = clientID;
+				cubeTagDataWrapper.dataSize = (UInt64)(Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData)) + lightSizeInBytes);
+				cubeTagDataWrapper.data = new avs.SceneCaptureCubeTagData();
+				cubeTagDataWrapper.data.id = tagDataID;
+				cubeTagDataWrapper.data.cameraTransform = new avs.Transform();
+				cubeTagDataWrapper.data.cameraTransform.position = camera.transform.position;
+				cubeTagDataWrapper.data.cameraTransform.rotation = camera.transform.rotation;
+				cubeTagDataWrapper.data.cameraTransform.scale = new avs.Vector3(1, 1, 1);
+				cubeTagDataWrapper.data.lightCount = (uint)lightDataList.Count;
 
 				// If this doesn't work, do Array.copy
-				w.data.lights = lightDataList.ToArray();
+				cubeTagDataWrapper.data.lights = lightDataList.ToArray();
 
 				var wrapperSize = Marshal.SizeOf(typeof(SceneCaptureCubeTagDataWrapper)) + lightSizeInBytes;
 				dataPtr = Marshal.AllocHGlobal(wrapperSize);
-				Marshal.StructureToPtr(w, dataPtr, true);
+				Marshal.StructureToPtr(cubeTagDataWrapper, dataPtr, true);
 			}
 		}
 
 		void CreateLightingData(Camera camera, out List<avs.LightData> lightDataList)
 		{
+			var textureScaleAndBias = Matrix4x4.identity;
+			//textureScaleAndBias.m00 = 0.5f;
+			//textureScaleAndBias.m11 = -1.0f;
+			textureScaleAndBias.m22 = 0.5f;
+			//textureScaleAndBias.m03 = 0.5f;
+			//textureScaleAndBias.m13 = 0.5f;
+			textureScaleAndBias.m23 = 0.0f;
+
 			lightDataList = new List<avs.LightData>();
 			// which lights are streamed in this session?
 			var streamedLights=Teleport_SessionComponent.sessions[clientID].GeometryStreamingService.GetStreamedLights();
@@ -218,8 +226,25 @@ namespace teleport
 				lightData.range = visibleLight.range;
 				lightData.spotAngle = visibleLight.spotAngle;
 				lightData.lightType = visibleLight.lightType;
-				lightData.shadowViewMatrix = perFramePerCameraLightProperties.cascades[0].viewMatrix;
-				lightData.shadowProjectionMatrix = perFramePerCameraLightProperties.cascades[0].projectionMatrix;
+				//	lightData.shadowViewMatrix = perFramePerCameraLightProperties.cascades[0].viewMatrix;
+				// We want here the ORIGIN of the shadow matrix, not the light's "position", which is irrelevant for directional lights.
+				
+				lightData.position = perFramePerCameraLightProperties.cascades[0].viewMatrix.inverse.GetPosition();
+				// Unity lights shine in the z direction...
+				// viewMatrix no good because Unity has view matrices that are not rotational!
+				Quaternion rotation = light.transform.rotation;
+				//perFramePerCameraLightProperties.cascades[0].viewMatrix.inverse.GetRotation();
+				Quaternion Z_to_Y=new Quaternion(0.707F, 0, 0, 0.707F);
+				rotation =  rotation* Z_to_Y;
+				rotation.Normalize();
+				lightData.orientation = rotation;
+				// Apply texture scale and offset to save a MAD in shader.
+				Matrix4x4 proj = textureScaleAndBias * perFramePerCameraLightProperties.cascades[0].projectionMatrix;
+				lightData.shadowProjectionMatrix =(proj).transpose ;// *  ;
+				lightData.worldToShadowMatrix =ShadowUtils.GetShadowTransformForRender(
+																		perFramePerCameraLightProperties.cascades[0].projectionMatrix
+																		, perFramePerCameraLightProperties.cascades[0].viewMatrix); ;
+				DataTypes.ConvertViewProjectionMatrix(AxesStandard.EngineeringStyle,ref lightData.worldToShadowMatrix);
 				lightData.texturePosition = perFrameLightProperties.texturePosition;
 				lightData.textureSize = perFrameLightProperties.sizeOnTexture;
 				lightData.worldTransform = light.transform.localToWorldMatrix;

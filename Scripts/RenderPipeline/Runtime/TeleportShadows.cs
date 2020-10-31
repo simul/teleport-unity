@@ -64,7 +64,7 @@ namespace teleport
 				offset.x * tileSize, offset.y * tileSize, tileSize, tileSize
 			);
 		}
-		public void RenderShadowCascadeForLight(ScriptableRenderContext context,CommandBuffer buffer,CullingResults cullingResults, Light light, int visibleLightIndex, ref PerFramePerCameraLightProperties perFrameLightProperties, int cascadeCount, int index)
+		public void RenderShadowCascadeForLight(ScriptableRenderContext context,CommandBuffer buffer,CullingResults cullingResults, Light light, int visibleLightIndex, ref PerFramePerCameraLightProperties perFramePerCamera, int cascadeCount, int index)
 		{
 			if (index >= cascadeCount)
 				return;
@@ -78,41 +78,42 @@ namespace teleport
 			{
 				result = cullingResults.ComputeDirectionalShadowMatricesAndCullingPrimitives(
 					visibleLightIndex, index, cascadeCount, ratios, tileSize, QualitySettings.shadowNearPlaneOffset,//+perFrameLightProperties.visibleLight.light.shadowNearPlane
-					out perFrameLightProperties.cascades[index].viewMatrix, out perFrameLightProperties.cascades[index].projectionMatrix,
-					out perFrameLightProperties.cascades[index].splitData
+					out perFramePerCamera.cascades[index].viewMatrix, out perFramePerCamera.cascades[index].projectionMatrix,
+					out perFramePerCamera.cascades[index].splitData
 				);
 			}
 			else if (light.type == LightType.Spot)
 			{
 				Debug.Assert(index == 0);
 				result = cullingResults.ComputeSpotShadowMatricesAndCullingPrimitives(
-					visibleLightIndex, out perFrameLightProperties.cascades[index].viewMatrix, out perFrameLightProperties.cascades[index].projectionMatrix,
-					out perFrameLightProperties.cascades[index].splitData
+					visibleLightIndex, out perFramePerCamera.cascades[index].viewMatrix, out perFramePerCamera.cascades[index].projectionMatrix,
+					out perFramePerCamera.cascades[index].splitData
 				);
 			}
 			else if (light.type == LightType.Point)
 			{
 				Debug.Assert(index == 0);
 				result = cullingResults.ComputePointShadowMatricesAndCullingPrimitives(
-					visibleLightIndex, CubemapFace.Unknown,0.0F,out perFrameLightProperties.cascades[index].viewMatrix, out perFrameLightProperties.cascades[index].projectionMatrix,
-					out perFrameLightProperties.cascades[index].splitData
+					visibleLightIndex, CubemapFace.Unknown,0.0F,out perFramePerCamera.cascades[index].viewMatrix, out perFramePerCamera.cascades[index].projectionMatrix,
+					out perFramePerCamera.cascades[index].splitData
 				);
 			}
 			if(result)
 			{
 				VisibleLight visibleLight = cullingResults.visibleLights[visibleLightIndex];
 				Rect vp = GetTileViewport(index, tileSize, split);
-				Vector4 sph = perFrameLightProperties.cascades[index].splitData.cullingSphere;
+				Vector4 sph = perFramePerCamera.cascades[index].splitData.cullingSphere;
 				sph.w *= sph.w;
-				perFrameLightProperties.cascades[index].splitData.cullingSphere = sph;
-				shadowSettings.splitData = perFrameLightProperties.cascades[index].splitData;
+				perFramePerCamera.cascades[index].splitData.cullingSphere = sph;
+				shadowSettings.splitData = perFramePerCamera.cascades[index].splitData;
 				buffer.SetViewport(vp);
-				buffer.SetViewProjectionMatrices(perFrameLightProperties.cascades[index].viewMatrix, perFrameLightProperties.cascades[index].projectionMatrix);
+				buffer.SetViewProjectionMatrices(perFramePerCamera.cascades[index].viewMatrix, perFramePerCamera.cascades[index].projectionMatrix);
+				Matrix4x4 viewproj  = ShadowUtils.GetShadowTransformForRender(perFramePerCamera.cascades[index].projectionMatrix, perFramePerCamera.cascades[index].viewMatrix);
 				Vector4 bias4 = new Vector4(visibleLight.light.shadowBias, visibleLight.light.shadowNormalBias, 0.0f, 0.0f);
 				//			new Vector4(visibleLight.light.shadowBias, visibleLight.light.shadowBias, visibleLight.light.shadowBias, visibleLight.light.shadowBias);
 
 				Vector4 shadowBias = new Vector4(0, 0, 0, 0);
-				shadowBias = teleport.ShadowUtils.GetShadowBias(ref visibleLight, visibleLightIndex, bias4, visibleLight.light.shadows == LightShadows.Soft, perFrameLightProperties.cascades[index].projectionMatrix, tileSize);
+				shadowBias = teleport.ShadowUtils.GetShadowBias(ref visibleLight, visibleLightIndex, bias4, visibleLight.light.shadows == LightShadows.Soft, perFramePerCamera.cascades[index].projectionMatrix, tileSize);
 
 				//Vector4 lightShadowBias = new Vector4(-0.001484548F, 1.0F, 0.017146875F, 0F);
 				buffer.SetGlobalVector(unity_LightShadowBias, shadowBias);
@@ -130,6 +131,7 @@ namespace teleport
 			if (perFrameLightProperties.shadowAtlasTexture == null || perFrameLightProperties.shadowAtlasTexture.width != atlasSize)
 			{
 				perFrameLightProperties.shadowAtlasTexture = new RenderTexture(atlasSize, atlasSize, 1, RenderTextureFormat.Shadowmap);
+				perFrameLightProperties.filteredShadowTexture = new RenderTexture(tileSize, tileSize, 1, RenderTextureFormat.RGB111110Float); 
 			}
 			buffer.SetRenderTarget(perFrameLightProperties.shadowAtlasTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
 			buffer.ClearRenderTarget(true, true, Color.clear);
@@ -163,7 +165,7 @@ namespace teleport
 			for (int i = 0; i < cascadeCount; i++)
 			{
 				PerFrameShadowCascadeProperties cascade = perFrameLightProperties.cascades[i];
-				perFrameLightProperties.WorldToShadow[i] = teleport.ShadowUtils.GetShadowTransform(cascade.projectionMatrix, cascade.viewMatrix);
+				perFrameLightProperties.WorldToShadow[i] = teleport.ShadowUtils.GetShadowTransformForShader(cascade.projectionMatrix, cascade.viewMatrix);
 				teleport.ShadowUtils.ApplySliceTransform(ref perFrameLightProperties.WorldToShadow[i], i, atlasSize, split, atlasSize / split);
 			}
 		}

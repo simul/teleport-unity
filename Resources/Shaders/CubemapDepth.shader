@@ -7,6 +7,9 @@
 
 	Texture2D<float4> DepthTexture;
 	SamplerState samplerDepthTexture;
+	Texture2D<float4> FilteredDepthTexture;
+	SamplerState samplerFilteredDepthTexture;
+	float4 CascadeOffsetScale;
 
 	struct v2f
 	{
@@ -51,13 +54,51 @@
 
 		return depth;
 	}
+	
+	float2 ComputeMoments(float Depth)
+	{
+		float2 Moments;
+		Moments.x = Depth; 
+		float dx = ddx(Depth);   
+		float dy = ddy(Depth);  
+		Moments.y = Depth*Depth + 0.25*(dx*dx + dy*dy);
+		return Moments;
+	} 
+
 	float4 frag_colour(v2f i, UNITY_VPOS_TYPE screenPos : VPOS) : SV_Target
 	{
-		float4 result=DepthTexture.Sample(samplerDepthTexture,i.uv) ;
-		//result.rb=1.0;
-		return result;
+		float2 uv=i.uv;
+		vec4 res=pow(FilteredDepthTexture.Sample(samplerFilteredDepthTexture,uv),2.0);
+		return res;
+	/*
+		float2 uv=.5*i.uv;
+		float depth=1.0-DepthTexture.Sample(samplerDepthTexture,uv).x ;
+	//	result.g=result*result;
+		vec4 result=vec4(depth,depth,depth,depth);
+		return result;*/
 	}
-
+	float4 filter_vsm(v2f i, UNITY_VPOS_TYPE screenPos : VPOS) : SV_Target
+	{
+		float2 uv=.5*vec2(i.uv.x,1.0-i.uv.y);
+		vec4 result=vec4(0,0,0,0);
+		vec2 offset[5]={{0,0},{-1,0},{1,0},{0,1},{0,-1}};
+		float sum=0.0;
+		for(int i=-2;i<3;i++)
+		{
+			for(int j=-2;j<3;j++)
+			{
+				vec2 off=vec2(i,j);
+				float weight=exp(-dot(off,off));
+				float depth=DepthTexture.Sample(samplerDepthTexture,uv+0.00*off).x;
+				float z=1.0-depth;//0.4243;
+				float2 moments=ComputeMoments(z);
+				// Square for variance shadow map.
+				result+=weight*vec4(moments.xyy,0);
+				sum+=weight;
+			}
+		}
+		return result/sum;
+	}
 	ENDCG
 
 	SubShader
@@ -86,6 +127,19 @@
 			#pragma fragmentoption ARB_precision_hint_nicest
 			#pragma vertex vert
 			#pragma fragment frag_colour
+			ENDCG
+		}
+		Pass
+		{
+			Blend Off
+
+			ZTest Always Cull Off ZWrite Off
+			Fog { Mode off }
+
+			CGPROGRAM
+			#pragma fragmentoption ARB_precision_hint_nicest
+			#pragma vertex vert
+			#pragma fragment filter_vsm
 			ENDCG
 		}
 	}
