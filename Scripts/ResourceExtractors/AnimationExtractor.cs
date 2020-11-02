@@ -85,6 +85,10 @@ namespace teleport
 			public AnimationCurve rotationY;
 			public AnimationCurve rotationZ;
 			public AnimationCurve rotationW;
+
+			public AnimationCurve eulerRotationX;
+			public AnimationCurve eulerRotationY;
+			public AnimationCurve eulerRotationZ;
 		}
 
 		#region DLLImports
@@ -437,6 +441,15 @@ namespace teleport
 						case "m_LocalRotation.w":
 							interimAnimation.rotationW = curve;
 							break;
+						case "localEulerAnglesRaw.x":
+							interimAnimation.eulerRotationX = curve;
+							break;
+						case "localEulerAnglesRaw.y":
+							interimAnimation.eulerRotationY = curve;
+							break;
+						case "localEulerAnglesRaw.z":
+							interimAnimation.eulerRotationZ = curve;
+							break;
 						case "m_LocalScale.x":
 							break;
 						case "m_LocalScale.y":
@@ -465,32 +478,48 @@ namespace teleport
 						continue;
 					}
 
-					if(interim.positionX.length != interim.positionY.length || interim.positionX.length != interim.positionZ.length)
+					if(interim.positionX != null)
 					{
-						Debug.LogError($"Animation for {animator.gameObject.name} on bone {bone.name} had unmatched amount of position keyframes. Skipping!");
-						continue;
+						transformKeyframe.positionKeyframes = new avs.Vector3Keyframe[interim.positionX.length];
+						transformKeyframe.positionAmount = interim.positionX.length;
+						for(int k = 0; k < interim.positionX.length; k++)
+						{
+							transformKeyframe.positionKeyframes[k].time = interim.positionX[k].time * 1000; //Convert to milliseconds from seconds.
+							transformKeyframe.positionKeyframes[k].value = new avs.Vector3(interim.positionX[k].value, interim.positionY[k].value, interim.positionZ[k].value);
+						}
+					}
+					else if(interim.positionY != null || interim.positionZ != null)
+					{
+						Debug.LogWarning("Position animation without X-property, but other properties, caused the animation data to be ignored!");
 					}
 
-					if(interim.rotationX.length != interim.rotationY.length || interim.rotationX.length != interim.rotationZ.length)
+					if(interim.rotationX != null)
 					{
-						Debug.LogError($"Animation for {animator.gameObject.name} on bone {bone.name} had unmatched amount of position keyframes. Skipping!");
-						continue;
+						transformKeyframe.rotationKeyframes = new avs.Vector4Keyframe[interim.rotationX.length];
+						transformKeyframe.rotationAmount = interim.rotationX.length;
+						for(int k = 0; k < interim.rotationX.length; k++)
+						{
+							transformKeyframe.rotationKeyframes[k].time = interim.rotationX[k].time * 1000; //Convert to milliseconds from seconds.
+							transformKeyframe.rotationKeyframes[k].value = new avs.Vector4(interim.rotationX[k].value, interim.rotationY[k].value, interim.rotationZ[k].value, interim.rotationW[k].value);
+						}
 					}
-
-					transformKeyframe.positionKeyframes = new avs.Vector3Keyframe[interim.positionX.length];
-					transformKeyframe.positionAmount = interim.positionX.length;
-					for(int k = 0; k < interim.positionX.length; k++)
+					else if(interim.eulerRotationX != null)
 					{
-						transformKeyframe.positionKeyframes[k].time = interim.positionX[k].time * 1000; //Convert to milliseconds from seconds.
-						transformKeyframe.positionKeyframes[k].value = new avs.Vector3(interim.positionX[k].value, interim.positionY[k].value, interim.positionZ[k].value);
+						transformKeyframe.rotationKeyframes = new avs.Vector4Keyframe[interim.eulerRotationX.length];
+						transformKeyframe.rotationAmount = interim.eulerRotationX.length;
+						for(int k = 0; k < interim.eulerRotationX.length; k++)
+						{
+							transformKeyframe.rotationKeyframes[k].time = interim.eulerRotationX[k].time * 1000; //Convert to milliseconds from seconds.
+							transformKeyframe.rotationKeyframes[k].value = Quaternion.Euler(interim.eulerRotationX[k].value, interim.eulerRotationY[k].value, interim.eulerRotationZ[k].value); //Convert from euler to quaternion to avs.Vector4.
+						}
 					}
-
-					transformKeyframe.rotationKeyframes = new avs.Vector4Keyframe[interim.rotationX.length];
-					transformKeyframe.rotationAmount = interim.rotationX.length;
-					for(int k = 0; k < interim.rotationX.length; k++)
+					else if(interim.rotationY != null || interim.rotationZ != null)
 					{
-						transformKeyframe.rotationKeyframes[k].time = interim.rotationX[k].time * 1000; //Convert to milliseconds from seconds.
-						transformKeyframe.rotationKeyframes[k].value = new avs.Vector4(interim.rotationX[k].value, interim.rotationY[k].value, interim.rotationZ[k].value, interim.rotationW[k].value);
+						Debug.LogWarning("Quaternion rotation animation without X-property, but other properties, caused the animation data to be ignored!");
+					}
+					else if(interim.eulerRotationY != null || interim.eulerRotationZ != null)
+					{
+						Debug.LogWarning("Euler rotation animation without X-property, but other properties, caused the animation data to be ignored!");
 					}
 
 					animation.boneKeyframes[j] = transformKeyframe;
