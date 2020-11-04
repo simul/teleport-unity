@@ -394,10 +394,23 @@ namespace teleport
 
 		public static avs.TransformAnimation[] ExtractNonHumanAnimationData(Animator animator)
 		{
+			if (animator==null)
+			{
+				Debug.LogWarning($"Null animator.");
+				return new avs.TransformAnimation[0];
+			}
+			if (animator.runtimeAnimatorController == null)
+			{
+				Debug.LogWarning($"Null runtimeAnimatorController for {animator.gameObject.name}.");
+				return new avs.TransformAnimation[0];
+			}
 			avs.TransformAnimation[] animations = new avs.TransformAnimation[animator.runtimeAnimatorController.animationClips.Length];
 
 			SkinnedMeshRenderer skinnedMeshRenderer = animator.gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
-			if(!skinnedMeshRenderer) Debug.LogWarning($"No skinned mesh renderer found for game object tree: {animator.gameObject.name}! If an bone is not found it will just assume it is not meant to be there.");
+			if (!skinnedMeshRenderer)
+			{
+				Debug.LogWarning($"No skinned mesh renderer found for game object tree: {animator.gameObject.name}! If an bone is not found it will just assume it is not meant to be there.");
+			}
 
 			for(int i = 0; i < animator.runtimeAnimatorController.animationClips.Length; i++)
 			{
@@ -411,11 +424,13 @@ namespace teleport
 
 					Transform bone = animator.gameObject.transform.Find(curveBinding.path);
 					//Don't create a curve if the bones doesn't actually exist.
-					if(!bone) continue;
+					if(!bone)
+						continue;
 
 					//Don't create the curve if it is not a bone.
 					//WARNING: Animations on non-bones are not handled!
-					if(skinnedMeshRenderer && !skinnedMeshRenderer.bones.Contains(bone)) continue; 
+					if(skinnedMeshRenderer && !skinnedMeshRenderer.bones.Contains(bone))
+						continue; 
 
 					nodeCurves.TryGetValue(bone, out InterimAnimation interimAnimation);
 					switch(curveBinding.propertyName)

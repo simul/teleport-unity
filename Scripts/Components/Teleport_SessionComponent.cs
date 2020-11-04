@@ -92,12 +92,20 @@ namespace teleport
 			sessions[clientID].SetControllerPose(index, latestRotation, latestPosition);
 		}
 
-		public static void StaticProcessInput(uid clientID, in avs.InputState newInput)
+		public static void StaticProcessInput(uid clientID, in avs.InputState newInput,in IntPtr inputEventsPtr )
 		{
 			if (!StaticDoesSessionExist(clientID))
 				return;
 			int index = 1;
 			sessions[clientID].SetControllerInput(index, newInput.buttonsPressed);
+			if (inputEventsPtr != null)
+			{
+				int EventSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(avs.InputEvent));
+
+				avs.InputEvent[] inputEvents = new avs.InputEvent[(int)newInput.numEvents];
+				Marshal.PtrToStructure(inputEventsPtr, inputEvents);
+				sessions[clientID].SetControllerEvents(index, newInput.numEvents, inputEvents);
+			}
 		}
 		#endregion
 
@@ -155,6 +163,15 @@ namespace teleport
 				controller.SetButtons(buttons);
 			}
 		}
+		public void SetControllerEvents(int index, UInt32 num, avs.InputEvent [] events)
+		{
+			if (controllers.ContainsKey(index))
+			{
+				var controller = controllers[index];
+				controller.AddEvents(num,events);
+			}
+		}
+		
 		public void SetControllerPose(int index, Quaternion newRotation, Vector3 newPosition)
 		{
 			if(!controllers.ContainsKey(index))

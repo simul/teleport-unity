@@ -172,7 +172,7 @@ namespace teleport
 			}
 			else
 			{
-				renderer.Render(context, camera,0xFFFFFFF,0xFFFFFFFF);
+				renderer.Render(context, camera,0x7FFFFFFF,0xFFFFFFFF);
 				viewmat = camera.worldToCameraMatrix;
 			}
 		}

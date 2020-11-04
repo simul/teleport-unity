@@ -54,7 +54,7 @@ namespace avs
 	};
 	public static class DataTypes
 	{
-		public static void ConvertViewProjectionMatrix( AxesStandard toStandard, ref Matrix4x4 m)
+		public static void ConvertViewProjectionMatrix(AxesStandard toStandard, ref Matrix4x4 m)
 		{
 			var y = m.GetColumn(1);
 			var z = m.GetColumn(2);
@@ -142,12 +142,12 @@ namespace avs
 		public static implicit operator UnityEngine.Vector2(Vector2 vector) => new UnityEngine.Vector2(vector.x, vector.y);
 		public static bool operator ==(Vector2 lhs, Vector2 rhs)
 		{
-			return lhs.x == rhs.x && lhs.y == rhs.y ;
+			return lhs.x == rhs.x && lhs.y == rhs.y;
 		}
 
 		public static bool operator !=(Vector2 lhs, Vector2 rhs)
 		{
-			return lhs.x != rhs.x || lhs.y != rhs.y ;
+			return lhs.x != rhs.x || lhs.y != rhs.y;
 		}
 	}
 
@@ -178,7 +178,7 @@ namespace avs
 			{
 				return false;
 			}
-			return (this==((Vector3)obj));
+			return (this == ((Vector3)obj));
 		}
 
 		public override string ToString()
@@ -262,7 +262,7 @@ namespace avs
 			return lhs.x != rhs.x || lhs.y != rhs.y || lhs.z != rhs.z || lhs.w != rhs.w;
 		}
 	}
-	
+
 	[StructLayout(LayoutKind.Sequential)]
 	public class Transform
 	{
@@ -346,6 +346,17 @@ namespace avs
 			);
 		}
 	}
+	enum InputEventType : byte
+	{
+		None=0,
+		Click
+	};
+	public struct InputEvent
+	{
+		UInt32 eventId;		 //< A monotonically increasing event identifier.
+		uid inputUid;       //< e.g. the uniqe identifier for this button or control.
+		UInt32 intValue;
+	};
 
 	public struct InputState
 	{
@@ -354,6 +365,7 @@ namespace avs
 		public float trackpadAxisY;
 		public float joystickAxisX;
 		public float joystickAxisY;
+		public UInt32 numEvents;
 	}
 
 	public struct HeadPose
