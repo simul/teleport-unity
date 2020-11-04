@@ -36,8 +36,6 @@ namespace teleport
 	{
 		public TeleportRenderSettings renderSettings = null;
 		public TeleportShadows shadows = new TeleportShadows();
-		// Recreate Unity's unityAttenuation 1024x1 R16 texture, because Unity doesn't expose it.
-		public static RenderTexture unityAttenuationTexture = null; 
 		public static Dictionary<Light, PerFrameLightProperties> perFrameLightProperties = new Dictionary<Light, PerFrameLightProperties>();
 		const int maxUnimportantLights = 4;
 		static int
@@ -94,33 +92,6 @@ namespace teleport
 		const string k_SetupLightConstants = "Setup Light Constants";
 		const string k_SetupShadowConstants = "Setup Shadow Constants";
 
-		static Shader attenuationShader = null;
-		static Material attenuationMaterial = null;
-		static void EnsureAttenuationTexture(ScriptableRenderContext context)
-		{
-			if (unityAttenuationTexture == null)
-			{
-				unityAttenuationTexture = new RenderTexture(1024, 1, 1, RenderTextureFormat.R16);
-			}
-			CommandBuffer buffer = CommandBufferPool.Get("unityAttenuationTexture");
-			buffer.SetRenderTarget(unityAttenuationTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-
-			if (attenuationMaterial == null)
-			{
-				attenuationShader = Shader.Find("Teleport/StandardAttenuation");
-				if (attenuationShader != null)
-				{
-					attenuationMaterial = new Material(attenuationShader);
-				}
-				else
-				{
-					Debug.LogError("attenuationMaterial.shader resource not found!");
-					return;
-				}
-			}
-			buffer.Blit(Texture2D.whiteTexture, unityAttenuationTexture, attenuationMaterial);
-			context.ExecuteCommandBuffer(buffer);
-		}
 		const string bufferName = "Lighting";
 		public void Cleanup(ScriptableRenderContext context,CommandBuffer buffer)
 		{
@@ -128,7 +99,6 @@ namespace teleport
 		}
 		public void RenderShadows(ScriptableRenderContext context, Camera camera, CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
 		{
-			EnsureAttenuationTexture(context);
 			CommandBuffer buffer = CommandBufferPool.Get(k_SetupShadowConstants);
 			shadows.renderSettings = renderSettings;
 			shadows.Setup(context, cullingResults);
@@ -178,7 +148,8 @@ namespace teleport
 					PerFrameLightProperties perFrame = perFrameLightProperties[light];
 					PerFramePerCameraLightProperties perFramePerCamera = perFrame.perFramePerCameraLightProperties[camera];
 					int cascadeCount = light.type == LightType.Directional ? 4 : 1;
-					shadows.RenderShadowsForLight(context, cullingResults, light, visibleLightIndex, camera, ref perFrame, ref perFramePerCamera, cascadeCount);
+					if(light.shadows!=LightShadows.None)
+						shadows.RenderShadowsForLight(context, cullingResults, light, visibleLightIndex, camera, ref perFrame, ref perFramePerCamera, cascadeCount);
 				}
 			}
 		}
@@ -204,6 +175,8 @@ namespace teleport
 				}
 				var visibleLight = cullingResults.visibleLights[vbIndex];
 				var light = visibleLight.light;
+					if (light.shadows == LightShadows.None)
+						continue;
 				if (perFrameLightProperties.ContainsKey(light))
 					shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[light], 1, depthTexture);
 			}
@@ -434,9 +407,14 @@ namespace teleport
 				}
 			}
 			if (light.lightType == LightType.Spot)
-				buffer.SetGlobalTexture(_LightTexture0, light.light.cookie);
+			{
+				if(light.light.cookie)
+					buffer.SetGlobalTexture(_LightTexture0, light.light.cookie);
+				else
+					buffer.SetGlobalTexture(_LightTexture0, GeneratedTexture.unitySoftTexture.GetRenderTexture());
+			}
 			else if (light.lightType == LightType.Point)
-				buffer.SetGlobalTexture(_LightTexture0, unityAttenuationTexture);
+				buffer.SetGlobalTexture(_LightTexture0, GeneratedTexture.unityAttenuationTexture.GetRenderTexture());
 			Matrix4x4 worldToShadow = teleport.ShadowUtils.CalcShadowMatrix(light);
 			if (light.lightType == LightType.Spot)
 				buffer.SetGlobalMatrix(unity_WorldToLight, worldToShadow);
@@ -465,7 +443,10 @@ namespace teleport
 				buffer.SetGlobalMatrix(_LightMatrix0, light.localToWorldMatrix);
 			if (light.lightType == LightType.Spot)
 			{
-				buffer.SetGlobalTexture(_LightTexture0, light.light.cookie);
+				if(light.light.cookie!=null)
+					buffer.SetGlobalTexture(_LightTexture0, light.light.cookie);
+				else
+					buffer.SetGlobalTexture(_LightTexture0, GeneratedTexture.unitySoftTexture.GetRenderTexture());
 			}
 		}
 	}

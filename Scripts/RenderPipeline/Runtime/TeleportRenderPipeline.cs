@@ -59,10 +59,9 @@ namespace teleport
 			List<int> AdditionalLightIndices = new List<int>();
 			lightingOrder.NumUnimportantLights = 0;
 			int totalVisibleLights = cullingResults.visibleLights.Length;
-
 			if (totalVisibleLights == 0)
 				return lightingOrder;
-
+			int UnprocessedLightIndices = (1<<totalVisibleLights)-1;
 			Light sunLight = RenderSettings.sun;
 			int brightestDirectionalLightIndex = -1;
 			float brightestLightIntensity = 0.0f;
@@ -108,9 +107,13 @@ namespace teleport
 					brightestDirectionalLightIndex = i;
 				}
 			}
+			if(brightestDirectionalLightIndex >= 0)
+			UnprocessedLightIndices&=~(1<<brightestDirectionalLightIndex);
+			// Search for shadow casters.
 			for (int i = 0; i < totalVisibleLights; ++i)
 			{
-				if (i == brightestDirectionalLightIndex)
+				int mask = 1 << i;
+				if ((UnprocessedLightIndices&mask)==0)
 					continue;
 				VisibleLight currVisibleLight = cullingResults.visibleLights[i];
 				Bounds outBounds= new Bounds();
@@ -120,11 +123,28 @@ namespace teleport
 				Light currLight = currVisibleLight.light;
 				if (currLight == null)
 				{
-					break;
+					continue;
 				}
 				AdditionalLightIndices.Add(i);
+				UnprocessedLightIndices &= ~mask;
 			}
-
+			for (int i = 0; i < totalVisibleLights; ++i)
+			{
+				int mask = 1 << i;
+				if ((UnprocessedLightIndices & mask) == 0)
+					continue;
+				VisibleLight currVisibleLight = cullingResults.visibleLights[i];
+				Light currLight = currVisibleLight.light;
+				if (currLight == null)
+				{
+					continue;
+				}
+				if(currLight.type==LightType.Spot)
+				{
+					AdditionalLightIndices.Add(i);
+					UnprocessedLightIndices &= ~mask;
+				}
+			}
 			lightingOrder.NumUnimportantLights = totalVisibleLights - (brightestDirectionalLightIndex >= 0 ? 1 : 0) - AdditionalLightIndices.Count;
 			if (lightingOrder.NumUnimportantLights > 4)
 				lightingOrder.NumUnimportantLights = 4;
@@ -142,6 +162,8 @@ namespace teleport
 		Matrix4x4 viewmat = new Matrix4x4();
 		void Render(ScriptableRenderContext context, Camera camera)
 		{
+			GeneratedTexture.unityAttenuationTexture.EnsureTexture(context);
+			GeneratedTexture.unitySoftTexture.EnsureTexture(context);
 			TeleportCameraRenderer renderer = GetTeleportCameraRenderer(camera);
 			var sc = camera.gameObject.GetComponent<Teleport_SceneCaptureComponent>();
 			if (sc != null)

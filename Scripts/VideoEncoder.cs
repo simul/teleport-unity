@@ -228,8 +228,14 @@ namespace teleport
 				lightData.lightType = visibleLight.lightType;
 				//	lightData.shadowViewMatrix = perFramePerCameraLightProperties.cascades[0].viewMatrix;
 				// We want here the ORIGIN of the shadow matrix, not the light's "position", which is irrelevant for directional lights.
-				
-				lightData.position = perFramePerCameraLightProperties.cascades[0].viewMatrix.inverse.GetPosition();
+				if (visibleLight.light.type == LightType.Directional || visibleLight.light.type == LightType.Spot)
+				{
+					lightData.position = perFramePerCameraLightProperties.cascades[0].viewMatrix.inverse.GetPosition();
+				}
+				else
+				{
+					lightData.position = light.transform.position;
+				}
 				// Unity lights shine in the z direction...
 				// viewMatrix no good because Unity has view matrices that are not rotational!
 				Quaternion rotation = light.transform.rotation;

@@ -506,16 +506,6 @@ namespace teleport
 				return;
 			}
 			teleportLighting.renderSettings = renderSettings;
-			//nity.Collections.NativeArray<VisibleLight> visibleLights = renderingData.lightData.visibleLights;
-			//or (int i = 0; i < visibleLights.Length; ++i)
-			//
-			//	// Skip main directional light as it is not packed into the shadow atlas
-			//	if (i == renderingData.lightData.mainLightIndex)
-			//	{
-			//		continue;
-			//	}
-			//	renderingData.cullResults.GetShadowCasterBounds(i, out var bounds);
-			//
 			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults);
 
 			var drawingSettings = new DrawingSettings(legacyShaderTagIds[0], sortingSettings)

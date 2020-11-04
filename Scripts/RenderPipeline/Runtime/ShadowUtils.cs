@@ -168,7 +168,7 @@ namespace teleport
 					Vector4 spotRow = new Vector4(spotDir.x, spotDir.y, spotDir.z, spotDir.w);
 					worldToLight.SetRow(3, spotRow);
 
-					spotRow *= 2.0F;
+				//	spotRow *= 2.0F;
 					worldToLight.SetRow(3, spotRow);
 				}
 				worldToShadow = worldToLight;
