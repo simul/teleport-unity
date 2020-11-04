@@ -4,6 +4,7 @@ using System.Text;
 using UnityEngine;
 using System.Collections.Generic;
 using uid = System.UInt64;
+using UnityEngine.SceneManagement;
 
 namespace teleport
 {
@@ -38,7 +39,7 @@ namespace teleport
 		delegate void OnSetControllerPose(uid clientID, int index, in avs.HeadPose newHeadPose);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate void OnNewInput(uid clientID, in avs.InputState newInput);
+		delegate void OnNewInput(uid clientID, in avs.InputState newInput, in IntPtr newInputEvents);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void OnDisconnect(uid clientID);
@@ -133,16 +134,28 @@ namespace teleport
 			initialiseState.SERVICE_PORT = teleportSettings.listenPort;
 			initialiseState.DISCOVERY_PORT = teleportSettings.discoveryPort;
 			ok = Initialise(initialiseState);
-
-			Renderer[] allRenderers = FindObjectsOfType<Renderer>();
-			SkinnedMeshRenderer[] allSkinnedMeshRenderers = FindObjectsOfType<SkinnedMeshRenderer>();
-			foreach(var r in allRenderers)
+			SceneManager.sceneLoaded += OnSceneLoaded;
+		}
+		void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+		{
+			GameObject[] gameObjects=scene.GetRootGameObjects();
+			foreach (var gameObject in gameObjects)
 			{
-				r.renderingLayerMask = 0xFFFFFFFF;
-			}
-			foreach (var r in allSkinnedMeshRenderers)
-			{
-				r.renderingLayerMask = 0xFFFFFFFF;
+				Renderer[] allRenderers = gameObject.GetComponentsInChildren<Renderer>();
+				SkinnedMeshRenderer[] allSkinnedMeshRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
+				CanvasRenderer[] allCanvasRenderers = gameObject.GetComponentsInChildren<CanvasRenderer>();
+				foreach (var r in allRenderers)
+				{
+					r.renderingLayerMask = 0xFFFFFFFF;
+				}
+				foreach (var r in allSkinnedMeshRenderers)
+				{
+					r.renderingLayerMask = 0xFFFFFFFF;
+				}
+				foreach (var r in allRenderers)
+				{
+					r.renderingLayerMask = 0xFFFFFFFF;
+				}
 			}
 		}
 
@@ -191,12 +204,13 @@ namespace teleport
 			uint clientMask = (uint)(((int)1) << clientLayer);
 			Renderer actorRenderer = gameObject.GetComponent<Renderer>();
 			if (actorRenderer)
-				actorRenderer.renderingLayerMask |= clientMask;
-			else
 			{
-				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
-				skinnedMeshRenderer.renderingLayerMask |= clientMask;
+				actorRenderer.renderingLayerMask |= clientMask;
+				return;
 			}
+			SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
+			skinnedMeshRenderer.renderingLayerMask |= clientMask;
+			
 		}
 
 		public static void HideActor(uid clientID,in IntPtr actorPtr)
@@ -206,13 +220,13 @@ namespace teleport
 			uint clientMask = (uint)(((int)1) << clientLayer);
 			Renderer actorRenderer = gameObject.GetComponent<Renderer>();
 			uint invClientMask = ~clientMask;
-			if (actorRenderer)
+		/*	if (actorRenderer)
 				actorRenderer.renderingLayerMask &= invClientMask;
 			else
 			{
 				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
 				skinnedMeshRenderer.renderingLayerMask &= invClientMask;
-			}
+			}*/
 		}
 
 		private static void LogMessageHandler(avs.LogSeverity Severity, string Msg, in IntPtr userData)
