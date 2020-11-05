@@ -788,7 +788,7 @@ namespace teleport
 			view.m23 *= -1f;
 			faceViewMatrices[face] = view;
 			int layerMask = 0x7FFFFFFF;
-			uint renderingMask = 0xFFFFFFFF;// 1 << 25;
+			uint renderingMask =  1 << 25;
 			camera.worldToCameraMatrix = view;
 			string samplename = camera.gameObject.name + " Face " + face;
 			StartSample(context, samplename);

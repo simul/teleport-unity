@@ -29,6 +29,7 @@ namespace teleport
 		public RenderTexture filteredShadowTexture = null; 
 		public Vector2Int texturePosition = new Vector2Int();
 		public int sizeOnTexture = 0;
+		public Matrix4x4 worldToLightMatrix = new Matrix4x4();
 		// One of these for each cascade.
 		public Dictionary<Camera, PerFramePerCameraLightProperties> perFramePerCameraLightProperties = new Dictionary<Camera, PerFramePerCameraLightProperties>();
 	};
@@ -111,10 +112,18 @@ namespace teleport
 					VisibleLight visibleLight = visibleLights[i];
 					Light light = visibleLight.light;
 					int cascadeCount = light.type==LightType.Directional?4:1;
-					if (lightingOrder.MainLightIndex == i )//|| lightingOrder.SecondLightIndex == i)
+					if (lightingOrder.MainLightIndex == i )
 					{
 						shadows.ReserveDirectionalShadows(cullingResults, light, i);
 					}
+					if (!perFrameLightProperties.ContainsKey(light))
+					{
+						perFrameLightProperties.Add(light, new PerFrameLightProperties());
+						perFrameLightProperties[light].visibleLight = visibleLight;
+					}
+					PerFrameLightProperties perFrame = perFrameLightProperties[light];
+
+					perFrame.worldToLightMatrix= teleport.ShadowUtils.CalcWorldToLightMatrix(visibleLight);
 					if (lightingOrder.MainLightIndex == i)
 					{
 						SetupMainLight(buffer, visibleLights[i]);
@@ -123,13 +132,7 @@ namespace teleport
 					{
 						SetupAddLight(buffer, visibleLights[i]);
 					}
-					if (!perFrameLightProperties.ContainsKey(light))
-					{
-						perFrameLightProperties.Add(light, new PerFrameLightProperties());
-						perFrameLightProperties[light].visibleLight = visibleLight;
-					}
-					PerFrameLightProperties perFrame = perFrameLightProperties[light];
-					if(!perFrame.perFramePerCameraLightProperties.ContainsKey(camera))
+					if (!perFrame.perFramePerCameraLightProperties.ContainsKey(camera))
 					{
 						perFrame.perFramePerCameraLightProperties.Add(camera, new PerFramePerCameraLightProperties());
 					}
@@ -408,26 +411,24 @@ namespace teleport
 			}
 			if (light.lightType == LightType.Spot)
 			{
-				if(light.light.cookie)
+				if (light.light.cookie != null)
 					buffer.SetGlobalTexture(_LightTexture0, light.light.cookie);
 				else
-					buffer.SetGlobalTexture(_LightTexture0, GeneratedTexture.unitySoftTexture.GetRenderTexture());
+					buffer.SetGlobalTexture(_LightTexture0, GeneratedTexture.unitySoftTexture.renderTexture);
 			}
 			else if (light.lightType == LightType.Point)
-				buffer.SetGlobalTexture(_LightTexture0, GeneratedTexture.unityAttenuationTexture.GetRenderTexture());
-			Matrix4x4 worldToShadow = teleport.ShadowUtils.CalcShadowMatrix(light);
-			if (light.lightType == LightType.Spot)
-				buffer.SetGlobalMatrix(unity_WorldToLight, worldToShadow);
-			else
-				buffer.SetGlobalMatrix(unity_WorldToLight, worldToShadow);
+				buffer.SetGlobalTexture(_LightTexture0, GeneratedTexture.unityAttenuationTexture.renderTexture);
+			// TODO: we already did this for the PerFramePerLight properties:
+			Matrix4x4 worldToLight = teleport.ShadowUtils.CalcWorldToLightMatrix(light);
+			buffer.SetGlobalMatrix(unity_WorldToLight, worldToLight);
 
-				// Supposedly:
+			// Supposedly:
 			//_LightShadowData.y = Appears to be unused
 			//_LightShadowData.z = 1.0 / shadow far distance
 			//_LightShadowData.w = shadow near 
 			// But actually:
-			Vector4 lightShadowData = new Vector4(1.0F - light.light.shadowStrength, 20.0F/3.0F, 1.0F / 60.0F, -8.0F/3.0F);
-			//Vector4 lightShadowData = new Vector4(1.0F-light.light.shadowStrength, 6.66666F, 1.0F/light.light.spotAngle, -light.light.shadowNearPlane);
+			Vector4 lightShadowData = new Vector4(1.0F - light.light.shadowStrength, 20.0F/3.0F, 1.0F/60.0F, -8.0F/3.0F);
+			
 			buffer.SetGlobalVector(_LightShadowData, lightShadowData);
 
 			Vector4 lightPos = light.localToWorldMatrix.GetColumn(3);
@@ -441,13 +442,6 @@ namespace teleport
 				buffer.SetGlobalVector(_WorldSpaceLightPos0, lightPos);
 			if(_LightMatrix0!= unity_WorldToLight)
 				buffer.SetGlobalMatrix(_LightMatrix0, light.localToWorldMatrix);
-			if (light.lightType == LightType.Spot)
-			{
-				if(light.light.cookie!=null)
-					buffer.SetGlobalTexture(_LightTexture0, light.light.cookie);
-				else
-					buffer.SetGlobalTexture(_LightTexture0, GeneratedTexture.unitySoftTexture.GetRenderTexture());
-			}
 		}
 	}
 	//FOG_LINEAR SHADOWS_DEPTH SPOT _METALLICGLOSSMAP _NORMALMAP

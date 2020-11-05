@@ -154,6 +154,8 @@ namespace teleport
 		}
 		protected override void Render(ScriptableRenderContext context, Camera[] cameras)
 		{
+			GeneratedTexture.unityAttenuationTexture.EnsureTexture(context);
+			GeneratedTexture.unitySoftTexture.EnsureTexture(context);
 			foreach (var camera in cameras)
 			{
 				Render(context, camera);
@@ -162,8 +164,6 @@ namespace teleport
 		Matrix4x4 viewmat = new Matrix4x4();
 		void Render(ScriptableRenderContext context, Camera camera)
 		{
-			GeneratedTexture.unityAttenuationTexture.EnsureTexture(context);
-			GeneratedTexture.unitySoftTexture.EnsureTexture(context);
 			TeleportCameraRenderer renderer = GetTeleportCameraRenderer(camera);
 			var sc = camera.gameObject.GetComponent<Teleport_SceneCaptureComponent>();
 			if (sc != null)

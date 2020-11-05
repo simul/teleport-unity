@@ -9,27 +9,23 @@ namespace teleport
 		const int maxShadowedDirectionalLightCount = 4;
 		int ShadowedDirectionalLightCount = 0;
 		int tileSize = 0;
-		struct ShadowedDirectionalLight
-		{
-			public int visibleLightIndex;
-		}
-		static int _ShadowMapTexture = Shader.PropertyToID("_ShadowMapTexture"),
-					_CameraDepthTexture=Shader.PropertyToID("_CameraDepthTexture"),
-					unity_ShadowSplitSpheres0 = Shader.PropertyToID("unity_ShadowSplitSpheres0"),
-					unity_ShadowSplitSpheres1 = Shader.PropertyToID("unity_ShadowSplitSpheres1"),
-					unity_ShadowSplitSpheres2 = Shader.PropertyToID("unity_ShadowSplitSpheres2"),
-					unity_ShadowSplitSpheres3 = Shader.PropertyToID("unity_ShadowSplitSpheres3"),
-					unity_ShadowSplitSqRadii = Shader.PropertyToID("unity_ShadowSplitSqRadii"),
-					unity_LightShadowBias = Shader.PropertyToID("unity_LightShadowBias"),
-					_LightSplitsNear = Shader.PropertyToID("_LightSplitsNear"),
-					_LightSplitsFar = Shader.PropertyToID("_LightSplitsFar"),
-					unity_WorldToShadow0 = Shader.PropertyToID("unity_WorldToShadow0"),
-					unity_WorldToShadow1 = Shader.PropertyToID("unity_WorldToShadow1"),
-					unity_WorldToShadow2 = Shader.PropertyToID("unity_WorldToShadow2"),
-					unity_WorldToShadow3 = Shader.PropertyToID("unity_WorldToShadow3"),
-					_LightShadowData = Shader.PropertyToID("_LightShadowData"),
+		static int _ShadowMapTexture			= Shader.PropertyToID("_ShadowMapTexture"),
+					_CameraDepthTexture			= Shader.PropertyToID("_CameraDepthTexture"),
+					unity_ShadowSplitSpheres0	= Shader.PropertyToID("unity_ShadowSplitSpheres0"),
+					unity_ShadowSplitSpheres1	= Shader.PropertyToID("unity_ShadowSplitSpheres1"),
+					unity_ShadowSplitSpheres2	= Shader.PropertyToID("unity_ShadowSplitSpheres2"),
+					unity_ShadowSplitSpheres3	= Shader.PropertyToID("unity_ShadowSplitSpheres3"),
+					unity_ShadowSplitSqRadii	= Shader.PropertyToID("unity_ShadowSplitSqRadii"),
+					unity_LightShadowBias		= Shader.PropertyToID("unity_LightShadowBias"),
+					_LightSplitsNear			= Shader.PropertyToID("_LightSplitsNear"),
+					_LightSplitsFar				= Shader.PropertyToID("_LightSplitsFar"),
+					unity_WorldToShadow0		= Shader.PropertyToID("unity_WorldToShadow0"),
+					unity_WorldToShadow1		= Shader.PropertyToID("unity_WorldToShadow1"),
+					unity_WorldToShadow2		= Shader.PropertyToID("unity_WorldToShadow2"),
+					unity_WorldToShadow3		= Shader.PropertyToID("unity_WorldToShadow3"),
+					_LightShadowData			= Shader.PropertyToID("_LightShadowData"),
 					unity_ShadowFadeCenterAndType = Shader.PropertyToID("unity_ShadowFadeCenterAndType"),
-					something_nonexistent = Shader.PropertyToID("something_nonexistent");
+					something_nonexistent		= Shader.PropertyToID("something_nonexistent");
 		Mesh fullscreenMesh = null;
 		public void ReserveDirectionalShadows(CullingResults cullingResults, Light light, int visibleLightIndex)
 		{

@@ -220,13 +220,13 @@ namespace teleport
 			uint clientMask = (uint)(((int)1) << clientLayer);
 			Renderer actorRenderer = gameObject.GetComponent<Renderer>();
 			uint invClientMask = ~clientMask;
-		/*	if (actorRenderer)
+			if (actorRenderer)
 				actorRenderer.renderingLayerMask &= invClientMask;
 			else
 			{
 				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
 				skinnedMeshRenderer.renderingLayerMask &= invClientMask;
-			}*/
+			}
 		}
 
 		private static void LogMessageHandler(avs.LogSeverity Severity, string Msg, in IntPtr userData)

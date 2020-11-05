@@ -5,6 +5,17 @@ using uid = System.UInt64;
 
 namespace avs
 {
+	//
+	// Summary:
+	//     The type of a Light.
+	public enum LightType : byte
+	{
+		Spot = 0,
+		Directional = 1,
+		Point = 2,
+		Area = 3,
+		Disc = 4
+	}
 	public enum LogSeverity
 	{
 		Never = 0,
@@ -54,6 +65,10 @@ namespace avs
 	};
 	public static class DataTypes
 	{
+		public static LightType UnityToTeleport(UnityEngine.LightType unity)
+		{
+			return (LightType)unity;
+		}
 		public static void ConvertViewProjectionMatrix(AxesStandard toStandard, ref Matrix4x4 m)
 		{
 			var y = m.GetColumn(1);
@@ -402,24 +417,25 @@ namespace avs
 		public Transform cameraTransform;
 		public uint lightCount;
 		[MarshalAs(UnmanagedType.ByValArray)]
-		public LightData[] lights;
+		public LightTagData[] lights;
 	};
 
-	[StructLayout(LayoutKind.Sequential)]
-	public struct LightData
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct LightTagData
 	{
-		public Transform worldTransform;
-		public Vector4 color;
-		public float range;
-		public float spotAngle;
-		public LightType lightType;
-		public Vector3 position;
-		public Vector4 orientation;
-		public Matrix4x4 shadowProjectionMatrix;
-		public Matrix4x4 worldToShadowMatrix; 
-		public Vector2Int texturePosition;
-        public int textureSize;
-        public uint uid;
+		public Transform worldTransform;			// 11*4	=44
+		public Vector4 color;						// 4*4	=16		60
+		public float range;							// 4			64
+		public float spotAngle;						// 4			68
+		public LightType lightType;					// 1			69
+		public Vector3 position;                    // 4*3 = 12		81
+		public Vector4 orientation;                 // 4*4 = 16		97
+		public Matrix4x4 shadowProjectionMatrix;    // 4*16 = 64	161
+		public Matrix4x4 worldToShadowMatrix;       // 4*16 = 64	225
+		public Vector2Int texturePosition;          // 4*2 = 8		233
+		public int textureSize;						// 4			237
+		public uid uid;								// 8			245
+														// Total is 245
 	};
 }
 

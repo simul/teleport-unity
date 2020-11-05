@@ -169,9 +169,9 @@ namespace teleport
 			}
 			else
 			{
-				List<avs.LightData> lightDataList;
+				List<avs.LightTagData> lightDataList;
 				CreateLightingData(camera, out lightDataList);
-				var lightSizeInBytes = Marshal.SizeOf(typeof(avs.LightData)) * lightDataList.Count;
+				var lightSizeInBytes = Marshal.SizeOf(typeof(avs.LightTagData)) * lightDataList.Count;
 
 				cubeTagDataWrapper.clientID = clientID;
 				cubeTagDataWrapper.dataSize = (UInt64)(Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData)) + lightSizeInBytes);
@@ -192,7 +192,7 @@ namespace teleport
 			}
 		}
 
-		void CreateLightingData(Camera camera, out List<avs.LightData> lightDataList)
+		void CreateLightingData(Camera camera, out List<avs.LightTagData> lightDataList)
 		{
 			var textureScaleAndBias = Matrix4x4.identity;
 			//textureScaleAndBias.m00 = 0.5f;
@@ -202,7 +202,7 @@ namespace teleport
 			//textureScaleAndBias.m13 = 0.5f;
 			textureScaleAndBias.m23 = 0.0f;
 
-			lightDataList = new List<avs.LightData>();
+			lightDataList = new List<avs.LightTagData>();
 			// which lights are streamed in this session?
 			var streamedLights=Teleport_SessionComponent.sessions[clientID].GeometryStreamingService.GetStreamedLights();
 			foreach(var l in streamedLights)
@@ -218,23 +218,27 @@ namespace teleport
 					continue;
 				}
 
-				var lightData = new avs.LightData();
+				var lightData = new avs.LightTagData();
 				ref var visibleLight = ref perFrameLightProperties.visibleLight;
-				lightData.uid =(uint)uid;
+			
 				lightData.worldTransform = visibleLight.localToWorldMatrix;
 				lightData.color = new avs.Vector4(visibleLight.light.color.linear.r, visibleLight.light.color.linear.g, visibleLight.light.color.linear.b, visibleLight.light.color.linear.a);
 				lightData.range = visibleLight.range;
 				lightData.spotAngle = visibleLight.spotAngle;
-				lightData.lightType = visibleLight.lightType;
+				lightData.lightType = DataTypes.UnityToTeleport(visibleLight.lightType);
 				//	lightData.shadowViewMatrix = perFramePerCameraLightProperties.cascades[0].viewMatrix;
 				// We want here the ORIGIN of the shadow matrix, not the light's "position", which is irrelevant for directional lights.
-				if (visibleLight.light.type == LightType.Directional || visibleLight.light.type == LightType.Spot)
+				if (lightData.lightType == avs.LightType.Directional )
 				{
 					lightData.position = perFramePerCameraLightProperties.cascades[0].viewMatrix.inverse.GetPosition();
+					lightData.worldToShadowMatrix = ShadowUtils.GetShadowTransformForRender(
+																			perFramePerCameraLightProperties.cascades[0].projectionMatrix
+																			,perFramePerCameraLightProperties.cascades[0].viewMatrix);
 				}
 				else
 				{
 					lightData.position = light.transform.position;
+					lightData.worldToShadowMatrix = perFrameLightProperties.worldToLightMatrix;
 				}
 				// Unity lights shine in the z direction...
 				// viewMatrix no good because Unity has view matrices that are not rotational!
@@ -247,14 +251,11 @@ namespace teleport
 				// Apply texture scale and offset to save a MAD in shader.
 				Matrix4x4 proj = textureScaleAndBias * perFramePerCameraLightProperties.cascades[0].projectionMatrix;
 				lightData.shadowProjectionMatrix =(proj).transpose ;// *  ;
-				lightData.worldToShadowMatrix =ShadowUtils.GetShadowTransformForRender(
-																		perFramePerCameraLightProperties.cascades[0].projectionMatrix
-																		, perFramePerCameraLightProperties.cascades[0].viewMatrix); ;
 				DataTypes.ConvertViewProjectionMatrix(AxesStandard.EngineeringStyle,ref lightData.worldToShadowMatrix);
 				lightData.texturePosition = perFrameLightProperties.texturePosition;
 				lightData.textureSize = perFrameLightProperties.sizeOnTexture;
 				lightData.worldTransform = light.transform.localToWorldMatrix;
-				lightData.lightType = light.type;
+				lightData.uid = uid;
 				lightDataList.Add(lightData);
 			}
 		}

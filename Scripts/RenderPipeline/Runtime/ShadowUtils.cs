@@ -66,7 +66,7 @@ namespace teleport
 		{
 			for (int i = 0; i < 4; i++)
 			{
-				WorldToShadow[i]=CalcShadowMatrix( light);
+				WorldToShadow[i]=CalcWorldToLightMatrix(light);
 				ApplySliceTransform(ref WorldToShadow[i], i, atlasSize, atlasSize, atlasSize / 2);
 			}
 		}
@@ -146,7 +146,7 @@ namespace teleport
 			outputBias.w = 0.0F;
 			return outputBias;
 		}
-		public static Matrix4x4 CalcShadowMatrix( VisibleLight light)
+		public static Matrix4x4 CalcWorldToLightMatrix( VisibleLight light)
 		{
 			Vector4 lightPos = light.localToWorldMatrix.GetColumn(3);
 			lightPos.w = 1.0F;
