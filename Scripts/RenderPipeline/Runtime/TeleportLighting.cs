@@ -30,6 +30,7 @@ namespace teleport
 		public Vector2Int texturePosition = new Vector2Int();
 		public int sizeOnTexture = 0;
 		public Matrix4x4 worldToLightMatrix = new Matrix4x4();
+		public bool AnyShadows = false;			// Any shadows this frame?
 		// One of these for each cascade.
 		public Dictionary<Camera, PerFramePerCameraLightProperties> perFramePerCameraLightProperties = new Dictionary<Camera, PerFramePerCameraLightProperties>();
 	};
@@ -104,6 +105,7 @@ namespace teleport
 			shadows.renderSettings = renderSettings;
 			shadows.Setup(context, cullingResults);
 			NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
+			Bounds bounds = new Bounds();
 
 			if (lightingOrder.MainLightIndex >= 0|| (lightingOrder.AdditionalLightIndices != null&&lightingOrder.AdditionalLightIndices.Length>0))
 			{
@@ -122,7 +124,12 @@ namespace teleport
 						perFrameLightProperties[light].visibleLight = visibleLight;
 					}
 					PerFrameLightProperties perFrame = perFrameLightProperties[light];
-
+					if (!cullingResults.GetShadowCasterBounds(i, out bounds))
+					{
+						perFrame.AnyShadows = false;
+						continue;
+					}
+					perFrame.AnyShadows = true;
 					perFrame.worldToLightMatrix= teleport.ShadowUtils.CalcWorldToLightMatrix(visibleLight);
 					if (lightingOrder.MainLightIndex == i)
 					{
@@ -142,17 +149,25 @@ namespace teleport
 						shadows.RenderShadowsForLight(context, cullingResults, light, i, camera, ref perFrame, ref perFramePerCamera, cascadeCount);
 					}
 				}
-				if(lightingOrder.AdditionalLightIndices!=null)
-				for(int i=0;i< lightingOrder.AdditionalLightIndices.Length;i++)
+				if (lightingOrder.AdditionalLightIndices != null)
 				{
-					var visibleLightIndex = lightingOrder.AdditionalLightIndices[i];
-					VisibleLight visibleLight = visibleLights[visibleLightIndex];
-					Light light = visibleLight.light;
-					PerFrameLightProperties perFrame = perFrameLightProperties[light];
-					PerFramePerCameraLightProperties perFramePerCamera = perFrame.perFramePerCameraLightProperties[camera];
-					int cascadeCount = light.type == LightType.Directional ? 4 : 1;
-					if(light.shadows!=LightShadows.None)
-						shadows.RenderShadowsForLight(context, cullingResults, light, visibleLightIndex, camera, ref perFrame, ref perFramePerCamera, cascadeCount);
+					for (int i = 0; i < lightingOrder.AdditionalLightIndices.Length; i++)
+					{
+						var visibleLightIndex = lightingOrder.AdditionalLightIndices[i];
+						VisibleLight visibleLight = visibleLights[visibleLightIndex];
+						Light light = visibleLight.light;
+						PerFrameLightProperties perFrame = perFrameLightProperties[light];
+						if (!cullingResults.GetShadowCasterBounds(visibleLightIndex, out bounds))
+						{
+							perFrame.AnyShadows = false;
+							continue;
+						}
+						perFrame.AnyShadows = true;
+						PerFramePerCameraLightProperties perFramePerCamera = perFrame.perFramePerCameraLightProperties[camera];
+						int cascadeCount = light.type == LightType.Directional ? 4 : 1;
+						if (light.shadows != LightShadows.None)
+							shadows.RenderShadowsForLight(context, cullingResults, light, visibleLightIndex, camera, ref perFrame, ref perFramePerCamera, cascadeCount);
+					}
 				}
 			}
 		}
@@ -165,7 +180,7 @@ namespace teleport
 			{
 				var visibleLight = cullingResults.visibleLights[lightingOrder.MainLightIndex];
 				var light = visibleLight.light;
-				if (perFrameLightProperties.ContainsKey(light))
+				if (perFrameLightProperties.ContainsKey(light) && perFrameLightProperties[light].AnyShadows)
 					shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[light], 4, depthTexture);
 			}
 			if(lightingOrder.AdditionalLightIndices!=null)
@@ -178,9 +193,7 @@ namespace teleport
 				}
 				var visibleLight = cullingResults.visibleLights[vbIndex];
 				var light = visibleLight.light;
-					if (light.shadows == LightShadows.None)
-						continue;
-				if (perFrameLightProperties.ContainsKey(light))
+				if (light.shadows == LightShadows.None||!perFrameLightProperties.ContainsKey(light)||!perFrameLightProperties[light].AnyShadows)
 					shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[light], 1, depthTexture);
 			}
 		}
@@ -293,15 +306,18 @@ namespace teleport
 				return false;
 			buffer.BeginSample(bufferName);
 			SetupAddLight(buffer, visibleLight);
-			buffer.SetGlobalTexture(_ShadowMapTexture, perFrameLightProperties[light].shadowAtlasTexture, RenderTextureSubElement.Depth);
-			Vector4 lightShadowData = new Vector4(0.0F, 6.66666F, 0.033333333F, -2.66667F);
-			buffer.SetGlobalVector(_LightShadowData, lightShadowData);
-			shadows.ApplyShadowConstants(context, buffer, camera, cullingResults, perFrameLightProperties[light]);
+			if (perFrameLightProperties[light].AnyShadows)
+			{
+				buffer.SetGlobalTexture(_ShadowMapTexture, perFrameLightProperties[light].shadowAtlasTexture, RenderTextureSubElement.Depth);
+				Vector4 lightShadowData = new Vector4(0.0F, 6.66666F, 0.033333333F, -2.66667F);
+				buffer.SetGlobalVector(_LightShadowData, lightShadowData);
+				shadows.ApplyShadowConstants(context, buffer, camera, cullingResults, perFrameLightProperties[light]);
+			}
 
 			CoreUtils.SetKeyword(buffer, "POINT", visibleLight.lightType == LightType.Point);
 			CoreUtils.SetKeyword(buffer, "DIRECTIONAL", visibleLight.lightType == LightType.Directional);
 			CoreUtils.SetKeyword(buffer, "SPOT", visibleLight.lightType == LightType.Spot);
-			CoreUtils.SetKeyword(buffer, "SHADOWS_DEPTH", visibleLight.light.shadows != LightShadows.None);
+			CoreUtils.SetKeyword(buffer, "SHADOWS_DEPTH", perFrameLightProperties[light].AnyShadows);//visibleLight.light.shadows != LightShadows.None);
 			CoreUtils.SetKeyword(buffer, "_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A", true);
 
 			//buffer.SetGlobalVectorArray(_VisibleLightColors, visibleLightColors);

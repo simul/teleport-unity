@@ -524,7 +524,6 @@ namespace teleport
 
 			if (cullingResults.visibleLights.Length > 0)
 			{
-
 			/*	drawingSettings.perObjectData |= PerObjectData.LightProbe
 												| PerObjectData.ReflectionProbes
 												| PerObjectData.LightProbeProxyVolume

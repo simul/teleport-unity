@@ -1521,7 +1521,7 @@ namespace teleport
 						uid newID = GenerateID();
 
 						reaffirmedResources.Add(new ReaffirmedResource { oldID = metaResource.oldID, newID = newID });
-						Debug.Log("Reaffirmed resource was " + metaResource.oldID + " now " + newID + " loaded from disk, " + assetPath);
+						//Debug.Log("Reaffirmed resource was " + metaResource.oldID + " now " + newID + " loaded from disk, " + assetPath);
 						// RK: I'm going to say it's WAY to early to put this in here when we can't be sure that the actual resource will be loaded!
 						processedResources[asset] = newID;
 					}

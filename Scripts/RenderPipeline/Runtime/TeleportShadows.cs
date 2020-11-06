@@ -210,8 +210,6 @@ namespace teleport
 											, new Vector4(0, 0, -0.0198F, 0)
 											, new Vector4(-1.0F, -1.0F, -0.98F, 1.0F));
 			buffer.SetProjectionMatrix(proj);
-			//buffer.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
-			//buffer.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_ScreenSpaceShadowsMaterial);
 
 			if (shadowMaterial == null)
 			{
