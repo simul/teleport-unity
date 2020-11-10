@@ -25,12 +25,6 @@ public class Teleport_Controller : MonoBehaviour
 	public void SetButtons(UInt32 b)
 	{
 		buttons = b;
-
-        // OVR X button 0x100 and mouse left button released is 0x010
-        if ((buttons & 0x110) != 0)
-        {
-            ExecuteEvents.Execute(EventSystem.current.currentSelectedGameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
-        }
     }
 
     public void AddEvents(UInt32 num, avs.InputEvent[] events)
@@ -38,7 +32,11 @@ public class Teleport_Controller : MonoBehaviour
         // OVR X button 0x100 and mouse left button released is 0x010
         for(int i=0;i<num;i++)
         {
-            ExecuteEvents.Execute(EventSystem.current.currentSelectedGameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
+            var evt = events[i];
+            if (evt.inputUid == 1)// e.g. mouse left btn
+            {
+                ExecuteEvents.Execute(EventSystem.current.currentSelectedGameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
+            }
         }
     }
 }

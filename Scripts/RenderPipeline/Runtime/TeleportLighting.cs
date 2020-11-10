@@ -209,12 +209,16 @@ namespace teleport
 				var light = visibleLight.light;
 				SetupMainLight(buffer, visibleLight);
 				// Which light do we want the shadows for?
-				if (perFrameLightProperties.ContainsKey(light)&& perFrameLightProperties[light].perFramePerCameraLightProperties.ContainsKey(camera))
+				if (perFrameLightProperties.ContainsKey(light)) 
 				{
-					screenspaceShadowTexture = perFrameLightProperties[light].perFramePerCameraLightProperties[camera].screenspaceShadowTexture;
-					buffer.SetGlobalTexture(_ShadowMapTexture, screenspaceShadowTexture, RenderTextureSubElement.Color);
+					var perFrame = perFrameLightProperties[light];
+					if (perFrame.AnyShadows)
+					{
+						screenspaceShadowTexture = perFrame.perFramePerCameraLightProperties[camera].screenspaceShadowTexture;
+						buffer.SetGlobalTexture(_ShadowMapTexture, screenspaceShadowTexture, RenderTextureSubElement.Color);
+						shadows.ApplyShadowConstants(context, buffer, camera, cullingResults, perFrame);
+					}
 				}
-				shadows.ApplyShadowConstants(context,buffer, camera, cullingResults, perFrameLightProperties[light]);
 			}
 			else
 			{
@@ -323,8 +327,11 @@ namespace teleport
 			//buffer.SetGlobalVectorArray(_VisibleLightColors, visibleLightColors);
 			//buffer.SetGlobalVectorArray(_VisibleLightDirectionsOrPositions, visibleLightDirectionsOrPositions);
 
-			PerFramePerCameraLightProperties perFramePerCamera = perFrameLightProperties[light].perFramePerCameraLightProperties[camera];
-			buffer.SetGlobalVector(unity_ShadowFadeCenterAndType, perFramePerCamera.shadowFadeCenterAndType);
+			if (perFrameLightProperties[light].AnyShadows)
+			{
+				PerFramePerCameraLightProperties perFramePerCamera = perFrameLightProperties[light].perFramePerCameraLightProperties[camera];
+				buffer.SetGlobalVector(unity_ShadowFadeCenterAndType, perFramePerCamera.shadowFadeCenterAndType);
+			}
 			buffer.EndSample(bufferName);
 			context.ExecuteCommandBuffer(buffer);
 			CommandBufferPool.Release(buffer);

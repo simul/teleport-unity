@@ -368,9 +368,9 @@ namespace avs
 	};
 	public struct InputEvent
 	{
-		UInt32 eventId;		 //< A monotonically increasing event identifier.
-		uid inputUid;       //< e.g. the uniqe identifier for this button or control.
-		UInt32 intValue;
+		public UInt32 eventId;		 //< A monotonically increasing event identifier.
+		public uid inputUid;       //< e.g. the uniqe identifier for this button or control.
+		public UInt32 intValue;
 	};
 
 	public struct InputState
