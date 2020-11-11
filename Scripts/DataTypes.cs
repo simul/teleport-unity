@@ -366,6 +366,8 @@ namespace avs
 		None=0,
 		Click
 	};
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct InputEvent
 	{
 		public UInt32 eventId;		 //< A monotonically increasing event identifier.
@@ -373,6 +375,7 @@ namespace avs
 		public UInt32 intValue;
 	};
 
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct InputState
 	{
 		public UInt32 buttonsPressed;

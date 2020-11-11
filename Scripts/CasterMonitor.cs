@@ -152,9 +152,9 @@ namespace teleport
 				{
 					r.renderingLayerMask = 0xFFFFFFFF;
 				}
-				foreach (var r in allRenderers)
+				foreach (var r in allCanvasRenderers)
 				{
-					r.renderingLayerMask = 0xFFFFFFFF;
+				//	r.renderingLayerMask = 0xFFFFFFFF;
 				}
 			}
 		}

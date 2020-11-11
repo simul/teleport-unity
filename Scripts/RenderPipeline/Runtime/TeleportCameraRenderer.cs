@@ -637,7 +637,7 @@ namespace teleport
 				RenderToSceneCaptureCubemap(context, camera);
 			}
 		}
-
+		int m = 0;
 		public void RenderToSceneCapture2D(ScriptableRenderContext context, Camera camera)
 		{
 			RenderTexture videoTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
@@ -653,7 +653,7 @@ namespace teleport
 			//UpdateStreamables(context, clientID, camera);
 
 			int layerMask = 0xFFFFFFF;
-			uint renderingMask = 1 << 25;
+			uint renderingMask = (uint)((1 << 25) | 0x7);
 			Render(context, camera, layerMask, renderingMask);
 			videoEncoding.EncodeColor(context, camera, 0);
 
@@ -787,7 +787,7 @@ namespace teleport
 			view.m23 *= -1f;
 			faceViewMatrices[face] = view;
 			int layerMask = 0x7FFFFFFF;
-			uint renderingMask =  1 << 25;
+			uint renderingMask =  (uint)((1 << 25)|0x7);	// canvasrenderers hard coded to have mask 0x7..!
 			camera.worldToCameraMatrix = view;
 			string samplename = camera.gameObject.name + " Face " + face;
 			StartSample(context, samplename);

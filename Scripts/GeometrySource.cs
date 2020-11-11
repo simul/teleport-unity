@@ -393,7 +393,7 @@ namespace teleport
 				for(int i = 0; i < processedResources_keys.Length; i++)
 				{
 					processedResources[processedResources_keys[i]] = processedResources_values[i];
-					Debug.Log("Restoring resource " + processedResources_values[i]);// ;
+					//Debug.Log("Restoring resource " + processedResources_values[i]);// ;
 				}
 			}
 		}

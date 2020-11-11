@@ -92,19 +92,27 @@ namespace teleport
 			sessions[clientID].SetControllerPose(index, latestRotation, latestPosition);
 		}
 
-		public static void StaticProcessInput(uid clientID, in avs.InputState newInput,in IntPtr inputEventsPtr )
+		public static void StaticProcessInput(uid clientID, in avs.InputState inputState, in IntPtr inputEventsPtr )
 		{
 			if (!StaticDoesSessionExist(clientID))
 				return;
+			//avs.InputState inputState=new avs.InputState();
+			//Marshal.PtrToStructure(newInput, inputState);
 			int index = 1;
-			sessions[clientID].SetControllerInput(index, newInput.buttonsPressed);
+			sessions[clientID].SetControllerInput(index, inputState.buttonsPressed);
 			if (inputEventsPtr != null)
 			{
 				int EventSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(avs.InputEvent));
+				//convert the pointer array into a struct array
+				avs.InputEvent[] inputEvents = new avs.InputEvent[inputState.numEvents];
+				IntPtr ptr=  inputEventsPtr;
+				for (int i = 0; i < inputState.numEvents; i++)
+				{
+					inputEvents[0]=Marshal.PtrToStructure<avs.InputEvent>(ptr);
+					ptr += EventSize;
+				}
 
-				avs.InputEvent[] inputEvents = new avs.InputEvent[(int)newInput.numEvents];
-				Marshal.PtrToStructure(inputEventsPtr, inputEvents);
-				sessions[clientID].SetControllerEvents(index, newInput.numEvents, inputEvents);
+				sessions[clientID].SetControllerEvents(index, inputState.numEvents, inputEvents);
 			}
 		}
 		#endregion

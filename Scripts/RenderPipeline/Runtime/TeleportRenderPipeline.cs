@@ -162,6 +162,7 @@ namespace teleport
 			}
 		}
 		Matrix4x4 viewmat = new Matrix4x4();
+		//int m = 0;
 		void Render(ScriptableRenderContext context, Camera camera)
 		{
 			TeleportCameraRenderer renderer = GetTeleportCameraRenderer(camera);
@@ -172,7 +173,11 @@ namespace teleport
 			}
 			else
 			{
-				renderer.Render(context, camera,0x7FFFFFFF,0xFFFFFFFF);
+			/*	m = m + 1;
+				if (m > 3)
+					m = 0;
+				uint renderMask = (uint)(0x7);*/
+				renderer.Render(context, camera,0x7FFFFFFF, 0xFFFFFFFF);
 				viewmat = camera.worldToCameraMatrix;
 			}
 		}
