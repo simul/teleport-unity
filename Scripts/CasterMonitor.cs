@@ -65,6 +65,8 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern bool Initialise(InitialiseState initialiseState);
 		[DllImport("SimulCasterServer")]
+		private static extern void SetConnectionTimeout(Int32 timeout);
+		[DllImport("SimulCasterServer")]
 		private static extern void UpdateCasterSettings(SCServer.CasterSettings newSettings);
 
 		[DllImport("SimulCasterServer")]
@@ -134,6 +136,9 @@ namespace teleport
 			initialiseState.SERVICE_PORT = teleportSettings.listenPort;
 			initialiseState.DISCOVERY_PORT = teleportSettings.discoveryPort;
 			ok = Initialise(initialiseState);
+
+			// Sets connection timeouts for peers (milliseconds)
+			SetConnectionTimeout(teleportSettings.connectionTimeout);
 			SceneManager.sceneLoaded += OnSceneLoaded;
 		}
 		void OnSceneLoaded(Scene scene, LoadSceneMode mode)
