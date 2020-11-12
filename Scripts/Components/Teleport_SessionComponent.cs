@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -43,7 +42,7 @@ namespace teleport
 
 		public static bool StaticDoesSessionExist(uid clientID)
 		{
-			if(!sessions.ContainsKey(clientID))
+			if (!sessions.ContainsKey(clientID))
 			{
 				teleport.TeleportLog.LogErrorOnce("No session component found for client with ID: " + clientID);
 				return false;
@@ -75,7 +74,7 @@ namespace teleport
 
 		public static void StaticSetHeadPose(uid clientID, in avs.HeadPose newHeadPose)
 		{
-			if(!StaticDoesSessionExist(clientID)) return;
+			if (!StaticDoesSessionExist(clientID)) return;
 
 			latestRotation.Set(newHeadPose.orientation.x, newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
 			latestPosition.Set(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
@@ -84,7 +83,7 @@ namespace teleport
 
 		public static void StaticSetControllerPose(uid clientID, int index, in avs.HeadPose newPose)
 		{
-			if(!StaticDoesSessionExist(clientID))
+			if (!StaticDoesSessionExist(clientID))
 				return;
 
 			latestRotation.Set(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
@@ -92,12 +91,10 @@ namespace teleport
 			sessions[clientID].SetControllerPose(index, latestRotation, latestPosition);
 		}
 
-		public static void StaticProcessInput(uid clientID, in avs.InputState inputState, in IntPtr inputEventsPtr )
+		public static void StaticProcessInput(uid clientID, in avs.InputState inputState, in IntPtr inputEventsPtr)
 		{
 			if (!StaticDoesSessionExist(clientID))
 				return;
-			//avs.InputState inputState=new avs.InputState();
-			//Marshal.PtrToStructure(newInput, inputState);
 			int index = 1;
 			sessions[clientID].SetControllerInput(index, inputState.buttonsPressed);
 			if (inputEventsPtr != null)
@@ -105,13 +102,13 @@ namespace teleport
 				int EventSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(avs.InputEvent));
 				//convert the pointer array into a struct array
 				avs.InputEvent[] inputEvents = new avs.InputEvent[inputState.numEvents];
+				//inputEvents = Marshal.PtrToStructure<avs.InputEvent[]>(inputEventsPtr);
 				IntPtr ptr=  inputEventsPtr;
 				for (int i = 0; i < inputState.numEvents; i++)
 				{
-					inputEvents[0]=Marshal.PtrToStructure<avs.InputEvent>(ptr);
+					inputEvents[i]=Marshal.PtrToStructure<avs.InputEvent>(ptr);
 					ptr += EventSize;
 				}
-
 				sessions[clientID].SetControllerEvents(index, inputState.numEvents, inputEvents);
 			}
 		}
@@ -122,34 +119,35 @@ namespace teleport
 		private TeleportSettings teleportSettings = null;
 
 		//One per session, as we stream geometry on a per-client basis.
-		private GeometryStreamingService geometryStreamingService=null;
+		private GeometryStreamingService geometryStreamingService = null;
 
 		public GeometryStreamingService GeometryStreamingService
 		{
-			get{
-					return geometryStreamingService;
+			get
+			{
+				return geometryStreamingService;
 			}
 		}
-	
+
 		private uid clientID = 0;
 
 		public Teleport_Head head = null;
-		public Teleport_SceneCaptureComponent sceneCaptureComponent= null;
+		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
 		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
 
 		private Vector3 last_sent_origin = new Vector3(0, 0, 0);
 
 		public bool IsConnected()
-        {
+		{
 			return Client_IsConnected(clientID);
-        }
+		}
 
 		public void Disconnect()
 		{
 			StopStreaming(clientID);
 
 			sessions.Remove(clientID);
-			if(geometryStreamingService!=null)
+			if (geometryStreamingService != null)
 				geometryStreamingService.Clear();
 
 			clientID = 0;
@@ -163,7 +161,7 @@ namespace teleport
 			head.transform.rotation = newRotation;
 			head.transform.position = newPosition;
 		}
-		public void SetControllerInput(int index,UInt32 buttons)
+		public void SetControllerInput(int index, UInt32 buttons)
 		{
 			if (controllers.ContainsKey(index))
 			{
@@ -171,37 +169,37 @@ namespace teleport
 				controller.SetButtons(buttons);
 			}
 		}
-		public void SetControllerEvents(int index, UInt32 num, avs.InputEvent [] events)
+		public void SetControllerEvents(int index, UInt32 num, avs.InputEvent[] events)
 		{
 			if (controllers.ContainsKey(index))
 			{
 				var controller = controllers[index];
-				controller.AddEvents(num,events);
+				controller.AddEvents(num, events);
 			}
 		}
-		
+
 		public void SetControllerPose(int index, Quaternion newRotation, Vector3 newPosition)
 		{
-			if(!controllers.ContainsKey(index))
+			if (!controllers.ContainsKey(index))
 			{
 				Teleport_Controller[] controller_components = GetComponentsInChildren<Teleport_Controller>();
-				foreach(var c in controller_components)
+				foreach (var c in controller_components)
 				{
-					if(c.Index == index)
+					if (c.Index == index)
 						controllers[index] = c;
 				}
-				if(!controllers.ContainsKey(index))
+				if (!controllers.ContainsKey(index))
 					return;
 			}
 			var controller = controllers[index];
-			
-		 //   controller.transform.rotation = newRotation;
-			controller.transform.SetPositionAndRotation( newPosition,newRotation);
+
+			//   controller.transform.rotation = newRotation;
+			controller.transform.SetPositionAndRotation(newPosition, newRotation);
 		}
 
 		private void OnDisable()
 		{
-			if(sessions.ContainsKey(clientID))
+			if (sessions.ContainsKey(clientID))
 			{
 				sessions.Remove(clientID);
 			}
@@ -229,10 +227,10 @@ namespace teleport
 
 		private void LateUpdate()
 		{
-			if(clientID == 0)
+			if (clientID == 0)
 			{
 				clientID = GetUnlinkedClientID();
-				if(clientID == 0)
+				if (clientID == 0)
 					return;
 				if (sessions.ContainsKey(clientID))
 				{
@@ -241,11 +239,11 @@ namespace teleport
 				sessions[clientID] = this;
 			}
 
-			if(Client_IsConnected(clientID))
+			if (Client_IsConnected(clientID))
 			{
-				if(head != null && (!Client_HasOrigin(clientID)))//||transform.hasChanged))
+				if (head != null && (!Client_HasOrigin(clientID)))//||transform.hasChanged))
 				{
-					if(Client_SetOrigin(clientID, head.transform.position))
+					if (Client_SetOrigin(clientID, head.transform.position))
 					{
 						last_sent_origin = head.transform.position;
 						transform.hasChanged = false;
@@ -253,9 +251,9 @@ namespace teleport
 				}
 			}
 
-			if(teleportSettings.casterSettings.isStreamingGeometry)
+			if (teleportSettings.casterSettings.isStreamingGeometry)
 			{
-				if(geometryStreamingService!=null)
+				if (geometryStreamingService != null)
 					geometryStreamingService.UpdateGeometryStreaming();
 			}
 		}
@@ -269,34 +267,34 @@ namespace teleport
 		{
 			Vector3 headPosition = head ? head.transform.position : new Vector3();
 
-			string str=string.Format("Client {0}", clientID);
+			string str = string.Format("Client {0}", clientID);
 			int dy = 14;
-			GUI.Label(new Rect(x, y+=dy, 300, 20), str, font);
-			GUI.Label(new Rect(x, y+=dy, 300, 20), string.Format("sent origin\t{0}", last_sent_origin), font);
+			GUI.Label(new Rect(x, y += dy, 300, 20), str, font);
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("sent origin\t{0}", last_sent_origin), font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("head position\t{0}", headPosition), font);
 			if (geometryStreamingService != null)
 			{
 				int num_actors = geometryStreamingService.GetStreamedObjectCount();
 				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Actors {0}", num_actors));
-				List<Collider> actors= geometryStreamingService.GetStreamedObjects();
+				List<Collider> actors = geometryStreamingService.GetStreamedObjects();
 				for (int i = 0; i < num_actors; i++)
 				{
 					var actor = actors[i].gameObject;
-					uid actor_uid=geometryStreamingService.GetActorID(actor);
-					GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}", actor_uid,actor.name));
+					uid actor_uid = geometryStreamingService.GetActorID(actor);
+					GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}", actor_uid, actor.name));
 				}
 				int num_lights = geometryStreamingService.GetStreamedLightCount();
 				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", num_lights));
-				int j=0;
-				foreach(var l in geometryStreamingService.GetStreamedLights())
+				int j = 0;
+				foreach (var l in geometryStreamingService.GetStreamedLights())
 				{
 					var light = l.Value;
 					if (light != null)
 					{
 						GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}:{2},{3},{4}", l.Key, light.name, light.transform.forward.x, light.transform.forward.y, light.transform.forward.z));
-						if (sceneCaptureComponent.VideoEncoder!=null&&j< sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lightCount)
+						if (sceneCaptureComponent.VideoEncoder != null && j < sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lightCount)
 						{
-							var shadow_pos=sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lights[j].position;
+							var shadow_pos = sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lights[j].position;
 							GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t\tshadow orig {0},{1},{2}", shadow_pos.x, shadow_pos.y, shadow_pos.z));
 
 						}
@@ -306,12 +304,12 @@ namespace teleport
 			}
 			foreach (var c in controllers)
 			{
-				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Controller {0}, buttons: {1}", c.Key,c.Value.buttons));
+				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Controller {0}, buttons: {1}", c.Key, c.Value.buttons));
 			}
 		}
 		private void OnDestroy()
 		{
-			if(clientID != 0)
+			if (clientID != 0)
 				StopSession(clientID);
 		}
 
