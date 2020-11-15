@@ -218,9 +218,15 @@ namespace teleport
 					continue;
 				}
 
-				var lightData = new avs.LightTagData();
+				
 				ref var visibleLight = ref perFrameLightProperties.visibleLight;
-			
+
+				if (visibleLight.light == null)
+				{
+					continue;
+				}
+
+				var lightData = new avs.LightTagData();
 				lightData.worldTransform = visibleLight.localToWorldMatrix;
 				lightData.color = new avs.Vector4(visibleLight.light.color.linear.r, visibleLight.light.color.linear.g, visibleLight.light.color.linear.b, visibleLight.light.color.linear.a);
 				lightData.range = visibleLight.range;
