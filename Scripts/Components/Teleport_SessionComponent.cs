@@ -211,18 +211,24 @@ namespace teleport
 			geometryStreamingService = new GeometryStreamingService(this);
 
 			Teleport_Head[] heads = GetComponentsInChildren<Teleport_Head>();
-			if (heads.Length != 1)
+			if(heads.Length != 1)
 			{
-				Debug.LogError("Precisely ONE Teleport_Head should be found.");
+				Debug.LogError($"Precisely ONE Teleport_Head should be found. <color=red><b>{heads.Length} were found!</b></color>");
 			}
-			head = heads[0];
+			else if(heads.Length != 0)
+			{
+				head = heads[0];
+			}
 
 			Teleport_SceneCaptureComponent[] sceneCaptureComponents = GetComponentsInChildren<Teleport_SceneCaptureComponent>();
-			if (sceneCaptureComponents.Length != 1)
+			if(sceneCaptureComponents.Length != 1)
 			{
-				Debug.LogError("Precisely ONE Teleport_SceneCaptureComponent should be found.");
+				Debug.LogError($"Precisely ONE Teleport_SceneCaptureComponent should be found. <color=red><b>{sceneCaptureComponents.Length} were found!</b></color>");
 			}
-			sceneCaptureComponent = sceneCaptureComponents[0];
+			else if(heads.Length != 0)
+			{
+				sceneCaptureComponent = sceneCaptureComponents[0];
+			}
 		}
 
 		private void LateUpdate()
