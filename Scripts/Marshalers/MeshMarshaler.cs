@@ -28,7 +28,7 @@ namespace teleport
 
         public void CleanUpNativeData(IntPtr pNativeData)
         {
-            int byteOffset = Marshal.SizeOf<Int64>();
+            int byteOffset = Marshal.SizeOf<IntPtr>() + Marshal.SizeOf<Int64>();
 
             //Free pointer for primitive arrays.
             Marshal.FreeCoTaskMem(Marshal.ReadIntPtr(pNativeData, byteOffset));
@@ -50,8 +50,8 @@ namespace teleport
 
         public int GetNativeDataSize()
         {
-            //4 64-bit ints, and 7 pointers.
-            return 88;
+            //4 64-bit ints(8), and 8 pointers(8).
+            return 96;
         }
 
         public IntPtr MarshalManagedToNative(object ManagedObj)
@@ -65,6 +65,9 @@ namespace teleport
             }
 
             int byteOffset = 0;
+
+			Marshal.WriteIntPtr(ptr, byteOffset, mesh.name);
+			byteOffset += Marshal.SizeOf<IntPtr>();
 
             //Write primitive arrays.
             Marshal.WriteInt64(ptr, byteOffset, mesh.primitiveArrayAmount);

@@ -178,6 +178,9 @@ namespace avs
 	[StructLayout(LayoutKind.Sequential)]
 	public struct Node
 	{
+		[MarshalAs(UnmanagedType.BStr)]
+		public IntPtr name;
+
 		public Transform transform;
 		public NodeDataType dataType;
 		public uid parentID;
@@ -201,6 +204,9 @@ namespace avs
 
 	public class Mesh
 	{
+		[MarshalAs(UnmanagedType.BStr)]
+		public IntPtr name;
+
 		public Int64 primitiveArrayAmount;
 		public PrimitiveArray[] primitiveArrays;
 
@@ -219,6 +225,9 @@ namespace avs
 
 	public struct Skin
 	{
+		[MarshalAs(UnmanagedType.BStr)]
+		public IntPtr name;
+
 		public Int64 bindMatrixAmount;
 		public avs.Mat4x4[] inverseBindMatrices;
 
@@ -681,6 +690,7 @@ namespace teleport
 			processedResources[bone] = boneID;
 
 			avs.Node boneNode = new avs.Node();
+			boneNode.name = Marshal.StringToBSTR(bone.name);
 			boneNode.parentID = AddBone(bone.parent, boneList);
 			boneNode.transform = avs.Transform.FromLocalUnityTransform(bone);
 			boneNode.dataType = avs.NodeDataType.Bone;
@@ -720,6 +730,7 @@ namespace teleport
 		{
 			GameObject node = light.gameObject;
 			avs.Node extractedNode = new avs.Node();
+			extractedNode.name = Marshal.StringToBSTR(light.name);
 
 			//Extract mesh used on node.
 			extractedNode.dataID = AddLight(light);
@@ -787,6 +798,7 @@ namespace teleport
 			uid nodeID = oldID == 0 ? GenerateID() : oldID;
 			processedResources[node] = nodeID;
 
+			extractedNode.name = Marshal.StringToBSTR(node.name);
 			extractedNode.skinID = skinID;
 
 			if(animationIDs != null)
@@ -841,6 +853,7 @@ namespace teleport
 		{
 			uid skinID = GenerateID();
 			avs.Skin skin = new avs.Skin();
+			skin.name = Marshal.StringToBSTR(skinnedMeshRenderer.name);
 
 			skin.inverseBindMatrices = ExtractInverseBindMatrices(skinnedMeshRenderer);
 			skin.bindMatrixAmount = skin.inverseBindMatrices.Count();
@@ -1185,6 +1198,8 @@ namespace teleport
 				GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)),
 				new avs.Mesh
 				{
+					name = Marshal.StringToBSTR(mesh.name),
+
 					primitiveArrayAmount = primitives.Length,
 					primitiveArrays = primitives,
 

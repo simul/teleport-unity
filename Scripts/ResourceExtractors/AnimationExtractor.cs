@@ -38,6 +38,8 @@ namespace avs
 
 	public class TransformAnimation
 	{
+		public IntPtr name;
+
 		public Int64 boneAmount;
 		public TransformKeyframe[] boneKeyframes;
 	}
@@ -394,16 +396,18 @@ namespace teleport
 
 		public static avs.TransformAnimation[] ExtractNonHumanAnimationData(Animator animator)
 		{
-			if (animator==null)
+			if(animator == null)
 			{
-				Debug.LogWarning($"Null animator.");
+				Debug.LogWarning($"Null animator passed to ExtractNonHumanAnimationData(...).");
 				return new avs.TransformAnimation[0];
 			}
-			if (animator.runtimeAnimatorController == null)
+
+			if(animator.runtimeAnimatorController == null)
 			{
 				Debug.LogWarning($"Null runtimeAnimatorController for {animator.gameObject.name}.");
 				return new avs.TransformAnimation[0];
 			}
+
 			avs.TransformAnimation[] animations = new avs.TransformAnimation[animator.runtimeAnimatorController.animationClips.Length];
 
 			SkinnedMeshRenderer skinnedMeshRenderer = animator.gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
@@ -416,6 +420,7 @@ namespace teleport
 			{
 				AnimationClip clip = animator.runtimeAnimatorController.animationClips[i];
 				avs.TransformAnimation animation = new avs.TransformAnimation();
+				animation.name = Marshal.StringToBSTR(clip.name);
 
 				Dictionary<Transform, InterimAnimation> nodeCurves = new Dictionary<Transform, InterimAnimation>();
 				foreach(EditorCurveBinding curveBinding in AnimationUtility.GetCurveBindings(clip))
@@ -425,12 +430,16 @@ namespace teleport
 					Transform bone = animator.gameObject.transform.Find(curveBinding.path);
 					//Don't create a curve if the bones doesn't actually exist.
 					if(!bone)
+					{
 						continue;
+					}
 
 					//Don't create the curve if it is not a bone.
 					//WARNING: Animations on non-bones are not handled!
 					if(skinnedMeshRenderer && !skinnedMeshRenderer.bones.Contains(bone))
-						continue; 
+					{
+						continue;
+					}
 
 					nodeCurves.TryGetValue(bone, out InterimAnimation interimAnimation);
 					switch(curveBinding.propertyName)
