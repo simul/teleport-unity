@@ -16,8 +16,8 @@ public class TransformAnimationMarshaler : ICustomMarshaler
 
 	public void CleanUpNativeData(IntPtr pNativeData)
 	{
-		//Free array.
-		Marshal.FreeCoTaskMem(Marshal.ReadIntPtr(pNativeData, Marshal.SizeOf<Int64>()));
+		//Free array of bone keyframes, that is located after name and array size.
+		Marshal.FreeCoTaskMem(Marshal.ReadIntPtr(pNativeData, Marshal.SizeOf<IntPtr>() + Marshal.SizeOf<Int64>()));
 
 		//Free animation.
 		Marshal.FreeCoTaskMem(pNativeData);
@@ -25,8 +25,8 @@ public class TransformAnimationMarshaler : ICustomMarshaler
 
 	public int GetNativeDataSize()
 	{
-		//16 = 8 + 8 == Marshal.SizeOf<Int64>() + Marshal.SizeOf<IntPtr>()
-		return 16;
+		//24 = 8 + 8 + 8 == Marshal.SizeOf<IntPtr>() + Marshal.SizeOf<Int64>() + Marshal.SizeOf<IntPtr>()
+		return 24;
 	}
 
 	public IntPtr MarshalManagedToNative(object managedObj)
@@ -41,8 +41,11 @@ public class TransformAnimationMarshaler : ICustomMarshaler
 
 		int byteOffset = 0;
 
-		Marshal.WriteInt64(ptr, animation.boneAmount);
-		byteOffset += Marshal.SizeOf(animation.boneAmount);
+		Marshal.WriteIntPtr(ptr, byteOffset, animation.name);
+		byteOffset += Marshal.SizeOf<IntPtr>();
+
+		Marshal.WriteInt64(ptr, byteOffset, animation.boneAmount);
+		byteOffset += Marshal.SizeOf<Int64>();
 
 		IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.TransformKeyframe>() * animation.boneAmount));
 		int arrayByteOffset = 0;

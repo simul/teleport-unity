@@ -215,7 +215,8 @@ namespace teleport
 			{
 				Debug.LogError($"Precisely ONE Teleport_Head should be found. <color=red><b>{heads.Length} were found!</b></color>");
 			}
-			else if(heads.Length != 0)
+			
+			if(heads.Length != 0)
 			{
 				head = heads[0];
 			}
@@ -225,7 +226,8 @@ namespace teleport
 			{
 				Debug.LogError($"Precisely ONE Teleport_SceneCaptureComponent should be found. <color=red><b>{sceneCaptureComponents.Length} were found!</b></color>");
 			}
-			else if(heads.Length != 0)
+			
+			if(sceneCaptureComponents.Length != 0)
 			{
 				sceneCaptureComponent = sceneCaptureComponents[0];
 			}
