@@ -193,7 +193,7 @@ namespace teleport
 				}
 				var visibleLight = cullingResults.visibleLights[vbIndex];
 				var light = visibleLight.light;
-				if (light.shadows == LightShadows.None||!perFrameLightProperties.ContainsKey(light)||!perFrameLightProperties[light].AnyShadows)
+				if (light.shadows != LightShadows.None&&perFrameLightProperties.ContainsKey(light)&&perFrameLightProperties[light].AnyShadows)
 					shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[light], 1, depthTexture);
 			}
 		}
@@ -310,28 +310,27 @@ namespace teleport
 				return false;
 			buffer.BeginSample(bufferName);
 			SetupAddLight(buffer, visibleLight);
-			if (perFrameLightProperties[light].AnyShadows)
+			bool has_shadows = false;
+			if (perFrameLightProperties.ContainsKey(light)&&perFrameLightProperties[light].AnyShadows)
 			{
+				has_shadows = true;
 				buffer.SetGlobalTexture(_ShadowMapTexture, perFrameLightProperties[light].shadowAtlasTexture, RenderTextureSubElement.Depth);
 				Vector4 lightShadowData = new Vector4(0.0F, 6.66666F, 0.033333333F, -2.66667F);
 				buffer.SetGlobalVector(_LightShadowData, lightShadowData);
 				shadows.ApplyShadowConstants(context, buffer, camera, cullingResults, perFrameLightProperties[light]);
+				PerFramePerCameraLightProperties perFramePerCamera = perFrameLightProperties[light].perFramePerCameraLightProperties[camera];
+				buffer.SetGlobalVector(unity_ShadowFadeCenterAndType, perFramePerCamera.shadowFadeCenterAndType);
 			}
 
 			CoreUtils.SetKeyword(buffer, "POINT", visibleLight.lightType == LightType.Point);
 			CoreUtils.SetKeyword(buffer, "DIRECTIONAL", visibleLight.lightType == LightType.Directional);
 			CoreUtils.SetKeyword(buffer, "SPOT", visibleLight.lightType == LightType.Spot);
-			CoreUtils.SetKeyword(buffer, "SHADOWS_DEPTH", perFrameLightProperties[light].AnyShadows);//visibleLight.light.shadows != LightShadows.None);
+			CoreUtils.SetKeyword(buffer, "SHADOWS_DEPTH", has_shadows);
 			CoreUtils.SetKeyword(buffer, "_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A", true);
 
 			//buffer.SetGlobalVectorArray(_VisibleLightColors, visibleLightColors);
 			//buffer.SetGlobalVectorArray(_VisibleLightDirectionsOrPositions, visibleLightDirectionsOrPositions);
 
-			if (perFrameLightProperties[light].AnyShadows)
-			{
-				PerFramePerCameraLightProperties perFramePerCamera = perFrameLightProperties[light].perFramePerCameraLightProperties[camera];
-				buffer.SetGlobalVector(unity_ShadowFadeCenterAndType, perFramePerCamera.shadowFadeCenterAndType);
-			}
 			buffer.EndSample(bufferName);
 			context.ExecuteCommandBuffer(buffer);
 			CommandBufferPool.Release(buffer);

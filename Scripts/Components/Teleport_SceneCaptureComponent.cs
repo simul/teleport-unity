@@ -50,7 +50,10 @@ namespace teleport
 		{
 			get; private set;
 		}
+		Teleport_SceneCaptureComponent()
+		{
 
+		}
 		void Start()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();

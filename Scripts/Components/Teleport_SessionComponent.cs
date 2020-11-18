@@ -28,8 +28,9 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern uid GetUnlinkedClientID();
 
+		// C# treats bool as 4 bytes, like C, but not like C++, which correctly uses only one byte.
 		[DllImport("SimulCasterServer")]
-		private static extern bool Client_SetOrigin(uid clientID, Vector3 pos);
+		private static extern bool Client_SetOrigin(uid clientID, Vector3 pos, [MarshalAs(UnmanagedType.I1)] bool set_rel, Vector3 rel_pos);
 		[DllImport("SimulCasterServer")]
 		private static extern bool Client_IsConnected(uid clientID);
 		[DllImport("SimulCasterServer")]
@@ -74,8 +75,8 @@ namespace teleport
 
 		public static void StaticSetHeadPose(uid clientID, in avs.HeadPose newHeadPose)
 		{
-			if (!StaticDoesSessionExist(clientID)) return;
-
+			if (!StaticDoesSessionExist(clientID))
+				return;
 			latestRotation.Set(newHeadPose.orientation.x, newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
 			latestPosition.Set(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
 			sessions[clientID].SetHeadPose(latestRotation, latestPosition);
@@ -132,6 +133,7 @@ namespace teleport
 		private uid clientID = 0;
 
 		public Teleport_Head head = null;
+		public Teleport_Root root = null; 
 		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
 		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
 
@@ -159,7 +161,7 @@ namespace teleport
 				return;
 
 			head.transform.rotation = newRotation;
-			head.transform.position = newPosition;
+			head.transform.position =root.transform.position+ newPosition;
 		}
 		public void SetControllerInput(int index, UInt32 buttons)
 		{
@@ -215,17 +217,26 @@ namespace teleport
 			{
 				Debug.LogError($"Precisely ONE Teleport_Head should be found. <color=red><b>{heads.Length} were found!</b></color>");
 			}
-			else if(heads.Length != 0)
+			else
 			{
 				head = heads[0];
 			}
-
+			Teleport_Root[] roots = GetComponentsInChildren<Teleport_Root>();
+			if (roots.Length != 1)
+			{
+				Debug.LogError($"Precisely ONE Teleport_Root should be found. <color=red><b>{roots.Length} were found!</b></color>");
+			}
+			else
+			{
+				root = roots[0];
+			}
+			
 			Teleport_SceneCaptureComponent[] sceneCaptureComponents = GetComponentsInChildren<Teleport_SceneCaptureComponent>();
 			if(sceneCaptureComponents.Length != 1)
 			{
 				Debug.LogError($"Precisely ONE Teleport_SceneCaptureComponent should be found. <color=red><b>{sceneCaptureComponents.Length} were found!</b></color>");
 			}
-			else if(heads.Length != 0)
+			else
 			{
 				sceneCaptureComponent = sceneCaptureComponents[0];
 			}
@@ -247,13 +258,18 @@ namespace teleport
 
 			if (Client_IsConnected(clientID))
 			{
-				if (head != null && (!Client_HasOrigin(clientID)))//||transform.hasChanged))
+				if (head != null && root!=null&&(!Client_HasOrigin(clientID)))//||transform.hasChanged))
 				{
-					if (Client_SetOrigin(clientID, head.transform.position))
+					if (Client_SetOrigin(clientID,root.transform.position,true, head.transform.position- root.transform.position))
 					{
-						last_sent_origin = head.transform.position;
+						last_sent_origin = root.transform.position;
 						transform.hasChanged = false;
 					}
+				}
+				else if(root.transform.hasChanged)
+				{
+					if (Client_SetOrigin(clientID, root.transform.position, false, head.transform.position - root.transform.position))
+						root.transform.hasChanged = false;
 				}
 			}
 
