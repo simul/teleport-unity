@@ -217,16 +217,17 @@ namespace teleport
 			{
 				Debug.LogError($"Precisely ONE Teleport_Head should be found. <color=red><b>{heads.Length} were found!</b></color>");
 			}
-			else
+			if(heads.Length != 0)
 			{
 				head = heads[0];
 			}
+
 			Teleport_Root[] roots = GetComponentsInChildren<Teleport_Root>();
 			if (roots.Length != 1)
 			{
 				Debug.LogError($"Precisely ONE Teleport_Root should be found. <color=red><b>{roots.Length} were found!</b></color>");
 			}
-			else
+			if(roots.Length != 0)
 			{
 				root = roots[0];
 			}
@@ -236,7 +237,7 @@ namespace teleport
 			{
 				Debug.LogError($"Precisely ONE Teleport_SceneCaptureComponent should be found. <color=red><b>{sceneCaptureComponents.Length} were found!</b></color>");
 			}
-			else
+			if(sceneCaptureComponents.Length != 0)
 			{
 				sceneCaptureComponent = sceneCaptureComponents[0];
 			}
@@ -256,20 +257,25 @@ namespace teleport
 				sessions[clientID] = this;
 			}
 
-			if (Client_IsConnected(clientID))
+			if(Client_IsConnected(clientID))
 			{
-				if (head != null && root!=null&&(!Client_HasOrigin(clientID)))//||transform.hasChanged))
+				if(head != null && root != null)
 				{
-					if (Client_SetOrigin(clientID,root.transform.position,true, head.transform.position- root.transform.position))
+					if(!Client_HasOrigin(clientID))//||transform.hasChanged))
 					{
-						last_sent_origin = root.transform.position;
-						transform.hasChanged = false;
+						if(Client_SetOrigin(clientID, root.transform.position, true, head.transform.position - root.transform.position))
+						{
+							last_sent_origin = root.transform.position;
+							transform.hasChanged = false;
+						}
 					}
-				}
-				else if(root.transform.hasChanged)
-				{
-					if (Client_SetOrigin(clientID, root.transform.position, false, head.transform.position - root.transform.position))
-						root.transform.hasChanged = false;
+					else if(root.transform.hasChanged)
+					{
+						if(Client_SetOrigin(clientID, root.transform.position, false, head.transform.position - root.transform.position))
+						{
+							root.transform.hasChanged = false;
+						}
+					}
 				}
 			}
 
