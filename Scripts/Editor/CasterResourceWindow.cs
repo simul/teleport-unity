@@ -93,11 +93,19 @@ namespace teleport
 			EditorGUILayout.BeginHorizontal();
 
 			if(GUILayout.Button("Find Scene Streamables"))
+			{
 				FindSceneStreamables();
+			}
+
 			if(GUILayout.Button("Extract Scene Geometry"))
+			{
 				ExtractSceneGeometry();
+			}
+
 			if(GUILayout.Button("Extract Project Geometry"))
+			{
 				ExtractProjectGeometry();
+			}
 
 			EditorGUILayout.EndHorizontal();
 
@@ -112,7 +120,10 @@ namespace teleport
 
 				foreach(RenderTexture texture in renderTextures)
 				{
-					if(texture) texture.Release();
+					if(texture)
+					{
+						texture.Release();
+					}
 				}
 				renderTextures = new RenderTexture[0];
 			}
@@ -137,45 +148,17 @@ namespace teleport
 				geometrySource.LoadFromDisk();
 			}
 		}
-		void AddChildren(ref HashSet<GameObject> objSet, GameObject gameObject)
-		{
-			objSet.Add(gameObject);
-			for (int i=0;i< gameObject.transform.childCount;i++)
-			{
-				var o = gameObject.transform.GetChild(i).gameObject;
-				AddChildren(ref objSet, o);
-			}
-		}
-		private GameObject[] GetStreamedObjects()
-		{
-			GameObject[] foundStreamedObjects= { };
-			if (teleportSettings.TagToStream.Length > 0)
-				foundStreamedObjects = GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream);
-			else
-			{
-				foundStreamedObjects = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
-				HashSet<GameObject> objSet = new HashSet<GameObject>();
-				foreach (var o in foundStreamedObjects)
-				{
-					AddChildren(ref objSet, o);
-				}
-				foundStreamedObjects = objSet.ToArray();
-			}
-			foundStreamedObjects = foundStreamedObjects.Where(x => (teleportSettings.LayersToStream & (1 << x.layer)) != 0).ToArray();
-
-			return foundStreamedObjects;
-		}
 
 		private void FindSceneStreamables()
 		{
-			streamedSceneObjects = GetStreamedObjects();
+			streamedSceneObjects = geometrySource.GetStreamableObjects();
 		}
 
 		private void ExtractSceneGeometry()
 		{
-			GameObject[] foundStreamables = GetStreamedObjects();
+			FindSceneStreamables();
 
-			foreach(GameObject gameObject in foundStreamables)
+			foreach(GameObject gameObject in streamedSceneObjects)
 			{
 				geometrySource.AddNode(gameObject, true);
 			}
@@ -215,7 +198,9 @@ namespace teleport
 			for(int i = geometrySource.texturesWaitingForExtraction.Count; i < renderTextures.Length; i++)
 			{
 				if(renderTextures[i])
+				{
 					renderTextures[i].Release();
+				}
 			}
 			//Resize the array, instead of simply creating a new one, as we want to keep the same render textures for quicker debugging.
 			Array.Resize(ref renderTextures, geometrySource.texturesWaitingForExtraction.Count);
@@ -236,17 +221,14 @@ namespace teleport
 				}
 
 				renderTextures[i].enableRandomWrite = true;
-				renderTextures[i].name = geometrySource.texturesWaitingForExtraction[i].id.ToString();
+				renderTextures[i].name = $"{geometrySource.texturesWaitingForExtraction[i].unityTexture.name} ({geometrySource.texturesWaitingForExtraction[i].id.ToString()})";
 				renderTextures[i].Create();
 
 				//Normal maps need to be extracted differently; i.e. convert from DXT5nm format.
-				string path = UnityEditor.AssetDatabase.GetAssetPath(sourceTexture);
-				UnityEditor.TextureImporter textureImporter = (UnityEditor.TextureImporter)UnityEditor.AssetImporter.GetAtPath(path);
-				UnityEditor.TextureImporterType textureType = UnityEditor.TextureImporterType.Default;
-				if (textureImporter != null)
-				{
-					textureType = textureImporter.textureType;
-				}
+				string path = AssetDatabase.GetAssetPath(sourceTexture);
+				TextureImporter textureImporter = (TextureImporter)AssetImporter.GetAtPath(path);
+				TextureImporterType textureType = textureImporter ? textureImporter.textureType : TextureImporterType.Default;
+
 				int kernelHandle = textureShader.FindKernel((textureType == UnityEditor.TextureImporterType.NormalMap ? "ExtractNormalMap" : "ExtractTexture") + (UnityEditor.PlayerSettings.colorSpace == ColorSpace.Gamma ? "Gamma" : "Linear"));
 
 				textureShader.SetTexture(kernelHandle, "Source", sourceTexture);

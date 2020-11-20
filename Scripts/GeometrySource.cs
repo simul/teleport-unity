@@ -410,7 +410,9 @@ namespace teleport
 		{
 			//We only want to load from disk when the project is loaded.
 			if(Application.isPlaying)
-			return;
+			{
+				return;
+			}
 
 			//Clear resources on boot.
 			processedResources.Clear();
@@ -466,6 +468,7 @@ namespace teleport
 			ClearGeometryStore();
 		}
 
+		//Returns the ID of the resource if it has been processed, or zero if the resource has not been processed or was passed in null.
 		public uid FindResourceID(UnityEngine.Object resource)
 		{
 			if(!resource) return 0;
@@ -479,6 +482,27 @@ namespace teleport
 			if(nodeID == 0) return null;
 
 			return processedResources.FirstOrDefault(x => x.Value == nodeID).Key;
+		}
+
+		public GameObject[] GetStreamableObjects()
+		{
+			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+
+			GameObject[] foundStreamedObjects = teleportSettings.TagToStream.Length > 0 ? GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream) : foundStreamedObjects = FindObjectsOfType<GameObject>();
+			foundStreamedObjects = foundStreamedObjects.Where(x => (teleportSettings.LayersToStream & (1 << x.layer)) != 0).ToArray();
+
+			return foundStreamedObjects;
+		}
+
+		//Adds all streamable objects to GeometrySource; updating any already extracted objects.
+		public void UpdateStreamableObjects()
+		{
+			GameObject[] streamableObjects = GetStreamableObjects();
+			foreach(GameObject gameObject in streamableObjects)
+			{
+				//NOTE: This will also cause materials to be re-extracted.
+				AddNode(gameObject, true);
+			}
 		}
 
 		public uid AddNode(GameObject node, bool forceUpdate = false)
