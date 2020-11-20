@@ -261,7 +261,7 @@ namespace teleport
 			{
 				if(head != null && root != null)
 				{
-					if(!Client_HasOrigin(clientID))//||transform.hasChanged))
+					if(!Client_HasOrigin(clientID))
 					{
 						if(Client_SetOrigin(clientID, root.transform.position, true, head.transform.position - root.transform.position))
 						{
