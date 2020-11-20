@@ -215,7 +215,7 @@ namespace teleport
 			{
 				Debug.LogError($"Precisely ONE "+typeof(T).Name+" should be found. <color=red><b>"+ts.Length+ "</b></color> were found!");
 			}
-			else
+			if(ts.Length != 0)
 			{
 				t= ts[0];
 			}

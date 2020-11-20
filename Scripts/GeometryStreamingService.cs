@@ -111,8 +111,11 @@ namespace teleport
 
 		public uid GetActorID(GameObject actor)
 		{
-			if (!gameObjectHandles.ContainsKey(actor))
+			if(!gameObjectHandles.ContainsKey(actor))
+			{
 				return 0;
+			}
+
 			return GetActorID(session.GetClientID(), GCHandle.ToIntPtr(gameObjectHandles[actor]));
 		}
 
@@ -123,42 +126,53 @@ namespace teleport
 
 		public void SetVisibleLights(Light[] lights)
 		{
-			foreach(var l in lights)
+			foreach(Light light in lights)
 			{
-				uid actorID = AddActor(l.gameObject);
+				uid actorID = AddActor(light.gameObject);
 				if(!streamedLights.ContainsKey(actorID))
-					streamedLights[actorID]=l;
+				{
+					streamedLights[actorID] = light;
+				}
 			}
 		}
 
 		public int GetStreamedObjectCount()
-        {
+		{
 			return streamedObjects.Count;
 		}
+
 		public List<Collider> GetStreamedObjects()
 		{
 			return streamedObjects;
 		}
-		public List<uid> GetStreamedObjectUids()
+
+		public List<uid> GetStreamedObjectIDs()
 		{
 			List<uid> uids = new List<uid>();
+
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-			foreach (var o in streamedObjects)
+			foreach(Collider collider in streamedObjects)
 			{
-				uid actorID = geometrySource.FindResourceID(o.gameObject);
-				uids.Add(actorID);
+				uid actorID = geometrySource.FindResourceID(collider.gameObject);
+				if(actorID != 0)
+				{
+					uids.Add(actorID);
+				}
 			}
+
 			return uids;
 		}
 
 		public int GetStreamedLightCount()
-        {
+		{
 			return streamedLights.Count;
-        }
-		public Dictionary<uid,Light> GetStreamedLights()
+		}
+
+		public Dictionary<uid, Light> GetStreamedLights()
 		{
 			return streamedLights;
 		}
+
 		public void UpdateGeometryStreaming()
 		{
 			//Detect changes in geometry that needs to be streamed to the client.
@@ -173,34 +187,15 @@ namespace teleport
 				foreach(Collider collider in gainedColliders)
 				{
 					//Skip game objects without the streaming tag.
-					if(teleportSettings.TagToStream.Length>0 && !collider.CompareTag(teleportSettings.TagToStream))
-						continue;
-					// Add to the list without first checking if it can be added. So it won't spam failure messages.
-					streamedObjects.Add(collider);
-					uid actorID = AddActor(collider.gameObject);
-					if(actorID != 0)
+					if(teleportSettings.TagToStream.Length == 0 || collider.CompareTag(teleportSettings.TagToStream))
 					{
-						ActorEnteredBounds(session.GetClientID(), actorID);
-					}
-					else
-					{
-						Debug.LogWarning("Failed to add game object to stream: " + collider.gameObject.name);
+						StartStreamingActor(collider);
 					}
 				}
 
 				foreach(Collider collider in lostColliders)
 				{
-					streamedObjects.Remove(collider);
-
-					uid actorID = RemoveActor(collider.gameObject);
-					if(actorID != 0)
-					{
-						ActorLeftBounds(session.GetClientID(), actorID);
-					}
-					else
-					{
-						Debug.LogWarning("Attempted to remove actor that was not being streamed: " + collider.gameObject.name);
-					}
+					StopStreamingActor(collider);
 				}
 			}
 			else
@@ -212,12 +207,56 @@ namespace teleport
 			timeSincePositionUpdate += Time.deltaTime;
 			if(session.IsConnected() && timeSincePositionUpdate >= 1.0f / teleportSettings.moveUpdatesPerSecond)
 			{
-				SendPositionUpdates();
 				timeSincePositionUpdate = 0;
+
+				DetectInvalidStreamables();
+				SendPositionUpdates();
 			}
 		}
 
-		public void SendPositionUpdates()
+		private void StartStreamingActor(Collider collider)
+		{
+			// Add to the list without first checking if it can be added. So it won't spam failure messages.
+			streamedObjects.Add(collider);
+			uid actorID = AddActor(collider.gameObject);
+			if(actorID != 0)
+			{
+				ActorEnteredBounds(session.GetClientID(), actorID);
+			}
+			else
+			{
+				Debug.LogWarning("Failed to add game object to stream: " + collider.gameObject.name);
+			}
+		}
+
+		private void StopStreamingActor(Collider collider)
+		{
+			streamedObjects.Remove(collider);
+
+			uid actorID = RemoveActor(collider.gameObject);
+			if(actorID != 0)
+			{
+				ActorLeftBounds(session.GetClientID(), actorID);
+			}
+			else
+			{
+				Debug.LogWarning("Attempted to remove actor that was not being streamed: " + collider.gameObject.name);
+			}
+		}
+
+		private void DetectInvalidStreamables()
+		{
+			for(int i = streamedObjects.Count - 1; i >= 0; i--)
+			{
+				Collider collider = streamedObjects[i];
+				if(!collider.CompareTag(teleportSettings.TagToStream))
+				{
+					StopStreamingActor(collider);
+				}
+			}
+		}
+
+		private void SendPositionUpdates()
         {
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 			if(teleportSettings == null) return;

@@ -410,7 +410,9 @@ namespace teleport
 		{
 			//We only want to load from disk when the project is loaded.
 			if(Application.isPlaying)
-			return;
+			{
+				return;
+			}
 
 			//Clear resources on boot.
 			processedResources.Clear();
@@ -466,6 +468,7 @@ namespace teleport
 			ClearGeometryStore();
 		}
 
+		//Returns the ID of the resource if it has been processed, or zero if the resource has not been processed or was passed in null.
 		public uid FindResourceID(UnityEngine.Object resource)
 		{
 			if(!resource) return 0;
@@ -479,6 +482,27 @@ namespace teleport
 			if(nodeID == 0) return null;
 
 			return processedResources.FirstOrDefault(x => x.Value == nodeID).Key;
+		}
+
+		public GameObject[] GetStreamableObjects()
+		{
+			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+
+			GameObject[] foundStreamedObjects = teleportSettings.TagToStream.Length > 0 ? GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream) : foundStreamedObjects = FindObjectsOfType<GameObject>();
+			foundStreamedObjects = foundStreamedObjects.Where(x => (teleportSettings.LayersToStream & (1 << x.layer)) != 0).ToArray();
+
+			return foundStreamedObjects;
+		}
+
+		//Adds all streamable objects to GeometrySource; updating any already extracted objects.
+		public void UpdateStreamableObjects()
+		{
+			GameObject[] streamableObjects = GetStreamableObjects();
+			foreach(GameObject gameObject in streamableObjects)
+			{
+				//NOTE: This will also cause materials to be re-extracted.
+				AddNode(gameObject, true);
+			}
 		}
 
 		public uid AddNode(GameObject node, bool forceUpdate = false)
@@ -531,19 +555,24 @@ namespace teleport
 		public uid AddMesh(Mesh mesh)
 		{
 			if(!mesh)
+			{
+				Debug.LogError("Passed null mesh to AddMesh(...) in GeometrySource!");
 				return 0;
+			}
+
+			if(!mesh.isReadable)
+			{
+				Debug.LogWarning($"Passed unreadable mesh \"{mesh.name}\" to AddMesh(...) in GeometrySource!");
+				return 0;
+			}
 
 			if(!processedResources.TryGetValue(mesh, out uid meshID))
 			{
 				meshID = GenerateID();
+				processedResources[mesh] = meshID;
 
-				if (ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID))
-				{
-					ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID);
-					processedResources[mesh] = meshID;
-				}
-				else
-					return 0;
+				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID);
+				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID);
 			}
 
 			return meshID;
@@ -791,7 +820,7 @@ namespace teleport
 			//Can't create a node with no data.
 			if(extractedNode.dataID == 0)
 			{
-				Debug.LogError("Failed to extract mesh data from game object: " + node.name+" - mesh may not be readable.");
+				Debug.LogError($"Failed to extract mesh data from GameObject: {node.name}");
 				return 0;
 			}
 
@@ -887,13 +916,8 @@ namespace teleport
 			return bindMatrices;
 		}
 
-		private bool ExtractMeshData(avs.AxesStandard extractToBasis, Mesh mesh, uid meshID)
+		private void ExtractMeshData(avs.AxesStandard extractToBasis, Mesh mesh, uid meshID)
 		{
-			if(!mesh.isReadable)
-			{
-				//Debug.LogError("ExtractMeshData failed for "+mesh.name+" because mesh is not readable.");
-				return false;
-			}
 			avs.PrimitiveArray[] primitives = new avs.PrimitiveArray[mesh.subMeshCount];
 			Dictionary<uid, avs.Accessor> accessors = new Dictionary<uid, avs.Accessor>(6);
 			Dictionary<uid, avs.BufferView> bufferViews = new Dictionary<uid, avs.BufferView>(6);
@@ -1218,7 +1242,6 @@ namespace teleport
 				extractToBasis
 			);
 #endif
-			return true;
 		}
 
 		private void CreateIndexBufferAndView(int stride, in int[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, out uid bufferViewID)

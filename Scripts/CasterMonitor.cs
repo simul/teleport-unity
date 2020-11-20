@@ -121,6 +121,9 @@ namespace teleport
 				title += ": Current rendering pipeline is not TeleportRenderPipeline!";
 				Debug.LogError(title);
 			}
+
+			//Force streamable objects to be updated, if they were changed but extract was not pressed in the Resource Window.
+			geometrySource.UpdateStreamableObjects();
 		}
 
 		private void OnEnable()
