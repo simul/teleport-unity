@@ -313,12 +313,17 @@ namespace teleport
 			bool has_shadows = false;
 			if (perFrameLightProperties.ContainsKey(light)&&perFrameLightProperties[light].AnyShadows)
 			{
+				var perFrame = perFrameLightProperties[light];
+				if (!perFrame.perFramePerCameraLightProperties.ContainsKey(camera))
+				{
+					perFrame.perFramePerCameraLightProperties.Add(camera, new PerFramePerCameraLightProperties());
+				}
+				PerFramePerCameraLightProperties perFramePerCamera = perFrame.perFramePerCameraLightProperties[camera];
 				has_shadows = true;
-				buffer.SetGlobalTexture(_ShadowMapTexture, perFrameLightProperties[light].shadowAtlasTexture, RenderTextureSubElement.Depth);
+				buffer.SetGlobalTexture(_ShadowMapTexture, perFrame.shadowAtlasTexture, RenderTextureSubElement.Depth);
 				Vector4 lightShadowData = new Vector4(0.0F, 6.66666F, 0.033333333F, -2.66667F);
 				buffer.SetGlobalVector(_LightShadowData, lightShadowData);
-				shadows.ApplyShadowConstants(context, buffer, camera, cullingResults, perFrameLightProperties[light]);
-				PerFramePerCameraLightProperties perFramePerCamera = perFrameLightProperties[light].perFramePerCameraLightProperties[camera];
+				shadows.ApplyShadowConstants(context, buffer, camera, cullingResults, perFrame);
 				buffer.SetGlobalVector(unity_ShadowFadeCenterAndType, perFramePerCamera.shadowFadeCenterAndType);
 			}
 

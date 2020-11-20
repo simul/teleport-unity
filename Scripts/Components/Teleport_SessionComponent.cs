@@ -133,7 +133,9 @@ namespace teleport
 		private uid clientID = 0;
 
 		public Teleport_Head head = null;
-		public Teleport_Root root = null; 
+		// The *client* root is the 
+		public Teleport_ClientspaceRoot clientspaceRoot = null;
+		public Teleport_CollisionRoot collisionRoot = null;
 		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
 		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
 
@@ -161,7 +163,7 @@ namespace teleport
 				return;
 
 			head.transform.rotation = newRotation;
-			head.transform.position =root.transform.position+ newPosition;
+			head.transform.position = clientspaceRoot.transform.position+ newPosition;
 		}
 		public void SetControllerInput(int index, UInt32 buttons)
 		{
@@ -206,40 +208,27 @@ namespace teleport
 				sessions.Remove(clientID);
 			}
 		}
-
+		void GetSingleChild<T>(ref T t)
+		{
+			T[] ts = GetComponentsInChildren<T>();
+			if (ts.Length != 1)
+			{
+				Debug.LogError($"Precisely ONE "+typeof(T).Name+" should be found. <color=red><b>"+ts.Length+ "</b></color> were found!");
+			}
+			else
+			{
+				t= ts[0];
+			}
+		}
 		private void Start()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
 			geometryStreamingService = new GeometryStreamingService(this);
 
-			Teleport_Head[] heads = GetComponentsInChildren<Teleport_Head>();
-			if(heads.Length != 1)
-			{
-				Debug.LogError($"Precisely ONE Teleport_Head should be found. <color=red><b>{heads.Length} were found!</b></color>");
-			}
-			else
-			{
-				head = heads[0];
-			}
-			Teleport_Root[] roots = GetComponentsInChildren<Teleport_Root>();
-			if (roots.Length != 1)
-			{
-				Debug.LogError($"Precisely ONE Teleport_Root should be found. <color=red><b>{roots.Length} were found!</b></color>");
-			}
-			else
-			{
-				root = roots[0];
-			}
-			
-			Teleport_SceneCaptureComponent[] sceneCaptureComponents = GetComponentsInChildren<Teleport_SceneCaptureComponent>();
-			if(sceneCaptureComponents.Length != 1)
-			{
-				Debug.LogError($"Precisely ONE Teleport_SceneCaptureComponent should be found. <color=red><b>{sceneCaptureComponents.Length} were found!</b></color>");
-			}
-			else
-			{
-				sceneCaptureComponent = sceneCaptureComponents[0];
-			}
+			GetSingleChild(ref head);
+			GetSingleChild(ref clientspaceRoot);
+			GetSingleChild(ref collisionRoot);
+			GetSingleChild(ref sceneCaptureComponent);
 		}
 
 		private void LateUpdate()
@@ -258,18 +247,22 @@ namespace teleport
 
 			if (Client_IsConnected(clientID))
 			{
-				if (head != null && root!=null&&(!Client_HasOrigin(clientID)))//||transform.hasChanged))
+				if (collisionRoot!=null&& collisionRoot.transform.hasChanged)
 				{
-					if (Client_SetOrigin(clientID,root.transform.position,true, head.transform.position- root.transform.position))
+					collisionRoot.transform.hasChanged = false;
+				}
+				if (head != null && clientspaceRoot != null&&(!Client_HasOrigin(clientID)))//||transform.hasChanged))
+				{
+					if (Client_SetOrigin(clientID, clientspaceRoot.transform.position,true, head.transform.position- clientspaceRoot.transform.position))
 					{
-						last_sent_origin = root.transform.position;
+						last_sent_origin = clientspaceRoot.transform.position;
 						transform.hasChanged = false;
 					}
 				}
-				else if(root.transform.hasChanged)
+				else if(clientspaceRoot.transform.hasChanged)
 				{
-					if (Client_SetOrigin(clientID, root.transform.position, false, head.transform.position - root.transform.position))
-						root.transform.hasChanged = false;
+					if (Client_SetOrigin(clientID, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position))
+						clientspaceRoot.transform.hasChanged = false;
 				}
 			}
 
