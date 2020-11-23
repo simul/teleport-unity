@@ -74,6 +74,7 @@ namespace teleport
 			if (teleportSettings == null)
 				teleportSettings = TeleportSettings.GetOrCreateSettings();
 			// Use IMGUI to display UI:
+			teleportSettings.defaultScene = EditorGUILayout.TextField("defaultScene", teleportSettings.defaultScene);
 			teleportSettings.TagToStream = EditorGUILayout.TextField("Tag to Stream",teleportSettings.TagToStream);
 			teleportSettings.LayersToStream = LayerMaskField("Layers", teleportSettings.LayersToStream);
 			teleportSettings.moveUpdatesPerSecond = (uint)EditorGUILayout.IntField("Move Updates Per Second", (int)teleportSettings.moveUpdatesPerSecond);

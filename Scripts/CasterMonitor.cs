@@ -143,9 +143,12 @@ namespace teleport
 			// Sets connection timeouts for peers (milliseconds)
 			SetConnectionTimeout(teleportSettings.connectionTimeout);
 			SceneManager.sceneLoaded += OnSceneLoaded;
+			SceneManager.sceneUnloaded += OnSceneUnloaded;
 		}
+		List<GameObject> streamableObjects=new List<GameObject>();
 		void OnSceneLoaded(Scene scene, LoadSceneMode mode)
 		{
+			//SceneManager.sceneCount
 			GameObject[] gameObjects=scene.GetRootGameObjects();
 			foreach (var gameObject in gameObjects)
 			{
@@ -162,11 +165,43 @@ namespace teleport
 				}
 				foreach (var r in allCanvasRenderers)
 				{
-				//	r.renderingLayerMask = 0xFFFFFFFF;
+					//	r.renderingLayerMask = 0xFFFFFFFF;
 				}
 			}
+			if (teleportSettings.TagToStream.Length != 0)
+				gameObjects = GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream);
+			// All streamable objects: add the component Teleport_Streamable.
+			foreach(var gameObject in gameObjects)
+			{
+				if(((1<<gameObject.layer)&teleportSettings.LayersToStream)!=0)
+				{
+					if(gameObject.GetComponent<Teleport_Streamable>()==null)
+						gameObject.AddComponent<Teleport_Streamable>();
+				}
+			}
+			var streamables= GameObject.FindObjectsOfType<Teleport_Streamable>();
+			foreach(var s in streamables)
+			{
+				streamableObjects.Add(s.gameObject);
+			}
+			// Reset the "origin" for all sessions on the assumption we have changed level.
+			foreach(var s in Teleport_SessionComponent.sessions)
+			{
+				s.Value.ResetOrigin();
+			}
 		}
+		void OnSceneUnloaded(Scene scene)
+		{
+			GameObject[] gameObjects = scene.GetRootGameObjects();
 
+			foreach (var gameObject in gameObjects)
+			{
+				Teleport_Streamable[] allStreamables = gameObject.GetComponentsInChildren<Teleport_Streamable>();
+				streamableObjects.Remove(gameObject);
+				foreach (var o in allStreamables)
+					streamableObjects.Remove(o.gameObject);
+			}
+		}
 		private void Update()
 		{
 			if (ok && Application.isPlaying)
@@ -202,6 +237,8 @@ namespace teleport
 
 		private void OnDisable()
 		{
+			SceneManager.sceneLoaded += OnSceneLoaded;
+			SceneManager.sceneUnloaded -= OnSceneUnloaded;
 			Shutdown();
 		}
 

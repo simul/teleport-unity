@@ -230,6 +230,11 @@ namespace teleport
 			GetSingleChild(ref collisionRoot);
 			GetSingleChild(ref sceneCaptureComponent);
 		}
+		bool resetOrigin = true;
+		public void ResetOrigin()
+		{
+			resetOrigin = true;
+		}
 
 		private void LateUpdate()
 		{
@@ -247,22 +252,23 @@ namespace teleport
 
 			if (Client_IsConnected(clientID))
 			{
-				if (collisionRoot!=null&& collisionRoot.transform.hasChanged)
-				{
-					collisionRoot.transform.hasChanged = false;
-				}
-				if (head != null && clientspaceRoot != null&&(!Client_HasOrigin(clientID)))//||transform.hasChanged))
+				if (head != null && clientspaceRoot != null&&(!Client_HasOrigin(clientID))|| resetOrigin)//||transform.hasChanged))
 				{
 					if (Client_SetOrigin(clientID, clientspaceRoot.transform.position,true, head.transform.position- clientspaceRoot.transform.position))
 					{
 						last_sent_origin = clientspaceRoot.transform.position;
 						transform.hasChanged = false;
+						resetOrigin = false;
 					}
 				}
 				else if(clientspaceRoot.transform.hasChanged)
 				{
 					if (Client_SetOrigin(clientID, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position))
 						clientspaceRoot.transform.hasChanged = false;
+				}
+				if (collisionRoot != null && collisionRoot.transform.hasChanged)
+				{
+					collisionRoot.transform.hasChanged = false;
 				}
 			}
 
@@ -291,10 +297,10 @@ namespace teleport
 			{
 				int num_actors = geometryStreamingService.GetStreamedObjectCount();
 				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Actors {0}", num_actors));
-				List<Collider> actors = geometryStreamingService.GetStreamedObjects();
+				List<GameObject> streamedGameObjects = geometryStreamingService.GetStreamedObjects();
 				for (int i = 0; i < num_actors; i++)
 				{
-					var actor = actors[i].gameObject;
+					var actor = streamedGameObjects[i];
 					uid actor_uid = geometryStreamingService.GetActorID(actor);
 					GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}", actor_uid, actor.name));
 				}

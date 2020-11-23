@@ -48,10 +48,12 @@ namespace teleport
 		private readonly Teleport_SessionComponent session;
 		private readonly TeleportSettings teleportSettings;
 
-		private List<Collider> streamedObjects = new List<Collider>();
+		private List<Collider> streamedColliders = new List<Collider>();
+		private List<GameObject> streamedGameObjects = new List<GameObject>();
 		private Dictionary<uid,Light> streamedLights = new Dictionary<uid, Light>();
 
 		//Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
+		// Roderick's note: this does not appear to work. Errors refer to accessing deleted objects.
 		private Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
 
 		private Dictionary<uid, avs.MovementUpdate> previousMovements = new Dictionary<uid, avs.MovementUpdate>();
@@ -67,7 +69,8 @@ namespace teleport
 
 		public void Clear()
         {
-			streamedObjects.Clear();
+			streamedColliders.Clear();
+			streamedGameObjects.Clear();
 			streamedLights.Clear();
 
 			RemoveAllActors();
@@ -138,12 +141,12 @@ namespace teleport
 
 		public int GetStreamedObjectCount()
 		{
-			return streamedObjects.Count;
+			return streamedGameObjects.Count;
 		}
 
-		public List<Collider> GetStreamedObjects()
+		public List<GameObject> GetStreamedObjects()
 		{
-			return streamedObjects;
+			return streamedGameObjects;
 		}
 
 		public List<uid> GetStreamedObjectIDs()
@@ -151,9 +154,9 @@ namespace teleport
 			List<uid> uids = new List<uid>();
 
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-			foreach(Collider collider in streamedObjects)
+			foreach(GameObject gameObject in streamedGameObjects)
 			{
-				uid actorID = geometrySource.FindResourceID(collider.gameObject);
+				uid actorID = geometrySource.FindResourceID(gameObject);
 				if(actorID != 0)
 				{
 					uids.Add(actorID);
@@ -181,21 +184,32 @@ namespace teleport
 				List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.transform.position, teleportSettings.casterSettings.detectionSphereRadius, teleportSettings.LayersToStream));
 				List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.transform.position, teleportSettings.casterSettings.detectionSphereRadius + teleportSettings.casterSettings.detectionSphereBufferDistance, teleportSettings.LayersToStream));
 
-				List<Collider> gainedColliders = new List<Collider>(innerSphereCollisions.Except(streamedObjects));
-				List<Collider> lostColliders = new List<Collider>(streamedObjects.Except(outerSphereCollisions));
+				List<Collider> gainedColliders = new List<Collider>(innerSphereCollisions.Except(streamedColliders));
+				List<Collider> lostColliders = new List<Collider>(streamedColliders.Except(outerSphereCollisions));
 
 				foreach(Collider collider in gainedColliders)
 				{
 					//Skip game objects without the streaming tag.
 					if(teleportSettings.TagToStream.Length == 0 || collider.CompareTag(teleportSettings.TagToStream))
 					{
-						StartStreamingActor(collider);
+						if(!StartStreamingGameObject(collider.gameObject))
+						{
+							// Why would this fail?
+							for(int i=0;i<streamedColliders.Count;i++)
+							{
+								var c = streamedColliders[i];
+								if(c==collider)
+								{
+									Debug.LogError("collider matches.");
+								}
+							}
+						}
 					}
 				}
 
 				foreach(Collider collider in lostColliders)
 				{
-					StopStreamingActor(collider);
+					StopStreamingGameObject(collider.gameObject);
 				}
 			}
 			else
@@ -214,44 +228,69 @@ namespace teleport
 			}
 		}
 
-		private void StartStreamingActor(Collider collider)
+		private bool StartStreamingGameObject(GameObject gameObject)
 		{
+			if(streamedGameObjects.Contains(gameObject))
+			{
+				Debug.LogError("StartStreamingGameObject called on " + gameObject.name + " which is already streamed.");
+				return false;
+			}
+			streamedGameObjects.Add(gameObject);
 			// Add to the list without first checking if it can be added. So it won't spam failure messages.
-			streamedObjects.Add(collider);
-			uid actorID = AddActor(collider.gameObject);
+			var colliders  = gameObject.GetComponents<Collider>();
+			foreach(var c in colliders)
+				streamedColliders.Add(c);
+			uid actorID = AddActor(gameObject);
 			if(actorID != 0)
 			{
 				ActorEnteredBounds(session.GetClientID(), actorID);
 			}
 			else
 			{
-				Debug.LogWarning("Failed to add game object to stream: " + collider.gameObject.name);
+				Debug.LogWarning("Failed to add game object to stream: " + gameObject.name);
 			}
+			var streamable = gameObject.GetComponent<Teleport_Streamable>();
+			if(streamable==null)
+			{
+				Debug.LogError("Game object "+gameObject.name+" has no Teleport_Streamable component.");
+			}
+			// This is assumed to exist.
+			streamable.AddStreamingClient(session);
+			return true;
 		}
 
-		private void StopStreamingActor(Collider collider)
+		public void StopStreamingGameObject(GameObject gameObject)
 		{
-			streamedObjects.Remove(collider);
+			var colliders = gameObject.GetComponents<Collider>();
+			foreach (var c in colliders)
+				streamedColliders.Remove(c);
+			streamedGameObjects.Remove(gameObject);
 
-			uid actorID = RemoveActor(collider.gameObject);
+			uid actorID = RemoveActor(gameObject);
 			if(actorID != 0)
 			{
 				ActorLeftBounds(session.GetClientID(), actorID);
 			}
 			else
 			{
-				Debug.LogWarning("Attempted to remove actor that was not being streamed: " + collider.gameObject.name);
+				Debug.LogWarning("Attempted to remove actor that was not being streamed: " + gameObject.name);
 			}
+			var streamable = gameObject.GetComponent<Teleport_Streamable>();
+			if (streamable == null)
+			{
+				Debug.LogError("Game object " + gameObject.name + " has no Teleport_Streamable component.");
+			}
+			streamable.RemoveStreamingClient(session);
 		}
 
 		private void DetectInvalidStreamables()
 		{
-			for(int i = streamedObjects.Count - 1; i >= 0; i--)
+			for(int i = streamedGameObjects.Count - 1; i >= 0; i--)
 			{
-				Collider collider = streamedObjects[i];
-				if(!collider.CompareTag(teleportSettings.TagToStream))
+				GameObject gameObject= streamedGameObjects[i];
+				if(!gameObject.CompareTag(teleportSettings.TagToStream))
 				{
-					StopStreamingActor(collider);
+					StopStreamingGameObject(gameObject);
 				}
 			}
 		}

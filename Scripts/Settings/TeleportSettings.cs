@@ -30,6 +30,10 @@ namespace teleport
 
 		public CasterSettings casterSettings =new CasterSettings();
 		public LayerMask LayersToStream;
+
+		[Header("Utility")]
+		public string defaultScene="";
+
 		public static void EnsureAssetPath(string requiredPath)
 		{
 			var settings_folders = requiredPath.Split('/');
