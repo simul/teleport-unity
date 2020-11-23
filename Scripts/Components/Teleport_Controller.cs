@@ -35,7 +35,8 @@ public class Teleport_Controller : MonoBehaviour
             var evt = events[i];
             if (evt.inputUid == 1)// e.g. mouse left btn
             {
-                ExecuteEvents.Execute(EventSystem.current.currentSelectedGameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
+                if (EventSystem.current!=null)
+                    ExecuteEvents.Execute(EventSystem.current.currentSelectedGameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
             }
         }
     }

@@ -12,37 +12,35 @@ namespace teleport
 	{
 		#region DLLImports
 		[DllImport("SimulCasterServer")]
-		private static extern void AddLight(uid clientID, IntPtr newLight, uid lightID);
+		private static extern void Client_AddActor(uid clientID, IntPtr newActor, uid actorID, avs.Transform currentTransform);
 		[DllImport("SimulCasterServer")]
-		private static extern void AddActor(uid clientID, IntPtr newActor, uid actorID, avs.Transform currentTransform);
+		private static extern uid Client_RemoveActor(uid clientID, IntPtr oldActor);
 		[DllImport("SimulCasterServer")]
-		private static extern uid RemoveActor(uid clientID, IntPtr oldActor);
-		[DllImport("SimulCasterServer")]
-		private static extern uid GetActorID(uid clientID, IntPtr actor);
+		private static extern uid Client_GetActorID(uid clientID, IntPtr actor);
 
 		[DllImport("SimulCasterServer")]
-		public static extern void ActorEnteredBounds(uid clientID, uid actorID);
+		public static extern void Client_ActorEnteredBounds(uid clientID, uid actorID);
 		[DllImport("SimulCasterServer")]
-		public static extern void ActorLeftBounds(uid clientID, uid actorID);
+		public static extern void Client_ActorLeftBounds(uid clientID, uid actorID);
 		[DllImport("SimulCasterServer")]
-		private static extern bool IsStreamingActor(uid clientID, IntPtr actor);
+		private static extern bool Client_IsStreamingActor(uid clientID, IntPtr actor);
 
 		[DllImport("SimulCasterServer")]
-		public static extern void ShowActor(uid clientID, uid actorID);
+		public static extern void Client_ShowActor(uid clientID, uid actorID);
 		[DllImport("SimulCasterServer")]
-		public static extern void HideActor(uid clientID, uid actorID);
+		public static extern void Client_HideActor(uid clientID, uid actorID);
 		[DllImport("SimulCasterServer")]
-		public static extern void SetActorVisible(uid clientID, uid actorID, bool isVisible);
+		public static extern void Client_SetActorVisible(uid clientID, uid actorID, bool isVisible);
 		[DllImport("SimulCasterServer")]
-		public static extern bool IsClientRenderingActorID(uid clientID, uid actorID);
+		public static extern bool Client_IsClientRenderingActorID(uid clientID, uid actorID);
 		[DllImport("SimulCasterServer")]
-		public static extern bool IsClientRenderingActorPtr(uid clientID, IntPtr actorPtr);
+		public static extern bool Client_IsClientRenderingActorPtr(uid clientID, IntPtr actorPtr);
 
 		[DllImport("SimulCasterServer")]
-		public static extern bool HasResource(uid clientID, uid resourceID);
+		public static extern bool Client_HasResource(uid clientID, uid resourceID);
 
 		[DllImport("SimulCasterServer")]
-		private static extern void UpdateActorMovement(uid clientID, avs.MovementUpdate[] updates, int updateAmount);
+		private static extern void Client_UpdateActorMovement(uid clientID, avs.MovementUpdate[] updates, int updateAmount);
 		#endregion
 
 		private readonly Teleport_SessionComponent session;
@@ -82,7 +80,7 @@ namespace teleport
 		{
 			foreach(GCHandle handle in gameObjectHandles.Values)
 			{
-				RemoveActor(session.GetClientID(), GCHandle.ToIntPtr(handle));
+				Client_RemoveActor(session.GetClientID(), GCHandle.ToIntPtr(handle));
 			}
 
 			gameObjectHandles.Clear();
@@ -97,17 +95,17 @@ namespace teleport
 			{
 				GCHandle actorHandle = GCHandle.Alloc(actor, GCHandleType.Pinned);
 
-				AddActor(session.GetClientID(), GCHandle.ToIntPtr(actorHandle), actorID, avs.Transform.FromGlobalUnityTransform(actor.transform));
+				Client_AddActor(session.GetClientID(), GCHandle.ToIntPtr(actorHandle), actorID, avs.Transform.FromGlobalUnityTransform(actor.transform));
 				gameObjectHandles.Add(actor, actorHandle);
 			}
 
 			return actorID;
 		}
 
-		public uid RemoveActor(GameObject actor)
+		public uid RemoveActor(GameObject gameObject)
 		{
-			uid actorID = RemoveActor(session.GetClientID(), GCHandle.ToIntPtr(gameObjectHandles[actor]));
-			gameObjectHandles.Remove(actor);
+			uid actorID = Client_RemoveActor(session.GetClientID(), GCHandle.ToIntPtr(gameObjectHandles[gameObject]));
+			gameObjectHandles.Remove(gameObject);
 
 			return actorID;
 		}
@@ -119,12 +117,12 @@ namespace teleport
 				return 0;
 			}
 
-			return GetActorID(session.GetClientID(), GCHandle.ToIntPtr(gameObjectHandles[actor]));
+			return Client_GetActorID(session.GetClientID(), GCHandle.ToIntPtr(gameObjectHandles[actor]));
 		}
 
 		public bool IsStreamingActor(GameObject actor)
 		{
-			return IsStreamingActor(session.GetClientID(), GCHandle.ToIntPtr(gameObjectHandles[actor]));
+			return Client_IsStreamingActor(session.GetClientID(), GCHandle.ToIntPtr(gameObjectHandles[actor]));
 		}
 
 		public void SetVisibleLights(Light[] lights)
@@ -181,8 +179,8 @@ namespace teleport
 			//Detect changes in geometry that needs to be streamed to the client.
 			if(teleportSettings.LayersToStream != 0)
 			{
-				List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.transform.position, teleportSettings.casterSettings.detectionSphereRadius, teleportSettings.LayersToStream));
-				List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.transform.position, teleportSettings.casterSettings.detectionSphereRadius + teleportSettings.casterSettings.detectionSphereBufferDistance, teleportSettings.LayersToStream));
+				List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.casterSettings.detectionSphereRadius, teleportSettings.LayersToStream));
+				List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.casterSettings.detectionSphereRadius + teleportSettings.casterSettings.detectionSphereBufferDistance, teleportSettings.LayersToStream));
 
 				List<Collider> gainedColliders = new List<Collider>(innerSphereCollisions.Except(streamedColliders));
 				List<Collider> lostColliders = new List<Collider>(streamedColliders.Except(outerSphereCollisions));
@@ -243,7 +241,7 @@ namespace teleport
 			uid actorID = AddActor(gameObject);
 			if(actorID != 0)
 			{
-				ActorEnteredBounds(session.GetClientID(), actorID);
+				Client_ActorEnteredBounds(session.GetClientID(), actorID);
 			}
 			else
 			{
@@ -269,7 +267,7 @@ namespace teleport
 			uid actorID = RemoveActor(gameObject);
 			if(actorID != 0)
 			{
-				ActorLeftBounds(session.GetClientID(), actorID);
+				Client_ActorLeftBounds(session.GetClientID(), actorID);
 			}
 			else
 			{
@@ -363,7 +361,7 @@ namespace teleport
 				++i;
             }
 
-			UpdateActorMovement(session.GetClientID(), updates, updates.Length);
+			Client_UpdateActorMovement(session.GetClientID(), updates, updates.Length);
         }
 
 		private bool IsClientRenderingParent(GameObject child)
@@ -373,7 +371,7 @@ namespace teleport
 				gameObjectHandles.TryGetValue(child.transform.parent.gameObject, out GCHandle parentHandle);
 				if(parentHandle.IsAllocated)
 				{
-					return IsClientRenderingActorPtr(session.GetClientID(), GCHandle.ToIntPtr(parentHandle));
+					return Client_IsClientRenderingActorPtr(session.GetClientID(), GCHandle.ToIntPtr(parentHandle));
 				}
 			}
 

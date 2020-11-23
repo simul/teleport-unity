@@ -12,19 +12,19 @@ namespace teleport
 	{
 		#region DLLImports
 		[DllImport("SimulCasterServer")]
-		public static extern void StopSession(uid clientID);
+		public static extern void Client_StopSession(uid clientID);
 		[DllImport("SimulCasterServer")]
-		public static extern void StopStreaming(uid clientID);
+		public static extern void Client_StopStreaming(uid clientID);
 		[DllImport("SimulCasterServer")]
-		public static extern bool HasHost(uid clientID);
+		public static extern bool Client_HasHost(uid clientID);
 		[DllImport("SimulCasterServer")]
-		public static extern bool HasPeer(uid clientID);
+		public static extern bool Client_HasPeer(uid clientID);
 		[DllImport("SimulCasterServer")]
-		public static extern string GetClientIP(uid clientID);
+		public static extern string Client_GetClientIP(uid clientID);
 		[DllImport("SimulCasterServer")]
-		public static extern System.UInt16 GetClientPort(uid clientID);
+		public static extern System.UInt16 Client_GetClientPort(uid clientID);
 		[DllImport("SimulCasterServer")]
-		public static extern System.UInt16 GetServerPort(uid clientID);
+		public static extern System.UInt16 Client_GetServerPort(uid clientID);
 		[DllImport("SimulCasterServer")]
 		private static extern uid GetUnlinkedClientID();
 
@@ -148,7 +148,7 @@ namespace teleport
 
 		public void Disconnect()
 		{
-			StopStreaming(clientID);
+			Client_StopStreaming(clientID);
 
 			sessions.Remove(clientID);
 			if (geometryStreamingService != null)
@@ -331,7 +331,7 @@ namespace teleport
 		private void OnDestroy()
 		{
 			if (clientID != 0)
-				StopSession(clientID);
+				Client_StopSession(clientID);
 		}
 
 		public void SetVisibleLights(Light[] lights)

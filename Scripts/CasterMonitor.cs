@@ -246,7 +246,7 @@ namespace teleport
 		{
 			GameObject gameObject = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
 			int clientLayer = 25;
-			uint clientMask = (uint)(((int)1) << clientLayer);
+			uint clientMask = (uint)(((int)1) << clientLayer) | (uint)0x7;
 			Renderer actorRenderer = gameObject.GetComponent<Renderer>();
 			if (actorRenderer)
 			{
@@ -262,7 +262,8 @@ namespace teleport
 		{
 			GameObject gameObject = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
 			int clientLayer = 25;
-			uint clientMask = (uint)(((int)1) << clientLayer);
+			// Add the 0x7 because that's used to show canvases, so we must remove it also from the inverse mask.
+			uint clientMask = (uint)(((int)1) << clientLayer)|(uint)0x7;
 			Renderer actorRenderer = gameObject.GetComponent<Renderer>();
 			uint invClientMask = ~clientMask;
 			if (actorRenderer)

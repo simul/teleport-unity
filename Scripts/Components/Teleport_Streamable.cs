@@ -21,8 +21,11 @@ namespace teleport
         }
         private void OnDestroy()
         {
-        // Are there sessions still using this object?
-            foreach(var s in sessions)
+            // Are there sessions still using this object?
+            List<Teleport_SessionComponent> ss = new List<Teleport_SessionComponent>();
+            foreach (var s in sessions)
+                ss.Add(s);
+            foreach (var s in ss)
             {
                 s.GeometryStreamingService.StopStreamingGameObject(gameObject);
             }

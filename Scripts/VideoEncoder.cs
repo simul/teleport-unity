@@ -209,16 +209,12 @@ namespace teleport
 			{
 				var uid=l.Key;
 				var light = l.Value;
-				PerFrameLightProperties perFrameLightProperties;
-				PerFramePerCameraLightProperties perFramePerCameraLightProperties;
+				PerFrameLightProperties perFrameLightProperties = null;
+				PerFramePerCameraLightProperties perFramePerCameraLightProperties=null;
 				if (!TeleportLighting.perFrameLightProperties.TryGetValue(light, out perFrameLightProperties))
 					continue;
-				if (!perFrameLightProperties.perFramePerCameraLightProperties.TryGetValue(camera, out perFramePerCameraLightProperties))
-				{
-					continue;
-				}
+				perFrameLightProperties.perFramePerCameraLightProperties.TryGetValue(camera, out perFramePerCameraLightProperties);
 
-				
 				ref var visibleLight = ref perFrameLightProperties.visibleLight;
 
 				if (visibleLight.light == null)
@@ -232,9 +228,8 @@ namespace teleport
 				lightData.range = visibleLight.range;
 				lightData.spotAngle = visibleLight.spotAngle;
 				lightData.lightType = DataTypes.UnityToTeleport(visibleLight.lightType);
-				//	lightData.shadowViewMatrix = perFramePerCameraLightProperties.cascades[0].viewMatrix;
 				// We want here the ORIGIN of the shadow matrix, not the light's "position", which is irrelevant for directional lights.
-				if (lightData.lightType == avs.LightType.Directional )
+				if (lightData.lightType == avs.LightType.Directional && perFramePerCameraLightProperties != null)
 				{
 					lightData.position = perFramePerCameraLightProperties.cascades[0].viewMatrix.inverse.GetPosition();
 					lightData.worldToShadowMatrix = ShadowUtils.GetShadowTransformForRender(
@@ -244,22 +239,28 @@ namespace teleport
 				else
 				{
 					lightData.position = light.transform.position;
-					lightData.worldToShadowMatrix = perFrameLightProperties.worldToLightMatrix;
+					if (perFrameLightProperties != null)
+						lightData.worldToShadowMatrix = perFrameLightProperties.worldToLightMatrix;
 				}
 				// Unity lights shine in the z direction...
 				// viewMatrix no good because Unity has view matrices that are not rotational!
 				Quaternion rotation = light.transform.rotation;
-				//perFramePerCameraLightProperties.cascades[0].viewMatrix.inverse.GetRotation();
 				Quaternion Z_to_Y=new Quaternion(0.707F, 0, 0, 0.707F);
 				rotation =  rotation* Z_to_Y;
 				rotation.Normalize();
 				lightData.orientation = rotation;
 				// Apply texture scale and offset to save a MAD in shader.
-				Matrix4x4 proj = textureScaleAndBias * perFramePerCameraLightProperties.cascades[0].projectionMatrix;
-				lightData.shadowProjectionMatrix =(proj).transpose ;// *  ;
+				if (perFramePerCameraLightProperties != null)
+				{
+					Matrix4x4 proj = textureScaleAndBias * perFramePerCameraLightProperties.cascades[0].projectionMatrix;
+					lightData.shadowProjectionMatrix = proj.transpose;
+				}
 				DataTypes.ConvertViewProjectionMatrix(AxesStandard.EngineeringStyle,ref lightData.worldToShadowMatrix);
-				lightData.texturePosition = perFrameLightProperties.texturePosition;
-				lightData.textureSize = perFrameLightProperties.sizeOnTexture;
+				if (perFrameLightProperties != null)
+				{
+					lightData.texturePosition = perFrameLightProperties.texturePosition;
+					lightData.textureSize = perFrameLightProperties.sizeOnTexture;
+				}
 				lightData.worldTransform = light.transform.localToWorldMatrix;
 				lightData.uid = uid;
 				lightDataList.Add(lightData);
