@@ -24,6 +24,13 @@ namespace avs
 		Bone
 	};
 
+	public enum NodeDataSubtype : byte
+	{
+		None = 0,
+		LeftHand,
+		RightHand
+	};
+
 	public enum PrimitiveMode
 	{
 		POINTS, LINES, TRIANGLES, LINE_STRIP, TRIANGLE_STRIP
@@ -183,6 +190,7 @@ namespace avs
 
 		public Transform transform;
 		public NodeDataType dataType;
+		public NodeDataSubtype dataSubtype;
 		public uid parentID;
 		public uid dataID;
 		public uid skinID;
@@ -508,7 +516,7 @@ namespace teleport
 		public uid AddNode(GameObject node, bool forceUpdate = false)
 		{
 			if(!node) return 0;
-
+			
 			processedResources.TryGetValue(node, out uid nodeID);
 
 			if(forceUpdate || nodeID == 0)
@@ -818,7 +826,7 @@ namespace teleport
 			extractedNode.dataType = avs.NodeDataType.Mesh;
 
 			//Can't create a node with no data.
-			if(extractedNode.dataID == 0)
+			if (extractedNode.dataID == 0)
 			{
 				Debug.LogError($"Failed to extract mesh data from GameObject: {node.name}");
 				return 0;

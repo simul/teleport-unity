@@ -252,8 +252,11 @@ namespace teleport
 			{
 				Debug.LogError("Game object "+gameObject.name+" has no Teleport_Streamable component.");
 			}
-			// This is assumed to exist.
-			streamable.AddStreamingClient(session);
+			else
+			{
+				streamable.AddStreamingClient(session);
+			}
+			
 			return true;
 		}
 
@@ -278,7 +281,10 @@ namespace teleport
 			{
 				Debug.LogError("Game object " + gameObject.name + " has no Teleport_Streamable component.");
 			}
-			streamable.RemoveStreamingClient(session);
+			else
+			{
+				streamable.RemoveStreamingClient(session);
+			}	
 		}
 
 		private void DetectInvalidStreamables()
