@@ -27,10 +27,10 @@ namespace teleport
 
 		#region DLLDelegates
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate void OnShowActor(uid clientID, in IntPtr actorPtr);
+		delegate byte OnShowActor(uid clientID, uid nodeID);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate void OnHideActor(uid clientID, in IntPtr actorPtr);
+		delegate byte OnHideActor(uid clientID, uid nodeID);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void OnSetHeadPose(uid clientID, in avs.HeadPose newHeadPose);
@@ -175,8 +175,11 @@ namespace teleport
 			{
 				if(((1<<gameObject.layer)&teleportSettings.LayersToStream)!=0)
 				{
-					if(gameObject.GetComponent<Teleport_Streamable>()==null)
+					if (gameObject.GetComponent<Teleport_Streamable>() == null)
+					{
+						// Adds the Teleport_Streamable component and does other initialization.
 						gameObject.AddComponent<Teleport_Streamable>();
+					}
 				}
 			}
 			var streamables= GameObject.FindObjectsOfType<Teleport_Streamable>();
@@ -241,26 +244,39 @@ namespace teleport
 			SceneManager.sceneUnloaded -= OnSceneUnloaded;
 			Shutdown();
 		}
-
-		private static void ShowActor(uid clientID, in IntPtr actorPtr)
+		// called from dll.
+		private static byte ShowActor(uid clientID, uid nodeID)
 		{
-			GameObject gameObject = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
+			UnityEngine.Object obj = GeometrySource.GetGeometrySource().GetNode(nodeID);
+			if(!obj||obj.GetType()!=typeof(GameObject))
+			{
+				return (byte)0;
+			}
+			GameObject gameObject = (GameObject)obj;
 			int clientLayer = 25;
 			uint clientMask = (uint)(((int)1) << clientLayer) | (uint)0x7;
 			Renderer actorRenderer = gameObject.GetComponent<Renderer>();
 			if (actorRenderer)
 			{
 				actorRenderer.renderingLayerMask |= clientMask;
-				return;
 			}
-			SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
-			skinnedMeshRenderer.renderingLayerMask |= clientMask;
-			
-		}
+			else
+			{
+				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
+				skinnedMeshRenderer.renderingLayerMask |= clientMask;
+			}
+			return (byte)1;
 
-		public static void HideActor(uid clientID,in IntPtr actorPtr)
+		}
+		// called from dll.
+		public static byte HideActor(uid clientID, uid nodeID)
 		{
-			GameObject gameObject = (GameObject)GCHandle.FromIntPtr(actorPtr).Target;
+			UnityEngine.Object obj = GeometrySource.GetGeometrySource().GetNode(nodeID);
+			if (!obj || obj.GetType() != typeof(GameObject))
+			{
+				return (byte)0;
+			}
+			GameObject gameObject = (GameObject)obj;
 			int clientLayer = 25;
 			// Add the 0x7 because that's used to show canvases, so we must remove it also from the inverse mask.
 			uint clientMask = (uint)(((int)1) << clientLayer)|(uint)0x7;
@@ -273,6 +289,7 @@ namespace teleport
 				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
 				skinnedMeshRenderer.renderingLayerMask &= invClientMask;
 			}
+			return (byte)1;
 		}
 
 		private static void LogMessageHandler(avs.LogSeverity Severity, string Msg, in IntPtr userData)

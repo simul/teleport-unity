@@ -370,9 +370,9 @@ namespace teleport
 		public string compressedTexturesFolderPath;
 		// <GameObject, ID of extracted data in native plug-in>
 		private readonly Dictionary<UnityEngine.Object, uid> processedResources = new Dictionary<UnityEngine.Object, uid>();
-
 		private bool isAwake = false;
 		private static GeometrySource geometrySource = null;
+		private Dictionary<uid, UnityEngine.Object> resourceMap= new Dictionary<uid, UnityEngine.Object> ();
 		// We always store the settings in this path:
 		public const string k_GeometrySourcePath = "TeleportVR/GeometrySource";
 		public const string k_GeometryFilename = "GeometrySource";
@@ -424,7 +424,7 @@ namespace teleport
 
 			//Clear resources on boot.
 			processedResources.Clear();
-
+			resourceMap.Clear();
 			LoadFromDisk();
 
 			isAwake = true;
@@ -440,6 +440,8 @@ namespace teleport
 			{
 				RemoveNode(pair.Value);
 				processedResources.Remove(pair.Key);
+				resourceMap.Remove(pair.Value);
+
 			}
 		}
 
@@ -452,6 +454,7 @@ namespace teleport
 		{
 			// This is PRESUMABLY necessary, or we'll have a list of invalid uids...
 			processedResources.Clear();
+			resourceMap.Clear();
 			//Load data from files.
 			LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 materialAmount, out IntPtr loadedMaterials);
 
@@ -479,7 +482,8 @@ namespace teleport
 		//Returns the ID of the resource if it has been processed, or zero if the resource has not been processed or was passed in null.
 		public uid FindResourceID(UnityEngine.Object resource)
 		{
-			if(!resource) return 0;
+			if(!resource)
+				return 0;
 
 			processedResources.TryGetValue(resource, out uid nodeID);
 			return nodeID;
@@ -487,11 +491,15 @@ namespace teleport
 
 		public UnityEngine.Object FindResource(uid nodeID)
 		{
-			if(nodeID == 0) return null;
+			if(nodeID == 0)
+				return null;
 
 			return processedResources.FirstOrDefault(x => x.Value == nodeID).Key;
 		}
-
+		public UnityEngine.Object GetNode(uid nodeID)
+		{
+			return resourceMap[nodeID];
+		}
 		public GameObject[] GetStreamableObjects()
 		{
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
@@ -515,8 +523,12 @@ namespace teleport
 
 		public uid AddNode(GameObject node, bool forceUpdate = false)
 		{
-			if(!node) return 0;
-			
+			if(!node)
+			{
+				Debug.LogError("AddNode: node is null.");
+				return 0;
+			}
+
 			processedResources.TryGetValue(node, out uid nodeID);
 
 			if(forceUpdate || nodeID == 0)
@@ -544,7 +556,8 @@ namespace teleport
 					MeshRenderer meshRenderer = node.GetComponent<MeshRenderer>();
 					if(meshRenderer && meshRenderer.enabled)
 					{
-						nodeID = AddMeshNode(node, meshFilter.sharedMesh, meshRenderer.sharedMaterials, 0, null, nodeID, forceUpdate);
+						Mesh m = meshFilter.sharedMesh;
+						nodeID = AddMeshNode(node, m, meshRenderer.sharedMaterials, 0, null, nodeID, forceUpdate);
 					}
 				}
 				else if(light && light.isActiveAndEnabled)
@@ -556,7 +569,6 @@ namespace teleport
 					Debug.LogWarning(node.name + " was marked as streamable, but has no streamable component attached.");
 				}
 			}
-
 			return nodeID;
 		}
 
@@ -812,6 +824,7 @@ namespace teleport
 			//Store extracted node.
 			uid nodeID = oldID == 0 ? GenerateID() : oldID;
 			processedResources[node] = nodeID;
+			resourceMap[nodeID] = node;
 			StoreNode(nodeID, extractedNode);
 
 			return nodeID;
@@ -834,6 +847,7 @@ namespace teleport
 
 			uid nodeID = oldID == 0 ? GenerateID() : oldID;
 			processedResources[node] = nodeID;
+			resourceMap[nodeID] = node;
 
 			extractedNode.name = Marshal.StringToBSTR(node.name);
 			extractedNode.skinID = skinID;
@@ -861,7 +875,8 @@ namespace teleport
 				if(!IsMaterialStored(extractedNode.materialIDs[i])) Debug.LogError("AddMeshNode storing material " + extractedNode.materialIDs[i] + " which is not there.");
 			}
 
-			if(node.transform.parent) extractedNode.parentID = AddNode(node.transform.parent.gameObject);
+			if(node.transform.parent)
+				extractedNode.parentID = AddNode(node.transform.parent.gameObject);
 
 			//Extract children of node, through transform hierarchy.
 			List<uid> childIDs = new List<uid>();
@@ -1580,6 +1595,7 @@ namespace teleport
 						Debug.Log("Reaffirmed resource was " + metaResource.oldID + " now " + newID + " loaded from disk, " + assetPath);
 						// RK: I'm going to say it's WAY to early to put this in here when we can't be sure that the actual resource will be loaded!
 						processedResources[asset] = newID;
+						resourceMap[newID] = asset;
 					}
 				}
 				else

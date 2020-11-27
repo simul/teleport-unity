@@ -14,16 +14,14 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void Client_AddActor(uid clientID, IntPtr newActor, uid actorID, avs.Transform currentTransform);
 		[DllImport("SimulCasterServer")]
-		private static extern uid Client_RemoveActor(uid clientID, IntPtr oldActor);
-		[DllImport("SimulCasterServer")]
-		private static extern uid Client_GetActorID(uid clientID, IntPtr actor);
+		private static extern uid Client_RemoveActorByID(uid clientID, uid actorID);
 
 		[DllImport("SimulCasterServer")]
 		public static extern void Client_ActorEnteredBounds(uid clientID, uid actorID);
 		[DllImport("SimulCasterServer")]
 		public static extern void Client_ActorLeftBounds(uid clientID, uid actorID);
 		[DllImport("SimulCasterServer")]
-		private static extern bool Client_IsStreamingActor(uid clientID, IntPtr actor);
+		private static extern bool Client_IsStreamingActorID(uid clientID, uid actorID);
 
 		[DllImport("SimulCasterServer")]
 		public static extern void Client_ShowActor(uid clientID, uid actorID);
@@ -33,8 +31,6 @@ namespace teleport
 		public static extern void Client_SetActorVisible(uid clientID, uid actorID, bool isVisible);
 		[DllImport("SimulCasterServer")]
 		public static extern bool Client_IsClientRenderingActorID(uid clientID, uid actorID);
-		[DllImport("SimulCasterServer")]
-		public static extern bool Client_IsClientRenderingActorPtr(uid clientID, IntPtr actorPtr);
 
 		[DllImport("SimulCasterServer")]
 		public static extern bool Client_HasResource(uid clientID, uid resourceID);
@@ -48,11 +44,12 @@ namespace teleport
 
 		private List<Collider> streamedColliders = new List<Collider>();
 		private List<GameObject> streamedGameObjects = new List<GameObject>();
+		private List<GameObject> failedGameObjects = new List<GameObject>(); 
 		private Dictionary<uid,Light> streamedLights = new Dictionary<uid, Light>();
 
 		//Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
-		// Roderick's note: this does not appear to work. Errors refer to accessing deleted objects.
-		private Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
+		// Roderick's note: this does not appear to work. Instead, we get null pointers.
+		//private Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
 
 		private Dictionary<uid, avs.MovementUpdate> previousMovements = new Dictionary<uid, avs.MovementUpdate>();
 		private float timeSincePositionUpdate = 0;
@@ -78,61 +75,83 @@ namespace teleport
 
 		public void RemoveAllActors()
 		{
-			foreach(GCHandle handle in gameObjectHandles.Values)
+			foreach(var gameObject in streamedGameObjects)
 			{
-				Client_RemoveActor(session.GetClientID(), GCHandle.ToIntPtr(handle));
+				Client_RemoveActorByID(session.GetClientID(), gameObject.GetComponent<Teleport_Streamable>().GetUid());
 			}
-
-			gameObjectHandles.Clear();
 		}
 
-		public uid AddActor(GameObject actor)
+		uid AddActor(GameObject actor)
 		{
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 			uid actorID = geometrySource.AddNode(actor);
-
-			if(actorID != 0 && !gameObjectHandles.ContainsKey(actor))
+			if(actorID==0)
 			{
-				GCHandle actorHandle = GCHandle.Alloc(actor, GCHandleType.Pinned);
-
-				Client_AddActor(session.GetClientID(), GCHandle.ToIntPtr(actorHandle), actorID, avs.Transform.FromGlobalUnityTransform(actor.transform));
-				gameObjectHandles.Add(actor, actorHandle);
+				Debug.LogError("AddNode failed for "+actor.name+".");
+				return actorID;
+			}
+			if(actorID != 0 )
+			{
+				Client_AddActor(session.GetClientID(), new IntPtr(0), actorID, avs.Transform.FromGlobalUnityTransform(actor.transform));
 			}
 
 			return actorID;
 		}
 
-		public uid RemoveActor(GameObject gameObject)
+		public uid GetActorID(GameObject gameObject)
 		{
-			uid actorID = Client_RemoveActor(session.GetClientID(), GCHandle.ToIntPtr(gameObjectHandles[gameObject]));
-			gameObjectHandles.Remove(gameObject);
-
-			return actorID;
-		}
-
-		public uid GetActorID(GameObject actor)
-		{
-			if(!gameObjectHandles.ContainsKey(actor))
-			{
+			var streamable = gameObject.GetComponent<Teleport_Streamable>();
+			if (streamable == null)
 				return 0;
-			}
-
-			return Client_GetActorID(session.GetClientID(), GCHandle.ToIntPtr(gameObjectHandles[actor]));
+			return streamable.GetUid();
 		}
 
-		public bool IsStreamingActor(GameObject actor)
+		public bool IsStreamingActor(GameObject gameObject)
 		{
-			return Client_IsStreamingActor(session.GetClientID(), GCHandle.ToIntPtr(gameObjectHandles[actor]));
+			var streamable= gameObject.GetComponent<Teleport_Streamable>();
+			if (streamable==null)
+				return false;
+			return Client_IsStreamingActorID(session.GetClientID(), streamable.GetUid());
 		}
-
-		public void SetVisibleLights(Light[] lights)
+		/// <summary>
+		/// Set the lights to be streamed to this client.
+		///		If they are streamable, this will:
+		///			- ensure that their nodes are streamed.
+		///			- tell the client that these are the active lights.
+		///		If not streamable, the lights will not be sent.
+		/// </summary>
+		/// <param name="lights"></param>
+		public void SetStreamedLights(Light[] lights)
 		{
+			HashSet<uid> streamedNow = new HashSet<uid>();
 			foreach(Light light in lights)
 			{
-				uid actorID = AddActor(light.gameObject);
-				if(!streamedLights.ContainsKey(actorID))
+			// if the light is not streamable, don't stream.
+				var streamable = light.gameObject.GetComponent<Teleport_Streamable>();
+				if (!streamable)
+					continue;
+				if (!streamedGameObjects.Contains(light.gameObject))
 				{
-					streamedLights[actorID] = light;
+					StartStreamingGameObject(light.gameObject);
+				}
+				var uid = streamable.GetUid();
+				if (uid == 0)
+					continue;
+				streamedNow.Add(uid);
+				if (!streamedLights.ContainsKey(uid))
+				{
+					streamedLights[uid] = light;
+				}
+			}
+			while(streamedLights.Count> streamedNow.Count)
+			foreach(var u in streamedLights)
+			{
+				if(!streamedNow.Contains(u.Key))
+				{
+					streamedLights.Remove(u.Key);
+					if(u.Value!=null)
+						StopStreamingGameObject(u.Value.gameObject);
+					break;
 				}
 			}
 		}
@@ -190,18 +209,7 @@ namespace teleport
 					//Skip game objects without the streaming tag.
 					if(teleportSettings.TagToStream.Length == 0 || collider.CompareTag(teleportSettings.TagToStream))
 					{
-						if(!StartStreamingGameObject(collider.gameObject))
-						{
-							// Why would this fail?
-							for(int i=0;i<streamedColliders.Count;i++)
-							{
-								var c = streamedColliders[i];
-								if(c==collider)
-								{
-									Debug.LogError("collider matches.");
-								}
-							}
-						}
+						StartStreamingGameObject(collider.gameObject);
 					}
 				}
 
@@ -228,35 +236,48 @@ namespace teleport
 
 		private bool StartStreamingGameObject(GameObject gameObject)
 		{
-			if(streamedGameObjects.Contains(gameObject))
+			if (failedGameObjects.Contains(gameObject))
+				return false;
+			if (streamedGameObjects.Contains(gameObject))
 			{
 				Debug.LogError("StartStreamingGameObject called on " + gameObject.name + " which is already streamed.");
 				return false;
 			}
-			streamedGameObjects.Add(gameObject);
-			// Add to the list without first checking if it can be added. So it won't spam failure messages.
-			var colliders  = gameObject.GetComponents<Collider>();
-			foreach(var c in colliders)
-				streamedColliders.Add(c);
-			uid actorID = AddActor(gameObject);
-			if(actorID != 0)
-			{
-				Client_ActorEnteredBounds(session.GetClientID(), actorID);
-			}
-			else
-			{
-				Debug.LogWarning("Failed to add game object to stream: " + gameObject.name);
-			}
 			var streamable = gameObject.GetComponent<Teleport_Streamable>();
-			if(streamable==null)
+			if (streamable == null)
 			{
-				Debug.LogError("Game object "+gameObject.name+" has no Teleport_Streamable component.");
+				Debug.LogError("Game object " + gameObject.name + " has no Teleport_Streamable component.");
+				return false;
 			}
-			else
+			bool any = false;
+			// include all collisionless children.
+			foreach(var g in streamable.includedChildren)
 			{
-				streamable.AddStreamingClient(session);
-			}
-			
+				if (failedGameObjects.Contains(g))
+					continue;
+				if (streamedGameObjects.Contains(g))
+					continue;
+				uid actorID = AddActor(g);
+				if (actorID == 0)
+				{
+					Debug.LogWarning("Failed to add game object for streaming: " + g.name);
+					failedGameObjects.Add(g);
+				}
+				else
+				{
+					any = true;
+					Client_ActorEnteredBounds(session.GetClientID(), actorID);
+					streamedGameObjects.Add(g);
+					var s = g.GetComponent<Teleport_Streamable>();
+					s.SetUid(actorID);
+					s.AddStreamingClient(session);
+				}
+			}	
+			// Add to the list without first checking if it can be added. So it won't spam failure messages.
+			var colliders = gameObject.GetComponents<Collider>();
+			foreach (var c in colliders)
+				streamedColliders.Add(c);			
+
 			return true;
 		}
 
@@ -266,30 +287,32 @@ namespace teleport
 			foreach (var c in colliders)
 				streamedColliders.Remove(c);
 			streamedGameObjects.Remove(gameObject);
-
-			uid actorID = RemoveActor(gameObject);
-			if(actorID != 0)
-			{
-				Client_ActorLeftBounds(session.GetClientID(), actorID);
-			}
-			else
-			{
-				Debug.LogWarning("Attempted to remove actor that was not being streamed: " + gameObject.name);
-			}
 			var streamable = gameObject.GetComponent<Teleport_Streamable>();
 			if (streamable == null)
 			{
 				Debug.LogError("Game object " + gameObject.name + " has no Teleport_Streamable component.");
 			}
-			else
+
+			// include all collisionless children.
+			foreach (var g in streamable.includedChildren)
 			{
-				streamable.RemoveStreamingClient(session);
-			}	
+				var s = g.GetComponent<Teleport_Streamable>();
+				uid actorID = Client_RemoveActorByID(session.GetClientID(), s.GetUid());
+				if (actorID != 0)
+				{
+					Client_ActorLeftBounds(session.GetClientID(), actorID);
+				}
+				else
+				{
+					Debug.LogWarning("Attempted to remove actor that was not being streamed: " + g.name);
+				}
+				s.RemoveStreamingClient(session);
+			}
 		}
 
 		private void DetectInvalidStreamables()
 		{
-			for(int i = streamedGameObjects.Count - 1; i >= 0; i--)
+			for (int i = streamedGameObjects.Count - 1; i >= 0; i--)
 			{
 				GameObject gameObject= streamedGameObjects[i];
 				if(!gameObject.CompareTag(teleportSettings.TagToStream))
@@ -302,14 +325,19 @@ namespace teleport
 		private void SendPositionUpdates()
         {
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-			if(teleportSettings == null) return;
+			if(teleportSettings == null)
+				return;
 
-			avs.MovementUpdate[] updates = new avs.MovementUpdate[gameObjectHandles.Count];
+			avs.MovementUpdate[] updates = new avs.MovementUpdate[streamedGameObjects.Count];
 			long timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
 			int i = 0;
-			foreach(GameObject node in gameObjectHandles.Keys)
+			foreach(GameObject node in streamedGameObjects)
             {
+				if (node == null)
+				{
+					continue;
+				}
 				GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 				uid nodeID = geometrySource.FindResourceID(node);
 
@@ -374,10 +402,12 @@ namespace teleport
         {
 			if(child.transform.parent)
 			{
-				gameObjectHandles.TryGetValue(child.transform.parent.gameObject, out GCHandle parentHandle);
-				if(parentHandle.IsAllocated)
+				if(child.transform.parent.gameObject)
 				{
-					return Client_IsClientRenderingActorPtr(session.GetClientID(), GCHandle.ToIntPtr(parentHandle));
+					var parent_Streamable = child.transform.parent.gameObject.GetComponent<Teleport_Streamable>();
+					if (parent_Streamable == null)
+						return false;
+					return Client_IsClientRenderingActorID(session.GetClientID(), parent_Streamable.GetUid());
 				}
 			}
 
