@@ -334,9 +334,9 @@ namespace teleport
 				Client_StopSession(clientID);
 		}
 
-		public void SetVisibleLights(Light[] lights)
+		public void SetStreamedLights(Light[] lights)
 		{
-			geometryStreamingService.SetVisibleLights(lights);
+			geometryStreamingService.SetStreamedLights(lights);
 		}
 	}
 }

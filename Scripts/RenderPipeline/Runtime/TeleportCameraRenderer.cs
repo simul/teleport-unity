@@ -750,7 +750,7 @@ namespace teleport
 				{
 					lights[i] = cullingResults.visibleLights[i].light;
 				}
-				Teleport_SessionComponent.sessions[clientID].SetVisibleLights(lights);
+				Teleport_SessionComponent.sessions[clientID].SetStreamedLights(lights);
 			}
 			camera.fieldOfView = 90.0F;
 			camera.farClipPlane = farClipPlane;
