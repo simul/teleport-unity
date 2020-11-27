@@ -272,12 +272,12 @@ namespace teleport
 					s.SetUid(actorID);
 					s.AddStreamingClient(session);
 				}
-			}
+			}	
 			// Add to the list without first checking if it can be added. So it won't spam failure messages.
 			var colliders = gameObject.GetComponents<Collider>();
 			foreach (var c in colliders)
-				streamedColliders.Add(c);
-			// This is assumed to exist.
+				streamedColliders.Add(c);			
+
 			return true;
 		}
 
@@ -292,6 +292,7 @@ namespace teleport
 			{
 				Debug.LogError("Game object " + gameObject.name + " has no Teleport_Streamable component.");
 			}
+
 			// include all collisionless children.
 			foreach (var g in streamable.includedChildren)
 			{
