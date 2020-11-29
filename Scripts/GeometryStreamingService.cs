@@ -60,6 +60,16 @@ namespace teleport
 
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
 			timeSincePositionUpdate = 1 / teleportSettings.moveUpdatesPerSecond;
+
+			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+			if (session.leftHand != null)
+			{
+				geometrySource.AddLeftHandID(session.leftHand.GetInstanceID());
+			}
+			if (session.rightHand != null)
+			{
+				geometrySource.AddRightHandID(session.rightHand.GetInstanceID());
+			}
 		}
 
 		public void Clear()
