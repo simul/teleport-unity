@@ -373,8 +373,8 @@ namespace teleport
 		private bool isAwake = false;
 		private static GeometrySource geometrySource = null;
 		private Dictionary<uid, UnityEngine.Object> resourceMap = new Dictionary<uid, UnityEngine.Object>();
-		private HashSet<int> leftHandIDs;
-		private HashSet<int> rightHandIDs;
+		private HashSet<int> leftHandIDs = new HashSet<int>();
+		private HashSet<int> rightHandIDs = new HashSet<int>();
 
 		// We always store the settings in this path:
 		public const string k_GeometrySourcePath = "TeleportVR/GeometrySource";
