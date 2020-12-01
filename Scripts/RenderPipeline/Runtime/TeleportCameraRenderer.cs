@@ -701,37 +701,40 @@ namespace teleport
 			}
 			if (!Teleport_SessionComponent.sessions.ContainsKey(ClientID))
 				return;
+			var oldPos = camera.transform.position;
+			var oldRot = camera.transform.rotation;
 			camera.transform.position = Teleport_SessionComponent.sessions[ClientID].head.transform.position;
 			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
 			if (ClientID != 0)
 				UpdateStreamables(context, ClientID, camera);
 
 			CullingResults cullingResultsAll;
-			if (!Cull(context, camera, out cullingResultsAll,true))
+			if (Cull(context, camera, out cullingResultsAll, true))
 			{
-				return;
-			}
-			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
-			teleportLighting.renderSettings = renderSettings;
-			teleportLighting.RenderShadows(context, camera, cullingResultsAll, lightingOrder);
+				TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
+				teleportLighting.renderSettings = renderSettings;
+				teleportLighting.RenderShadows(context, camera, cullingResultsAll, lightingOrder);
 
-			for (int i = 0; i < VideoEncoding.NumFaces; ++i)
-			{
-				DrawCubemapFace(context, camera, lightingOrder, i);
-			}
+				for (int i = 0; i < VideoEncoding.NumFaces; ++i)
+				{
+					DrawCubemapFace(context, camera, lightingOrder, i);
+				}
 
-			int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
-			var shadowmapOffset = new Vector2Int(3 * faceSize/2, 2 * faceSize+2* Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + Teleport_SceneCaptureComponent.RenderingSceneCapture.diffuseOffset;
-			videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, lightingOrder, teleportLighting, shadowmapOffset);
-			videoEncoding.EncodeTagID(context, camera);
-			context.Submit();
+				int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
+				var shadowmapOffset = new Vector2Int(3 * faceSize / 2, 2 * faceSize + 2 * Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + Teleport_SceneCaptureComponent.RenderingSceneCapture.diffuseOffset;
+				videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, lightingOrder, teleportLighting, shadowmapOffset);
+				videoEncoding.EncodeTagID(context, camera);
+				context.Submit();
 
-			var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
-			if (teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
-			{
-				var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
-				videoEncoder.CreateEncodeCommands(context, camera, tagDataID);
+				var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
+				if (teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
+				{
+					var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
+					videoEncoder.CreateEncodeCommands(context, camera, tagDataID);
+				}
 			}
+			camera.transform.position = oldPos;
+			camera.transform.rotation = oldRot;
 		}
 		// This function leverages the Unity rendering pipeline functionality to get information about what lights etc should be visible to the client.
 		void UpdateStreamables(ScriptableRenderContext context, uid clientID, Camera camera)
@@ -814,7 +817,6 @@ namespace teleport
 			}
 			EndSample(context, samplename);
 			EndCamera(context, camera);
-			camera.transform.rotation = new Quaternion();
 		}
 	}
 }
