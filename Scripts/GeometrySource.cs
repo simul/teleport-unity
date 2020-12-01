@@ -24,6 +24,13 @@ namespace avs
 		Bone
 	};
 
+	public enum NodeDataSubtype : byte
+	{
+		None = 0,
+		LeftHand,
+		RightHand
+	};
+
 	public enum PrimitiveMode
 	{
 		POINTS, LINES, TRIANGLES, LINE_STRIP, TRIANGLE_STRIP
@@ -183,6 +190,7 @@ namespace avs
 
 		public Transform transform;
 		public NodeDataType dataType;
+		public NodeDataSubtype dataSubtype;
 		public uid parentID;
 		public uid dataID;
 		public uid skinID;
@@ -364,16 +372,19 @@ namespace teleport
 		private readonly Dictionary<UnityEngine.Object, uid> processedResources = new Dictionary<UnityEngine.Object, uid>();
 		private bool isAwake = false;
 		private static GeometrySource geometrySource = null;
-		private Dictionary<uid, UnityEngine.Object> resourceMap= new Dictionary<uid, UnityEngine.Object> ();
+		private Dictionary<uid, UnityEngine.Object> resourceMap = new Dictionary<uid, UnityEngine.Object>();
+		private HashSet<int> leftHandIDs = new HashSet<int>();
+		private HashSet<int> rightHandIDs = new HashSet<int>();
+
 		// We always store the settings in this path:
 		public const string k_GeometrySourcePath = "TeleportVR/GeometrySource";
 		public const string k_GeometryFilename = "GeometrySource";
 		public static GeometrySource GetGeometrySource()
 		{
-			if(geometrySource == null)
+			if (geometrySource == null)
 				geometrySource = Resources.Load<GeometrySource>(k_GeometrySourcePath + "/" + k_GeometryFilename);
 #if UNITY_EDITOR
-			if(geometrySource == null)
+			if (geometrySource == null)
 			{
 				geometrySource = CreateInstance<GeometrySource>();
 				TeleportSettings.EnsureAssetPath("Assets/Resources/" + k_GeometrySourcePath);
@@ -397,9 +408,9 @@ namespace teleport
 		public void OnAfterDeserialize()
 		{
 			//Don't run during boot.
-			if(isAwake)
+			if (isAwake)
 			{
-				for(int i = 0; i < processedResources_keys.Length; i++)
+				for (int i = 0; i < processedResources_keys.Length; i++)
 				{
 					processedResources[processedResources_keys[i]] = processedResources_values[i];
 					//Debug.Log("Restoring resource " + processedResources_values[i]);// ;
@@ -409,7 +420,7 @@ namespace teleport
 		public void Awake()
 		{
 			//We only want to load from disk when the project is loaded.
-			if(Application.isPlaying)
+			if (Application.isPlaying)
 			{
 				return;
 			}
@@ -417,6 +428,8 @@ namespace teleport
 			//Clear resources on boot.
 			processedResources.Clear();
 			resourceMap.Clear();
+			leftHandIDs.Clear();
+			rightHandIDs.Clear();
 			LoadFromDisk();
 
 			isAwake = true;
@@ -428,7 +441,7 @@ namespace teleport
 
 			//Remove nodes that have been lost due to level change.
 			var pairsToDelete = processedResources.Where(pair => pair.Key == null).ToArray();
-			foreach(var pair in pairsToDelete)
+			foreach (var pair in pairsToDelete)
 			{
 				RemoveNode(pair.Value);
 				processedResources.Remove(pair.Key);
@@ -474,11 +487,21 @@ namespace teleport
 		//Returns the ID of the resource if it has been processed, or zero if the resource has not been processed or was passed in null.
 		public uid FindResourceID(UnityEngine.Object resource)
 		{
-			if(!resource)
+			if (!resource)
 				return 0;
 
 			processedResources.TryGetValue(resource, out uid nodeID);
 			return nodeID;
+		}
+
+		public void AddLeftHandID(int id)
+		{ 	
+			leftHandIDs.Add(id);
+		}
+
+		public void AddRightHandID(int id)
+		{
+			rightHandIDs.Add(id);
 		}
 
 		public UnityEngine.Object FindResource(uid nodeID)
@@ -529,7 +552,23 @@ namespace teleport
 				MeshFilter meshFilter = node.GetComponentInChildren<MeshFilter>();
 				Light light = node.GetComponentInChildren<Light>();
 
-				if(skinnedMeshRenderer)
+				avs.NodeDataSubtype nodeSubtype;
+
+				// Check if the mesh is a hand
+				if (leftHandIDs.Contains(node.GetInstanceID()))
+				{
+					nodeSubtype = avs.NodeDataSubtype.LeftHand;
+				}
+				else if (rightHandIDs.Contains(node.GetInstanceID()))
+				{
+					nodeSubtype = avs.NodeDataSubtype.RightHand;
+				}
+				else
+				{
+					nodeSubtype = avs.NodeDataSubtype.None;
+				}
+
+				if (skinnedMeshRenderer)
 				{
 					//If the child count is zero, then this is just a child node holding the SkinnedMeshRenderer.
 					if(skinnedMeshRenderer.enabled && node.transform.childCount != 0)
@@ -539,7 +578,7 @@ namespace teleport
 						Animator animator = node.GetComponentInChildren<Animator>();
 						uid[] animationIDs = (animator ? AnimationExtractor.AddAnimations(animator) : null);
 
-						nodeID = AddMeshNode(node, skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, skinID, animationIDs, nodeID, forceUpdate);
+						nodeID = AddMeshNode(node, nodeSubtype, skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, skinID, animationIDs, nodeID, forceUpdate);
 					}
 				}
 				else if(meshFilter)
@@ -549,7 +588,7 @@ namespace teleport
 					if(meshRenderer && meshRenderer.enabled)
 					{
 						Mesh m = meshFilter.sharedMesh;
-						nodeID = AddMeshNode(node, m, meshRenderer.sharedMaterials, 0, null, nodeID, forceUpdate);
+						nodeID = AddMeshNode(node, nodeSubtype, m, meshRenderer.sharedMaterials, 0, null, nodeID, forceUpdate);
 					}
 				}
 				else if(light && light.isActiveAndEnabled)
@@ -822,20 +861,21 @@ namespace teleport
 			return nodeID;
 		}
 
-		private uid AddMeshNode(GameObject node, Mesh mesh, Material[] materials, uid skinID, uid[] animationIDs, uid oldID, bool forceUpdate = false)
+		private uid AddMeshNode(GameObject node, avs.NodeDataSubtype nodeSubtype, Mesh mesh, Material[] materials, uid skinID, uid[] animationIDs, uid oldID, bool forceUpdate = false)
 		{
 			avs.Node extractedNode = new avs.Node();
 
 			//Extract mesh used on node.
 			extractedNode.dataID = AddMesh(mesh);
-			extractedNode.dataType = avs.NodeDataType.Mesh;
 
 			//Can't create a node with no data.
-			if(extractedNode.dataID == 0)
+			if (extractedNode.dataID == 0)
 			{
 				Debug.LogError($"Failed to extract mesh data from GameObject: {node.name}");
 				return 0;
 			}
+
+			extractedNode.dataType = avs.NodeDataType.Mesh;
 
 			uid nodeID = oldID == 0 ? GenerateID() : oldID;
 			processedResources[node] = nodeID;

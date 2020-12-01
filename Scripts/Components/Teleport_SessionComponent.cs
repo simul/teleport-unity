@@ -137,6 +137,10 @@ namespace teleport
 		public Teleport_ClientspaceRoot clientspaceRoot = null;
 		public Teleport_CollisionRoot collisionRoot = null;
 		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
+
+		public GameObject leftHand = null;
+		public GameObject rightHand = null;
+
 		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
 
 		private Vector3 last_sent_origin = new Vector3(0, 0, 0);

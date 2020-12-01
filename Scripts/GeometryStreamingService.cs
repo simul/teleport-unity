@@ -60,6 +60,16 @@ namespace teleport
 
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
 			timeSincePositionUpdate = 1 / teleportSettings.moveUpdatesPerSecond;
+
+			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+			if (session.leftHand != null)
+			{
+				geometrySource.AddLeftHandID(session.leftHand.GetInstanceID());
+			}
+			if (session.rightHand != null)
+			{
+				geometrySource.AddRightHandID(session.rightHand.GetInstanceID());
+			}
 		}
 
 		public void Clear()
@@ -272,12 +282,12 @@ namespace teleport
 					s.SetUid(actorID);
 					s.AddStreamingClient(session);
 				}
-			}
+			}	
 			// Add to the list without first checking if it can be added. So it won't spam failure messages.
 			var colliders = gameObject.GetComponents<Collider>();
 			foreach (var c in colliders)
-				streamedColliders.Add(c);
-			// This is assumed to exist.
+				streamedColliders.Add(c);			
+
 			return true;
 		}
 
@@ -292,6 +302,7 @@ namespace teleport
 			{
 				Debug.LogError("Game object " + gameObject.name + " has no Teleport_Streamable component.");
 			}
+
 			// include all collisionless children.
 			foreach (var g in streamable.includedChildren)
 			{
