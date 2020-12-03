@@ -519,7 +519,7 @@ namespace teleport
 		{
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 
-			GameObject[] foundStreamedObjects = teleportSettings.TagToStream.Length > 0 ? GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream) : foundStreamedObjects = FindObjectsOfType<GameObject>();
+			GameObject[] foundStreamedObjects = teleportSettings.TagToStream.Length > 0 ? GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream) : FindObjectsOfType<GameObject>();
 			foundStreamedObjects = foundStreamedObjects.Where(x => (teleportSettings.LayersToStream & (1 << x.layer)) != 0).ToArray();
 
 			return foundStreamedObjects;
