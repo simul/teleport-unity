@@ -393,7 +393,7 @@ namespace teleport
 				AssetDatabase.SaveAssets();
 				ClearGeometryStore();
 				Debug.LogWarning("Created Geometry Source at: " + assetPath);
-			}
+			}	
 #endif
 			return geometrySource;
 		}

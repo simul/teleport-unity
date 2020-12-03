@@ -69,7 +69,10 @@ namespace teleport
                 ss.Add(s);
             foreach (var s in ss)
             {
-                s.GeometryStreamingService.StopStreamingGameObject(gameObject);
+                if (s.GeometryStreamingService != null)
+                {
+                    s.GeometryStreamingService.StopStreamingGameObject(gameObject);
+                }
             }
         }
         HashSet<Teleport_SessionComponent> sessions=new HashSet<Teleport_SessionComponent>();

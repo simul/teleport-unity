@@ -60,16 +60,6 @@ namespace teleport
 
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
 			timeSincePositionUpdate = 1 / teleportSettings.moveUpdatesPerSecond;
-
-			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-			if (session.leftHand != null)
-			{
-				geometrySource.AddLeftHandID(session.leftHand.GetInstanceID());
-			}
-			if (session.rightHand != null)
-			{
-				geometrySource.AddRightHandID(session.rightHand.GetInstanceID());
-			}
 		}
 
 		public void Clear()
@@ -307,6 +297,10 @@ namespace teleport
 			foreach (var g in streamable.includedChildren)
 			{
 				var s = g.GetComponent<Teleport_Streamable>();
+				if (s == null)
+				{
+					continue;
+				}
 				uid actorID = Client_RemoveActorByID(session.GetClientID(), s.GetUid());
 				if (actorID != 0)
 				{

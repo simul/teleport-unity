@@ -15,6 +15,8 @@ namespace teleport
 		private TeleportSettings teleportSettings= null;
 
 		private GeometrySource geometrySource = null;
+		public GameObject leftHand = null;
+		public GameObject rightHand = null;
 
 		private static bool ok = false;
 		private static CasterMonitor instance; //There should only be one CasterMonitor instance at a time.
@@ -110,6 +112,17 @@ namespace teleport
 			{
 				geometrySource = GeometrySource.GetGeometrySource();
 			}
+
+			// Add hands
+			if (leftHand)
+			{
+				geometrySource.AddLeftHandID(leftHand.GetInstanceID());
+			}
+			if (rightHand)
+			{
+				geometrySource.AddRightHandID(rightHand.GetInstanceID());
+			}
+
 			overlayFont.normal.textColor = Color.yellow;
 			overlayFont.fontSize = 14;
 			clientFont.fontSize = 14;
