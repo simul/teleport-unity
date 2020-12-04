@@ -54,6 +54,8 @@ namespace teleport
 		private Dictionary<uid, avs.MovementUpdate> previousMovements = new Dictionary<uid, avs.MovementUpdate>();
 		private float timeSincePositionUpdate = 0;
 
+		private bool handsStreamed = false;
+
 		public GeometryStreamingService(Teleport_SessionComponent parentComponent)
 		{
 			session = parentComponent;
@@ -71,6 +73,8 @@ namespace teleport
 			RemoveAllActors();
 
 			previousMovements.Clear();
+
+			handsStreamed = false;
         }
 
 		public void RemoveAllActors()
@@ -198,16 +202,33 @@ namespace teleport
 			//Detect changes in geometry that needs to be streamed to the client.
 			if(teleportSettings.LayersToStream != 0)
 			{
+				if (!handsStreamed)
+				{
+					var monitor = CasterMonitor.GetCasterMonitor();
+
+					if (monitor.leftHand)
+					{
+						StartStreamingGameObject(monitor.leftHand);
+					}
+
+					if (monitor.rightHand)
+					{
+						StartStreamingGameObject(monitor.rightHand);
+					}
+
+					handsStreamed = true;
+				}
+
 				List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.casterSettings.detectionSphereRadius, teleportSettings.LayersToStream));
 				List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.casterSettings.detectionSphereRadius + teleportSettings.casterSettings.detectionSphereBufferDistance, teleportSettings.LayersToStream));
 
 				List<Collider> gainedColliders = new List<Collider>(innerSphereCollisions.Except(streamedColliders));
 				List<Collider> lostColliders = new List<Collider>(streamedColliders.Except(outerSphereCollisions));
 
-				foreach(Collider collider in gainedColliders)
-				{
+				foreach (Collider collider in gainedColliders)
+				{			
 					//Skip game objects without the streaming tag.
-					if(teleportSettings.TagToStream.Length == 0 || collider.CompareTag(teleportSettings.TagToStream))
+					if (teleportSettings.TagToStream.Length == 0 || collider.CompareTag(teleportSettings.TagToStream))
 					{
 						StartStreamingGameObject(collider.gameObject);
 					}
@@ -257,6 +278,12 @@ namespace teleport
 					continue;
 				if (streamedGameObjects.Contains(g))
 					continue;
+
+				// Not all children should have this because hands just add actor for the root node
+				var s = g.GetComponent<Teleport_Streamable>();
+				if (s == null)
+					continue;
+
 				uid actorID = AddActor(g);
 				if (actorID == 0)
 				{
@@ -268,7 +295,6 @@ namespace teleport
 					any = true;
 					Client_ActorEnteredBounds(session.GetClientID(), actorID);
 					streamedGameObjects.Add(g);
-					var s = g.GetComponent<Teleport_Streamable>();
 					s.SetUid(actorID);
 					s.AddStreamingClient(session);
 				}

@@ -876,6 +876,7 @@ namespace teleport
 			}
 
 			extractedNode.dataType = avs.NodeDataType.Mesh;
+			extractedNode.dataSubtype = nodeSubtype;
 
 			uid nodeID = oldID == 0 ? GenerateID() : oldID;
 			processedResources[node] = nodeID;
