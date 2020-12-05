@@ -803,8 +803,7 @@ namespace teleport
 				//Clear(context, 0 * direction_colours[face]);
 				DrawOpaqueGeometry(context, camera, layerMask, renderingMask);
 				DrawTransparentGeometry(context, camera, layerMask, renderingMask);
-				videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture,
-					 face);
+				videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture,face);
 				videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face,0);
 				videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.RoughSpecularCubeTexture, face, 3);
 				videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.RoughSpecularCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face);

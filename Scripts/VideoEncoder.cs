@@ -195,11 +195,7 @@ namespace teleport
 		void CreateLightingData(Camera camera, out List<avs.LightTagData> lightDataList)
 		{
 			var textureScaleAndBias = Matrix4x4.identity;
-			//textureScaleAndBias.m00 = 0.5f;
-			//textureScaleAndBias.m11 = -1.0f;
 			textureScaleAndBias.m22 = 0.5f;
-			//textureScaleAndBias.m03 = 0.5f;
-			//textureScaleAndBias.m13 = 0.5f;
 			textureScaleAndBias.m23 = 0.0f;
 
 			lightDataList = new List<avs.LightTagData>();
@@ -207,45 +203,39 @@ namespace teleport
 			var streamedLights=Teleport_SessionComponent.sessions[clientID].GeometryStreamingService.GetStreamedLights();
 			foreach(var l in streamedLights)
 			{
-				var uid=l.Key;
+				var uid = l.Key;
 				var light = l.Value;
 				PerFrameLightProperties perFrameLightProperties = null;
 				PerFramePerCameraLightProperties perFramePerCameraLightProperties=null;
-				if (!TeleportLighting.perFrameLightProperties.TryGetValue(light, out perFrameLightProperties))
-					continue;
-				perFrameLightProperties.perFramePerCameraLightProperties.TryGetValue(camera, out perFramePerCameraLightProperties);
-
-				ref var visibleLight = ref perFrameLightProperties.visibleLight;
-
-				if (visibleLight.light == null)
-				{
-					continue;
-				}
-
 				var lightData = new avs.LightTagData();
-				lightData.worldTransform = visibleLight.localToWorldMatrix;
-				lightData.color = new avs.Vector4(visibleLight.light.color.linear.r, visibleLight.light.color.linear.g, visibleLight.light.color.linear.b, visibleLight.light.color.linear.a);
-				lightData.range = visibleLight.range;
-				lightData.spotAngle = visibleLight.spotAngle;
-				lightData.lightType = DataTypes.UnityToTeleport(visibleLight.lightType);
-				// We want here the ORIGIN of the shadow matrix, not the light's "position", which is irrelevant for directional lights.
-				if (lightData.lightType == avs.LightType.Directional && perFramePerCameraLightProperties != null)
+				if (TeleportLighting.perFrameLightProperties.TryGetValue(light, out perFrameLightProperties)&&perFrameLightProperties != null)
 				{
-					lightData.position = perFramePerCameraLightProperties.cascades[0].viewMatrix.inverse.GetPosition();
+					perFrameLightProperties.perFramePerCameraLightProperties.TryGetValue(camera, out perFramePerCameraLightProperties);
+					lightData.worldTransform = perFrameLightProperties.visibleLight.localToWorldMatrix;
+				}
+				lightData.color = new avs.Vector4(light.color.linear.r, light.color.linear.g, light.color.linear.b, light.color.linear.a);
+				lightData.range = light.range;// visibleLight.range; 
+				lightData.spotAngle = light.spotAngle;// visibleLight.spotAngle;
+				lightData.lightType = DataTypes.UnityToTeleport(light.type);
+				lightData.position = light.transform.position;
+				// We want here the ORIGIN of the shadow matrix, not the light's "position", which is irrelevant for directional lights.
+				if ( perFramePerCameraLightProperties != null)
+				{
+					if(lightData.lightType == avs.LightType.Directional)
+						lightData.position = perFramePerCameraLightProperties.cascades[0].viewMatrix.inverse.GetPosition();
 					lightData.worldToShadowMatrix = ShadowUtils.GetShadowTransformForRender(
 																			perFramePerCameraLightProperties.cascades[0].projectionMatrix
 																			,perFramePerCameraLightProperties.cascades[0].viewMatrix);
 				}
 				else
 				{
-					lightData.position = light.transform.position;
 					if (perFrameLightProperties != null)
 						lightData.worldToShadowMatrix = perFrameLightProperties.worldToLightMatrix;
 				}
 				// Unity lights shine in the z direction...
 				// viewMatrix no good because Unity has view matrices that are not rotational!
 				Quaternion rotation = light.transform.rotation;
-				Quaternion Z_to_Y=new Quaternion(0.707F, 0, 0, 0.707F);
+				Quaternion Z_to_Y	= new Quaternion(0.707F, 0, 0, 0.707F);
 				rotation =  rotation* Z_to_Y;
 				rotation.Normalize();
 				lightData.orientation = rotation;

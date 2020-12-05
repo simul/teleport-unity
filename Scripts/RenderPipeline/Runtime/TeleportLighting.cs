@@ -105,7 +105,18 @@ namespace teleport
 			shadows.renderSettings = renderSettings;
 			shadows.Setup(context, cullingResults);
 			NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
-			Bounds bounds = new Bounds();
+			foreach (var visibleLight in visibleLights)
+			{
+				Light light = visibleLight.light;
+				if (!perFrameLightProperties.ContainsKey(light))
+				{
+					perFrameLightProperties.Add(light, new PerFrameLightProperties());
+					perFrameLightProperties[light].visibleLight = visibleLight;
+				}
+				PerFrameLightProperties perFrame = perFrameLightProperties[light];
+				perFrame.worldToLightMatrix = teleport.ShadowUtils.CalcWorldToLightMatrix(visibleLight);
+			}
+				Bounds bounds = new Bounds();
 
 			if (lightingOrder.MainLightIndex >= 0|| (lightingOrder.AdditionalLightIndices != null&&lightingOrder.AdditionalLightIndices.Length>0))
 			{
@@ -117,11 +128,6 @@ namespace teleport
 					if (lightingOrder.MainLightIndex == i )
 					{
 						shadows.ReserveDirectionalShadows(cullingResults, light, i);
-					}
-					if (!perFrameLightProperties.ContainsKey(light))
-					{
-						perFrameLightProperties.Add(light, new PerFrameLightProperties());
-						perFrameLightProperties[light].visibleLight = visibleLight;
 					}
 					PerFrameLightProperties perFrame = perFrameLightProperties[light];
 					if (!cullingResults.GetShadowCasterBounds(i, out bounds))

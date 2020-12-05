@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using UnityEngine;
 
 using uid = System.UInt64;
@@ -20,7 +21,25 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		public static extern bool Client_HasPeer(uid clientID);
 		[DllImport("SimulCasterServer")]
-		public static extern string Client_GetClientIP(uid clientID);
+		public static extern uint Client_GetClientIP(uid clientID, uint bufferLength, StringBuilder buffer);
+		public string Client_GetClientIPAddr(uid clientID)
+		{
+			StringBuilder str = new StringBuilder("", 20);
+			try
+			{
+				uint newlen = Client_GetClientIP(clientID,(uint)16, str);
+				if (newlen > 0)
+				{
+					str = new StringBuilder("",(int)newlen + (int)2);
+					Client_GetClientIP(clientID,newlen + 1, str );
+				}
+			}
+			catch (Exception exc)
+			{
+				UnityEngine.Debug.Log(exc.ToString());
+			}
+			return str.ToString();
+		}
 		[DllImport("SimulCasterServer")]
 		public static extern System.UInt16 Client_GetClientPort(uid clientID);
 		[DllImport("SimulCasterServer")]
@@ -292,7 +311,7 @@ namespace teleport
 		{
 			Vector3 headPosition = head ? head.transform.position : new Vector3();
 
-			string str = string.Format("Client {0}", clientID);
+			string str = string.Format("Client {0} {1}", clientID, Client_GetClientIPAddr(clientID));
 			int dy = 14;
 			GUI.Label(new Rect(x, y += dy, 300, 20), str, font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("sent origin\t{0}", last_sent_origin), font);
