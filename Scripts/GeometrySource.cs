@@ -393,7 +393,7 @@ namespace teleport
 				AssetDatabase.SaveAssets();
 				ClearGeometryStore();
 				Debug.LogWarning("Created Geometry Source at: " + assetPath);
-			}
+			}	
 #endif
 			return geometrySource;
 		}
@@ -519,7 +519,7 @@ namespace teleport
 		{
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 
-			GameObject[] foundStreamedObjects = teleportSettings.TagToStream.Length > 0 ? GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream) : foundStreamedObjects = FindObjectsOfType<GameObject>();
+			GameObject[] foundStreamedObjects = teleportSettings.TagToStream.Length > 0 ? GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream) : FindObjectsOfType<GameObject>();
 			foundStreamedObjects = foundStreamedObjects.Where(x => (teleportSettings.LayersToStream & (1 << x.layer)) != 0).ToArray();
 
 			return foundStreamedObjects;
@@ -876,6 +876,7 @@ namespace teleport
 			}
 
 			extractedNode.dataType = avs.NodeDataType.Mesh;
+			extractedNode.dataSubtype = nodeSubtype;
 
 			uid nodeID = oldID == 0 ? GenerateID() : oldID;
 			processedResources[node] = nodeID;
