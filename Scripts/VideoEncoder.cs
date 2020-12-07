@@ -14,6 +14,16 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		static extern System.IntPtr GetRenderEventWithDataCallback();
 		#endregion
+		[DllImport("SimulCasterServer")]
+		public static extern void ConvertTransform(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Transform transform);
+		[DllImport("SimulCasterServer")]
+		public static extern void ConvertRotation(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector4 rotation);
+		[DllImport("SimulCasterServer")]
+		public static extern void ConvertPosition(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector3 position);
+		[DllImport("SimulCasterServer")]
+		public static extern void ConvertScale(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector3 scale);
+		[DllImport("SimulCasterServer")]
+		public static extern byte ConvertAxis(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref byte axis);
 
 		[StructLayout(LayoutKind.Sequential)]
 		struct EncodeVideoParamsWrapper
@@ -200,7 +210,9 @@ namespace teleport
 
 			lightDataList = new List<avs.LightTagData>();
 			// which lights are streamed in this session?
-			var streamedLights=Teleport_SessionComponent.sessions[clientID].GeometryStreamingService.GetStreamedLights();
+			var session = Teleport_SessionComponent.sessions[clientID];
+		
+			var streamedLights=session.GeometryStreamingService.GetStreamedLights();
 			foreach(var l in streamedLights)
 			{
 				var uid = l.Key;
@@ -245,7 +257,7 @@ namespace teleport
 					Matrix4x4 proj = textureScaleAndBias * perFramePerCameraLightProperties.cascades[0].projectionMatrix;
 					lightData.shadowProjectionMatrix = proj.transpose;
 				}
-				DataTypes.ConvertViewProjectionMatrix(AxesStandard.EngineeringStyle,ref lightData.worldToShadowMatrix);
+				DataTypes.ConvertViewProjectionMatrix(session.axesStandard,ref lightData.worldToShadowMatrix);
 				if (perFrameLightProperties != null)
 				{
 					lightData.texturePosition = perFrameLightProperties.texturePosition;
@@ -253,6 +265,9 @@ namespace teleport
 				}
 				lightData.worldTransform = light.transform.localToWorldMatrix;
 				lightData.uid = uid;
+				ConvertPosition(avs.AxesStandard.UnityStyle, session.axesStandard, ref lightData.position);
+				ConvertRotation(avs.AxesStandard.UnityStyle, session.axesStandard, ref lightData.orientation);
+
 				lightDataList.Add(lightData);
 			}
 		}

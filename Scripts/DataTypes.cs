@@ -27,7 +27,7 @@ namespace avs
 		Num_LogSeverity
 	}
 
-	public enum AxesStandard
+	public enum AxesStandard : byte
 	{
 		NotInitialised = 0,
 		RightHanded = 1,
@@ -361,6 +361,22 @@ namespace avs
 			);
 		}
 	}
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct Handshake
+	{
+		public UInt32 display_width;
+		public UInt32 display_height;
+		public float MetresPerUnit ;
+		public float FOV ;
+		public UInt32 udpBufferSize ;
+		public UInt32 maxBandwidthKpS ;     
+		public AxesStandard axesStandard ;
+		public byte framerate;					// In hertz
+		public byte usingHands ;				//Whether to send the hand actors to the client.
+		public byte isVR;
+		public UInt64 resourceCount ;			//	Number of resources the client has, these are appended to the handshake.
+	};
+
 	enum InputEventType : byte
 	{
 		None=0,

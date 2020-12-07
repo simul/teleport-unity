@@ -12,6 +12,7 @@ namespace teleport
 	public class Teleport_SessionComponent : MonoBehaviour
 	{
 		#region DLLImports
+
 		[DllImport("SimulCasterServer")]
 		public static extern void Client_StopSession(uid clientID);
 		[DllImport("SimulCasterServer")]
@@ -175,6 +176,11 @@ namespace teleport
 				geometryStreamingService.Clear();
 
 			clientID = 0;
+		}
+		public avs.AxesStandard axesStandard = new avs.AxesStandard();
+		public void ReportHandshake(avs.Handshake handshake)
+		{
+			axesStandard = handshake.axesStandard;
 		}
 
 		public void SetHeadPose(Quaternion newRotation, Vector3 newPosition)

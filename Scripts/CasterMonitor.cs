@@ -48,8 +48,11 @@ namespace teleport
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void OnMessageHandler(avs.LogSeverity Severity, string Msg, in IntPtr userData);
-		#endregion
 
+		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+		delegate void ReportHandshakeFn(uid clientID, in avs.Handshake handshake);
+#endregion
+		
 		#region DLLImport
 
 		struct InitialiseState
@@ -63,6 +66,7 @@ namespace teleport
 			public OnMessageHandler messageHandler;
 			public uint DISCOVERY_PORT;
 			public uint SERVICE_PORT;
+			public ReportHandshakeFn reportHandshake;
 		};
 		[DllImport("SimulCasterServer")]
 		private static extern bool Initialise(InitialiseState initialiseState);
@@ -148,9 +152,10 @@ namespace teleport
 			initialiseState.controllerPoseSetter = Teleport_SessionComponent.StaticSetControllerPose;
 			initialiseState.newInputProcessing = Teleport_SessionComponent.StaticProcessInput;
 			initialiseState.disconnect = Teleport_SessionComponent.StaticDisconnect;
-			initialiseState.messageHandler = LogMessageHandler;
+			initialiseState.messageHandler = LogMessageHandler; 
 			initialiseState.SERVICE_PORT = teleportSettings.listenPort;
 			initialiseState.DISCOVERY_PORT = teleportSettings.discoveryPort;
+			initialiseState.reportHandshake = ReportHandshake; 
 			ok = Initialise(initialiseState);
 
 			// Sets connection timeouts for peers (milliseconds)
@@ -288,7 +293,7 @@ namespace teleport
 			if (!obj || obj.GetType() != typeof(GameObject))
 			{
 				return (byte)0;
-			}
+			}	
 			GameObject gameObject = (GameObject)obj;
 			int clientLayer = 25;
 			// Add the 0x7 because that's used to show canvases, so we must remove it also from the inverse mask.
@@ -304,7 +309,14 @@ namespace teleport
 			}
 			return (byte)1;
 		}
-
+		private static void ReportHandshake(uid clientID,in avs.Handshake handshake)
+		{
+			var session=Teleport_SessionComponent.sessions[clientID];
+			if(session!=null)
+			{
+				session.ReportHandshake(handshake);
+			}
+		}
 		private static void LogMessageHandler(avs.LogSeverity Severity, string Msg, in IntPtr userData)
 		{
 			switch(Severity)

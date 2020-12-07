@@ -19,7 +19,6 @@ namespace avs
 		Camera,
 		Scene,
 		ShadowMap,
-		Hand,
 		Light,
 		Bone
 	};
