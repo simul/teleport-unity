@@ -589,6 +589,10 @@ namespace teleport
 						Mesh m = meshFilter.sharedMesh;
 						nodeID = AddMeshNode(node, nodeSubtype, m, meshRenderer.sharedMaterials, 0, null, nodeID, forceUpdate);
 					}
+					else
+					{
+						Debug.LogError(node.name + " has a meshFilter but no meshRenderer was found.");
+					}
 				}
 				else if(light && light.isActiveAndEnabled)
 				{
@@ -596,7 +600,7 @@ namespace teleport
 				}
 				else
 				{
-					Debug.LogWarning(node.name + " was marked as streamable, but has no streamable component attached.");
+					Debug.LogError(node.name + " was marked as streamable, but has no streamable component attached.");
 				}
 			}
 			return nodeID;
@@ -763,7 +767,8 @@ namespace teleport
 		public uid AddBone(Transform bone, Transform[] boneList)
 		{
 			processedResources.TryGetValue(bone, out uid boneID);
-			if(boneID != 0 || !boneList.Contains(bone)) return boneID;
+			if(boneID != 0 || !boneList.Contains(bone))
+				return boneID;
 
 			boneID = GenerateID();
 			processedResources[bone] = boneID;

@@ -193,7 +193,9 @@ namespace teleport
 			{
 				if(((1<<gameObject.layer)&teleportSettings.LayersToStream)!=0)
 				{
-					if (gameObject.GetComponent<Teleport_Streamable>() == null)
+				// Objects with collision will have a Teleport_Streamable added, as they can be streamed
+				// as root objects.
+					if (gameObject.GetComponent<Collider>() != null&&gameObject.GetComponent<Teleport_Streamable>() == null)
 					{
 						// Adds the Teleport_Streamable component and does other initialization.
 						gameObject.AddComponent<Teleport_Streamable>();
