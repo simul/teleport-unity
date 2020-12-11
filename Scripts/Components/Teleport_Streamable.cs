@@ -53,8 +53,9 @@ namespace teleport
 
 		private void OnDestroy()
 		{
-			//Are there sessions still using this object?
-			foreach(Teleport_SessionComponent session in sessions)
+			//Remove GameObject from sessions.
+			List<Teleport_SessionComponent> copiedSessions = new List<Teleport_SessionComponent>(sessions);
+			foreach(Teleport_SessionComponent session in copiedSessions)
 			{
 				if(session.GeometryStreamingService != null)
 				{
