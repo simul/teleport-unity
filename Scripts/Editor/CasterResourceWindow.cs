@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -157,12 +155,12 @@ namespace teleport
 		private void ExtractSceneGeometry()
 		{
 			FindSceneStreamables();
-			int idx = 0;
-			foreach(GameObject gameObject in streamedSceneObjects)
+			for(int i = 0; i < streamedSceneObjects.Length; i++)
 			{
+				GameObject gameObject = streamedSceneObjects[i];
 				geometrySource.AddNode(gameObject, true);
-				UnityEditor.EditorUtility.DisplayCancelableProgressBar("Extracting Scene Geometry", "Processing " + gameObject.name, ((float)(idx)) / ((float)(streamedSceneObjects.Length)));
-				idx++;
+
+				EditorUtility.DisplayCancelableProgressBar("Extracting Scene Geometry", "Processing " + gameObject.name, i / streamedSceneObjects.Length);
 			}
 			ExtractTextures();
 

@@ -15,7 +15,7 @@ namespace avs
 {
 	public enum NodeDataType : byte
 	{
-		Mesh = 0,
+		Mesh,
 		Camera,
 		Scene,
 		ShadowMap,
@@ -25,7 +25,8 @@ namespace avs
 
 	public enum NodeDataSubtype : byte
 	{
-		None = 0,
+		None,
+		Body,
 		LeftHand,
 		RightHand
 	};
@@ -385,20 +386,26 @@ namespace teleport
 
 		public static GeometrySource GetGeometrySource()
 		{
-			if (geometrySource == null)
-				geometrySource = Resources.Load<GeometrySource>(k_GeometrySourcePath + "/" + k_GeometryFilename);
-#if UNITY_EDITOR
-			if (geometrySource == null)
+			if(geometrySource == null)
 			{
-				geometrySource = CreateInstance<GeometrySource>();
+				geometrySource = Resources.Load<GeometrySource>(k_GeometrySourcePath + "/" + k_GeometryFilename);
+			}
+
+#if UNITY_EDITOR
+			if(geometrySource == null)
+			{
 				TeleportSettings.EnsureAssetPath("Assets/Resources/" + k_GeometrySourcePath);
 				string assetPath = "Assets/Resources/" + k_GeometrySourcePath + "/" + k_GeometryFilename + ".asset";
+
+				geometrySource = CreateInstance<GeometrySource>();
 				AssetDatabase.CreateAsset(geometrySource, assetPath);
 				AssetDatabase.SaveAssets();
+
 				ClearGeometryStore();
 				Debug.LogWarning("Created Geometry Source at: " + assetPath);
-			}	
+			}
 #endif
+
 			return geometrySource;
 		}
 
@@ -455,7 +462,7 @@ namespace teleport
 
 			if(sceneReferenceManager == null)
 			{
-				sceneReferenceManager = new SceneReferenceManager();
+				sceneReferenceManager = CreateInstance<SceneReferenceManager>();
 			}
 		}
 
@@ -496,8 +503,10 @@ namespace teleport
 		//Returns the ID of the resource if it has been processed, or zero if the resource has not been processed or was passed in null.
 		public uid FindResourceID(UnityEngine.Object resource)
 		{
-			if (!resource)
+			if(!resource)
+			{
 				return 0;
+			}
 
 			processedResources.TryGetValue(resource, out uid nodeID);
 			return nodeID;
@@ -515,21 +524,28 @@ namespace teleport
 
 		public UnityEngine.Object FindResource(uid nodeID)
 		{
-			if(nodeID == 0)
-				return null;
+			return (nodeID == 0) ? null : processedResources.FirstOrDefault(x => x.Value == nodeID).Key;
+		}
 
-			return processedResources.FirstOrDefault(x => x.Value == nodeID).Key;
-		}
-		public UnityEngine.Object GetNode(uid nodeID)
+		//If the passed collision layer is streamed.
+		public bool IsCollisionLayerStreamed(int layer)
 		{
-			return resourceMap[nodeID];
+			return (TeleportSettings.GetOrCreateSettings().LayersToStream & (1 << layer)) != 0;
 		}
+
+		//If the GameObject has been marked correctly to be streamed; i.e. on streamed collision layer and has the correct tag.
+		public bool IsGameObjectMarkedForStreaming(GameObject gameObject)
+		{
+			string streamingTag = TeleportSettings.GetOrCreateSettings().TagToStream;
+			return (streamingTag.Length == 0 || gameObject.CompareTag(streamingTag)) && IsCollisionLayerStreamed(gameObject.layer);
+		}
+
 		public GameObject[] GetStreamableObjects()
 		{
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 
 			GameObject[] foundStreamedObjects = teleportSettings.TagToStream.Length > 0 ? GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream) : FindObjectsOfType<GameObject>();
-			foundStreamedObjects = foundStreamedObjects.Where(x => (teleportSettings.LayersToStream & (1 << x.layer)) != 0).ToArray();
+			foundStreamedObjects = foundStreamedObjects.Where(x => IsCollisionLayerStreamed(x.layer)).ToArray();
 
 			return foundStreamedObjects;
 		}
@@ -549,7 +565,7 @@ namespace teleport
 		{
 			if(!node)
 			{
-				Debug.LogError("AddNode: node is null.");
+				Debug.LogError("Null GameObject passed to AddNode(...).");
 				return 0;
 			}
 
@@ -579,8 +595,7 @@ namespace teleport
 
 				if(skinnedMeshRenderer)
 				{
-					//If the child count is zero, then this is just a child node holding the SkinnedMeshRenderer.
-					if(skinnedMeshRenderer.enabled && node.transform.childCount != 0)
+					if(skinnedMeshRenderer.enabled)
 					{
 						Mesh mesh = sceneReferenceManager.GetGameObjectMesh(node);
 

@@ -197,12 +197,14 @@ public class SceneReferenceManager : ScriptableObject, ISerializationCallbackRec
 		string meshAssetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(saveFormat.meshGUID);
 		resourceReferences.mesh = UnityEditor.AssetDatabase.LoadAssetAtPath<Mesh>(meshAssetPath);
 
+		//If it didn't recover, then it is probably a Unity default resource.
+		//We'll try extracting it by loading all of the assets from the default resource file and picking it out of the list.
 		if(!resourceReferences.mesh)
 		{
 			UnityEngine.Object[] assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(saveFormat.meshAssetPath);
 			List<UnityEngine.Object> matched = new List<UnityEngine.Object>(assets.Where(i => i.name == saveFormat.meshName && i.GetType() == typeof(Mesh)));
 
-			//Grab first index, even if there are multiple.
+			//Grab first index, even if there are multiple; there shouldn't be multiple in the default Unity resource files, but it is possible.
 			if(matched.Count != 0)
 			{
 				resourceReferences.mesh = (Mesh)matched[0];

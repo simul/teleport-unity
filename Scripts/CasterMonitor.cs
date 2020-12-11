@@ -11,12 +11,15 @@ namespace teleport
 	[ExecuteInEditMode]
 	public class CasterMonitor : MonoBehaviour
 	{
+		public GameObject leftHand = null;
+		public GameObject rightHand = null;
+
 		// Reference to the global (per-project) TeleportSettings asset.
 		private TeleportSettings teleportSettings= null;
 
 		private GeometrySource geometrySource = null;
-		public GameObject leftHand = null;
-		public GameObject rightHand = null;
+
+		private List<GameObject> streamableObjects = new List<GameObject>();
 
 		private static bool ok = false;
 		private static CasterMonitor instance; //There should only be one CasterMonitor instance at a time.
@@ -163,72 +166,80 @@ namespace teleport
 			SceneManager.sceneLoaded += OnSceneLoaded;
 			SceneManager.sceneUnloaded += OnSceneUnloaded;
 		}
-		List<GameObject> streamableObjects=new List<GameObject>();
+
 		void OnSceneLoaded(Scene scene, LoadSceneMode mode)
 		{
-			//SceneManager.sceneCount
-			GameObject[] gameObjects=scene.GetRootGameObjects();
-			foreach (var gameObject in gameObjects)
+			GameObject[] rootGameObjects = scene.GetRootGameObjects();
+			foreach(GameObject gameObject in rootGameObjects)
 			{
-				Renderer[] allRenderers = gameObject.GetComponentsInChildren<Renderer>();
-				SkinnedMeshRenderer[] allSkinnedMeshRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
-				CanvasRenderer[] allCanvasRenderers = gameObject.GetComponentsInChildren<CanvasRenderer>();
-				foreach (var r in allRenderers)
+				Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
+				foreach(Renderer renderer in renderers)
 				{
-					r.renderingLayerMask = 0xFFFFFFFF;
+					renderer.renderingLayerMask = 0xFFFFFFFF;
 				}
-				foreach (var r in allSkinnedMeshRenderers)
+
+				SkinnedMeshRenderer[] skinnedMeshRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
+				foreach(SkinnedMeshRenderer renderer in skinnedMeshRenderers)
 				{
-					r.renderingLayerMask = 0xFFFFFFFF;
+					renderer.renderingLayerMask = 0xFFFFFFFF;
 				}
-				foreach (var r in allCanvasRenderers)
+
+				//CanvasRenderer[] canvasRenderers = gameObject.GetComponentsInChildren<CanvasRenderer>();
+				//foreach(CanvasRenderer renderer in canvasRenderers)
+				//{
+				//	renderer.renderingLayerMask = 0xFFFFFFFF;
+				//}
+			}
+
+			//Add the Teleport_Streamable component to all streamable objects.
+			GameObject[] teleportStreamableObjects = geometrySource.GetStreamableObjects();
+			foreach(var gameObject in teleportStreamableObjects)
+			{
+				if(gameObject.GetComponent<Teleport_Streamable>() == null)
 				{
-					//	r.renderingLayerMask = 0xFFFFFFFF;
+					gameObject.AddComponent<Teleport_Streamable>();
 				}
 			}
-			if (teleportSettings.TagToStream.Length != 0)
-				gameObjects = GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream);
-			// All streamable objects: add the component Teleport_Streamable.
-			foreach(var gameObject in gameObjects)
+
+			Teleport_Streamable[] streamables = FindObjectsOfType<Teleport_Streamable>();
+			foreach(Teleport_Streamable streamable in streamables)
 			{
-				if(((1<<gameObject.layer)&teleportSettings.LayersToStream)!=0)
-				{
-					if (gameObject.GetComponent<Teleport_Streamable>() == null)
-					{
-						// Adds the Teleport_Streamable component and does other initialization.
-						gameObject.AddComponent<Teleport_Streamable>();
-					}
-				}
+				streamableObjects.Add(streamable.gameObject);
 			}
-			var streamables= GameObject.FindObjectsOfType<Teleport_Streamable>();
-			foreach(var s in streamables)
-			{
-				streamableObjects.Add(s.gameObject);
-			}
+
 			// Reset the "origin" for all sessions on the assumption we have changed level.
-			foreach(var s in Teleport_SessionComponent.sessions)
+			foreach(Teleport_SessionComponent sessionComponent in Teleport_SessionComponent.sessions.Values)
 			{
-				s.Value.ResetOrigin();
+				sessionComponent.ResetOrigin();
 			}
 		}
+
 		void OnSceneUnloaded(Scene scene)
 		{
-			GameObject[] gameObjects = scene.GetRootGameObjects();
+			GameObject[] rootGameObjects = scene.GetRootGameObjects();
 
-			foreach (var gameObject in gameObjects)
+			foreach(GameObject gameObject in rootGameObjects)
 			{
-				Teleport_Streamable[] allStreamables = gameObject.GetComponentsInChildren<Teleport_Streamable>();
 				streamableObjects.Remove(gameObject);
-				foreach (var o in allStreamables)
-					streamableObjects.Remove(o.gameObject);
+
+				Teleport_Streamable[] streamableChildren = gameObject.GetComponentsInChildren<Teleport_Streamable>();
+				foreach(Teleport_Streamable child in streamableChildren)
+				{
+					streamableObjects.Remove(child.gameObject);
+				}
 			}
 		}
+
 		private void Update()
 		{
-			if (ok && Application.isPlaying)
+			if(ok && Application.isPlaying)
+			{
 				Tick(Time.deltaTime);
+			}
 			else
+			{
 				Tock();
+			}
 		}
 		void OnGUI()
 		{
@@ -246,7 +257,6 @@ namespace teleport
 			}
 		}
 
-
 		private void OnValidate()
 		{
 			if(Application.isPlaying)
@@ -262,14 +272,16 @@ namespace teleport
 			SceneManager.sceneUnloaded -= OnSceneUnloaded;
 			Shutdown();
 		}
-		// called from dll.
+
+		//Called from DLL.
 		private static byte ShowActor(uid clientID, uid nodeID)
 		{
-			UnityEngine.Object obj = GeometrySource.GetGeometrySource().GetNode(nodeID);
-			if(!obj||obj.GetType()!=typeof(GameObject))
+			UnityEngine.Object obj = GeometrySource.GetGeometrySource().FindResource(nodeID);
+			if(!obj || obj.GetType() != typeof(GameObject))
 			{
 				return (byte)0;
 			}
+
 			GameObject gameObject = (GameObject)obj;
 			int clientLayer = 25;
 			uint clientMask = (uint)(((int)1) << clientLayer) | (uint)0x7;
@@ -286,14 +298,16 @@ namespace teleport
 			return (byte)1;
 
 		}
-		// called from dll.
+
+		//Called from DLL.
 		public static byte HideActor(uid clientID, uid nodeID)
 		{
-			UnityEngine.Object obj = GeometrySource.GetGeometrySource().GetNode(nodeID);
-			if (!obj || obj.GetType() != typeof(GameObject))
+			UnityEngine.Object obj = GeometrySource.GetGeometrySource().FindResource(nodeID);
+			if(!obj || obj.GetType() != typeof(GameObject))
 			{
 				return (byte)0;
-			}	
+			}
+
 			GameObject gameObject = (GameObject)obj;
 			int clientLayer = 25;
 			// Add the 0x7 because that's used to show canvases, so we must remove it also from the inverse mask.
@@ -309,14 +323,16 @@ namespace teleport
 			}
 			return (byte)1;
 		}
-		private static void ReportHandshake(uid clientID,in avs.Handshake handshake)
+
+		private static void ReportHandshake(uid clientID, in avs.Handshake handshake)
 		{
-			var session=Teleport_SessionComponent.sessions[clientID];
-			if(session!=null)
+			var session = Teleport_SessionComponent.sessions[clientID];
+			if(session != null)
 			{
 				session.ReportHandshake(handshake);
 			}
 		}
+
 		private static void LogMessageHandler(avs.LogSeverity Severity, string Msg, in IntPtr userData)
 		{
 			switch(Severity)
