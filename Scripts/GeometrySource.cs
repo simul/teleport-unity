@@ -370,7 +370,11 @@ namespace teleport
 		// <GameObject, ID of extracted data in native plug-in>
 		private readonly Dictionary<UnityEngine.Object, uid> processedResources = new Dictionary<UnityEngine.Object, uid>();
 		private bool isAwake = false;
+
 		private static GeometrySource geometrySource = null;
+
+		[SerializeField, HideInInspector] private SceneReferenceManager sceneReferenceManager = null;
+
 		private Dictionary<uid, UnityEngine.Object> resourceMap = new Dictionary<uid, UnityEngine.Object>();
 		private HashSet<int> leftHandIDs = new HashSet<int>();
 		private HashSet<int> rightHandIDs = new HashSet<int>();
@@ -378,6 +382,7 @@ namespace teleport
 		// We always store the settings in this path:
 		public const string k_GeometrySourcePath = "TeleportVR/GeometrySource";
 		public const string k_GeometryFilename = "GeometrySource";
+
 		public static GeometrySource GetGeometrySource()
 		{
 			if (geometrySource == null)
@@ -416,6 +421,7 @@ namespace teleport
 				}
 			}
 		}
+
 		public void Awake()
 		{
 			//We only want to load from disk when the project is loaded.
@@ -445,7 +451,11 @@ namespace teleport
 				RemoveNode(pair.Value);
 				processedResources.Remove(pair.Key);
 				resourceMap.Remove(pair.Value);
+			}
 
+			if(sceneReferenceManager == null)
+			{
+				sceneReferenceManager = new SceneReferenceManager();
 			}
 		}
 
@@ -567,17 +577,19 @@ namespace teleport
 					nodeSubtype = avs.NodeDataSubtype.None;
 				}
 
-				if (skinnedMeshRenderer)
+				if(skinnedMeshRenderer)
 				{
 					//If the child count is zero, then this is just a child node holding the SkinnedMeshRenderer.
 					if(skinnedMeshRenderer.enabled && node.transform.childCount != 0)
 					{
+						Mesh mesh = sceneReferenceManager.GetGameObjectMesh(node);
+
 						uid skinID = AddSkin(skinnedMeshRenderer);
 
 						Animator animator = node.GetComponentInChildren<Animator>();
 						uid[] animationIDs = (animator ? AnimationExtractor.AddAnimations(animator) : null);
 
-						nodeID = AddMeshNode(node, nodeSubtype, skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, skinID, animationIDs, nodeID, forceUpdate);
+						nodeID = AddMeshNode(node, nodeSubtype, mesh, skinnedMeshRenderer.sharedMaterials, skinID, animationIDs, nodeID, forceUpdate);
 					}
 				}
 				else if(meshFilter)
@@ -586,8 +598,9 @@ namespace teleport
 					MeshRenderer meshRenderer = node.GetComponent<MeshRenderer>();
 					if(meshRenderer && meshRenderer.enabled)
 					{
-						Mesh m = meshFilter.sharedMesh;
-						nodeID = AddMeshNode(node, nodeSubtype, m, meshRenderer.sharedMaterials, 0, null, nodeID, forceUpdate);
+						Mesh mesh = sceneReferenceManager.GetGameObjectMesh(node);
+
+						nodeID = AddMeshNode(node, nodeSubtype, mesh, meshRenderer.sharedMaterials, 0, null, nodeID, forceUpdate);
 					}
 				}
 				else if(light && light.isActiveAndEnabled)
@@ -1625,7 +1638,6 @@ namespace teleport
 
 						reaffirmedResources.Add(new ReaffirmedResource { oldID = metaResource.oldID, newID = newID });
 						Debug.Log("Reaffirmed resource was " + metaResource.oldID + " now " + newID + " loaded from disk, " + assetPath);
-						// RK: I'm going to say it's WAY to early to put this in here when we can't be sure that the actual resource will be loaded!
 						processedResources[asset] = newID;
 						resourceMap[newID] = asset;
 					}
