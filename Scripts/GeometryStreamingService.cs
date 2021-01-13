@@ -88,13 +88,14 @@ namespace teleport
 		uid AddActor(GameObject actor)
 		{
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+			
 			uid actorID = geometrySource.AddNode(actor);
-			if(actorID==0)
+			if(actorID == 0)
 			{
-				Debug.LogError("AddNode failed for "+actor.name+".");
+				Debug.LogError($"AddActor failed for {actor.name}.");
 				return actorID;
 			}
-			if(actorID != 0 )
+			else
 			{
 				Client_AddActor(session.GetClientID(), new IntPtr(0), actorID, avs.Transform.FromGlobalUnityTransform(actor.transform));
 			}
@@ -276,8 +277,23 @@ namespace teleport
 				return false;
 			}
 
-			//Stream hierarchy.
-			foreach(GameObject node in streamable.streamedHierarchy)
+			uid gameObjectID = AddActor(gameObject);
+			if(gameObjectID != 0)
+			{
+				streamable.SetUid(gameObjectID);
+				streamable.AddStreamingClient(session);
+
+				streamedGameObjects.Add(gameObject);
+				Client_ActorEnteredBounds(session.GetClientID(), gameObjectID);
+			}
+			else
+			{
+				failedGameObjects.Add(gameObject);
+				Debug.LogWarning($"Failed to add GameObject <b>\"{gameObject.name}\"</b> for streaming! ");
+			}
+
+			//Stream child hierarchy this GameObject Streamable is responsible for.
+			foreach(GameObject node in streamable.childHierarchy)
 			{
 				if(failedGameObjects.Contains(node))
 				{
@@ -289,18 +305,16 @@ namespace teleport
 					continue;
 				}
 
-				uid actorID = AddActor(node);
-				if (actorID == 0)
+				uid childID = AddActor(node);
+				if (childID == 0)
 				{
-					Debug.LogWarning($"Failed to add GameObject <b>\"{node.name}\"</b> for streaming! ");
 					failedGameObjects.Add(node);
+					Debug.LogWarning($"Failed to add GameObject <b>\"{node.name}\"</b> for streaming! ");
 				}
 				else
 				{
-					Client_ActorEnteredBounds(session.GetClientID(), actorID);
 					streamedGameObjects.Add(node);
-					streamable.SetUid(actorID);
-					streamable.AddStreamingClient(session);
+					Client_ActorEnteredBounds(session.GetClientID(), childID);
 				}
 			}
 			
@@ -315,33 +329,44 @@ namespace teleport
 
 		public void StopStreamingGameObject(GameObject gameObject)
 		{
-			Collider[] colliders = gameObject.GetComponents<Collider>();
-			foreach(Collider collider in colliders)
-			{
-				streamedColliders.Remove(collider);
-			}
+			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+			uid gameObjectID = geometrySource.FindResourceID(gameObject);
 
 			streamedGameObjects.Remove(gameObject);
-			var streamable = gameObject.GetComponent<Teleport_Streamable>();
-			if(streamable == null)
+			Client_RemoveActorByID(session.GetClientID(), gameObjectID);
+			Client_ActorLeftBounds(session.GetClientID(), gameObjectID);
+
+			Teleport_Streamable streamable = gameObject.GetComponent<Teleport_Streamable>();
+			if(streamable)
+			{
+				streamable.RemoveStreamingClient(session);
+			}
+			else
 			{
 				Debug.LogError($"GameObject \"{gameObject.name}\" has no Teleport_Streamable component.");
 			}
 
-			//Remove hierarchy.
-			foreach(GameObject node in streamable.streamedHierarchy)
+			//Stop streaming child hierarchy.
+			foreach(GameObject child in streamable.childHierarchy)
 			{
-				uid actorID = Client_RemoveActorByID(session.GetClientID(), streamable.GetUid());
-				if(actorID != 0)
+				uid childID = geometrySource.FindResourceID(child);
+				if(childID != 0)
 				{
-					Client_ActorLeftBounds(session.GetClientID(), actorID);
+					streamedGameObjects.Remove(child);
+					Client_RemoveActorByID(session.GetClientID(), childID);
+					Client_ActorLeftBounds(session.GetClientID(), childID);
 				}
 				else
 				{
-					Debug.LogWarning($"Attempted to stop streaming GameObject <b>{node.name}</b>, but it was not being streamed!");
+					Debug.LogWarning($"Attempted to stop streaming GameObject <b>{child.name}</b> (child of {gameObject.name}({gameObjectID})), but received 0 for ID from GeometrySource!");
 				}
+			}
 
-				streamable.RemoveStreamingClient(session);
+			//Remove GameObject's colliders from list.
+			Collider[] colliders = gameObject.GetComponents<Collider>();
+			foreach(Collider collider in colliders)
+			{
+				streamedColliders.Remove(collider);
 			}
 		}
 

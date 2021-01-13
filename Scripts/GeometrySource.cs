@@ -419,9 +419,9 @@ namespace teleport
 		public void OnAfterDeserialize()
 		{
 			//Don't run during boot.
-			if (isAwake)
+			if(isAwake)
 			{
-				for (int i = 0; i < processedResources_keys.Length; i++)
+				for(int i = 0; i < processedResources_keys.Length; i++)
 				{
 					processedResources[processedResources_keys[i]] = processedResources_values[i];
 					//Debug.Log("Restoring resource " + processedResources_values[i]);// ;
@@ -432,7 +432,7 @@ namespace teleport
 		public void Awake()
 		{
 			//We only want to load from disk when the project is loaded.
-			if (Application.isPlaying)
+			if(Application.isPlaying)
 			{
 				return;
 			}
@@ -453,7 +453,7 @@ namespace teleport
 
 			//Remove nodes that have been lost due to level change.
 			var pairsToDelete = processedResources.Where(pair => pair.Key == null).ToArray();
-			foreach (var pair in pairsToDelete)
+			foreach(var pair in pairsToDelete)
 			{
 				RemoveNode(pair.Value);
 				processedResources.Remove(pair.Key);
@@ -513,7 +513,7 @@ namespace teleport
 		}
 
 		public void AddLeftHandID(int id)
-		{ 	
+		{
 			leftHandIDs.Add(id);
 		}
 
@@ -570,63 +570,41 @@ namespace teleport
 			}
 
 			processedResources.TryGetValue(node, out uid nodeID);
-
-			if(forceUpdate || nodeID == 0)
+			if(!forceUpdate && nodeID != 0)
 			{
-				SkinnedMeshRenderer skinnedMeshRenderer = node.GetComponentInChildren<SkinnedMeshRenderer>();
-				MeshFilter meshFilter = node.GetComponentInChildren<MeshFilter>();
-				Light light = node.GetComponentInChildren<Light>();
-
-				avs.NodeDataSubtype nodeSubtype;
-
-				// Check if the mesh is a hand
-				if (leftHandIDs.Contains(node.GetInstanceID()))
-				{
-					nodeSubtype = avs.NodeDataSubtype.LeftHand;
-				}
-				else if (rightHandIDs.Contains(node.GetInstanceID()))
-				{
-					nodeSubtype = avs.NodeDataSubtype.RightHand;
-				}
-				else
-				{
-					nodeSubtype = avs.NodeDataSubtype.None;
-				}
-
-				if(skinnedMeshRenderer)
-				{
-					if(skinnedMeshRenderer.enabled)
-					{
-						Mesh mesh = sceneReferenceManager.GetGameObjectMesh(node);
-
-						uid skinID = AddSkin(skinnedMeshRenderer);
-
-						Animator animator = node.GetComponentInChildren<Animator>();
-						uid[] animationIDs = (animator ? AnimationExtractor.AddAnimations(animator) : null);
-
-						nodeID = AddMeshNode(node, nodeSubtype, mesh, skinnedMeshRenderer.sharedMaterials, skinID, animationIDs, nodeID, forceUpdate);
-					}
-				}
-				else if(meshFilter)
-				{
-					//Only stream mesh nodes that have their mesh renderer enabled.
-					MeshRenderer meshRenderer = node.GetComponent<MeshRenderer>();
-					if(meshRenderer && meshRenderer.enabled)
-					{
-						Mesh mesh = sceneReferenceManager.GetGameObjectMesh(node);
-
-						nodeID = AddMeshNode(node, nodeSubtype, mesh, meshRenderer.sharedMaterials, 0, null, nodeID, forceUpdate);
-					}
-				}
-				else if(light && light.isActiveAndEnabled)
-				{
-					nodeID = AddLightNode(light, nodeID, forceUpdate);
-				}
-				else
-				{
-					Debug.LogWarning(node.name + " was marked as streamable, but has no streamable component attached.");
-				}
+				return nodeID;
 			}
+
+			if(nodeID == 0)
+			{
+				nodeID = GenerateID();
+			}
+			processedResources[node] = nodeID;
+			resourceMap[nodeID] = node;
+
+			avs.Node extractedNode = new avs.Node();
+			extractedNode.name = Marshal.StringToBSTR(node.name);
+			extractedNode.transform = avs.Transform.FromLocalUnityTransform(node.transform);
+
+			ExtractNodeHierarchy(node, ref extractedNode, forceUpdate);
+			ExtractNodeSubType(node, ref extractedNode, forceUpdate);
+
+			bool hasExtractedData = false;
+			if(!hasExtractedData)
+			{
+				hasExtractedData = ExtractNodeMeshData(node, ref extractedNode, forceUpdate);
+			}
+			if(!hasExtractedData)
+			{
+				hasExtractedData = ExtractNodeSkinnedMeshData(node, ref extractedNode, forceUpdate);
+			}
+			if(!hasExtractedData)
+			{
+				hasExtractedData = ExtractNodeLightData(node, ref extractedNode, forceUpdate);
+			}
+
+			//Store extracted node.
+			StoreNode(nodeID, extractedNode);
 			return nodeID;
 		}
 
@@ -655,21 +633,7 @@ namespace teleport
 
 			return meshID;
 		}
-		public uid AddLight(Light light)
-		{
-			if(!light) return 0;
 
-			if(!processedResources.TryGetValue(light, out uid lightID))
-			{
-				lightID = GenerateID();
-				processedResources[light] = lightID;
-
-				ExtractLightData(light, lightID);
-			}
-
-			return lightID;
-
-		}
 		public uid AddMaterial(Material material, bool forceUpdate = false)
 		{
 			if(!material)
@@ -833,133 +797,170 @@ namespace teleport
 #endif
 		}
 
-		private uid AddLightNode(Light light, uid oldID, bool forceUpdate = false)
+		private void ExtractNodeHierarchy(GameObject source, ref avs.Node extractTo, bool forceUpdate)
 		{
-			GameObject node = light.gameObject;
-			avs.Node extractedNode = new avs.Node();
-			extractedNode.name = Marshal.StringToBSTR(light.name);
-
-			//Extract mesh used on node.
-			extractedNode.dataID = AddLight(light);
-			extractedNode.dataType = avs.NodeDataType.Light;
-			Color c = light.color;
-			if(PlayerSettings.colorSpace == ColorSpace.Linear)
-				extractedNode.lightColour = c.linear * light.intensity;
-			else
-				extractedNode.lightColour = c.gamma * light.intensity;
-			extractedNode.lightType = (byte)light.type;
-			extractedNode.lightRadius = light.range / 5.0F;
-			// For Unity, lights point along the X-axis, so:
-			extractedNode.lightDirection = new avs.Vector3(0, 0, 1.0F);
-			//Can't create a node with no data.
-			if(extractedNode.dataID == 0)
+			if(source.transform.parent)
 			{
-				Debug.LogError("Failed to extract light data from game object: " + node.name);
-				return 0;
+				extractTo.parentID = AddNode(source.transform.parent.gameObject, forceUpdate);
 			}
 
 			//Extract children of node, through transform hierarchy.
 			List<uid> childIDs = new List<uid>();
-			for(int i = 0; i < node.transform.childCount; i++)
+			for(int i = 0; i < source.transform.childCount; i++)
 			{
-				uid childID = AddNode(node.transform.GetChild(i).gameObject);
+				uid childID = AddNode(source.transform.GetChild(i).gameObject);
 
-				if(childID == 0)
-					Debug.LogWarning("Received 0 for ID of child on game object: " + node.name);
-				else
+				if(childID != 0)
+				{
 					childIDs.Add(childID);
+				}
+				else
+				{
+					Debug.LogWarning("Received 0 for ID of child on game object: " + source.name);
+				}
 			}
-			extractedNode.childAmount = (ulong)childIDs.Count;
-			extractedNode.childIDs = childIDs.ToArray();
-
-			extractedNode.transform = new avs.Transform
-			{
-				position = node.transform.position,
-				rotation = node.transform.rotation,
-				scale = node.transform.localScale
-			};
-
-			//Store extracted node.
-			uid nodeID = oldID == 0 ? GenerateID() : oldID;
-			processedResources[node] = nodeID;
-			resourceMap[nodeID] = node;
-			StoreNode(nodeID, extractedNode);
-
-			return nodeID;
+			extractTo.childAmount = (ulong)childIDs.Count;
+			extractTo.childIDs = childIDs.ToArray();
 		}
 
-		private uid AddMeshNode(GameObject node, avs.NodeDataSubtype nodeSubtype, Mesh mesh, Material[] materials, uid skinID, uid[] animationIDs, uid oldID, bool forceUpdate = false)
+		private void ExtractNodeSubType(GameObject source, ref avs.Node extractTo, bool forceUpdate)
 		{
-			avs.Node extractedNode = new avs.Node();
-
-			//Extract mesh used on node.
-			extractedNode.dataID = AddMesh(mesh);
-
-			//Can't create a node with no data.
-			if (extractedNode.dataID == 0)
+			//Get node sub-type, if it has one.
+			if(leftHandIDs.Contains(source.GetInstanceID()))
 			{
-				Debug.LogError($"Failed to extract mesh data from GameObject: {node.name}");
-				return 0;
+				extractTo.dataSubtype = avs.NodeDataSubtype.LeftHand;
 			}
-
-			extractedNode.dataType = avs.NodeDataType.Mesh;
-			extractedNode.dataSubtype = nodeSubtype;
-
-			uid nodeID = oldID == 0 ? GenerateID() : oldID;
-			processedResources[node] = nodeID;
-			resourceMap[nodeID] = node;
-
-			extractedNode.name = Marshal.StringToBSTR(node.name);
-			extractedNode.skinID = skinID;
-
-			if(animationIDs != null)
+			else if(rightHandIDs.Contains(source.GetInstanceID()))
 			{
-				extractedNode.animationAmount = (ulong)animationIDs.Length;
-				extractedNode.animationIDs = animationIDs;
+				extractTo.dataSubtype = avs.NodeDataSubtype.RightHand;
 			}
+			else if(false)
+			{
+				extractTo.dataSubtype = avs.NodeDataSubtype.Body;
+			}
+			else
+			{
+				extractTo.dataSubtype = avs.NodeDataSubtype.None;
+			}
+		}
 
-			//Extract materials used on node.
+		private void ExtractNodeMaterials(Material[] sourceMaterials, ref avs.Node extractTo, bool forceUpdate)
+		{
 			List<uid> materialIDs = new List<uid>();
-			foreach(Material material in materials)
+			foreach(Material material in sourceMaterials)
 			{
 				uid materialID = AddMaterial(material, forceUpdate);
 
-				if(materialID == 0) Debug.LogWarning("Received 0 for ID of material on game object: " + node.name);
-				else materialIDs.Add(materialID);
+				if(materialID != 0)
+				{
+					materialIDs.Add(materialID);
+					
+					//Check GeometryStore to see if material actually exists, if it doesn't then there is a mismatch between the mananged code data and the unmanaged code data.
+					if(!IsMaterialStored(materialID))
+					{
+						Debug.LogError($"Missing material {material.name}({materialID}), which was added to \"{extractTo.name}\".");
+					}
+				}
+				else
+				{
+					Debug.LogWarning($"Received 0 for ID of material on game object: {extractTo.name}");
+				}
 			}
-			extractedNode.materialAmount = (ulong)materialIDs.Count;
-			extractedNode.materialIDs = materialIDs.ToArray();
-
-			for(int i = 0; i < extractedNode.materialIDs.Length; i++)
-			{
-				if(!IsMaterialStored(extractedNode.materialIDs[i])) Debug.LogError("AddMeshNode storing material " + extractedNode.materialIDs[i] + " which is not there.");
-			}
-
-			if(node.transform.parent)
-				extractedNode.parentID = AddNode(node.transform.parent.gameObject);
-
-			//Extract children of node, through transform hierarchy.
-			List<uid> childIDs = new List<uid>();
-			for(int i = 0; i < node.transform.childCount; i++)
-			{
-				uid childID = AddNode(node.transform.GetChild(i).gameObject);
-
-				if(childID == 0) Debug.LogWarning("Received 0 for ID of child on game object: " + node.name);
-				else childIDs.Add(childID);
-			}
-			extractedNode.childAmount = (ulong)childIDs.Count;
-			extractedNode.childIDs = childIDs.ToArray();
-
-			extractedNode.transform = avs.Transform.FromLocalUnityTransform(node.transform);
-
-			//Store extracted node.
-			StoreNode(nodeID, extractedNode);
-
-			return nodeID;
+			extractTo.materialAmount = (ulong)materialIDs.Count;
+			extractTo.materialIDs = materialIDs.ToArray();
 		}
 
-		private void ExtractLightData(Light light, uid lightID)
-		{ }
+		private bool ExtractNodeMeshData(GameObject source, ref avs.Node extractTo, bool forceUpdate)
+		{
+			MeshFilter meshFilter = source.GetComponent<MeshFilter>();
+			MeshRenderer meshRenderer = source.GetComponent<MeshRenderer>();
+			if(!meshFilter || !meshRenderer || !meshRenderer.enabled)
+			{
+				return false;
+			}
+
+			//Extract mesh used on node.
+			Mesh mesh = sceneReferenceManager.GetGameObjectMesh(source);
+			extractTo.dataID = AddMesh(mesh);
+
+			//Can't create a node with no data.
+			if(extractTo.dataID == 0)
+			{
+				Debug.LogError($"Failed to extract mesh data from GameObject: {source.name}");
+				return false;
+			}
+			extractTo.dataType = avs.NodeDataType.Mesh;
+
+			ExtractNodeMaterials(meshRenderer.sharedMaterials, ref extractTo, forceUpdate);
+
+			return true;
+		}
+
+		private bool ExtractNodeSkinnedMeshData(GameObject source, ref avs.Node extractTo, bool forceUpdate)
+		{
+			SkinnedMeshRenderer skinnedMeshRenderer = source.GetComponent<SkinnedMeshRenderer>();
+			if(!skinnedMeshRenderer || !skinnedMeshRenderer.enabled)
+			{
+				return false;
+			}
+
+			//Extract mesh used on node.
+			Mesh mesh = sceneReferenceManager.GetGameObjectMesh(source);
+			extractTo.dataID = AddMesh(mesh);
+
+			//Can't create a node with no data.
+			if(extractTo.dataID == 0)
+			{
+				Debug.LogError($"Failed to extract skinned mesh data from GameObject: {source.name}");
+				return false;
+			}
+			extractTo.dataType = avs.NodeDataType.Mesh;
+
+			extractTo.skinID = AddSkin(skinnedMeshRenderer);
+
+			//Animator component usually appears on the parent GameObject, so we need to use that instead for searching the children.
+			GameObject animatorSource = (source.transform.parent) ? source.transform.parent.gameObject : source.transform.gameObject;
+			Animator animator = animatorSource.GetComponentInChildren<Animator>();
+			if(animator)
+			{
+				extractTo.animationIDs = AnimationExtractor.AddAnimations(animator);
+				extractTo.animationAmount = (ulong)extractTo.animationIDs.Length;
+			}
+			else
+			{
+				extractTo.animationIDs = null;
+				extractTo.animationAmount = 0;
+			}
+
+			ExtractNodeMaterials(skinnedMeshRenderer.sharedMaterials, ref extractTo, forceUpdate);
+
+			return true;
+		}
+
+		private bool ExtractNodeLightData(GameObject source, ref avs.Node extractTo, bool forceUpdate)
+		{
+			Light light = source.GetComponent<Light>();
+			if(!light || !light.isActiveAndEnabled)
+			{
+				return false;
+			}
+
+			if(!processedResources.TryGetValue(light, out extractTo.dataID))
+			{
+				extractTo.dataID = GenerateID();
+			}
+			processedResources[light] = extractTo.dataID;
+			extractTo.dataType = avs.NodeDataType.Light;
+
+			Color lightColour = light.color;
+			extractTo.lightColour = (PlayerSettings.colorSpace == ColorSpace.Linear) ? lightColour.linear * light.intensity : lightColour.gamma * light.intensity;
+			extractTo.lightType = (byte)light.type;
+			extractTo.lightRadius = light.range / 5.0F;
+			// For Unity, lights point along the X-axis, so:
+			extractTo.lightDirection = new avs.Vector3(0, 0, 1.0F);
+
+			return true;
+		}
 
 		private uid AddSkin(SkinnedMeshRenderer skinnedMeshRenderer)
 		{

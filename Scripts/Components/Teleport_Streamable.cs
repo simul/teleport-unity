@@ -12,8 +12,8 @@ namespace teleport
 	public class Teleport_Streamable : MonoBehaviour
 	{
 		private uid uid = 0;
-		//The GameObject itself; and the child objects that have no collision, so are streamed automatically with this one.
-		public List<GameObject> streamedHierarchy = new List<GameObject>();
+		//The child objects that have no collision, so are streamed automatically with the GameObject the component is attached to.
+		public List<GameObject> childHierarchy = new List<GameObject>();
 
 		private HashSet<Teleport_SessionComponent> sessions = new HashSet<Teleport_SessionComponent>();
 
@@ -31,7 +31,7 @@ namespace teleport
 		{
 			if(uid != 0 && u != uid)
 			{
-				Debug.LogError("Already have uid " + uid + " but overriding it with uid " + u);
+				Debug.LogError($"GameObject <i>\"{name}\"</i> already has ID {uid}, but we are overriding it with uid {u}!");
 			}
 			uid = u;
 		}
@@ -48,7 +48,7 @@ namespace teleport
 
 		private void Start()
 		{
-			CreateStreamedHierarchy();
+			CreateChildHierarchy();
 		}
 
 		private void OnDestroy()
@@ -64,13 +64,12 @@ namespace teleport
 			}
 		}
 
-		private void CreateStreamedHierarchy()
+		private void CreateChildHierarchy()
 		{
-			streamedHierarchy.Clear();
+			childHierarchy.Clear();
 
 			List<GameObject> exploredGameObjects = new List<GameObject>();
 			exploredGameObjects.Add(gameObject);
-			streamedHierarchy.Add(gameObject);
 
 			//Mark all children that will be streamed separately as explored; i.e. is marked for streaming.
 			List<Collider> childColliders = new List<Collider>(GetComponentsInChildren<Collider>());
@@ -78,7 +77,7 @@ namespace teleport
 			{
 				if(childCollider.gameObject != gameObject && GeometrySource.GetGeometrySource().IsGameObjectMarkedForStreaming(childCollider.gameObject))
 				{
-					//Mark all children as explored, as they are part of a different streaming hierarchy.
+					//Mark child's children as explored, as they are part of a different streaming hierarchy.
 					Transform[] childTransforms = childCollider.GetComponentsInChildren<Transform>();
 					foreach(Transform transform in childTransforms)
 					{
@@ -107,7 +106,7 @@ namespace teleport
 				if(!exploredGameObjects.Contains(gameObject))
 				{
 					exploredGameObjects.Add(gameObject);
-					streamedHierarchy.Add(gameObject);
+					childHierarchy.Add(gameObject);
 
 					AddToHierarchy(transform.parent, exploredGameObjects);
 				}
