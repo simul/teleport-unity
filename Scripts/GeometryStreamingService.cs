@@ -44,7 +44,7 @@ namespace teleport
 
 		private List<Collider> streamedColliders = new List<Collider>();
 		private List<GameObject> streamedGameObjects = new List<GameObject>();
-		private List<GameObject> failedGameObjects = new List<GameObject>(); 
+		private List<GameObject> failedGameObjects = new List<GameObject>(); //Objects that have already failed to stream, and as such won't stream again.
 		private Dictionary<uid,Light> streamedLights = new Dictionary<uid, Light>();
 
 		//Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
@@ -88,13 +88,14 @@ namespace teleport
 		uid AddActor(GameObject actor)
 		{
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+			
 			uid actorID = geometrySource.AddNode(actor);
 			if(actorID==0)
 			{
-				Debug.LogError("AddNode failed for "+actor.name+".");
+				Debug.LogError($"AddActor failed for {actor.name}.");
 				return actorID;
 			}
-			if(actorID != 0 )
+			else
 			{
 				Client_AddNode(session.GetClientID(),  actorID, avs.Transform.FromGlobalUnityTransform(actor.transform));
 			}
@@ -117,6 +118,7 @@ namespace teleport
 				return false;
 			return Client_IsStreamingNodeID(session.GetClientID(), streamable.GetUid());
 		}
+
 		/// <summary>
 		/// Set the lights to be streamed to this client.
 		///		If they are streamable, this will:
@@ -246,7 +248,7 @@ namespace teleport
 			}
 			else
 			{
-				teleport.TeleportLog.LogErrorOnce("Teleport geometry streaming layer is not defined! Please assign layer masks under \"Layers To Stream\".");
+				TeleportLog.LogErrorOnce("Teleport geometry streaming layer is not defined! Please assign layer masks under \"Layers To Stream\".");
 			}
 
 			//Send position updates, if enough time has elapsed.
@@ -263,94 +265,124 @@ namespace teleport
 		private bool StartStreamingGameObject(GameObject gameObject)
 		{
 			if (failedGameObjects.Contains(gameObject))
+			{
 				return false;
+			}
+
 			if (streamedGameObjects.Contains(gameObject))
 			{
-				Debug.LogError("StartStreamingGameObject called on " + gameObject.name + " which is already streamed.");
+				Debug.LogError($"StartStreamingGameObject called on {gameObject.name}, which is already streamed.");
 				return false;
 			}
-			var streamable = gameObject.GetComponent<Teleport_Streamable>();
+
+			Teleport_Streamable streamable = gameObject.GetComponent<Teleport_Streamable>();
 			if (streamable == null)
 			{
-				Debug.LogError("Game object " + gameObject.name + " has no Teleport_Streamable component.");
+				Debug.LogError($"Attempted to stream GameObject \"{gameObject.name}\", which has no Teleport_Streamable component!");
 				return false;
 			}
-			bool any = false;
-			uid nodeID = 0;
-			// include all collisionless children.
-			for (int i = 0; i < streamable.includedChildren.Count; i++)
+
+			uid gameObjectID = AddActor(gameObject);
+			if(gameObjectID != 0)
 			{
-				var g = streamable.includedChildren[i];
-				if (failedGameObjects.Contains(g))
-					continue;
-				if (streamedGameObjects.Contains(g))
-					continue;
-				uid actorID = AddActor(g);
-				if (i== 0)
-					nodeID = actorID;
-				if (actorID == 0)
+				streamable.SetUid(gameObjectID);
+				streamable.AddStreamingClient(session);
+
+				streamedGameObjects.Add(gameObject);
+				Client_ActorEnteredBounds(session.GetClientID(), gameObjectID);
+			}
+			else
+			{
+				failedGameObjects.Add(gameObject);
+				Debug.LogWarning($"Failed to add GameObject <b>\"{gameObject.name}\"</b> for streaming! ");
+			}
+
+			//Stream child hierarchy this GameObject Streamable is responsible for.
+			foreach(GameObject node in streamable.childHierarchy)
+			{
+				if(failedGameObjects.Contains(node))
 				{
-					Debug.LogWarning("Failed to add game object for streaming: " + g.name);
-					failedGameObjects.Add(g);
+					continue;
+				}
+
+				if(streamedGameObjects.Contains(node))
+				{
+					continue;
+				}
+
+				uid childID = AddActor(node);
+				if (childID == 0)
+				{
+					failedGameObjects.Add(node);
+					Debug.LogWarning($"Failed to add GameObject <b>\"{node.name}\"</b> for streaming! ");
 				}
 				else
 				{
-					any = true;
-					Client_ActorEnteredBounds(session.GetClientID(), actorID);
-					streamedGameObjects.Add(g);
+					streamedGameObjects.Add(node);
+					Client_ActorEnteredBounds(session.GetClientID(), childID);
 				}
 			}
-			streamable.SetUid(nodeID);
-			streamable.AddStreamingClient(session);
-			// Add to the list without first checking if it can be added. So it won't spam failure messages.
-			var colliders = gameObject.GetComponents<Collider>();
-			foreach (var c in colliders)
-				streamedColliders.Add(c);			
+
+			Collider[] colliders = gameObject.GetComponents<Collider>();
+			foreach(Collider collider in colliders)
+			{
+				streamedColliders.Add(collider);
+			}
 
 			return true;
 		}
 
 		public void StopStreamingGameObject(GameObject gameObject)
 		{
-			var colliders = gameObject.GetComponents<Collider>();
-			foreach (var c in colliders)
-				streamedColliders.Remove(c);
+			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+			uid gameObjectID = geometrySource.FindResourceID(gameObject);
+
 			streamedGameObjects.Remove(gameObject);
-			var streamable = gameObject.GetComponent<Teleport_Streamable>();
-			if (streamable == null)
+			Client_RemoveActorByID(session.GetClientID(), gameObjectID);
+			Client_ActorLeftBounds(session.GetClientID(), gameObjectID);
+
+			Teleport_Streamable streamable = gameObject.GetComponent<Teleport_Streamable>();
+			if(streamable)
 			{
-				Debug.LogError("Game object " + gameObject.name + " has no Teleport_Streamable component.");
+				streamable.RemoveStreamingClient(session);
+			}
+			else
+			{
+				Debug.LogError($"GameObject \"{gameObject.name}\" has no Teleport_Streamable component.");
 			}
 
-			// include all collisionless children.
-			foreach (var g in streamable.includedChildren)
+			//Stop streaming child hierarchy.
+			foreach(GameObject child in streamable.childHierarchy)
 			{
-				var s = g.GetComponent<Teleport_Streamable>();
-				if (s == null)
+				uid childID = geometrySource.FindResourceID(child);
+				if(childID != 0)
 				{
-					continue;
-				}
-				uid actorID = Client_RemoveNodeByID(session.GetClientID(), s.GetUid());
-				if (actorID != 0)
-				{
-					Client_ActorLeftBounds(session.GetClientID(), actorID);
+					streamedGameObjects.Remove(child);
+					Client_RemoveActorByID(session.GetClientID(), childID);
+					Client_ActorLeftBounds(session.GetClientID(), childID);
 				}
 				else
 				{
-					Debug.LogWarning("Attempted to remove actor that was not being streamed: " + g.name);
+					Debug.LogWarning($"Attempted to stop streaming GameObject <b>{child.name}</b> (child of {gameObject.name}({gameObjectID})), but received 0 for ID from GeometrySource!");
 				}
-				s.RemoveStreamingClient(session);
 			}
-		}
+
+			//Remove GameObject's colliders from list.
+			Collider[] colliders = gameObject.GetComponents<Collider>();
+			foreach(Collider collider in colliders)
+				{
+				streamedColliders.Remove(collider);
+				}
+			}
 
 		private void DetectInvalidStreamables()
 		{
-			for (int i = streamedGameObjects.Count - 1; i >= 0; i--)
+			for(int i = streamedColliders.Count - 1; i >= 0; i--)
 			{
-				GameObject gameObject= streamedGameObjects[i];
-				if(!gameObject.CompareTag(teleportSettings.TagToStream))
+				Collider collider = streamedColliders[i];
+				if(!collider.CompareTag(teleportSettings.TagToStream))
 				{
-					StopStreamingGameObject(gameObject);
+					StopStreamingGameObject(collider.gameObject);
 				}
 			}
 		}
