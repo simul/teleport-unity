@@ -38,9 +38,10 @@ v2f vert (appdata v)
  */
 float4 frag (v2f i) : SV_Target
 {
-    float U_CONST=100.0;
+    float U_CONST=8.0;
     float c=i.uv.x*U_CONST+1.0;
-    float4 res =float4(saturate(1.0/c),0,0,1.0);//0.4/c*c,0,0,0);
+    float r=min(saturate(1/c),1.0-i.uv.x);
+    float4 res =float4(r,0,0,1.0);
 	return res;
 }
 

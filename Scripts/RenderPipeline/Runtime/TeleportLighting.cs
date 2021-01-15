@@ -104,7 +104,7 @@ namespace teleport
 			CommandBuffer buffer = CommandBufferPool.Get(k_SetupShadowConstants);
 			shadows.renderSettings = renderSettings;
 			shadows.Setup(context, cullingResults);
-			NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
+			NativeArray<VisibleLight> visibleLights = lightingOrder.visibleLights;
 			foreach (var visibleLight in visibleLights)
 			{
 				Light light = visibleLight.light;
@@ -182,9 +182,9 @@ namespace teleport
 		/// </summary>
 		public void RenderScreenspaceShadows(ScriptableRenderContext context, Camera camera, TeleportRenderPipeline.LightingOrder lightingOrder, CullingResults cullingResults,RenderTexture depthTexture)
 		{
-			if (lightingOrder.MainLightIndex >= 0 && lightingOrder.MainLightIndex<cullingResults.visibleLights.Count())
+			if (lightingOrder.MainLightIndex >= 0 && lightingOrder.MainLightIndex< lightingOrder.visibleLights.Count())
 			{
-				var visibleLight = cullingResults.visibleLights[lightingOrder.MainLightIndex];
+				var visibleLight = lightingOrder.visibleLights[lightingOrder.MainLightIndex];
 				var light = visibleLight.light;
 				if (perFrameLightProperties.ContainsKey(light) && perFrameLightProperties[light].AnyShadows)
 					shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[light], 4, depthTexture);
@@ -193,11 +193,11 @@ namespace teleport
 			for(int i=0;i<lightingOrder.AdditionalLightIndices.Length;i++)
 			{
 				int vbIndex = lightingOrder.AdditionalLightIndices[i];
-				if (cullingResults.visibleLights.Length <= vbIndex)
+				if (lightingOrder.visibleLights.Length <= vbIndex)
 				{
 					continue;
 				}
-				var visibleLight = cullingResults.visibleLights[vbIndex];
+				var visibleLight = lightingOrder.visibleLights[vbIndex];
 				var light = visibleLight.light;
 				if (light.shadows != LightShadows.None&&perFrameLightProperties.ContainsKey(light)&&perFrameLightProperties[light].AnyShadows)
 					shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[light], 1, depthTexture);
@@ -207,19 +207,25 @@ namespace teleport
 		{
 			CommandBuffer buffer = CommandBufferPool.Get(k_SetupLightConstants);
 			buffer.BeginSample(bufferName);
-			NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
+			NativeArray<VisibleLight> visibleLights = lightingOrder.visibleLights;
 			RenderTexture screenspaceShadowTexture = null;
+			bool mainlight_is_directional = false;
+			bool mainlight_is_point = false;
+			bool has_shadows = false;
 			if (lightingOrder.MainLightIndex >= 0)
 			{
 				var visibleLight = visibleLights[lightingOrder.MainLightIndex];
 				var light = visibleLight.light;
 				SetupMainLight(buffer, visibleLight);
+				mainlight_is_directional = light.type == LightType.Directional||light.type==LightType.Spot;
+				mainlight_is_point = light.type == LightType.Point;
 				// Which light do we want the shadows for?
 				if (perFrameLightProperties.ContainsKey(light)) 
 				{
 					var perFrame = perFrameLightProperties[light];
 					if (perFrame.AnyShadows)
 					{
+						has_shadows = true;
 						screenspaceShadowTexture = perFrame.perFramePerCameraLightProperties[camera].screenspaceShadowTexture;
 						buffer.SetGlobalTexture(_ShadowMapTexture, screenspaceShadowTexture, RenderTextureSubElement.Color);
 						shadows.ApplyShadowConstants(context, buffer, camera, cullingResults, perFrame);
@@ -237,7 +243,7 @@ namespace teleport
 			nonImportantX = Vector4.zero;
 			nonImportantY = Vector4.zero;
 			nonImportantZ = Vector4.zero;
-			nonImportantAtten = Vector4.zero;
+			nonImportantAtten = Vector4.one;
 			int n = 0;
 			for (int i = 0; i < visibleLights.Length; i++)
 			{
@@ -253,9 +259,10 @@ namespace teleport
 				unimportant_LightColours[i] = Vector3.zero;
 			}
 			// We want to use keywords to choose the correct shader variants.
-			CoreUtils.SetKeyword(buffer, "DIRECTIONAL", true);
+			CoreUtils.SetKeyword(buffer, "DIRECTIONAL", mainlight_is_directional);
+			CoreUtils.SetKeyword(buffer, "POINT", mainlight_is_point);
 			CoreUtils.SetKeyword(buffer, "LIGHTPROBE_SH", true);
-			CoreUtils.SetKeyword(buffer, "SHADOWS_SCREEN", true);
+			CoreUtils.SetKeyword(buffer, "SHADOWS_SCREEN", has_shadows);
 			CoreUtils.SetKeyword(buffer, "VERTEXLIGHT_ON", lightingOrder.NumUnimportantLights > 0);
 			CoreUtils.SetKeyword(buffer, "_ALPHATEST_ON", false);
 			CoreUtils.SetKeyword(buffer, "_NORMALMAP", true);
@@ -306,7 +313,7 @@ namespace teleport
 		public bool SetupForwardAddPass(ScriptableRenderContext context, Camera camera,CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder,int additionalLightIndex)
 		{
 			CommandBuffer buffer = CommandBufferPool.Get(k_SetupLightConstants);
-			NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
+			NativeArray<VisibleLight> visibleLights = lightingOrder.visibleLights;
 			if (additionalLightIndex < 0|| additionalLightIndex>= visibleLights.Length)
 				return false;
 			
@@ -368,6 +375,10 @@ namespace teleport
 					// y is 1 / cos(spotAngle / 4) or 1 for non - spot lights;
 					// z is quadratic attenuation;
 					//w is squared light range.
+				}
+				else if(light.lightType==LightType.Point)
+				{
+					unimportant_lightAttenuations[index].z = 1.0f;
 				}
 			}
 

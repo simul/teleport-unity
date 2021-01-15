@@ -49,6 +49,7 @@ namespace teleport
 			public int MainLightIndex;
 			public int[] AdditionalLightIndices;
 			public int NumUnimportantLights;
+			public NativeArray<VisibleLight> visibleLights;
 		};
 
 		// Main Light is always a directional light
@@ -59,6 +60,7 @@ namespace teleport
 			List<int> AdditionalLightIndices = new List<int>();
 			lightingOrder.NumUnimportantLights = 0;
 			int totalVisibleLights = cullingResults.visibleLights.Length;
+			lightingOrder.visibleLights = cullingResults.visibleLights;
 			if (totalVisibleLights == 0)
 				return lightingOrder;
 			int UnprocessedLightIndices = (1<<totalVisibleLights)-1;
@@ -108,7 +110,7 @@ namespace teleport
 				}
 			}
 			if(brightestDirectionalLightIndex >= 0)
-			UnprocessedLightIndices&=~(1<<brightestDirectionalLightIndex);
+				UnprocessedLightIndices&=~(1<<brightestDirectionalLightIndex);
 			// Search for shadow casters.
 			for (int i = 0; i < totalVisibleLights; ++i)
 			{
@@ -139,7 +141,7 @@ namespace teleport
 				{
 					continue;
 				}
-				if(currLight.type==LightType.Spot)
+				if(currLight.type==LightType.Spot|| currLight.type == LightType.Point)
 				{
 					AdditionalLightIndices.Add(i);
 					UnprocessedLightIndices &= ~mask;

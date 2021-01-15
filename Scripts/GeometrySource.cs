@@ -557,9 +557,9 @@ namespace teleport
 
 			if(forceUpdate || nodeID == 0)
 			{
-				SkinnedMeshRenderer skinnedMeshRenderer = node.GetComponentInChildren<SkinnedMeshRenderer>();
-				MeshFilter meshFilter = node.GetComponentInChildren<MeshFilter>();
-				Light light = node.GetComponentInChildren<Light>();
+				SkinnedMeshRenderer skinnedMeshRenderer = node.GetComponent<SkinnedMeshRenderer>();
+				MeshFilter meshFilter = node.GetComponent<MeshFilter>();
+				Light light = node.GetComponent<Light>();
 
 				avs.NodeDataSubtype nodeSubtype;
 

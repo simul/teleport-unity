@@ -276,9 +276,9 @@ namespace teleport
 		{
 			// For each shadowcasting light, write the shadowmap to the video.
 			Vector2Int CurrentOffset= StartOffset;
-			if (lightingOrder.MainLightIndex > -1 && lightingOrder.MainLightIndex < cullingResults.visibleLights.Length)
+			if (lightingOrder.MainLightIndex > -1 && lightingOrder.MainLightIndex < lightingOrder.visibleLights.Length)
 			{
-				var l=cullingResults.visibleLights[lightingOrder.MainLightIndex].light;
+				var l= lightingOrder.visibleLights[lightingOrder.MainLightIndex].light;
 				if (TeleportLighting.perFrameLightProperties.ContainsKey(l))
 				{
 					var perFrame = TeleportLighting.perFrameLightProperties[l];
@@ -402,16 +402,30 @@ namespace teleport
 
 		bool Cull(ScriptableRenderContext context, Camera camera, out CullingResults cullingResults,bool for_streaming=false)
 		{
+			if (for_streaming)
+			{
+				camera.fieldOfView = 180.0F;
+				camera.aspect = 1.0F;
+			}
+			bool result;
 			if (camera.TryGetCullingParameters(out ScriptableCullingParameters p))
 			{
-				
 				p.shadowDistance = QualitySettings.shadowDistance;//renderSettings.maxShadowDistance;
 				p.shadowDistance = Mathf.Min(p.shadowDistance, camera.farClipPlane);
 				cullingResults = context.Cull(ref p);
-				return true;
+				result= true;
 			}
-			cullingResults = new CullingResults();
-			return false;
+			else
+			{
+				cullingResults = new CullingResults();
+				result = false;
+			}
+			if (for_streaming)
+			{
+				camera.fieldOfView = 90.0F;
+				camera.aspect = 1.0F;
+			}
+			return result;
 		}
 		// A ShaderTagId is ACTUALLY the Tag "LightMode" in the .shader file.
 		// It allows us to render all shaders that have a specific Pass defined with that tag.
@@ -477,7 +491,7 @@ namespace teleport
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
 		}
 
-		void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask)
+		void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask, TeleportRenderPipeline.LightingOrder lightingOrder)
 		{
 			// The generic textures accessible from all default shaders...
 			var buffer = new CommandBuffer();
@@ -506,7 +520,6 @@ namespace teleport
 				return;
 			}
 			teleportLighting.renderSettings = renderSettings;
-			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults);
 
 			var drawingSettings = new DrawingSettings(legacyShaderTagIds[0], sortingSettings)
 			{
@@ -522,8 +535,6 @@ namespace teleport
 			};
 			drawingSettings.mainLightIndex = lightingOrder.MainLightIndex;
 
-			if (cullingResults.visibleLights.Length > 0)
-			{
 			/*	drawingSettings.perObjectData |= PerObjectData.LightProbe
 												| PerObjectData.ReflectionProbes
 												| PerObjectData.LightProbeProxyVolume
@@ -536,7 +547,6 @@ namespace teleport
 												| PerObjectData.OcclusionProbeProxyVolume
 												| PerObjectData.ShadowMask
 												;*/
-			}
 			teleportLighting.SetupForwardBasePass(context, camera, cullingResults, lightingOrder);
 			for (int i = 1; i < legacyShaderTagIds.Length; i++)
 			{
@@ -617,9 +627,9 @@ namespace teleport
 			context.SetupCameraProperties(camera);
 			Clear(context, camera);
 			PrepareForSceneWindow(context, camera);
-			DrawOpaqueGeometry(context, camera, layerMask, renderingMask);
+			DrawOpaqueGeometry(context, camera, layerMask, renderingMask,lightingOrder);
 			DrawTransparentGeometry(context, camera, layerMask, renderingMask);
-#if UNITY_EDITOR
+#if UNITY_EDITOR 
 			DrawUnsupportedShaders(context, camera);
 #endif
 			DrawGizmos(context, camera);
@@ -709,6 +719,7 @@ namespace teleport
 				UpdateStreamables(context, ClientID, camera);
 
 			CullingResults cullingResultsAll;
+		
 			if (Cull(context, camera, out cullingResultsAll, true))
 			{
 				TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
@@ -801,7 +812,7 @@ namespace teleport
 				Clear(context, camera);
 				PrepareForSceneWindow(context, camera);
 				//Clear(context, 0 * direction_colours[face]);
-				DrawOpaqueGeometry(context, camera, layerMask, renderingMask);
+				DrawOpaqueGeometry(context, camera, layerMask, renderingMask,lightingOrder);
 				DrawTransparentGeometry(context, camera, layerMask, renderingMask);
 				videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture,face);
 				videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face,0);
