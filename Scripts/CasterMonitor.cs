@@ -54,8 +54,12 @@ namespace teleport
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void ReportHandshakeFn(uid clientID, in avs.Handshake handshake);
-#endregion
-		
+
+		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+		delegate void OnAudioInputReceived(uid clientID, in IntPtr dataPtr, UInt64 dataSize);
+
+		#endregion
+
 		#region DLLImport
 
 		struct InitialiseState
@@ -70,6 +74,7 @@ namespace teleport
 			public uint DISCOVERY_PORT;
 			public uint SERVICE_PORT;
 			public ReportHandshakeFn reportHandshake;
+			public OnAudioInputReceived audioInputReceived;
 		};
 		[DllImport("SimulCasterServer")]
 		private static extern bool Initialise(InitialiseState initialiseState);
@@ -158,7 +163,8 @@ namespace teleport
 			initialiseState.messageHandler = LogMessageHandler; 
 			initialiseState.SERVICE_PORT = teleportSettings.listenPort;
 			initialiseState.DISCOVERY_PORT = teleportSettings.discoveryPort;
-			initialiseState.reportHandshake = ReportHandshake; 
+			initialiseState.reportHandshake = ReportHandshake;
+			initialiseState.audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput;
 			ok = Initialise(initialiseState);
 
 			// Sets connection timeouts for peers (milliseconds)
