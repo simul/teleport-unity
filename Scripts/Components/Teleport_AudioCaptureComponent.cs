@@ -53,7 +53,7 @@ namespace teleport
             var audioParams = new SCServer.AudioParams();
             audioParams.codec = avs.AudioCodec.PCM;
             audioParams.sampleRate = (UInt32)sampleRate;
-            audioParams.bitsPerSample = 16;
+            audioParams.bitsPerSample = 32;
             audioParams.numChannels = 2;
             InitializeAudioEncoder(clientID, ref audioParams);
         }

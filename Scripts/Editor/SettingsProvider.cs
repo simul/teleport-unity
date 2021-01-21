@@ -59,15 +59,15 @@ namespace teleport
 		}
 		Tuple<int, string, bool>[] headers =
 		{
-			Tuple.Create(1, "SRT", false),
-			Tuple.Create(6, "General", false),
-			Tuple.Create(4, "Geometry", false),
-			Tuple.Create(24, "Encoding", false),
-			Tuple.Create(1, "Audio", false),
-			Tuple.Create(5, "Debugging", false),
-			Tuple.Create(3, "Compression", false),
-			Tuple.Create(2, "Camera", false),
-			Tuple.Create(4, "Lighting", false),
+			Tuple.Create(1,  "SRT", false),
+			Tuple.Create(6,  "General", false),
+			Tuple.Create(4,  "Geometry", false),
+			Tuple.Create(25, "Video", false),
+			Tuple.Create(2,  "Audio", false),
+			Tuple.Create(5,  "Debugging", false),
+			Tuple.Create(3,  "Compression", false),
+			Tuple.Create(2,  "Camera", false),
+			Tuple.Create(4,  "Lighting", false),
 		};
 		public override void OnGUI(string searchContext)
 		{
