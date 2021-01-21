@@ -194,21 +194,15 @@ public class SceneReferenceManager : ScriptableObject, ISerializationCallbackRec
 #if UNITY_EDITOR
 		ResourceReferences resourceReferences = new ResourceReferences();
 
+		//Load all assets at path; there may be multiple meshes sharing a GUID, but differentiated by name.
 		string meshAssetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(saveFormat.meshGUID);
-		resourceReferences.mesh = UnityEditor.AssetDatabase.LoadAssetAtPath<Mesh>(meshAssetPath);
+		UnityEngine.Object[] assetsAtPath = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(meshAssetPath);
 
-		//If it didn't recover, then it is probably a Unity default resource.
-		//We'll try extracting it by loading all of the assets from the default resource file and picking it out of the list.
-		if(!resourceReferences.mesh)
+		//Match meshes at the path with the same mesh name; this should only give one result.
+		List<UnityEngine.Object> meshesAtPath = new List<UnityEngine.Object>(assetsAtPath.Where(i => i.name == saveFormat.meshName && i.GetType() == typeof(Mesh)));
+		if(meshesAtPath.Count != 0)
 		{
-			UnityEngine.Object[] assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(saveFormat.meshAssetPath);
-			List<UnityEngine.Object> matched = new List<UnityEngine.Object>(assets.Where(i => i.name == saveFormat.meshName && i.GetType() == typeof(Mesh)));
-
-			//Grab first index, even if there are multiple; there shouldn't be multiple in the default Unity resource files, but it is possible.
-			if(matched.Count != 0)
-			{
-				resourceReferences.mesh = (Mesh)matched[0];
-			}
+			resourceReferences.mesh = (Mesh)meshesAtPath[0];
 		}
 
 		gameObjectPath = saveFormat.gameObjectPath;
