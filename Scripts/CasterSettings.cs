@@ -28,6 +28,7 @@ namespace SCServer
 
 		[Header("Video")]
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingVideo = true;
+		[MarshalAs(UnmanagedType.U1)] public bool isStreamingWebcam = false;
 		public float captureCubeTextureSize = 512; 
 		public Int32 videoEncodeFrequency = 2;
 		[MarshalAs(UnmanagedType.U1)] public bool isDeferringOutput = false;
@@ -54,6 +55,7 @@ namespace SCServer
 
 		[Header("Audio")]
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingAudio = true;
+		[MarshalAs(UnmanagedType.U1)] public bool isReceivingAudio = false;
 
 		[Header("Debugging")]
 		public Int32 debugStream = 0;

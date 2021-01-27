@@ -22,7 +22,7 @@ namespace teleport
 		[Header("Connections")]
 		public uint listenPort = 10500u;
 		public uint discoveryPort = 10600u;
-		public int connectionTimeout = 60000; //How many millseconds to wait before automatically disconnecting from the client.
+		public int connectionTimeout = 90000; //How many millseconds to wait before automatically disconnecting from the client.
 										  //! Mask of the physics layers the user can choose to stream.
 
 		[Header("Geometry")]

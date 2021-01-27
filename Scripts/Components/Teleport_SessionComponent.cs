@@ -133,6 +133,14 @@ namespace teleport
 				sessions[clientID].SetControllerEvents(index, inputState.numEvents, inputEvents);
 			}
 		}
+
+		public static void StaticProcessAudioInput(uid clientID, in IntPtr dataPtr, UInt64 dataSize)
+		{
+			float[] data = new float[dataSize / sizeof(float)];
+			Marshal.Copy(dataPtr, data, 0, data.Length);
+			if (sessions.ContainsKey(clientID))
+				sessions[clientID].ProcessAudioInput(data);
+		}
 		#endregion
 
 		public static Dictionary<uid, Teleport_SessionComponent> sessions = new Dictionary<uid, Teleport_SessionComponent>();
@@ -157,6 +165,7 @@ namespace teleport
 		public Teleport_ClientspaceRoot clientspaceRoot = null;
 		public Teleport_CollisionRoot collisionRoot = null;
 		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
+		public AudioSource inputAudioSource = null;
 
 		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
 
@@ -170,13 +179,21 @@ namespace teleport
 		public void Disconnect()
 		{
 			Client_StopStreaming(clientID);
-
 			sessions.Remove(clientID);
 			if (geometryStreamingService != null)
 				geometryStreamingService.Clear();
 
 			clientID = 0;
 		}
+
+		public void ProcessAudioInput(float[] data)
+		{
+			int numFrames = data.Length / (sizeof(float) * 2);
+			inputAudioSource.clip = AudioClip.Create("Input", numFrames, 2, AudioSettings.outputSampleRate, false);
+			inputAudioSource.clip.SetData(data, 0);
+			inputAudioSource.Play();
+		}
+
 		public avs.AxesStandard axesStandard = new avs.AxesStandard();
 		public void ReportHandshake(avs.Handshake handshake)
 		{
@@ -255,6 +272,11 @@ namespace teleport
 			GetSingleChild(ref clientspaceRoot);
 			GetSingleChild(ref collisionRoot);
 			GetSingleChild(ref sceneCaptureComponent);
+
+			inputAudioSource = new AudioSource();
+
+			// Bypass effects added by the scene's AudioListener
+			inputAudioSource.bypassEffects = true;
 		}
 		bool resetOrigin = true;
 		public void ResetOrigin()

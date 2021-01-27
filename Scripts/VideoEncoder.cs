@@ -217,6 +217,10 @@ namespace teleport
 			{
 				var uid = l.Key;
 				var light = l.Value;
+				if (light == null)
+				{
+					continue;
+				}
 				PerFrameLightProperties perFrameLightProperties = null;
 				PerFramePerCameraLightProperties perFramePerCameraLightProperties=null;
 				var lightData = new avs.LightTagData();
