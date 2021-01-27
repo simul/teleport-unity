@@ -322,13 +322,11 @@ namespace teleport
 					Client_ActorEnteredBounds(session.GetClientID(), childID);
 				}
 			}
-
 			Collider[] colliders = gameObject.GetComponents<Collider>();
 			foreach(Collider collider in colliders)
 			{
 				streamedColliders.Add(collider);
 			}
-
 			return true;
 		}
 
@@ -338,7 +336,7 @@ namespace teleport
 			uid gameObjectID = geometrySource.FindResourceID(gameObject);
 
 			streamedGameObjects.Remove(gameObject);
-			Client_RemoveActorByID(session.GetClientID(), gameObjectID);
+			Client_RemoveNodeByID(session.GetClientID(), gameObjectID);
 			Client_ActorLeftBounds(session.GetClientID(), gameObjectID);
 
 			Teleport_Streamable streamable = gameObject.GetComponent<Teleport_Streamable>();
@@ -358,7 +356,7 @@ namespace teleport
 				if(childID != 0)
 				{
 					streamedGameObjects.Remove(child);
-					Client_RemoveActorByID(session.GetClientID(), childID);
+					Client_RemoveNodeByID(session.GetClientID(), childID);
 					Client_ActorLeftBounds(session.GetClientID(), childID);
 				}
 				else

@@ -574,14 +574,10 @@ namespace teleport
 			{
 				return nodeID;
 			}
-				SkinnedMeshRenderer skinnedMeshRenderer = node.GetComponent<SkinnedMeshRenderer>();
-				MeshFilter meshFilter = node.GetComponent<MeshFilter>();
-				Light light = node.GetComponent<Light>();
-
 			if(nodeID == 0)
-				{
+			{
 				nodeID = GenerateID();
-				}
+			}
 			processedResources[node] = nodeID;
 			resourceMap[nodeID] = node;
 
@@ -594,16 +590,17 @@ namespace teleport
 
 			bool hasExtractedData = false;
 			if(!hasExtractedData)
-				{
+			{
 				hasExtractedData = ExtractNodeMeshData(node, ref extractedNode, forceUpdate);
-					}
-				{
+			}
+			if (!hasExtractedData)
+			{
 				hasExtractedData = ExtractNodeSkinnedMeshData(node, ref extractedNode, forceUpdate);
-				}
+			}
 			if(!hasExtractedData)
-				{
+			{
 				hasExtractedData = ExtractNodeLightData(node, ref extractedNode, forceUpdate);
-				}
+			}
 
 			//Store extracted node.
 			StoreNode(nodeID, extractedNode);
@@ -816,7 +813,7 @@ namespace teleport
 				if(childID != 0)
 				{
 					childIDs.Add(childID);
-			}
+				}
 				else
 				{
 					Debug.LogWarning("Received 0 for ID of child on game object: " + source.name);
@@ -827,7 +824,7 @@ namespace teleport
 		}
 
 		private void ExtractNodeSubType(GameObject source, ref avs.Node extractTo, bool forceUpdate)
-			{
+		{
 			//Get node sub-type, if it has one.
 			if(leftHandIDs.Contains(source.GetInstanceID()))
 			{
@@ -941,7 +938,7 @@ namespace teleport
 			}
 
 		private bool ExtractNodeLightData(GameObject source, ref avs.Node extractTo, bool forceUpdate)
-			{
+		{
 			Light light = source.GetComponent<Light>();
 			if(!light || !light.isActiveAndEnabled)
 			{

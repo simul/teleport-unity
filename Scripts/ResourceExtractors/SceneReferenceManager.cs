@@ -59,6 +59,7 @@ public class SceneReferenceManager : ScriptableObject, ISerializationCallbackRec
 
 		references.mesh = GetMesh(gameObject);
 
+		Debug.Log("Game Object " + gameObject.name + " adds reference to mesh "+ references.mesh.name+" with path "+ gameObjectPath);
 		//Remove first, so we can overwrite current value with updated value.
 		gameObjectReferences.Remove(gameObjectPath);
 		gameObjectReferences.Add(gameObjectPath, references);
@@ -76,6 +77,8 @@ public class SceneReferenceManager : ScriptableObject, ISerializationCallbackRec
 		{
 			references = AddGameObject(gameObject, gameObjectPath);
 		}
+		else
+			Debug.Log("Game Object " + gameObject.name + " has reference to mesh " + references.mesh.name + " with path " + gameObjectPath);
 
 		return references.mesh;
 	}

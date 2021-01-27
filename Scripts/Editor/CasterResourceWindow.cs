@@ -15,7 +15,7 @@ namespace teleport
 		private TeleportSettings teleportSettings;
 
 		//List of found/extracted data.
-		private GameObject[] streamedSceneObjects = new GameObject[0];
+		private GameObject[] streamedSceneObjects = new GameObject[0];		// list of last group of extracted gameObjects
 		private RenderTexture[] renderTextures = new RenderTexture[0];
 
 		//GUI variables that control user-changeable properties.

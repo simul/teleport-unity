@@ -203,11 +203,11 @@ namespace teleport
 			{
 				// Objects with collision will have a Teleport_Streamable added, as they can be streamed
 				// as root objects.
-					if (gameObject.GetComponent<Collider>() != null&&gameObject.GetComponent<Teleport_Streamable>() == null)
-					{
-						gameObject.AddComponent<Teleport_Streamable>();
-					}
+				if (gameObject.GetComponent<Collider>() != null&&gameObject.GetComponent<Teleport_Streamable>() == null)
+				{
+					gameObject.AddComponent<Teleport_Streamable>();
 				}
+			}
 
 			Teleport_Streamable[] streamables = FindObjectsOfType<Teleport_Streamable>();
 			foreach(Teleport_Streamable streamable in streamables)
