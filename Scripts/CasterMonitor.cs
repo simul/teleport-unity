@@ -175,19 +175,24 @@ namespace teleport
 
 		void OnSceneLoaded(Scene scene, LoadSceneMode mode)
 		{
+			// clear masks corresponding to streamed objects.
+			int clientLayer = 25;
+			uint streamedClientMask = (uint)(((int)1) << (clientLayer + 1));
+			uint invStreamedMask = ~streamedClientMask;
+
 			GameObject[] rootGameObjects = scene.GetRootGameObjects();
 			foreach(GameObject gameObject in rootGameObjects)
 			{
 				Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
 				foreach(Renderer renderer in renderers)
 				{
-					renderer.renderingLayerMask = 0xFFFFFFFF;
+					renderer.renderingLayerMask = invStreamedMask;
 				}
 
 				SkinnedMeshRenderer[] skinnedMeshRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
 				foreach(SkinnedMeshRenderer renderer in skinnedMeshRenderers)
 				{
-					renderer.renderingLayerMask = 0xFFFFFFFF;
+					renderer.renderingLayerMask = invStreamedMask;
 				}
 
 				//CanvasRenderer[] canvasRenderers = gameObject.GetComponentsInChildren<CanvasRenderer>();
@@ -281,7 +286,7 @@ namespace teleport
 			Shutdown();
 		}
 
-		//Called from DLL.
+		//Called from DLL. Tell the server to render the node.
 		private static byte ShowActor(uid clientID, uid nodeID)
 		{
 			UnityEngine.Object obj = GeometrySource.GetGeometrySource().FindResource(nodeID);
@@ -293,21 +298,25 @@ namespace teleport
 			GameObject gameObject = (GameObject)obj;
 			int clientLayer = 25;
 			uint clientMask = (uint)(((int)1) << clientLayer) | (uint)0x7;
+			uint streamedClientMask = (uint)(((int)1) << (clientLayer + 1));
+			uint invStreamedMask = ~streamedClientMask;
 			Renderer actorRenderer = gameObject.GetComponent<Renderer>();
 			if (actorRenderer)
 			{
+				actorRenderer.renderingLayerMask &= invStreamedMask;
 				actorRenderer.renderingLayerMask |= clientMask;
 			}
 			else
 			{
 				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
+				skinnedMeshRenderer.renderingLayerMask &= invStreamedMask;
 				skinnedMeshRenderer.renderingLayerMask |= clientMask;
 			}
 			return (byte)1;
 
 		}
 
-		//Called from DLL.
+		//Called from DLL. Tell the server not to draw the node for this client, it is streamed as geometry.
 		public static byte HideActor(uid clientID, uid nodeID)
 		{
 			UnityEngine.Object obj = GeometrySource.GetGeometrySource().FindResource(nodeID);
@@ -319,15 +328,21 @@ namespace teleport
 			GameObject gameObject = (GameObject)obj;
 			int clientLayer = 25;
 			// Add the 0x7 because that's used to show canvases, so we must remove it also from the inverse mask.
+			// clear clientLayer and set (clientLayer+1)
 			uint clientMask = (uint)(((int)1) << clientLayer)|(uint)0x7;
 			Renderer actorRenderer = gameObject.GetComponent<Renderer>();
 			uint invClientMask = ~clientMask;
+			uint streamedClientMask = (uint)(((int)1) << (clientLayer+1));
 			if (actorRenderer)
+			{
 				actorRenderer.renderingLayerMask &= invClientMask;
+				actorRenderer.renderingLayerMask |= streamedClientMask; 
+			}
 			else
 			{
 				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
 				skinnedMeshRenderer.renderingLayerMask &= invClientMask;
+				skinnedMeshRenderer.renderingLayerMask |= streamedClientMask;
 			}
 			return (byte)1;
 		}

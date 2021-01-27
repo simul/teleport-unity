@@ -276,7 +276,8 @@ namespace teleport
 			inputAudioSource = new AudioSource();
 
 			// Bypass effects added by the scene's AudioListener
-			inputAudioSource.bypassEffects = true;
+			if(inputAudioSource)
+				inputAudioSource.bypassEffects = true;
 		}
 		bool resetOrigin = true;
 		public void ResetOrigin()

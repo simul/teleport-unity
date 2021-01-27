@@ -491,7 +491,9 @@ namespace teleport
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
 		}
 
-		void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask, TeleportRenderPipeline.LightingOrder lightingOrder)
+		static Material highlightMaterial=null;
+		void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask, TeleportRenderPipeline.LightingOrder lightingOrder
+			,bool highlight=false)
 		{
 			// The generic textures accessible from all default shaders...
 			var buffer = new CommandBuffer();
@@ -501,7 +503,6 @@ namespace teleport
 			buffer.SetGlobalTexture(_CameraOpaqueTexture, Texture2D.whiteTexture);
 			buffer.SetGlobalTexture(_AfterPostProcessTexture, Texture2D.whiteTexture);
 			buffer.SetGlobalTexture(_InternalGradingLut, Texture2D.whiteTexture);
-
 			buffer.SetGlobalTexture(_GrabTexture, Texture2D.whiteTexture);
 			//buffer.SetGlobalTexture(_GrabTexture_HDR, Texture2D.whiteTexture);
 			//buffer.SetGlobalTexture(_GrabTexture_ST, Texture2D.whiteTexture);
@@ -513,7 +514,6 @@ namespace teleport
 			{
 				criteria = SortingCriteria.CommonOpaque
 			};
-			var filteringSettings = new FilteringSettings(RenderQueueRange.opaque, layerMask, renderingMask, 0);
 			CullingResults cullingResults;
 			if (!Cull(context, camera, out cullingResults))
 			{
@@ -535,6 +535,16 @@ namespace teleport
 			};
 			drawingSettings.mainLightIndex = lightingOrder.MainLightIndex;
 
+			if (highlight)
+			{
+				if (highlightMaterial == null)
+				{
+					highlightMaterial = new Material(Shader.Find("Teleport/HighlightShader"));
+					//highlightMaterial.renderQueue
+				}
+				drawingSettings.overrideMaterial = highlightMaterial;
+			}
+
 			/*	drawingSettings.perObjectData |= PerObjectData.LightProbe
 												| PerObjectData.ReflectionProbes
 												| PerObjectData.LightProbeProxyVolume
@@ -552,6 +562,7 @@ namespace teleport
 			{
 				drawingSettings.SetShaderPassName(i, legacyShaderTagIds[i]);
 			}
+			var filteringSettings = new FilteringSettings(RenderQueueRange.opaque, layerMask, renderingMask, 0);
 			context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
 			if(lightingOrder.AdditionalLightIndices!=null)
 			for(int i=0;i< lightingOrder.AdditionalLightIndices.Length;i++)
@@ -627,9 +638,16 @@ namespace teleport
 			context.SetupCameraProperties(camera);
 			Clear(context, camera);
 			PrepareForSceneWindow(context, camera);
+			// We draw everything first:
 			DrawOpaqueGeometry(context, camera, layerMask, renderingMask,lightingOrder);
 			DrawTransparentGeometry(context, camera, layerMask, renderingMask);
-#if UNITY_EDITOR 
+			// Now we highlight the streamed objects:
+			if (Application.isPlaying)
+			{
+				renderingMask = (uint)(1 << 26);   // Render ONLY the items that are streamed to this client.
+				DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder, true);
+			}
+#if UNITY_EDITOR
 			DrawUnsupportedShaders(context, camera);
 #endif
 			DrawGizmos(context, camera);

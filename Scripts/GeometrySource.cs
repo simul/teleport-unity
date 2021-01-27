@@ -687,7 +687,7 @@ namespace teleport
 					materialID = GenerateID();
 				processedResources[material] = materialID;
 				StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)), extractedMaterial);
-				Debug.Log("Stored material " + materialID + ": " + material.name);
+				//Debug.Log("Stored material " + materialID + ": " + material.name);
 #endif
 			}
 			else
