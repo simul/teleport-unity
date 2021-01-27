@@ -28,6 +28,7 @@ namespace teleport
 		public Vector2Int diffuseOffset;
 		public Vector2Int roughOffset;
 		public Vector2Int lightOffset;
+		public WebCamTexture webcamTexture = null;
 
 		TeleportSettings teleportSettings=null;
 
@@ -144,6 +145,15 @@ namespace teleport
 			cam.enabled = false;
 
 			CreateResources();
+
+			if (teleportSettings.casterSettings.isStreamingWebcam)
+			{
+				Application.RequestUserAuthorization(UserAuthorization.WebCam);
+				if (Application.HasUserAuthorization(UserAuthorization.WebCam))
+				{
+					CreateWebTexture();				
+				}
+			}
 		}
 
 		void ManagePerformance()
@@ -344,6 +354,29 @@ namespace teleport
 			RoughSpecularCubeTexture.autoGenerateMips = false;
 			RoughSpecularCubeTexture.enableRandomWrite = true;
 			RoughSpecularCubeTexture.Create();
+		}
+
+		void CreateWebTexture()
+		{
+			WebCamDevice[] devices = WebCamTexture.devices;
+
+			if (devices.Length < 1)
+			{
+				return;
+			}
+
+			webcamTexture = new WebCamTexture();
+
+			if (devices.Length > 1)
+			{
+				webcamTexture.deviceName = devices[1].name;
+			}
+			else
+			{
+				webcamTexture.deviceName = devices[0].name;
+			}
+		
+			webcamTexture.Play();
 		}
 	}
 }

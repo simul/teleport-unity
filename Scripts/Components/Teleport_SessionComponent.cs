@@ -165,7 +165,7 @@ namespace teleport
 		public Teleport_ClientspaceRoot clientspaceRoot = null;
 		public Teleport_CollisionRoot collisionRoot = null;
 		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
-		public AudioSource inputAudioSource = new AudioSource();
+		public AudioSource inputAudioSource = null;
 
 		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
 
@@ -272,6 +272,8 @@ namespace teleport
 			GetSingleChild(ref clientspaceRoot);
 			GetSingleChild(ref collisionRoot);
 			GetSingleChild(ref sceneCaptureComponent);
+
+			inputAudioSource = new AudioSource();
 
 			// Bypass effects added by the scene's AudioListener
 			inputAudioSource.bypassEffects = true;

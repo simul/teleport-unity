@@ -108,6 +108,11 @@ namespace teleport
 			foreach (var visibleLight in visibleLights)
 			{
 				Light light = visibleLight.light;
+				if (light == null)
+				{
+					continue;
+				}
+
 				if (!perFrameLightProperties.ContainsKey(light))
 				{
 					perFrameLightProperties.Add(light, new PerFrameLightProperties());
@@ -116,14 +121,18 @@ namespace teleport
 				PerFrameLightProperties perFrame = perFrameLightProperties[light];
 				perFrame.worldToLightMatrix = teleport.ShadowUtils.CalcWorldToLightMatrix(visibleLight);
 			}
-				Bounds bounds = new Bounds();
-
+			Bounds bounds = new Bounds();
+			
 			if (lightingOrder.MainLightIndex >= 0|| (lightingOrder.AdditionalLightIndices != null&&lightingOrder.AdditionalLightIndices.Length>0))
 			{
 				for (int i = 0; i < visibleLights.Length; i++)
 				{
 					VisibleLight visibleLight = visibleLights[i];
 					Light light = visibleLight.light;
+					if (light == null)
+					{
+						continue;
+					}
 					int cascadeCount = light.type==LightType.Directional?4:1;
 					if (lightingOrder.MainLightIndex == i )
 					{
@@ -162,6 +171,10 @@ namespace teleport
 						var visibleLightIndex = lightingOrder.AdditionalLightIndices[i];
 						VisibleLight visibleLight = visibleLights[visibleLightIndex];
 						Light light = visibleLight.light;
+						if (light == null)
+						{
+							continue;
+						}
 						PerFrameLightProperties perFrame = perFrameLightProperties[light];
 						if (!cullingResults.GetShadowCasterBounds(visibleLightIndex, out bounds))
 						{
