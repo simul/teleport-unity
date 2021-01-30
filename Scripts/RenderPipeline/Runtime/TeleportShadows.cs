@@ -116,7 +116,7 @@ namespace teleport
 				ExecuteBuffer(context,buffer);
 				// Commenting out for now because causes Unity to crash. 
 				// This code is never called for cubemap rendering
-				//context.DrawShadows(ref shadowSettings);
+				context.DrawShadows(ref shadowSettings);
 			}
 		}
 		public void RenderShadowsForLight(ScriptableRenderContext context, CullingResults cullingResults, Light light, int visibleLightIndex, Camera camera, ref PerFrameLightProperties perFrameLightProperties, ref PerFramePerCameraLightProperties perFramePerCameraLightProperties, int cascadeCount)

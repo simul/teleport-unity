@@ -84,6 +84,7 @@ namespace teleport
 			SpecularCubeTexture = null;
 			RoughSpecularCubeTexture = null;
 			UnfilteredCubeTexture = null;
+			webcamTexture = null;
 			VideoEncoder = null;
 		}
 
@@ -146,7 +147,7 @@ namespace teleport
 
 			CreateResources();
 
-			if (teleportSettings.casterSettings.isStreamingWebcam)
+			if (teleportSettings.casterSettings.isStreamingWebcam && !teleportSettings.casterSettings.usePerspectiveRendering)
 			{
 				Application.RequestUserAuthorization(UserAuthorization.WebCam);
 				if (Application.HasUserAuthorization(UserAuthorization.WebCam))
@@ -375,7 +376,12 @@ namespace teleport
 			{
 				webcamTexture.deviceName = devices[0].name;
 			}
-		
+
+			//int size = (int)teleportSettings.casterSettings.captureCubeTextureSize;
+			//int height = size / 2;
+			
+			//float aspect = webcamTexture.width / webcamTexture.height;
+			//int width = (int)(height * aspect);
 			webcamTexture.Play();
 		}
 	}
