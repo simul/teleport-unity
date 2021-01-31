@@ -28,6 +28,7 @@ namespace teleport
 		public int encodeTagIdKernel = -1;
 		public int encodeColorKernel = -1;
 		public int encodeCubemapFaceKernel = -1;
+		public int encodeWebcamKernel = -1;
 		//int downCopyFaceKernel = 0;
 		const int THREADGROUP_SIZE = 32;
 
@@ -46,8 +47,10 @@ namespace teleport
 			encodeTagIdKernel = computeShader.FindKernel("EncodeTagDataIdCS");
 			encodeColorKernel = computeShader.FindKernel("EncodeColorCS");
 			encodeCubemapFaceKernel = computeShader.FindKernel("EncodeCubemapFaceCS");
-			//downCopyFaceKernel = computeShader.FindKernel("DownCopyFaceCS");
-		}
+			encodeWebcamKernel = computeShader.FindKernel("EncodeWebcamCS");
+
+		//downCopyFaceKernel = computeShader.FindKernel("DownCopyFaceCS");
+	}
 		public void EnsureMaterial(ref Material m,ref Shader s,string shaderName)
 		{
 			if (m == null)
@@ -226,6 +229,45 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
+
+		public void EncodeWebcam(ScriptableRenderContext context, Camera camera)
+		{
+			if (!computeShader)
+				InitShaders();
+			
+			var inputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.webcamTexture;
+
+			// Will be null if not streaming webcam.
+			if (!inputTexture)
+			{
+				return;
+			}
+
+			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
+
+			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+
+			int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
+			int halfFaceSize = faceSize / 2;
+			int[] webcamCubemapSize = { halfFaceSize, halfFaceSize };
+
+			int numThreadGroupsX = webcamCubemapSize[0] / THREADGROUP_SIZE;
+			int numThreadGroupsY = webcamCubemapSize[1] / THREADGROUP_SIZE;
+
+			computeShader.SetTexture(encodeWebcamKernel, "InputColorTexture", inputTexture);
+			computeShader.SetTexture(encodeWebcamKernel, "RWOutputColorTexture", outputTexture);
+			
+			int[] offset = { halfFaceSize * 3, halfFaceSize * 5 };
+			computeShader.SetInts("Offset", offset);
+			computeShader.SetInts("WebcamCubemapSize", webcamCubemapSize);
+
+			var buffer = new CommandBuffer();
+			buffer.name = "Encode Webcam";
+			buffer.DispatchCompute(computeShader, encodeWebcamKernel, numThreadGroupsX, numThreadGroupsY, 1);
+			context.ExecuteCommandBuffer(buffer);
+			buffer.Release();
+		}
+
 		/// <summary>
 		/// Write the specified cubemap to the video texture.
 		/// </summary>
@@ -839,6 +881,7 @@ namespace teleport
 				videoEncoding.EncodeColor(context, camera, face);
 				videoEncoding.EncodeDepth(context, camera, depthViewport, face);
 				videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, new Vector2Int(3*(int)depthViewport.width,2* (int)faceSize), face);
+				videoEncoding.EncodeWebcam(context, camera);
 #if UNITY_EDITOR
 				DrawUnsupportedShaders(context, camera);
 #endif

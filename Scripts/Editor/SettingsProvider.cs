@@ -68,6 +68,7 @@ namespace teleport
 			Tuple.Create(3,  "Compression", false),
 			Tuple.Create(2,  "Camera", false),
 			Tuple.Create(4,  "Lighting", false),
+			Tuple.Create(1,  "Input", false),
 		};
 		public override void OnGUI(string searchContext)
 		{

@@ -81,5 +81,8 @@ namespace SCServer
 		public Int32 roughCubemapSize = 64;
 		public Int32 diffuseCubemapSize = 64;
 		public Int32 lightCubemapSize = 64;
+
+		[Header("Input")]
+		public bool lockPlayerHeight = true;
 	}
 }

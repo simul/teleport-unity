@@ -4,6 +4,7 @@
 #pragma kernel EncodeTagDataIdCS
 #pragma kernel EncodeColorCS
 #pragma kernel EncodeCubemapFaceCS
+#pragma kernel EncodeWebcamCS
 
 #include "Common.cginc"
 
@@ -16,6 +17,7 @@ RWTexture2D<float4> RWOutputColorTexture;
 RWTexture2DArray<float4> RWOutputColorTextureArray;
 
 int2 Offset;
+int2 WebcamCubemapSize;
 int2 TagDataIdOffset;
 int TagDataId;
 int Face;
@@ -83,4 +85,26 @@ void EncodeCubemapFaceCS(uint2 ThreadID : SV_DispatchThreadID)
 	pos += Offset+FaceOffsets[Face] * InputW;
 
 	RWOutputColorTexture[pos] = SceneColor;
+}
+
+[numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
+void EncodeWebcamCS(uint2 ThreadID : SV_DispatchThreadID)
+{
+	if (ThreadID.x >= WebcamCubemapSize.x || ThreadID.y >= WebcamCubemapSize.y)
+		return;
+
+	uint InputW, InputH;
+	InputColorTexture.GetDimensions(InputW, InputH);
+
+	int2 div = int2(InputW, InputH) / int2(WebcamCubemapSize.x, WebcamCubemapSize.y);
+
+	int2 ipos = int2(ThreadID.x, InputH - 1 - ThreadID.y) * div;
+	float4 color = InputColorTexture[ipos];
+	color.x = sqrt(color.x);
+	color.y = sqrt(color.y);
+	color.z = sqrt(color.z);
+
+	int2 pos = Offset + ThreadID;
+
+	RWOutputColorTexture[pos] = color;
 }
