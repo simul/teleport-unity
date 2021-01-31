@@ -58,8 +58,6 @@ namespace teleport
 		#endregion
 
 		#region StaticCallbacks
-		private static Quaternion latestRotation = new Quaternion();
-		private static Vector3 latestPosition = new Vector3();
 
 		public static bool StaticDoesSessionExist(uid clientID)
 		{
@@ -97,6 +95,8 @@ namespace teleport
 		{
 			if (!StaticDoesSessionExist(clientID))
 				return;
+			Quaternion latestRotation = new Quaternion();
+			Vector3 latestPosition = new Vector3();
 			latestRotation.Set(newHeadPose.orientation.x, newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
 			latestPosition.Set(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
 			sessions[clientID].SetHeadPose(latestRotation, latestPosition);
@@ -106,7 +106,8 @@ namespace teleport
 		{
 			if (!StaticDoesSessionExist(clientID))
 				return;
-
+			Quaternion latestRotation = new Quaternion();
+			Vector3 latestPosition = new Vector3();
 			latestRotation.Set(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
 			latestPosition.Set(newPose.position.x, newPose.position.y, newPose.position.z);
 			sessions[clientID].SetControllerPose(index, latestRotation, latestPosition);
@@ -117,7 +118,7 @@ namespace teleport
 			if (!StaticDoesSessionExist(clientID))
 				return;
 			int index = 1;
-			sessions[clientID].SetControllerInput(index, inputState.buttonsPressed);
+			sessions[clientID].SetControllerInput(index, inputState.buttonsPressed,inputState.joystickAxisX,inputState.joystickAxisY);
 			if (inputEventsPtr != null)
 			{
 				int EventSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(avs.InputEvent));
@@ -208,12 +209,13 @@ namespace teleport
 			head.transform.rotation = newRotation;
 			head.transform.position = clientspaceRoot.transform.position+ newPosition;
 		}
-		public void SetControllerInput(int index, UInt32 buttons)
+		public void SetControllerInput(int index, UInt32 buttons,float jx,float jy)
 		{
 			if (controllers.ContainsKey(index))
 			{
 				var controller = controllers[index];
 				controller.SetButtons(buttons);
+				controller.SetJoystick(jx, jy);
 			}
 		}
 		public void SetControllerEvents(int index, UInt32 num, avs.InputEvent[] events)
@@ -240,8 +242,9 @@ namespace teleport
 			}
 			var controller = controllers[index];
 
-			//   controller.transform.rotation = newRotation;
-			controller.transform.SetPositionAndRotation(newPosition, newRotation);
+			//  rotation is absolute. Position is relative to clientspace.
+			controller.transform.rotation = newRotation;
+			controller.transform.position = clientspaceRoot.transform.position+ newPosition;
 		}
 
 		private void OnDisable()

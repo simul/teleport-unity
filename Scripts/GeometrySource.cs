@@ -653,27 +653,37 @@ namespace teleport
 
 				extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : (material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 0.0f); //Unity doesn't use the factor when the texture is set.
 
-				float smoothness = metallicRoughness ? material.GetFloat("_GlossMapScale") : material.GetFloat("_Glossiness");
+				float smoothness = metallicRoughness ? material.GetFloat("_GlossMapScale") : (material.HasProperty("_Glossiness")?material.GetFloat("_Glossiness"):0.0f);
 				extractedMaterial.pbrMetallicRoughness.roughnessFactor = 1 - smoothness;
 				extractedMaterial.pbrMetallicRoughness.roughnessMode = avs.RoughnessMode.MULTIPLY_REVERSE;
 
 				Texture normal = material.GetTexture("_BumpMap");
 				extractedMaterial.normalTexture.index = AddTexture(normal);
 				extractedMaterial.normalTexture.tiling = material.mainTextureScale;
-				extractedMaterial.normalTexture.strength = material.GetFloat("_BumpScale");
+				if (material.HasProperty("_BumpScale"))
+					extractedMaterial.normalTexture.strength = material.GetFloat("_BumpScale");
+				else
+					extractedMaterial.normalTexture.strength = 1.0F;
 
 				Texture occlusion = material.GetTexture("_OcclusionMap");
 				extractedMaterial.occlusionTexture.index = AddTexture(occlusion);
 				extractedMaterial.occlusionTexture.tiling = material.mainTextureScale;
-				extractedMaterial.occlusionTexture.strength = material.GetFloat("_OcclusionStrength");
+				if (material.HasProperty("_OcclusionStrength"))
+					extractedMaterial.occlusionTexture.strength = material.GetFloat("_OcclusionStrength");
+				else
+					extractedMaterial.occlusionTexture.strength = 1.0F;
 
 				//Extract emission properties only if emission is active.
-				if(!material.globalIlluminationFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack))
+				if (!material.globalIlluminationFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack))
 				{
 					Texture emission = material.GetTexture("_EmissionMap");
 					extractedMaterial.emissiveTexture.index = AddTexture(emission);
 					extractedMaterial.emissiveTexture.tiling = material.mainTextureScale;
-					extractedMaterial.emissiveFactor = material.GetColor("_EmissionColor");
+					if (material.HasProperty("_BumpScale"))
+						extractedMaterial.emissiveFactor = material.GetColor("_EmissionColor");
+					else
+						extractedMaterial.emissiveFactor = new avs.Vector3(0,0,0);
+
 				}
 
 				extractedMaterial.extensionAmount = 0;
@@ -692,7 +702,7 @@ namespace teleport
 			}
 			else
 			{
-				Debug.Log("Already processed material " + materialID + ": " + material.name);
+				//Debug.Log("Already processed material " + materialID + ": " + material.name);
 				// But do we REALLY have it?
 				if(!IsMaterialStored(materialID))
 				{
@@ -1653,7 +1663,8 @@ namespace teleport
 						uid newID = GenerateID();
 
 						reaffirmedResources.Add(new ReaffirmedResource { oldID = metaResource.oldID, newID = newID });
-						Debug.Log("Reaffirmed resource was " + metaResource.oldID + " now " + newID + " loaded from disk, " + assetPath);
+						// Not spamming here unless debugging this feature:
+						//Debug.Log("Reaffirmed resource was " + metaResource.oldID + " now " + newID + " loaded from disk, " + assetPath);
 						processedResources[asset] = newID;
 						resourceMap[newID] = asset;
 					}

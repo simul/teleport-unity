@@ -408,8 +408,8 @@ namespace teleport
 			// attenuation
 			//float atten = 1.0F / (1.0F + 25.0F);
 			float diff = (1.0F + atten);
-
-			unimportant_LightColours8[index] = light.finalColor * diff;
+			if(index<8)
+				unimportant_LightColours8[index] = light.finalColor * diff;
 			// Fill in xyzw of these variables: e.g. index 0 is x etc.
 			if (index < 4)
 			{
@@ -426,7 +426,7 @@ namespace teleport
 			// radiance=lightColour * n.l * 1/(1+(r*5/range)^2)
 			//								1/(1+((5*r)/range)^2)
 			// e.g. if range was very large, it would be 1/((5r)^2).
-			// i.e. proper inv square law.
+			// i.e. proper inv square law, but without a divide-by-zero at small r.
 
 			// At what range is radiance==lightColour??
 			// that would be where

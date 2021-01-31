@@ -8,7 +8,8 @@ public class Teleport_Controller : MonoBehaviour
 {
     public uint Index = 0;
 	public Vector2 triggerAxis = new Vector2();
-	public UInt32 buttons=0;
+    public Vector2 joystick = new Vector2();
+    public UInt32 buttons=0;
 
 	// Start is called before the first frame update
 	void Start()
@@ -27,6 +28,12 @@ public class Teleport_Controller : MonoBehaviour
 		buttons = b;
     }
 
+    public void SetJoystick(float x,float y)
+    {
+        joystick.x = x;
+        joystick.y = y;
+    }
+    
     public void AddEvents(UInt32 num, avs.InputEvent[] events)
     { 
         // OVR X button 0x100 and mouse left button released is 0x010
