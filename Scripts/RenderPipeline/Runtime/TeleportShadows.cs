@@ -113,9 +113,7 @@ namespace teleport
 
 				//Vector4 lightShadowBias = new Vector4(-0.001484548F, 1.0F, 0.017146875F, 0F);
 				buffer.SetGlobalVector(unity_LightShadowBias, shadowBias);
-				ExecuteBuffer(context,buffer);
-				// Commenting out for now because causes Unity to crash. 
-				// This code is never called for cubemap rendering
+				ExecuteBuffer(context,buffer); 
 				context.DrawShadows(ref shadowSettings);
 			}
 		}

@@ -207,10 +207,6 @@ namespace teleport
 				return;
 
 			head.transform.rotation = newRotation;
-			if (teleportSettings.casterSettings.lockPlayerHeight)
-			{
-				//newPosition.y = head.transform.position.y;
-			}
 			head.transform.position = clientspaceRoot.transform.position + newPosition;
 		}
 		public void SetControllerInput(int index, UInt32 buttons,float jx,float jy)

@@ -63,7 +63,9 @@ namespace SCServer
 		[MarshalAs(UnmanagedType.U1)] public bool debugControlPackets = false;
 		[MarshalAs(UnmanagedType.U1)] public bool calculateChecksums = false;
 		[MarshalAs(UnmanagedType.U1)] private bool willCacheReset = false;
+		[MarshalAs(UnmanagedType.U1)] public bool pipeDllOutputToUnity = false;
 		public byte estimatedDecodingFrequency = 10; //An estimate of how frequently the client will decode the packets sent to it; used by throttling.
+		
 
 		[Header("Compression")]
 		[MarshalAs(UnmanagedType.U1)] public bool useCompressedTextures = true;
@@ -72,7 +74,6 @@ namespace SCServer
 
 		[Header("Camera")]
 		[MarshalAs(UnmanagedType.U1)] public bool willDisableMainCamera = false;
-
 		[NonSerialized]
 		[MarshalAs(UnmanagedType.U8)] public byte axesStandard = 64|2|4;
 
