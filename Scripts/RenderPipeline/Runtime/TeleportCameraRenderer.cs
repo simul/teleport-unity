@@ -794,6 +794,7 @@ namespace teleport
 				int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
 				var shadowmapOffset = new Vector2Int(3 * faceSize / 2, 2 * faceSize + 2 * Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + Teleport_SceneCaptureComponent.RenderingSceneCapture.diffuseOffset;
 				videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, lightingOrder, teleportLighting, shadowmapOffset);
+				videoEncoding.EncodeWebcam(context, camera);
 				videoEncoding.EncodeTagID(context, camera);
 				context.Submit();
 
@@ -881,7 +882,6 @@ namespace teleport
 				videoEncoding.EncodeColor(context, camera, face);
 				videoEncoding.EncodeDepth(context, camera, depthViewport, face);
 				videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, new Vector2Int(3*(int)depthViewport.width,2* (int)faceSize), face);
-				videoEncoding.EncodeWebcam(context, camera);
 #if UNITY_EDITOR
 				DrawUnsupportedShaders(context, camera);
 #endif
