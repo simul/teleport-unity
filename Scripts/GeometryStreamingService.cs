@@ -12,31 +12,31 @@ namespace teleport
 	{
 		#region DLLImports
 		[DllImport("SimulCasterServer")]
-		private static extern void Client_AddNode(uid clientID, uid actorID, avs.Transform currentTransform);
+		private static extern void Client_AddNode(uid clientID, uid nodeID, avs.Transform currentTransform);
 		[DllImport("SimulCasterServer")]
-		private static extern uid Client_RemoveNodeByID(uid clientID, uid actorID);
+		private static extern void Client_RemoveNodeByID(uid clientID, uid nodeID);
 
 		[DllImport("SimulCasterServer")]
-		public static extern void Client_ActorEnteredBounds(uid clientID, uid actorID);
+		public static extern void Client_NodeEnteredBounds(uid clientID, uid nodeID);
 		[DllImport("SimulCasterServer")]
-		public static extern void Client_ActorLeftBounds(uid clientID, uid actorID);
+		public static extern void Client_NodeLeftBounds(uid clientID, uid nodeID);
 		[DllImport("SimulCasterServer")]
-		private static extern bool Client_IsStreamingNodeID(uid clientID, uid actorID);
+		private static extern bool Client_IsStreamingNodeID(uid clientID, uid nodeID);
 
 		[DllImport("SimulCasterServer")]
-		public static extern void Client_ShowActor(uid clientID, uid actorID);
+		public static extern void Client_ShowNode(uid clientID, uid nodeID);
 		[DllImport("SimulCasterServer")]
-		public static extern void Client_HideActor(uid clientID, uid actorID);
+		public static extern void Client_HideNode(uid clientID, uid nodeID);
 		[DllImport("SimulCasterServer")]
-		public static extern void Client_SetActorVisible(uid clientID, uid actorID, bool isVisible);
+		public static extern void Client_SetNodeVisible(uid clientID, uid nodeID, bool isVisible);
 		[DllImport("SimulCasterServer")]
-		public static extern bool Client_IsClientRenderingActorID(uid clientID, uid actorID);
+		public static extern bool Client_IsClientRenderingNodeID(uid clientID, uid nodeID);
 
 		[DllImport("SimulCasterServer")]
 		public static extern bool Client_HasResource(uid clientID, uid resourceID);
 
 		[DllImport("SimulCasterServer")]
-		private static extern void Client_UpdateActorMovement(uid clientID, avs.MovementUpdate[] updates, int updateAmount);
+		private static extern void Client_UpdateNodeMovement(uid clientID, avs.MovementUpdate[] updates, int updateAmount);
 		#endregion
 
 		private readonly Teleport_SessionComponent session;
@@ -44,7 +44,7 @@ namespace teleport
 
 		private List<Collider> streamedColliders = new List<Collider>();
 		private List<GameObject> streamedGameObjects = new List<GameObject>();
-		private List<GameObject> failedGameObjects = new List<GameObject>(); //Objects that have already failed to stream, and as such won't stream again.
+		private List<GameObject> failedGameObjects = new List<GameObject>(); //Objects that have already failed to stream, and as such we won't attempt to stream again.
 		private Dictionary<uid,Light> streamedLights = new Dictionary<uid, Light>();
 
 		//Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
@@ -53,8 +53,6 @@ namespace teleport
 
 		private Dictionary<uid, avs.MovementUpdate> previousMovements = new Dictionary<uid, avs.MovementUpdate>();
 		private float timeSincePositionUpdate = 0;
-
-		private bool handsStreamed = false;
 
 		public GeometryStreamingService(Teleport_SessionComponent parentComponent)
 		{
@@ -65,58 +63,56 @@ namespace teleport
 		}
 
 		public void Clear()
-        {
+		{
+			RemoveAllNodes();
+
 			streamedColliders.Clear();
 			streamedGameObjects.Clear();
+			failedGameObjects.Clear();
 			streamedLights.Clear();
-
-			RemoveAllActors();
-
 			previousMovements.Clear();
 
-			handsStreamed = false;
+			if(session.HasClient())
+			{
+				StreamPlayerBody();
+			}
         }
 
-		public void RemoveAllActors()
+		public void RemoveAllNodes()
 		{
-			foreach(var gameObject in streamedGameObjects)
+			foreach(GameObject gameObject in streamedGameObjects)
 			{
 				Client_RemoveNodeByID(session.GetClientID(), gameObject.GetComponent<Teleport_Streamable>().GetUid());
 			}
 		}
 
-		uid AddActor(GameObject actor)
+		uid AddNode(GameObject node)
 		{
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-			
-			uid actorID = geometrySource.AddNode(actor);
-			if(actorID==0)
+
+			uid nodeID = geometrySource.AddNode(node);
+			if(nodeID == 0)
 			{
-				Debug.LogError($"AddActor failed for {actor.name}.");
-				return actorID;
+				Debug.LogError($"AddNode failed for {node.name}. Received 0 for node ID.");
 			}
 			else
 			{
-				Client_AddNode(session.GetClientID(),  actorID, avs.Transform.FromGlobalUnityTransform(actor.transform));
+				Client_AddNode(session.GetClientID(), nodeID, avs.Transform.FromGlobalUnityTransform(node.transform));
 			}
 
-			return actorID;
-		}
-
-		public uid GetActorID(GameObject gameObject)
-		{
-			var streamable = gameObject.GetComponent<Teleport_Streamable>();
-			if (streamable == null)
-				return 0;
-			return streamable.GetUid();
+			return nodeID;
 		}
 
 		public bool IsStreamingNode(GameObject gameObject)
 		{
-			var streamable= gameObject.GetComponent<Teleport_Streamable>();
-			if (streamable==null)
+			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+			uid nodeID = geometrySource.FindResourceID(gameObject);
+			if(nodeID == 0)
+			{
 				return false;
-			return Client_IsStreamingNodeID(session.GetClientID(), streamable.GetUid());
+			}
+
+			return Client_IsStreamingNodeID(session.GetClientID(), nodeID);
 		}
 
 		/// <summary>
@@ -184,10 +180,10 @@ namespace teleport
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 			foreach(GameObject gameObject in streamedGameObjects)
 			{
-				uid actorID = geometrySource.FindResourceID(gameObject);
-				if(actorID != 0)
+				uid nodeID = geometrySource.FindResourceID(gameObject);
+				if(nodeID != 0)
 				{
-					uids.Add(actorID);
+					uids.Add(nodeID);
 				}
 			}
 
@@ -204,28 +200,21 @@ namespace teleport
 			return streamedLights;
 		}
 
+		public void StreamPlayerBody()
+		{
+			CasterMonitor monitor = CasterMonitor.GetCasterMonitor();
+			List<GameObject> bodyParts = monitor.GetPlayerBodyParts();
+			foreach(GameObject part in bodyParts)
+			{
+				StartStreamingGameObject(part);
+			}
+		}
+
 		public void UpdateGeometryStreaming()
 		{
 			//Detect changes in geometry that needs to be streamed to the client.
 			if(teleportSettings.LayersToStream != 0)
 			{
-				if (!handsStreamed)
-				{
-					var monitor = CasterMonitor.GetCasterMonitor();
-
-					if (monitor.leftHand)
-					{
-						StartStreamingGameObject(monitor.leftHand);
-					}
-
-					if (monitor.rightHand)
-					{
-						StartStreamingGameObject(monitor.rightHand);
-					}
-
-					handsStreamed = true;
-				}
-
 				List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.casterSettings.detectionSphereRadius, teleportSettings.LayersToStream));
 				List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.casterSettings.detectionSphereRadius + teleportSettings.casterSettings.detectionSphereBufferDistance, teleportSettings.LayersToStream));
 
@@ -282,14 +271,14 @@ namespace teleport
 				return false;
 			}
 
-			uid gameObjectID = AddActor(gameObject);
+			uid gameObjectID = AddNode(gameObject);
 			if(gameObjectID != 0)
 			{
 				streamable.SetUid(gameObjectID);
 				streamable.AddStreamingClient(session);
 
 				streamedGameObjects.Add(gameObject);
-				Client_ActorEnteredBounds(session.GetClientID(), gameObjectID);
+				Client_NodeEnteredBounds(session.GetClientID(), gameObjectID);
 			}
 			else
 			{
@@ -310,7 +299,7 @@ namespace teleport
 					continue;
 				}
 
-				uid childID = AddActor(node);
+				uid childID = AddNode(node);
 				if (childID == 0)
 				{
 					failedGameObjects.Add(node);
@@ -319,7 +308,7 @@ namespace teleport
 				else
 				{
 					streamedGameObjects.Add(node);
-					Client_ActorEnteredBounds(session.GetClientID(), childID);
+					Client_NodeEnteredBounds(session.GetClientID(), childID);
 				}
 			}
 			Collider[] colliders = gameObject.GetComponents<Collider>();
@@ -337,7 +326,7 @@ namespace teleport
 
 			streamedGameObjects.Remove(gameObject);
 			Client_RemoveNodeByID(session.GetClientID(), gameObjectID);
-			Client_ActorLeftBounds(session.GetClientID(), gameObjectID);
+			Client_NodeLeftBounds(session.GetClientID(), gameObjectID);
 
 			Teleport_Streamable streamable = gameObject.GetComponent<Teleport_Streamable>();
 			if(streamable)
@@ -357,7 +346,7 @@ namespace teleport
 				{
 					streamedGameObjects.Remove(child);
 					Client_RemoveNodeByID(session.GetClientID(), childID);
-					Client_ActorLeftBounds(session.GetClientID(), childID);
+					Client_NodeLeftBounds(session.GetClientID(), childID);
 				}
 				else
 				{
@@ -386,22 +375,26 @@ namespace teleport
 		}
 
 		private void SendPositionUpdates()
-        {
+		{
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-			if(teleportSettings == null)
+			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+			if(teleportSettings == null || geometrySource == null)
+			{
 				return;
+			}
 
 			avs.MovementUpdate[] updates = new avs.MovementUpdate[streamedGameObjects.Count];
-			long timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+			long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
 			int i = 0;
 			foreach(GameObject node in streamedGameObjects)
-            {
-				if (node == null)
+			{
+				if(node == null)
 				{
+					Debug.LogWarning($"Attempted to update movement of \"{node.name}\", but it has an ID of 0!");
 					continue;
 				}
-				GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+
 				uid nodeID = geometrySource.FindResourceID(node);
 
 				if(nodeID == 0)
@@ -413,13 +406,13 @@ namespace teleport
 				updates[i].timestamp = timestamp;
 				updates[i].nodeID = nodeID;
 
-                if(IsClientRenderingParent(node))
-                {
+				if(IsClientRenderingParent(node))
+				{
 					updates[i].isGlobal = false;
 					updates[i].position = node.transform.localPosition;
-                    updates[i].rotation = node.transform.localRotation;
+					updates[i].rotation = node.transform.localRotation;
 				}
-                else
+				else
 				{
 					updates[i].isGlobal = true;
 					updates[i].position = node.transform.position;
@@ -438,10 +431,10 @@ namespace teleport
 						rotation = node.transform.rotation;
 					}
 					else
-                    {
+					{
 						position = node.transform.localPosition;
 						rotation = node.transform.localRotation;
-                    }
+					}
 
 					//We cast to the unity engine types to take advantage of the existing vector subtraction operators.
 					//We multiply by the amount of move updates per second to get the movement per second, rather than per update.
@@ -456,22 +449,22 @@ namespace teleport
 				previousMovements[nodeID] = updates[i];
 
 				++i;
-            }
+			}
 
-			Client_UpdateActorMovement(session.GetClientID(), updates, updates.Length);
-        }
+			Client_UpdateNodeMovement(session.GetClientID(), updates, updates.Length);
+		}
 
 		private bool IsClientRenderingParent(GameObject child)
         {
 			if(child.transform.parent)
 			{
-				if(child.transform.parent.gameObject)
+				uid parentID = GeometrySource.GetGeometrySource().FindResourceID(child.transform.parent.gameObject);
+				if(parentID == 0)
 				{
-					var parent_Streamable = child.transform.parent.gameObject.GetComponent<Teleport_Streamable>();
-					if (parent_Streamable == null)
-						return false;
-					return Client_IsClientRenderingActorID(session.GetClientID(), parent_Streamable.GetUid());
+					return false;
 				}
+
+				return Client_IsClientRenderingNodeID(session.GetClientID(), parentID);
 			}
 
 			return false;

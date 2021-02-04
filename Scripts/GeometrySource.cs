@@ -377,8 +377,6 @@ namespace teleport
 		[SerializeField, HideInInspector] private SceneReferenceManager sceneReferenceManager = null;
 
 		private Dictionary<uid, UnityEngine.Object> resourceMap = new Dictionary<uid, UnityEngine.Object>();
-		private HashSet<int> leftHandIDs = new HashSet<int>();
-		private HashSet<int> rightHandIDs = new HashSet<int>();
 
 		// We always store the settings in this path:
 		public const string k_GeometrySourcePath = "TeleportVR/GeometrySource";
@@ -440,8 +438,6 @@ namespace teleport
 			//Clear resources on boot.
 			processedResources.Clear();
 			resourceMap.Clear();
-			leftHandIDs.Clear();
-			rightHandIDs.Clear();
 			LoadFromDisk();
 
 			isAwake = true;
@@ -512,16 +508,6 @@ namespace teleport
 			return nodeID;
 		}
 
-		public void AddLeftHandID(int id)
-		{ 	
-			leftHandIDs.Add(id);
-		}
-
-		public void AddRightHandID(int id)
-		{
-			rightHandIDs.Add(id);
-		}
-
 		public UnityEngine.Object FindResource(uid nodeID)
 		{
 			return (nodeID == 0) ? null : processedResources.FirstOrDefault(x => x.Value == nodeID).Key;
@@ -540,20 +526,38 @@ namespace teleport
 			return (streamingTag.Length == 0 || gameObject.CompareTag(streamingTag)) && IsCollisionLayerStreamed(gameObject.layer);
 		}
 
-		public GameObject[] GetStreamableObjects()
+		public List<GameObject> GetStreamableObjects()
 		{
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 
-			GameObject[] foundStreamedObjects = teleportSettings.TagToStream.Length > 0 ? GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream) : FindObjectsOfType<GameObject>();
-			foundStreamedObjects = foundStreamedObjects.Where(x => IsCollisionLayerStreamed(x.layer)).ToArray();
+			//Find all GameObjects in open scenes that have the correct tag and collision layer to be streamed.
+			List<GameObject> streamedObjects = new List<GameObject>(teleportSettings.TagToStream.Length > 0 ? GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream) : FindObjectsOfType<GameObject>());
+			for(int i = streamedObjects.Count - 1; i >= 0; i--)
+			{
+				GameObject gameObject = streamedObjects[i];
+				if(!IsCollisionLayerStreamed(gameObject.layer))
+				{
+					streamedObjects.RemoveAt(i);
+				}
+			}
 
-			return foundStreamedObjects;
+			//Add player body parts to list of streamed objects.
+			CasterMonitor casterMonitor = CasterMonitor.GetCasterMonitor();
+			List<GameObject> playerParts = casterMonitor.GetPlayerBodyParts();
+			foreach(GameObject playerPart in playerParts)
+			{
+				//We don't want to duplicate it, so we remove it first; which only affects performance.
+				streamedObjects.Remove(playerPart);
+				streamedObjects.Add(playerPart);
+			}
+
+			return streamedObjects;
 		}
 
 		//Adds all streamable objects to GeometrySource; updating any already extracted objects.
 		public void UpdateStreamableObjects()
 		{
-			GameObject[] streamableObjects = GetStreamableObjects();
+			List<GameObject> streamableObjects = GetStreamableObjects();
 			foreach(GameObject gameObject in streamableObjects)
 			{
 				//NOTE: This will also cause materials to be re-extracted.
@@ -636,7 +640,10 @@ namespace teleport
 		public uid AddMaterial(Material material, bool forceUpdate = false)
 		{
 			if(!material)
+			{
 				return 0;
+			}
+
 			processedResources.TryGetValue(material, out uid materialID);
 			if(forceUpdate || materialID == 0)
 			{
@@ -674,15 +681,19 @@ namespace teleport
 					extractedMaterial.occlusionTexture.strength = 1.0F;
 
 				//Extract emission properties only if emission is active.
-				if (!material.globalIlluminationFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack))
+				if(!material.globalIlluminationFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack))
 				{
 					Texture emission = material.GetTexture("_EmissionMap");
 					extractedMaterial.emissiveTexture.index = AddTexture(emission);
 					extractedMaterial.emissiveTexture.tiling = material.mainTextureScale;
-					if (material.HasProperty("_BumpScale"))
+					if(material.HasProperty("_BumpScale"))
+					{
 						extractedMaterial.emissiveFactor = material.GetColor("_EmissionColor");
+					}
 					else
-						extractedMaterial.emissiveFactor = new avs.Vector3(0,0,0);
+					{
+						extractedMaterial.emissiveFactor = new avs.Vector3(0, 0, 0);
+					}
 
 				}
 
@@ -693,8 +704,11 @@ namespace teleport
 #if UNITY_EDITOR
 				AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long _);
 
-				if(materialID == 0)
-					materialID = GenerateID();
+					if(materialID == 0)
+					{
+						materialID = GenerateID();
+					}
+
 				processedResources[material] = materialID;
 				StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)), extractedMaterial);
 				//Debug.Log("Stored material " + materialID + ": " + material.name);
@@ -835,23 +849,7 @@ namespace teleport
 
 		private void ExtractNodeSubType(GameObject source, ref avs.Node extractTo, bool forceUpdate)
 		{
-			//Get node sub-type, if it has one.
-			if(leftHandIDs.Contains(source.GetInstanceID()))
-			{
-				extractTo.dataSubtype = avs.NodeDataSubtype.LeftHand;
-			}
-			else if(rightHandIDs.Contains(source.GetInstanceID()))
-			{
-				extractTo.dataSubtype = avs.NodeDataSubtype.RightHand;
-			}
-			else if(false)
-			{
-				extractTo.dataSubtype = avs.NodeDataSubtype.Body;
-			}
-			else
-			{
-				extractTo.dataSubtype = avs.NodeDataSubtype.None;
-			}
+			extractTo.dataSubtype = CasterMonitor.GetCasterMonitor().GetGameObjectBodyPart(source);
 		}
 
 		private void ExtractNodeMaterials(Material[] sourceMaterials, ref avs.Node extractTo, bool forceUpdate)

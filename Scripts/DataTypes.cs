@@ -372,7 +372,7 @@ namespace avs
 		public UInt32 maxBandwidthKpS ;     
 		public AxesStandard axesStandard ;
 		public byte framerate;					// In hertz
-		public byte usingHands ;				//Whether to send the hand actors to the client.
+		public byte usingHands ;				//Whether to send the hand nodes to the client.
 		public byte isVR;
 		public UInt64 resourceCount ;			//	Number of resources the client has, these are appended to the handshake.
 	};

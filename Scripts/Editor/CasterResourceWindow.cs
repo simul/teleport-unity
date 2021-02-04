@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -15,7 +16,7 @@ namespace teleport
 		private TeleportSettings teleportSettings;
 
 		//List of found/extracted data.
-		private GameObject[] streamedSceneObjects = new GameObject[0];		// list of last group of extracted gameObjects
+		private List<GameObject> streamedSceneObjects = new List<GameObject>(); //Game objects that were found to be valid streamables in the opened scenes.
 		private RenderTexture[] renderTextures = new RenderTexture[0];
 
 		//GUI variables that control user-changeable properties.
@@ -44,7 +45,7 @@ namespace teleport
 
         private void OnGUI()
 		{
-			foldout_gameObjects = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_gameObjects, "GameObjects (" + streamedSceneObjects.Length + ")");
+			foldout_gameObjects = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_gameObjects, "GameObjects (" + streamedSceneObjects.Count + ")");
 			if(foldout_gameObjects)
 			{
 				scrollPosition_gameObjects = EditorGUILayout.BeginScrollView(scrollPosition_gameObjects);
@@ -114,7 +115,7 @@ namespace teleport
 			if(GUILayout.Button("Clear Cached Data"))
 			{
 				geometrySource.ClearData();
-				streamedSceneObjects = new GameObject[0];
+				streamedSceneObjects = new List<GameObject>();
 
 				foreach(RenderTexture texture in renderTextures)
 				{
@@ -155,12 +156,12 @@ namespace teleport
 		private void ExtractSceneGeometry()
 		{
 			FindSceneStreamables();
-			for(int i = 0; i < streamedSceneObjects.Length; i++)
+			for(int i = 0; i < streamedSceneObjects.Count; i++)
 			{
 				GameObject gameObject = streamedSceneObjects[i];
-				geometrySource.AddNode(gameObject, true);
 
-				EditorUtility.DisplayCancelableProgressBar("Extracting Scene Geometry", "Processing " + gameObject.name, i / streamedSceneObjects.Length);
+				EditorUtility.DisplayCancelableProgressBar("Extracting Scene Geometry", "Processing " + gameObject.name, i / streamedSceneObjects.Count);
+				geometrySource.AddNode(gameObject, true);
 			}
 			ExtractTextures();
 

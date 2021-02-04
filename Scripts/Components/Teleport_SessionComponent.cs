@@ -181,8 +181,10 @@ namespace teleport
 		{
 			Client_StopStreaming(clientID);
 			sessions.Remove(clientID);
-			if (geometryStreamingService != null)
+			if(geometryStreamingService != null)
+			{
 				geometryStreamingService.Clear();
+			}
 
 			clientID = 0;
 		}
@@ -290,23 +292,28 @@ namespace teleport
 
 		private void LateUpdate()
 		{
-			if (clientID == 0)
+			if(clientID == 0)
 			{
 				clientID = GetUnlinkedClientID();
-				if (clientID == 0)
+				if(clientID == 0)
+				{
 					return;
-				if (sessions.ContainsKey(clientID))
+				}
+
+				if(sessions.ContainsKey(clientID))
 				{
 					Debug.LogError("Session duplicate key!");
 				}
 				sessions[clientID] = this;
+
+				geometryStreamingService.StreamPlayerBody();
 			}
 
-			if (Client_IsConnected(clientID))
+			if(Client_IsConnected(clientID))
 			{
-				if (head != null && clientspaceRoot != null&&(!Client_HasOrigin(clientID))|| resetOrigin)//||transform.hasChanged))
+				if(head != null && clientspaceRoot != null && (!Client_HasOrigin(clientID)) || resetOrigin)//||transform.hasChanged))
 				{
-					if (Client_SetOrigin(clientID, clientspaceRoot.transform.position,true, head.transform.position- clientspaceRoot.transform.position))
+					if(Client_SetOrigin(clientID, clientspaceRoot.transform.position, true, head.transform.position - clientspaceRoot.transform.position))
 					{
 						last_sent_origin = clientspaceRoot.transform.position;
 						transform.hasChanged = false;
@@ -315,19 +322,21 @@ namespace teleport
 				}
 				else if(clientspaceRoot.transform.hasChanged)
 				{
-					if (Client_SetOrigin(clientID, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position))
+					if(Client_SetOrigin(clientID, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position))
 						clientspaceRoot.transform.hasChanged = false;
 				}
-				if (collisionRoot != null && collisionRoot.transform.hasChanged)
+				if(collisionRoot != null && collisionRoot.transform.hasChanged)
 				{
 					collisionRoot.transform.hasChanged = false;
 				}
 			}
 
-			if (teleportSettings.casterSettings.isStreamingGeometry)
+			if(teleportSettings.casterSettings.isStreamingGeometry)
 			{
-				if (geometryStreamingService != null)
+				if(geometryStreamingService != null)
+				{
 					geometryStreamingService.UpdateGeometryStreaming();
+				}
 			}
 		}
 
@@ -336,8 +345,14 @@ namespace teleport
 			return clientID;
 		}
 
+		public bool HasClient()
+		{
+			return clientID != 0;
+		}
+
 		public void ShowOverlay(int x, int y, GUIStyle font)
 		{
+			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 			Vector3 headPosition = head ? head.transform.position : new Vector3();
 
 			string str = string.Format("Client {0} {1}", clientID, Client_GetClientIPAddr(clientID));
@@ -347,14 +362,14 @@ namespace teleport
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("head position\t{0}", headPosition), font);
 			if (geometryStreamingService != null)
 			{
-				int num_actors = geometryStreamingService.GetStreamedObjectCount();
-				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Actors {0}", num_actors));
+				int num_nodes = geometryStreamingService.GetStreamedObjectCount();
+				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Nodes {0}", num_nodes));
 				List<GameObject> streamedGameObjects = geometryStreamingService.GetStreamedObjects();
-				for (int i = 0; i < num_actors; i++)
+				for (int i = 0; i < num_nodes; i++)
 				{
-					var actor = streamedGameObjects[i];
-					uid actor_uid = geometryStreamingService.GetActorID(actor);
-					GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}", actor_uid, actor.name));
+					GameObject node = streamedGameObjects[i];
+					uid nodeID = geometrySource.FindResourceID(node);
+					GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}", nodeID, node.name));
 				}
 				int num_lights = geometryStreamingService.GetStreamedLightCount();
 				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", num_lights));
@@ -382,8 +397,10 @@ namespace teleport
 		}
 		private void OnDestroy()
 		{
-			if (clientID != 0)
+			if(clientID != 0)
+			{
 				Client_StopSession(clientID);
+			}
 		}
 
 		public void SetStreamedLights(Light[] lights)
