@@ -394,6 +394,7 @@ namespace avs
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct InputState
 	{
+		public Int32 controllerId;
 		public UInt32 buttonsPressed;
 		public float trackpadAxisX;
 		public float trackpadAxisY;
@@ -402,7 +403,7 @@ namespace avs
 		public UInt32 numEvents;
 	}
 
-	public struct HeadPose
+	public struct Pose
 	{
 		public Vector4 orientation;
 		public Vector3 position;

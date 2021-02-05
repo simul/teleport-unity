@@ -90,19 +90,29 @@ namespace teleport
 			if (sessions.ContainsKey(clientID))
 				sessions[clientID].Disconnect();
 		}
-
-		public static void StaticSetHeadPose(uid clientID, in avs.HeadPose newHeadPose)
+		public static void StaticSetOriginFromClient(uid clientID, in avs.Pose newHeadPose)
 		{
 			if (!StaticDoesSessionExist(clientID))
 				return;
-			Quaternion latestRotation = new Quaternion();
-			Vector3 latestPosition = new Vector3();
-			latestRotation.Set(newHeadPose.orientation.x, newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
-			latestPosition.Set(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
-			sessions[clientID].SetHeadPose(latestRotation, latestPosition);
+			Quaternion rotation = new Quaternion();
+			Vector3 position = new Vector3();
+			rotation.Set(newHeadPose.orientation.x, newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
+			position.Set(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
+			sessions[clientID].SetOriginFromClient(rotation, position);
 		}
 
-		public static void StaticSetControllerPose(uid clientID, int index, in avs.HeadPose newPose)
+		public static void StaticSetHeadPose(uid clientID, in avs.Pose newHeadPose)
+		{
+			if (!StaticDoesSessionExist(clientID))
+				return;
+			Quaternion rotation = new Quaternion();
+			Vector3 position = new Vector3();
+			rotation.Set(newHeadPose.orientation.x, newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
+			position.Set(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
+			sessions[clientID].SetHeadPose(rotation, position);
+		}
+
+		public static void StaticSetControllerPose(uid clientID, int index, in avs.Pose newPose)
 		{
 			if (!StaticDoesSessionExist(clientID))
 				return;
@@ -117,21 +127,19 @@ namespace teleport
 		{
 			if (!StaticDoesSessionExist(clientID))
 				return;
-			int index = 1;
-			sessions[clientID].SetControllerInput(index, inputState.buttonsPressed,inputState.joystickAxisX,inputState.joystickAxisY);
+			sessions[clientID].SetControllerInput(inputState.controllerId, inputState.buttonsPressed,inputState.joystickAxisX,inputState.joystickAxisY);
 			if (inputEventsPtr != null)
 			{
 				int EventSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(avs.InputEvent));
 				//convert the pointer array into a struct array
 				avs.InputEvent[] inputEvents = new avs.InputEvent[inputState.numEvents];
-				//inputEvents = Marshal.PtrToStructure<avs.InputEvent[]>(inputEventsPtr);
 				IntPtr ptr=  inputEventsPtr;
 				for (int i = 0; i < inputState.numEvents; i++)
 				{
 					inputEvents[i]=Marshal.PtrToStructure<avs.InputEvent>(ptr);
 					ptr += EventSize;
 				}
-				sessions[clientID].SetControllerEvents(index, inputState.numEvents, inputEvents);
+				sessions[clientID].SetControllerEvents(inputState.controllerId, inputState.numEvents, inputEvents);
 			}
 		}
 
@@ -202,14 +210,21 @@ namespace teleport
 		{
 			axesStandard = handshake.axesStandard;
 		}
-
+		
+		public void SetOriginFromClient(Quaternion newRotation, Vector3 newPosition)
+		{
+		}
 		public void SetHeadPose(Quaternion newRotation, Vector3 newPosition)
 		{
 			if (!head)
 				return;
 
-			head.transform.rotation = newRotation;
-			head.transform.position = clientspaceRoot.transform.position + newPosition;
+			//head.transform.rotation = newRotation;
+			// NOTE: We consider positions received from the client to be worldspace and absolute.
+			// Therefore we use SetPositionAndRotation, which is absolute, not position=, rotation= which are relative.
+			//head.transform.position = clientspaceRoot.transform.position + newPosition;
+			//head.transform
+			head.transform.SetPositionAndRotation(newPosition,newRotation);
 		}
 		public void SetControllerInput(int index, UInt32 buttons,float jx,float jy)
 		{
@@ -244,9 +259,10 @@ namespace teleport
 			}
 			var controller = controllers[index];
 
-			//  rotation is absolute. Position is relative to clientspace.
-			controller.transform.rotation = newRotation;
-			controller.transform.position = clientspaceRoot.transform.position+ newPosition;
+			controller.transform.SetPositionAndRotation(newPosition,newRotation);
+			//  rotation is absolute. Position is absolute
+			//controller.transform.rotation = newRotation;
+			//controller.transform.position = clientspaceRoot.transform.position+ newPosition;
 		}
 
 		private void OnDisable()
@@ -313,7 +329,7 @@ namespace teleport
 			{
 				if(head != null && clientspaceRoot != null && (!Client_HasOrigin(clientID)) || resetOrigin)//||transform.hasChanged))
 				{
-					if(Client_SetOrigin(clientID, clientspaceRoot.transform.position, true, head.transform.position - clientspaceRoot.transform.position))
+					if (Client_SetOrigin(clientID, clientspaceRoot.transform.position, false, head.transform.position- clientspaceRoot.transform.position))
 					{
 						last_sent_origin = clientspaceRoot.transform.position;
 						transform.hasChanged = false;
@@ -323,7 +339,10 @@ namespace teleport
 				else if(clientspaceRoot.transform.hasChanged)
 				{
 					if(Client_SetOrigin(clientID, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position))
+					{
+						last_sent_origin = clientspaceRoot.transform.position;
 						clientspaceRoot.transform.hasChanged = false;
+				}
 				}
 				if(collisionRoot != null && collisionRoot.transform.hasChanged)
 				{
@@ -365,12 +384,15 @@ namespace teleport
 				int num_nodes = geometryStreamingService.GetStreamedObjectCount();
 				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Nodes {0}", num_nodes));
 				List<GameObject> streamedGameObjects = geometryStreamingService.GetStreamedObjects();
-				for (int i = 0; i < num_nodes; i++)
+				for (int i = 0; i < num_nodes&&i<10; i++)
 				{
 					GameObject node = streamedGameObjects[i];
 					uid nodeID = geometrySource.FindResourceID(node);
 					GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}", nodeID, node.name));
 				}
+				if(num_nodes>10)
+					GUI.Label(new Rect(x, y += dy, 500, 20), "\t...");
+
 				int num_lights = geometryStreamingService.GetStreamedLightCount();
 				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", num_lights));
 				int j = 0;
@@ -392,7 +414,8 @@ namespace teleport
 			}
 			foreach (var c in controllers)
 			{
-				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Controller {0}, buttons: {1}", c.Key, c.Value.buttons));
+				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Controller {0}, buttons: {1}, stick {2} {3}", c.Key, c.Value.buttons
+							,c.Value.joystick.x,c.Value.joystick.y));
 			}
 		}
 		private void OnDestroy()

@@ -36,10 +36,13 @@ namespace teleport
 		delegate byte OnHideNode(uid clientID, uid nodeID);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate void OnSetHeadPose(uid clientID, in avs.HeadPose newHeadPose);
+		delegate void OnSetHeadPose(uid clientID, in avs.Pose newHeadPose);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate void OnSetControllerPose(uid clientID, int index, in avs.HeadPose newHeadPose);
+		delegate void OnSetOriginFromClient(uid clientID, in avs.Pose newHeadPose);
+
+		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+		delegate void OnSetControllerPose(uid clientID, int index, in avs.Pose newHeadPose);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void OnNewInput(uid clientID, in avs.InputState newInput, in IntPtr newInputEvents);
@@ -65,6 +68,7 @@ namespace teleport
 			public OnShowNode showNode;
 			public OnHideNode hideNode;
 			public OnSetHeadPose headPoseSetter;
+			public OnSetOriginFromClient setOriginFromCLientFn;
 			public OnSetControllerPose controllerPoseSetter;
 			public OnNewInput newInputProcessing;
 			public OnDisconnect disconnect;
@@ -74,6 +78,8 @@ namespace teleport
 			public ReportHandshakeFn reportHandshake;
 			public OnAudioInputReceived audioInputReceived;
 		};
+		[DllImport("SimulCasterServer")]
+		public static extern UInt64 SizeOf(string name);
 		[DllImport("SimulCasterServer")]
 		private static extern bool Initialise(InitialiseState initialiseState);
 		[DllImport("SimulCasterServer")]
@@ -193,14 +199,26 @@ namespace teleport
 
 		private void OnEnable()
 		{
+			ulong dllSize=SizeOf("CasterSettings");
+			ulong exeSize=(ulong)System.Runtime.InteropServices.Marshal.SizeOf(typeof(SCServer.CasterSettings));
+			if(exeSize!=dllSize)
+			{
+				Debug.LogError("Struct size mismatch in dll vs C#.");
+				return;
+			}
 			InitialiseState initialiseState = new InitialiseState();
 			initialiseState.showNode = ShowNode;
 			initialiseState.hideNode = HideNode;
 			initialiseState.headPoseSetter = Teleport_SessionComponent.StaticSetHeadPose;
+			initialiseState.setOriginFromCLientFn = Teleport_SessionComponent.StaticSetOriginFromClient;
 			initialiseState.controllerPoseSetter = Teleport_SessionComponent.StaticSetControllerPose;
 			initialiseState.newInputProcessing = Teleport_SessionComponent.StaticProcessInput;
 			initialiseState.disconnect = Teleport_SessionComponent.StaticDisconnect;
-			initialiseState.messageHandler = LogMessageHandler; 
+
+			if(teleportSettings.casterSettings.pipeDllOutputToUnity)
+				initialiseState.messageHandler = LogMessageHandler;
+			else
+				initialiseState.messageHandler = (OnMessageHandler)null; 
 			initialiseState.SERVICE_PORT = teleportSettings.listenPort;
 			initialiseState.DISCOVERY_PORT = teleportSettings.discoveryPort;
 			initialiseState.reportHandshake = ReportHandshake;
@@ -371,6 +389,8 @@ namespace teleport
 
 		private static void LogMessageHandler(avs.LogSeverity Severity, string Msg, in IntPtr userData)
 		{
+			if(Msg.Length<1)
+				return;
 			switch(Severity)
 			{
 				case avs.LogSeverity.Debug:
