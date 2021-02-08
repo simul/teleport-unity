@@ -204,7 +204,7 @@ public class SceneReferenceManager : ScriptableObject, ISerializationCallbackRec
 		UnityEngine.Object[] assetsAtPath = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(meshAssetPath);
 
 		//Match meshes at the path with the same mesh name; this should only give one result.
-		List<UnityEngine.Object> meshesAtPath = new List<UnityEngine.Object>(assetsAtPath.Where(i => i.name == saveFormat.meshName && i.GetType() == typeof(Mesh)));
+		List<UnityEngine.Object> meshesAtPath = new List<UnityEngine.Object>(assetsAtPath.Where(i => i.name == saveFormat.meshName && (i.GetType() == typeof(Mesh) || i.GetType().IsSubclassOf(typeof(Mesh)))));
 		if(meshesAtPath.Count != 0)
 		{
 			resourceReferences.mesh = (Mesh)meshesAtPath[0];

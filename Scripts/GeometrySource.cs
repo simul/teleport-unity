@@ -302,6 +302,7 @@ namespace teleport
 		{
 			public uid oldID; //ID of the resource as it was loaded from disk; needs to be replaced.
 			public IntPtr guid; //ID string of the asset that this resource relates to.
+			public IntPtr name; //Name of asset that this resource relates to.
 			public Int64 lastModified;
 		}
 
@@ -660,25 +661,33 @@ namespace teleport
 
 				extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : (material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 0.0f); //Unity doesn't use the factor when the texture is set.
 
-				float smoothness = metallicRoughness ? material.GetFloat("_GlossMapScale") : (material.HasProperty("_Glossiness")?material.GetFloat("_Glossiness"):0.0f);
+				float smoothness = metallicRoughness ? material.GetFloat("_GlossMapScale") : (material.HasProperty("_Glossiness") ? material.GetFloat("_Glossiness") : 0.0f);
 				extractedMaterial.pbrMetallicRoughness.roughnessFactor = 1 - smoothness;
 				extractedMaterial.pbrMetallicRoughness.roughnessMode = avs.RoughnessMode.MULTIPLY_REVERSE;
 
 				Texture normal = material.GetTexture("_BumpMap");
 				extractedMaterial.normalTexture.index = AddTexture(normal);
 				extractedMaterial.normalTexture.tiling = material.mainTextureScale;
-				if (material.HasProperty("_BumpScale"))
+				if(material.HasProperty("_BumpScale"))
+				{
 					extractedMaterial.normalTexture.strength = material.GetFloat("_BumpScale");
+				}
 				else
+				{
 					extractedMaterial.normalTexture.strength = 1.0F;
+				}
 
 				Texture occlusion = material.GetTexture("_OcclusionMap");
 				extractedMaterial.occlusionTexture.index = AddTexture(occlusion);
 				extractedMaterial.occlusionTexture.tiling = material.mainTextureScale;
-				if (material.HasProperty("_OcclusionStrength"))
+				if(material.HasProperty("_OcclusionStrength"))
+				{
 					extractedMaterial.occlusionTexture.strength = material.GetFloat("_OcclusionStrength");
+				}
 				else
+				{
 					extractedMaterial.occlusionTexture.strength = 1.0F;
+				}
 
 				//Extract emission properties only if emission is active.
 				if(!material.globalIlluminationFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack))
@@ -704,10 +713,10 @@ namespace teleport
 #if UNITY_EDITOR
 				AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long _);
 
-					if(materialID == 0)
-					{
-						materialID = GenerateID();
-					}
+				if(materialID == 0)
+				{
+					materialID = GenerateID();
+				}
 
 				processedResources[material] = materialID;
 				StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)), extractedMaterial);
@@ -723,7 +732,6 @@ namespace teleport
 					Debug.LogError("But material " + materialID + " is not in the store!");
 				}
 			}
-
 
 			return materialID;
 		}
@@ -1568,7 +1576,9 @@ namespace teleport
 		private uid AddTexture(Texture texture)
 		{
 			if(!texture)
+			{
 				return 0;
+			}
 
 			if(!processedResources.TryGetValue(texture, out uid textureID))
 			{
@@ -1645,11 +1655,23 @@ namespace teleport
 				//Marshal data to usuable types.
 				LoadedResource metaResource = Marshal.PtrToStructure<LoadedResource>(resourcePtr);
 				string guid = Marshal.PtrToStringBSTR(metaResource.guid);
+				string name = Marshal.PtrToStringBSTR(metaResource.name);
 
 #if UNITY_EDITOR
+				//Asset we found in the database.
+				UnityAsset asset = null;
+
 				//Attempt to find asset.
 				string assetPath = AssetDatabase.GUIDToAssetPath(guid);
-				UnityAsset asset = AssetDatabase.LoadAssetAtPath<UnityAsset>(assetPath);
+				UnityEngine.Object[] assetsAtPath = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+				foreach(UnityEngine.Object unityObject in assetsAtPath)
+				{ 
+					if((unityObject.GetType() == typeof(UnityAsset) || unityObject.GetType().IsSubclassOf(typeof(UnityAsset))) && unityObject.name == name)
+					{
+						asset = (UnityAsset)unityObject;
+						break;
+					}
+				}
 
 				if(asset)
 				{
@@ -1669,7 +1691,7 @@ namespace teleport
 				}
 				else
 				{
-					Debug.Log("Disposed of missing " + nameof(UnityAsset) + " asset with GUID:" + metaResource.guid);
+					Debug.Log($"Disposed of missing {typeof(UnityAsset).FullName} \"{name}\" with GUID \"{guid}\"!");
 				}
 #endif
 			}
