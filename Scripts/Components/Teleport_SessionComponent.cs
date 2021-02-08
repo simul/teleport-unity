@@ -50,7 +50,7 @@ namespace teleport
 
 		// C# treats bool as 4 bytes, like C, but not like C++, which correctly uses only one byte.
 		[DllImport("SimulCasterServer")]
-		private static extern bool Client_SetOrigin(uid clientID, Vector3 pos, [MarshalAs(UnmanagedType.I1)] bool set_rel, Vector3 rel_pos);
+		private static extern bool Client_SetOrigin(uid clientID, UInt64 validCounter, Vector3 pos, [MarshalAs(UnmanagedType.I1)] bool set_rel, Vector3 rel_pos);
 		[DllImport("SimulCasterServer")]
 		private static extern bool Client_IsConnected(uid clientID);
 		[DllImport("SimulCasterServer")]
@@ -90,7 +90,7 @@ namespace teleport
 			if (sessions.ContainsKey(clientID))
 				sessions[clientID].Disconnect();
 		}
-		public static void StaticSetOriginFromClient(uid clientID, in avs.Pose newHeadPose)
+		public static void StaticSetOriginFromClient(uid clientID, UInt64 validCounter, in avs.Pose newHeadPose)
 		{
 			if (!StaticDoesSessionExist(clientID))
 				return;
@@ -98,7 +98,7 @@ namespace teleport
 			Vector3 position = new Vector3();
 			rotation.Set(newHeadPose.orientation.x, newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
 			position.Set(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
-			sessions[clientID].SetOriginFromClient(rotation, position);
+			sessions[clientID].SetOriginFromClient(validCounter, rotation, position);
 		}
 
 		public static void StaticSetHeadPose(uid clientID, in avs.Pose newHeadPose)
@@ -179,6 +179,7 @@ namespace teleport
 		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
 
 		private Vector3 last_sent_origin = new Vector3(0, 0, 0);
+		private Vector3 last_received_origin = new Vector3(0, 0, 0);
 
 		public bool IsConnected()
 		{
@@ -211,8 +212,13 @@ namespace teleport
 			axesStandard = handshake.axesStandard;
 		}
 		
-		public void SetOriginFromClient(Quaternion newRotation, Vector3 newPosition)
+		public void SetOriginFromClient(UInt64 validCounter,Quaternion newRotation, Vector3 newPosition)
 		{
+			if(clientspaceRoot!=null&&validCounter==originValidCounter)
+			{
+				clientspaceRoot.transform.SetPositionAndRotation(newPosition,newRotation);
+				last_received_origin=newPosition;
+			}
 		}
 		public void SetHeadPose(Quaternion newRotation, Vector3 newPosition)
 		{
@@ -305,7 +311,7 @@ namespace teleport
 		{
 			resetOrigin = true;
 		}
-
+		UInt64 originValidCounter=1;
 		private void LateUpdate()
 		{
 			if(clientID == 0)
@@ -329,7 +335,8 @@ namespace teleport
 			{
 				if(head != null && clientspaceRoot != null && (!Client_HasOrigin(clientID)) || resetOrigin)//||transform.hasChanged))
 				{
-					if (Client_SetOrigin(clientID, clientspaceRoot.transform.position, false, head.transform.position- clientspaceRoot.transform.position))
+					originValidCounter++;
+					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position- clientspaceRoot.transform.position))
 					{
 						last_sent_origin = clientspaceRoot.transform.position;
 						transform.hasChanged = false;
@@ -338,11 +345,16 @@ namespace teleport
 				}
 				else if(clientspaceRoot.transform.hasChanged)
 				{
-					if(Client_SetOrigin(clientID, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position))
+					Vector3 diff=clientspaceRoot.transform.position-last_received_origin;
+					if(diff.magnitude>5.0F)
 					{
-						last_sent_origin = clientspaceRoot.transform.position;
-						clientspaceRoot.transform.hasChanged = false;
-				}
+						originValidCounter++;
+						if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position))
+						{
+							last_sent_origin = clientspaceRoot.transform.position;
+							clientspaceRoot.transform.hasChanged = false;
+						}
+					}
 				}
 				if(collisionRoot != null && collisionRoot.transform.hasChanged)
 				{
@@ -368,7 +380,10 @@ namespace teleport
 		{
 			return clientID != 0;
 		}
-
+		string StringOf(Vector3 v)
+		{
+			return string.Format("{0:F3},{1:F3},{2:F3}",v.x,v.y,v.z);
+		}
 		public void ShowOverlay(int x, int y, GUIStyle font)
 		{
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
@@ -377,8 +392,9 @@ namespace teleport
 			string str = string.Format("Client {0} {1}", clientID, Client_GetClientIPAddr(clientID));
 			int dy = 14;
 			GUI.Label(new Rect(x, y += dy, 300, 20), str, font);
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("sent origin\t{0}", last_sent_origin), font);
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("head position\t{0}", headPosition), font);
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("sent origin\t{0}", StringOf(last_sent_origin)), font);
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("received origin\t{0}", StringOf(last_received_origin)), font);
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("head position\t{0}", StringOf(headPosition)), font);
 			if (geometryStreamingService != null)
 			{
 				int num_nodes = geometryStreamingService.GetStreamedObjectCount();
