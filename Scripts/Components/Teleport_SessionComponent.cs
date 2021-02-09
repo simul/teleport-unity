@@ -356,6 +356,15 @@ namespace teleport
 						}
 					}
 				}
+				else
+				{
+				// Just a "suggestion" update. ValidCounter is not altered. The client will use the vertical only.
+					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position))
+					{
+						last_sent_origin = clientspaceRoot.transform.position;
+						clientspaceRoot.transform.hasChanged = false;
+					}
+				}
 				if(collisionRoot != null && collisionRoot.transform.hasChanged)
 				{
 					collisionRoot.transform.hasChanged = false;
@@ -430,7 +439,7 @@ namespace teleport
 			}
 			foreach (var c in controllers)
 			{
-				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Controller {0}, buttons: {1}, stick {2} {3}", c.Key, c.Value.buttons
+				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Controller {0}, {1}, buttons: {2}, stick {3} {4}", c.Key,StringOf(c.Value.transform.position), c.Value.buttons
 							,c.Value.joystick.x,c.Value.joystick.y));
 			}
 		}
