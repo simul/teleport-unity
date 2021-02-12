@@ -23,6 +23,9 @@ namespace teleport
 		public static extern bool Client_HasPeer(uid clientID);
 		[DllImport("SimulCasterServer")]
 		public static extern uint Client_GetClientIP(uid clientID, uint bufferLength, StringBuilder buffer);
+		[DllImport("SimulCasterServer")]
+		public static extern bool Client_GetClientNetworkStats(uid clientID, ref avs.NetworkStats stats);
+		
 		public string Client_GetClientIPAddr(uid clientID)
 		{
 			StringBuilder str = new StringBuilder("", 20);
@@ -362,6 +365,15 @@ namespace teleport
 				if(collisionRoot != null && collisionRoot.transform.hasChanged)
 				{
 					collisionRoot.transform.hasChanged = false;
+				}
+
+				avs.NetworkStats stats = new avs.NetworkStats();
+				//IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(avs.NetworkStats)));			
+				bool result = Client_GetClientNetworkStats(clientID, ref stats);
+				if (result)
+				{
+					//avs.NetworkStats stats = new avs.NetworkStats();
+					//Marshal.PtrToStructure(ptr, stats);
 				}
 			}
 

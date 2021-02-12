@@ -316,6 +316,27 @@ namespace avs
 		}
 	}
 
+	[StructLayout(LayoutKind.Sequential)]
+	public struct NetworkStats
+	{
+		/*! Total bytes sent. */
+		public UInt64 bytesSent;
+		/*! Number of sent network packets. */
+		public UInt64 networkPacketsSent;
+		/*! Average packets sent per second over a user specified interval */
+		public UInt32 avgPacketsSentPerSec;
+		/*! Minimum packets sent per second over all intervals */
+		public UInt32 minPacketsSentPerSec;
+		/*! Maximum packets sent per second over all intervals */
+		public UInt32 maxPacketsSentPerSec;
+		/*! Average bandwidth required per second in the last interval  */
+		public UInt32 avgRequiredBandwidth;
+		/*! Minimum bandwidth required per second over all intervals */
+		public UInt32 minRequiredBandwidth;
+		/*! Maximum bandwidth required per second over all intervals */
+		public UInt32 maxRequiredBandwidth;
+	};
+
 	public struct Mat4x4
 	{
 		//[Row, Column]
