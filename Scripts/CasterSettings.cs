@@ -5,7 +5,6 @@ using UnityEditor;
 
 namespace SCServer
 {
-
 	[StructLayout(LayoutKind.Sequential), Serializable]
     public class CasterSettings
     {
@@ -85,5 +84,6 @@ namespace SCServer
 
 		[Header("Input")]
 		public bool lockPlayerHeight = true;
+		public ControlModel controlModel=ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY;
 	}
 }

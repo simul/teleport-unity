@@ -489,4 +489,10 @@ namespace SCServer
 		public UInt32 bitsPerSample;
 		public UInt32 numChannels;
 	}
+	public enum ControlModel:UInt32
+	{
+		NONE=0,
+		CLIENT_ORIGIN_SERVER_GRAVITY=1,
+		SERVER_ORIGIN_CLIENT_LOCAL=2
+	};
 }

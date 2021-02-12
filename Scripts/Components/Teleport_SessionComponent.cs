@@ -180,7 +180,8 @@ namespace teleport
 
 		private Vector3 last_sent_origin = new Vector3(0, 0, 0);
 		private Vector3 last_received_origin = new Vector3(0, 0, 0);
-
+		private Vector3 last_received_headPos = new Vector3(0, 0, 0);
+		
 		public bool IsConnected()
 		{
 			return Client_IsConnected(clientID);
@@ -231,6 +232,7 @@ namespace teleport
 			//head.transform.position = clientspaceRoot.transform.position + newPosition;
 			//head.transform
 			head.transform.SetPositionAndRotation(newPosition,newRotation);
+			last_received_headPos=newPosition;
 		}
 		public void SetControllerInput(int index, UInt32 buttons,float jx,float jy)
 		{
@@ -349,16 +351,8 @@ namespace teleport
 					if(diff.magnitude>5.0F)
 					{
 						originValidCounter++;
-						if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position))
-						{
-							last_sent_origin = clientspaceRoot.transform.position;
-							clientspaceRoot.transform.hasChanged = false;
-						}
 					}
-				}
-				else
-				{
-				// Just a "suggestion" update. ValidCounter is not altered. The client will use the vertical only.
+					// Otherwise just a "suggestion" update. ValidCounter is not altered. The client will use the vertical only.
 					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position))
 					{
 						last_sent_origin = clientspaceRoot.transform.position;
@@ -403,6 +397,7 @@ namespace teleport
 			GUI.Label(new Rect(x, y += dy, 300, 20), str, font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("sent origin\t{0}", StringOf(last_sent_origin)), font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("received origin\t{0}", StringOf(last_received_origin)), font);
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("received head\t{0}", StringOf(last_received_headPos)), font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("head position\t{0}", StringOf(headPosition)), font);
 			if (geometryStreamingService != null)
 			{
