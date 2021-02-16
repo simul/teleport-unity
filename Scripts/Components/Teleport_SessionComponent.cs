@@ -192,7 +192,6 @@ namespace teleport
 
 		public void Disconnect()
 		{
-			Client_StopStreaming(clientID);
 			sessions.Remove(clientID);
 			if(geometryStreamingService != null)
 			{
