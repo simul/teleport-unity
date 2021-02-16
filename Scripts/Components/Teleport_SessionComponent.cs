@@ -91,8 +91,12 @@ namespace teleport
 		public static void StaticDisconnect(uid clientID)
 		{
 			if (sessions.ContainsKey(clientID))
+			{
 				sessions[clientID].Disconnect();
+				sessions.Remove(clientID);
+			}
 		}
+
 		public static void StaticSetOriginFromClient(uid clientID, UInt64 validCounter, in avs.Pose newHeadPose)
 		{
 			if (!StaticDoesSessionExist(clientID))
@@ -192,7 +196,6 @@ namespace teleport
 
 		public void Disconnect()
 		{
-			sessions.Remove(clientID);
 			if(geometryStreamingService != null)
 			{
 				geometryStreamingService.Clear();

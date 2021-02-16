@@ -82,7 +82,11 @@ namespace teleport
 		{
 			foreach(GameObject gameObject in streamedGameObjects)
 			{
-				Client_RemoveNodeByID(session.GetClientID(), gameObject.GetComponent<Teleport_Streamable>().GetUid());
+				var sComp = gameObject.GetComponent<Teleport_Streamable>();
+				if (sComp != null)
+				{
+					Client_RemoveNodeByID(session.GetClientID(), sComp.GetUid());
+				}			
 			}
 		}
 
