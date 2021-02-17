@@ -94,6 +94,7 @@ namespace teleport
 			{
 				sessions[clientID].Disconnect();
 				sessions.Remove(clientID);
+			}
 		}
 		public static void StaticSetOriginFromClient(uid clientID, UInt64 validCounter, in avs.Pose newPose)
 		{
