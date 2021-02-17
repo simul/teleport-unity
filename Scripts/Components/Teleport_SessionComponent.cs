@@ -399,12 +399,12 @@ namespace teleport
 					return;
 				}
 
-				avs.NetworkStats stats = new avs.NetworkStats();			
-				bool result = Client_GetClientNetworkStats(clientID, ref stats);
-				if (result)
+				if (sessions.ContainsKey(clientID))
 				{
 					Debug.LogError("Session duplicate key!");
+					return;
 				}
+
 				sessions[clientID] = this;
 
 				geometryStreamingService.StreamPlayerBody();
@@ -413,6 +413,8 @@ namespace teleport
 			if(Client_IsConnected(clientID))
 			{
 				SendOriginUpdates();
+				avs.NetworkStats stats = new avs.NetworkStats();
+				bool result = Client_GetClientNetworkStats(clientID, ref stats);
 			}
 
 			if(teleportSettings.casterSettings.isStreamingGeometry)
