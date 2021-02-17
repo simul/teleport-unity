@@ -333,9 +333,12 @@ namespace teleport
 				{
 					Debug.LogError("Session duplicate key!");
 				}
-				sessions[clientID] = this;
+				else
+				{
+					sessions[clientID] = this;
 
-				geometryStreamingService.StreamPlayerBody();
+					geometryStreamingService.StreamPlayerBody();
+				}
 			}
 
 			if(Client_IsConnected(clientID))
@@ -369,13 +372,11 @@ namespace teleport
 					collisionRoot.transform.hasChanged = false;
 				}
 
-				avs.NetworkStats stats = new avs.NetworkStats();
-				//IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(avs.NetworkStats)));			
+				avs.NetworkStats stats = new avs.NetworkStats();			
 				bool result = Client_GetClientNetworkStats(clientID, ref stats);
 				if (result)
 				{
-					//avs.NetworkStats stats = new avs.NetworkStats();
-					//Marshal.PtrToStructure(ptr, stats);
+					
 				}
 			}
 
