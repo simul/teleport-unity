@@ -91,7 +91,9 @@ namespace teleport
 		public static void StaticDisconnect(uid clientID)
 		{
 			if (sessions.ContainsKey(clientID))
+			{
 				sessions[clientID].Disconnect();
+				sessions.Remove(clientID);
 		}
 		public static void StaticSetOriginFromClient(uid clientID, UInt64 validCounter, in avs.Pose newPose)
 		{
@@ -196,8 +198,6 @@ namespace teleport
 
 		public void Disconnect()
 		{
-			Client_StopStreaming(clientID);
-			sessions.Remove(clientID);
 			if(geometryStreamingService != null)
 			{
 				geometryStreamingService.Clear();
@@ -325,6 +325,26 @@ namespace teleport
 		{
 			if (teleportSettings.casterSettings.controlModel == SCServer.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
 			{
+				clientID = GetUnlinkedClientID();
+				if(clientID == 0)
+				{
+					return;
+				}
+
+				if(sessions.ContainsKey(clientID))
+				{
+					Debug.LogError("Session duplicate key!");
+				}
+				else
+				{
+					sessions[clientID] = this;
+
+					geometryStreamingService.StreamPlayerBody();
+				}
+			}
+
+			if(Client_IsConnected(clientID))
+			{
 				if (head != null && clientspaceRoot != null && (!Client_HasOrigin(clientID)) || resetOrigin)//||transform.hasChanged))
 				{
 					originValidCounter++;
@@ -378,7 +398,9 @@ namespace teleport
 					return;
 				}
 
-				if(sessions.ContainsKey(clientID))
+				avs.NetworkStats stats = new avs.NetworkStats();			
+				bool result = Client_GetClientNetworkStats(clientID, ref stats);
+				if (result)
 				{
 					Debug.LogError("Session duplicate key!");
 				}

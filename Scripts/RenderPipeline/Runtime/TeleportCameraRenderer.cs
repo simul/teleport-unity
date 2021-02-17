@@ -726,7 +726,7 @@ namespace teleport
 			context.Submit();
 
 			var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
-			if (teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
+			if (ClientID != 0 && teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
 			{
 				var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
 				videoEncoder.CreateEncodeCommands(context, camera, tagDataID);
@@ -796,7 +796,7 @@ namespace teleport
 				context.Submit();
 
 				var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
-				if (teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
+				if (ClientID != 0 && teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
 				{
 					var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
 					videoEncoder.CreateEncodeCommands(context, camera, tagDataID);
