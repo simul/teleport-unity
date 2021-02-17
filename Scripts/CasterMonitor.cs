@@ -86,6 +86,7 @@ namespace teleport
 		private static extern void SetConnectionTimeout(Int32 timeout);
 		[DllImport("SimulCasterServer")]
 		private static extern void UpdateCasterSettings(SCServer.CasterSettings newSettings);
+
 		[DllImport("SimulCasterServer")]
 		private static extern void SetClientPosition(uid clientID, Vector3 pos);
 		[DllImport("SimulCasterServer")]

@@ -490,7 +490,7 @@ namespace teleport
 		static ShaderTagId[] depthShaderTagIds = {
 				new ShaderTagId("ShadowCaster"),
 		};
-		void DrawDepthPass(ScriptableRenderContext context, Camera camera,int layerMask,uint renderingMask)
+		void DrawDepthPass(ScriptableRenderContext context, Camera camera,int layerMask,uint renderingMask,CullingResults cullingResults)
 		{
 			context.SetupCameraProperties(camera);
 			CommandBuffer buffer = CommandBufferPool.Get("Depth Pass");
@@ -508,11 +508,6 @@ namespace teleport
 				criteria = SortingCriteria.CommonOpaque
 			};
 			var filteringSettings = new FilteringSettings(RenderQueueRange.opaque, layerMask, renderingMask, 0);
-			CullingResults cullingResults;
-			if (!Cull(context, camera, out cullingResults))
-			{
-				return;
-			}
 			buffer.BeginSample("Depth");
 			var drawingSettings = new DrawingSettings(depthShaderTagIds[0], sortingSettings);
 			drawingSettings.enableDynamicBatching = true;
@@ -675,7 +670,7 @@ namespace teleport
 			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
 			teleportLighting.renderSettings = renderSettings;
 			teleportLighting.RenderShadows(context, camera, cullingResultsAll, lightingOrder);
-			DrawDepthPass(context, camera,  layerMask,  renderingMask);
+			DrawDepthPass(context, camera,  layerMask,  renderingMask, cullingResultsAll);
 			teleportLighting.RenderScreenspaceShadows(context, camera, lightingOrder, cullingResultsAll, depthTexture);
 			context.SetupCameraProperties(camera);
 			Clear(context, camera);
@@ -783,6 +778,8 @@ namespace teleport
 			if (Cull(context, camera, out cullingResultsAll, true))
 			{
 				TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
+				//UpdateStreamedLights(cullingResultsAll.visibleLights);
+
 				teleportLighting.renderSettings = renderSettings;
 				teleportLighting.RenderShadows(context, camera, cullingResultsAll, lightingOrder);
 
@@ -867,7 +864,7 @@ namespace teleport
 			string samplename = camera.gameObject.name + " Face " + face;
 			StartSample(context, samplename);
 			{
-				DrawDepthPass(context, camera, layerMask, renderingMask);
+				DrawDepthPass(context, camera, layerMask, renderingMask, cullingResultsAll);
 				teleportLighting.RenderScreenspaceShadows(context, camera, lightingOrder, cullingResultsAll, depthTexture);
 				context.SetupCameraProperties(camera);
 				Clear(context, camera);

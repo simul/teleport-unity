@@ -64,11 +64,11 @@ namespace teleport
 			Tuple.Create(4,  "Geometry", false),
 			Tuple.Create(25, "Video", false),
 			Tuple.Create(2,  "Audio", false),
-			Tuple.Create(7,  "Debugging", false),
+			Tuple.Create(6,  "Debugging", false),
 			Tuple.Create(3,  "Compression", false),
 			Tuple.Create(2,  "Camera", false),
 			Tuple.Create(4,  "Lighting", false),
-			Tuple.Create(1,  "Input", false),
+			Tuple.Create(2,  "Input", false),
 		};
 		public override void OnGUI(string searchContext)
 		{
@@ -135,6 +135,10 @@ namespace teleport
 						else if (field.FieldType == typeof(object))
 						{
 						//	field.SetValue(teleportSettings.casterSettings, EditorGUILayout.ObjectField(field.Name, (bool)field.GetValue(teleportSettings.casterSettings)));
+						}
+						else if (field.FieldType == typeof(SCServer.ControlModel))
+						{
+							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.EnumPopup(field.Name, (SCServer.ControlModel)field.GetValue(teleportSettings.casterSettings)));
 						}
 						else
 							EditorGUILayout.LabelField(field.Name, field.FieldType.ToString() + " " + field.GetValue(teleportSettings.casterSettings).ToString());

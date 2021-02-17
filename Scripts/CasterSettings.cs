@@ -84,6 +84,6 @@ namespace SCServer
 
 		[Header("Input")]
 		public bool lockPlayerHeight = true;
-		public ControlModel controlModel=ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY;
+		public ControlModel controlModel=ControlModel.SERVER_ORIGIN_CLIENT_LOCAL;
 	}
 }

@@ -20,8 +20,12 @@ public class Teleport_Controller : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        joystick.x = 0;
-        joystick.y = 0;
+        joystick.x*= 0.5F;
+        joystick.y*= 0.5F;
+        if(Math.Abs(joystick.x)<0.01F)
+            joystick.x=0.0F;
+        if(Math.Abs(joystick.y)<0.01F)
+            joystick.y=0.0F;
     }
 
 	public void SetButtons(UInt32 b)

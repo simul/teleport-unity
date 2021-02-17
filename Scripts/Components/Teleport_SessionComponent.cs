@@ -53,7 +53,7 @@ namespace teleport
 
 		// C# treats bool as 4 bytes, like C, but not like C++, which correctly uses only one byte.
 		[DllImport("SimulCasterServer")]
-		private static extern bool Client_SetOrigin(uid clientID, UInt64 validCounter, Vector3 pos, [MarshalAs(UnmanagedType.I1)] bool set_rel, Vector3 rel_pos);
+		private static extern bool Client_SetOrigin(uid clientID, UInt64 validCounter, Vector3 pos, [MarshalAs(UnmanagedType.I1)] bool set_rel, Vector3 rel_pos, Quaternion orientation);
 		[DllImport("SimulCasterServer")]
 		private static extern bool Client_IsConnected(uid clientID);
 		[DllImport("SimulCasterServer")]
@@ -93,14 +93,18 @@ namespace teleport
 			if (sessions.ContainsKey(clientID))
 				sessions[clientID].Disconnect();
 		}
-		public static void StaticSetOriginFromClient(uid clientID, UInt64 validCounter, in avs.Pose newHeadPose)
+		public static void StaticSetOriginFromClient(uid clientID, UInt64 validCounter, in avs.Pose newPose)
 		{
 			if (!StaticDoesSessionExist(clientID))
 				return;
 			Quaternion rotation = new Quaternion();
 			Vector3 position = new Vector3();
-			rotation.Set(newHeadPose.orientation.x, newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
-			position.Set(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
+			rotation.Set(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
+			position.Set(newPose.position.x, newPose.position.y, newPose.position.z);
+			//if(position.y>0.6F)
+			{
+			//	position.y=0.6F;
+			}
 			sessions[clientID].SetOriginFromClient(validCounter, rotation, position);
 		}
 
@@ -317,6 +321,53 @@ namespace teleport
 			resetOrigin = true;
 		}
 		UInt64 originValidCounter=1;
+		void SendOriginUpdates()
+		{
+			if (teleportSettings.casterSettings.controlModel == SCServer.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
+			{
+				if (head != null && clientspaceRoot != null && (!Client_HasOrigin(clientID)) || resetOrigin)//||transform.hasChanged))
+				{
+					originValidCounter++;
+					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position,clientspaceRoot.transform.rotation))
+					{
+						last_sent_origin = clientspaceRoot.transform.position;
+						clientspaceRoot.transform.hasChanged = false;
+						resetOrigin = false;
+					}
+				}
+				else if (clientspaceRoot.transform.hasChanged)
+				{
+					Vector3 diff = clientspaceRoot.transform.position - last_received_origin;
+					if (diff.magnitude > 5.0F)
+					{
+						originValidCounter++;
+					}
+					// Otherwise just a "suggestion" update. ValidCounter is not altered. The client will use the vertical only.
+					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position,clientspaceRoot.transform.rotation))
+					{
+						last_sent_origin = clientspaceRoot.transform.position;
+						clientspaceRoot.transform.hasChanged = false;
+					}
+				}
+				if (collisionRoot != null && collisionRoot.transform.hasChanged)
+				{
+					collisionRoot.transform.hasChanged = false;
+				}
+			}
+			if (teleportSettings.casterSettings.controlModel == SCServer.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
+			{
+				if (head != null && clientspaceRoot != null && (!Client_HasOrigin(clientID)) || resetOrigin||clientspaceRoot.transform.hasChanged)
+				{
+					originValidCounter++;
+					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position,clientspaceRoot.transform.rotation))
+					{
+						last_sent_origin = clientspaceRoot.transform.position;
+						clientspaceRoot.transform.hasChanged = false;
+						resetOrigin = false;
+					}
+				}
+			}
+		}
 		private void LateUpdate()
 		{
 			if(clientID == 0)
@@ -338,43 +389,7 @@ namespace teleport
 
 			if(Client_IsConnected(clientID))
 			{
-				if(head != null && clientspaceRoot != null && (!Client_HasOrigin(clientID)) || resetOrigin)//||transform.hasChanged))
-				{
-					originValidCounter++;
-					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position- clientspaceRoot.transform.position))
-					{
-						last_sent_origin = clientspaceRoot.transform.position;
-						transform.hasChanged = false;
-						resetOrigin = false;
-					}
-				}
-				else if(clientspaceRoot.transform.hasChanged)
-				{
-					Vector3 diff=clientspaceRoot.transform.position-last_received_origin;
-					if(diff.magnitude>5.0F)
-					{
-						originValidCounter++;
-					}
-					// Otherwise just a "suggestion" update. ValidCounter is not altered. The client will use the vertical only.
-					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position))
-					{
-						last_sent_origin = clientspaceRoot.transform.position;
-						clientspaceRoot.transform.hasChanged = false;
-					}
-				}
-				if(collisionRoot != null && collisionRoot.transform.hasChanged)
-				{
-					collisionRoot.transform.hasChanged = false;
-				}
-
-				avs.NetworkStats stats = new avs.NetworkStats();
-				//IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(avs.NetworkStats)));			
-				bool result = Client_GetClientNetworkStats(clientID, ref stats);
-				if (result)
-				{
-					//avs.NetworkStats stats = new avs.NetworkStats();
-					//Marshal.PtrToStructure(ptr, stats);
-				}
+				SendOriginUpdates();
 			}
 
 			if(teleportSettings.casterSettings.isStreamingGeometry)
@@ -403,14 +418,22 @@ namespace teleport
 		{
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 			Vector3 headPosition = head ? head.transform.position : new Vector3();
+			Vector3 origPosition = clientspaceRoot ? clientspaceRoot.transform.position : new Vector3();
 
 			string str = string.Format("Client {0} {1}", clientID, Client_GetClientIPAddr(clientID));
 			int dy = 14;
 			GUI.Label(new Rect(x, y += dy, 300, 20), str, font);
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("     origin pos\t{0}", StringOf(origPosition)), font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("sent origin\t{0}", StringOf(last_sent_origin)), font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("received origin\t{0}", StringOf(last_received_origin)), font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("received head\t{0}", StringOf(last_received_headPos)), font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("head position\t{0}", StringOf(headPosition)), font);
+			foreach (var c in controllers)
+			{
+				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Controller {0}, {1}",c.Key,StringOf(c.Value.transform.position)));
+				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("\tbtns:{0} stick:{1:F3},{2:F3}",c.Value.buttons
+							,c.Value.joystick.x,c.Value.joystick.y));
+			}
 			if (geometryStreamingService != null)
 			{
 				int num_nodes = geometryStreamingService.GetStreamedObjectCount();
@@ -443,11 +466,6 @@ namespace teleport
 						j++;
 					}
 				}
-			}
-			foreach (var c in controllers)
-			{
-				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Controller {0}, {1}, buttons: {2}, stick {3} {4}", c.Key,StringOf(c.Value.transform.position), c.Value.buttons
-							,c.Value.joystick.x,c.Value.joystick.y));
 			}
 		}
 		private void OnDestroy()
