@@ -294,8 +294,8 @@ namespace teleport
 			if ( Application.isPlaying)
 			{
 				int x = 10;
-				int y = 20;
-				GUI.Label(new Rect(x, y += 14, 100, 20), title, overlayFont);
+				int y = 0;
+				GUI.Label(new Rect(x, y, 100, 20), title, overlayFont);
 		
 				GUI.Label(new Rect(x,y+=14, 100, 20), string.Format("Discovering on port {0}", teleportSettings.discoveryPort), overlayFont);
 				foreach(var s in Teleport_SessionComponent.sessions)
