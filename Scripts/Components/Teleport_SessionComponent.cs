@@ -192,7 +192,7 @@ namespace teleport
 		private Vector3 last_received_origin = new Vector3(0, 0, 0);
 		private Vector3 last_received_headPos = new Vector3(0, 0, 0);
 
-		private avs.NetworkStats networkStats = new avs.NetworkStats();
+		private avs.NetworkStats networkStats;
 
 		public bool IsConnected()
 		{
@@ -317,6 +317,8 @@ namespace teleport
 			// Bypass effects added by the scene's AudioListener
 			if(inputAudioSource)
 				inputAudioSource.bypassEffects = true;
+
+			networkStats = new avs.NetworkStats();
 		}
 		bool resetOrigin = true;
 		public void ResetOrigin()
@@ -328,30 +330,10 @@ namespace teleport
 		{
 			if (teleportSettings.casterSettings.controlModel == SCServer.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
 			{
-				clientID = GetUnlinkedClientID();
-				if(clientID == 0)
-				{
-					return;
-				}
-
-				if(sessions.ContainsKey(clientID))
-				{
-					Debug.LogError("Session duplicate key!");
-				}
-				else
-				{
-					sessions[clientID] = this;
-
-					geometryStreamingService.StreamPlayerBody();
-				}
-			}
-
-			if(Client_IsConnected(clientID))
-			{
 				if (head != null && clientspaceRoot != null && (!Client_HasOrigin(clientID)) || resetOrigin)//||transform.hasChanged))
 				{
 					originValidCounter++;
-					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position,clientspaceRoot.transform.rotation))
+					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
 					{
 						last_sent_origin = clientspaceRoot.transform.position;
 						clientspaceRoot.transform.hasChanged = false;
@@ -366,7 +348,7 @@ namespace teleport
 						originValidCounter++;
 					}
 					// Otherwise just a "suggestion" update. ValidCounter is not altered. The client will use the vertical only.
-					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position,clientspaceRoot.transform.rotation))
+					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
 					{
 						last_sent_origin = clientspaceRoot.transform.position;
 						clientspaceRoot.transform.hasChanged = false;
@@ -377,6 +359,7 @@ namespace teleport
 					collisionRoot.transform.hasChanged = false;
 				}
 			}
+
 			if (teleportSettings.casterSettings.controlModel == SCServer.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
 			{
 				if (head != null && clientspaceRoot != null && (!Client_HasOrigin(clientID)) || resetOrigin||clientspaceRoot.transform.hasChanged)
@@ -395,17 +378,19 @@ namespace teleport
 		{
 			if(clientID == 0)
 			{
-				clientID = GetUnlinkedClientID();
-				if(clientID == 0)
+				uid id = GetUnlinkedClientID();
+				if(id == 0)
 				{
 					return;
 				}
 
-				if (sessions.ContainsKey(clientID))
+				if (sessions.ContainsKey(id))
 				{
 					Debug.LogError("Session duplicate key!");
 					return;
 				}
+
+				clientID = id;
 
 				sessions[clientID] = this;
 
