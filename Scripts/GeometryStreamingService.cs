@@ -160,7 +160,10 @@ namespace teleport
 					if (u.Value != null)
 					{
 						var streamable = u.Value.GetComponentInParent<Teleport_Streamable>();
-						StopStreamingGameObject(streamable.gameObject);
+						if (streamable != null)
+						{
+							StopStreamingGameObject(streamable.gameObject);
+						}
 					}
 					break;
 				}
