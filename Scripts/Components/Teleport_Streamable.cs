@@ -51,11 +51,6 @@ namespace teleport
 			CreateChildHierarchy();
 		}
 
-		private void End()
-		{
-			CreateChildHierarchy();
-		}
-
 		private void OnApplicationQuit()
 		{
 			//Remove GameObject from sessions.
