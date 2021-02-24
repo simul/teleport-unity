@@ -915,7 +915,7 @@ namespace teleport
 		private bool ExtractNodeSkinnedMeshData(GameObject source, ref avs.Node extractTo, bool forceUpdate)
 		{
 			SkinnedMeshRenderer skinnedMeshRenderer = source.GetComponent<SkinnedMeshRenderer>();
-			if(!skinnedMeshRenderer || !skinnedMeshRenderer.enabled)
+			if(!skinnedMeshRenderer || !skinnedMeshRenderer.enabled || !skinnedMeshRenderer.rootBone)
 			{
 				return false;
 			}
@@ -997,6 +997,8 @@ namespace teleport
 			skin.jointAmount = jointIDs.Count;
 
 			skin.rootTransform = avs.Transform.FromGlobalUnityTransform(skinnedMeshRenderer.rootBone.parent);
+
+		
 
 			StoreSkin(skinID, skin);
 			return skinID;

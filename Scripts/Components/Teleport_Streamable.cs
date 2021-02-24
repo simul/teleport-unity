@@ -51,7 +51,12 @@ namespace teleport
 			CreateChildHierarchy();
 		}
 
-		private void OnDestroy()
+		private void End()
+		{
+			CreateChildHierarchy();
+		}
+
+		private void OnApplicationQuit()
 		{
 			//Remove GameObject from sessions.
 			List<Teleport_SessionComponent> copiedSessions = new List<Teleport_SessionComponent>(sessions);

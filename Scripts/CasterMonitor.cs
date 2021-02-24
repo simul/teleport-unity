@@ -102,7 +102,7 @@ namespace teleport
 		private GUIStyle clientFont = new GUIStyle();
 
 		private string title = "Teleport";
-
+		
 		public static CasterMonitor GetCasterMonitor()
 		{
 			// We only want one instance, so delete duplicates.

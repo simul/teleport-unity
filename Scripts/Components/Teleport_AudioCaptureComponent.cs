@@ -18,10 +18,10 @@ namespace teleport
         static extern void SendAudio(uid clientID, IntPtr data, UInt64 dataSize);
         #endregion
 
+        TeleportSettings teleportSettings = null;
         public uid clientID = 0;
         bool running = false;
         int sampleRate = 0;
-        TeleportSettings teleportSettings = null;
 
         void Start()
         {
