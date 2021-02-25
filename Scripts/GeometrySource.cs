@@ -15,16 +15,16 @@ namespace avs
 {
 	public enum NodeDataType : byte
 	{
+		Invalid,
+		None,
 		Mesh,
-		Camera,
-		Scene,
-		ShadowMap,
 		Light,
 		Bone
 	};
 
 	public enum NodeDataSubtype : byte
 	{
+		Invalid,
 		None,
 		Body,
 		LeftHand,
@@ -579,6 +579,7 @@ namespace teleport
 			{
 				return nodeID;
 			}
+
 			if(nodeID == 0)
 			{
 				nodeID = GenerateID();
@@ -593,18 +594,18 @@ namespace teleport
 			ExtractNodeHierarchy(node, ref extractedNode, forceUpdate);
 			ExtractNodeSubType(node, ref extractedNode, forceUpdate);
 
-			bool hasExtractedData = false;
-			if(!hasExtractedData)
+			extractedNode.dataType = avs.NodeDataType.None;
+			if(extractedNode.dataType == avs.NodeDataType.None)
 			{
-				hasExtractedData = ExtractNodeMeshData(node, ref extractedNode, forceUpdate);
+				ExtractNodeMeshData(node, ref extractedNode, forceUpdate);
 			}
-			if (!hasExtractedData)
+			if (extractedNode.dataType == avs.NodeDataType.None)
 			{
-				hasExtractedData = ExtractNodeSkinnedMeshData(node, ref extractedNode, forceUpdate);
+				ExtractNodeSkinnedMeshData(node, ref extractedNode, forceUpdate);
 			}
-			if(!hasExtractedData)
+			if(extractedNode.dataType == avs.NodeDataType.None)
 			{
-				hasExtractedData = ExtractNodeLightData(node, ref extractedNode, forceUpdate);
+				ExtractNodeLightData(node, ref extractedNode, forceUpdate);
 			}
 
 			//Store extracted node.
@@ -902,7 +903,7 @@ namespace teleport
 			//Can't create a node with no data.
 			if(extractTo.dataID == 0)
 			{
-				Debug.LogError($"Failed to extract mesh data from GameObject: {source.name}");
+				Debug.LogError($"Failed to extract node mesh data! Failed extraction of mesh \"{(mesh ? mesh.name : "NULL")}\" from GameObject \"{source.name}\"!");
 				return false;
 			}
 			extractTo.dataType = avs.NodeDataType.Mesh;
