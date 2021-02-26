@@ -19,7 +19,7 @@ namespace teleport
 
 		private GeometrySource geometrySource = null;
 
-		private static bool ok = false;
+		private static bool initialised = false;
 		private static CasterMonitor instance; //There should only be one CasterMonitor instance at a time.
 
 		//StringBuilders used for constructing log messages from libavstream.
@@ -188,42 +188,46 @@ namespace teleport
 
 			//Add Teleport_Streamable component to all player body parts.
 			List<GameObject> playerBodyParts = GetPlayerBodyParts();
-			foreach(GameObject gameObject in playerBodyParts)
+			foreach(GameObject bodyPart in playerBodyParts)
 			{
-				if(gameObject.GetComponent<Teleport_Streamable>() == null)
+				Teleport_Streamable streamableComponent = bodyPart.GetComponent<Teleport_Streamable>();
+				if(!streamableComponent)
 				{
-					gameObject.AddComponent<Teleport_Streamable>();
+					streamableComponent = bodyPart.AddComponent<Teleport_Streamable>();
 				}
+
+				//We want the client to control the client-side transform of the body parts for reduced latency.
+				streamableComponent.sendMovementUpdates = false;
 			}
 		}
 
 		private void OnEnable()
 		{
-			ulong dllSize=SizeOf("CasterSettings");
-			ulong exeSize=(ulong)System.Runtime.InteropServices.Marshal.SizeOf(typeof(SCServer.CasterSettings));
-			if(exeSize!=dllSize)
+			ulong unmanagedSize = SizeOf("CasterSettings");
+			ulong managedSize = (ulong)Marshal.SizeOf(typeof(SCServer.CasterSettings));
+			if(managedSize != unmanagedSize)
 			{
-				Debug.LogError("Struct size mismatch in dll vs C#.");
+				Debug.LogError($"CasterMonitor failed to initialise! {nameof(SCServer.CasterSettings)} struct size mismatch between unmanaged code({unmanagedSize}) and managed code({managedSize})!");
 				return;
 			}
-			InitialiseState initialiseState = new InitialiseState();
-			initialiseState.showNode = ShowNode;
-			initialiseState.hideNode = HideNode;
-			initialiseState.headPoseSetter = Teleport_SessionComponent.StaticSetHeadPose;
-			initialiseState.setOriginFromCLientFn = Teleport_SessionComponent.StaticSetOriginFromClient;
-			initialiseState.controllerPoseSetter = Teleport_SessionComponent.StaticSetControllerPose;
-			initialiseState.newInputProcessing = Teleport_SessionComponent.StaticProcessInput;
-			initialiseState.disconnect = Teleport_SessionComponent.StaticDisconnect;
 
-			if(teleportSettings.casterSettings.pipeDllOutputToUnity)
-				initialiseState.messageHandler = LogMessageHandler;
-			else
-				initialiseState.messageHandler = (OnMessageHandler)null; 
-			initialiseState.SERVICE_PORT = teleportSettings.listenPort;
-			initialiseState.DISCOVERY_PORT = teleportSettings.discoveryPort;
-			initialiseState.reportHandshake = ReportHandshake;
-			initialiseState.audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput;
-			ok = Initialise(initialiseState);
+			InitialiseState initialiseState = new InitialiseState
+			{
+				showNode = ShowNode,
+				hideNode = HideNode,
+				headPoseSetter = Teleport_SessionComponent.StaticSetHeadPose,
+				setOriginFromCLientFn = Teleport_SessionComponent.StaticSetOriginFromClient,
+				controllerPoseSetter = Teleport_SessionComponent.StaticSetControllerPose,
+				newInputProcessing = Teleport_SessionComponent.StaticProcessInput,
+				disconnect = Teleport_SessionComponent.StaticDisconnect,
+				messageHandler = teleportSettings.casterSettings.pipeDllOutputToUnity ? LogMessageHandler : (OnMessageHandler)null,
+				SERVICE_PORT = teleportSettings.listenPort,
+				DISCOVERY_PORT = teleportSettings.discoveryPort,
+				reportHandshake = ReportHandshake,
+				audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput
+			};
+
+			initialised = Initialise(initialiseState);
 
 			// Sets connection timeouts for peers (milliseconds)
 			SetConnectionTimeout(teleportSettings.connectionTimeout);
@@ -279,7 +283,7 @@ namespace teleport
 
 		private void Update()
 		{
-			if(ok && Application.isPlaying)
+			if(initialised && Application.isPlaying)
 			{
 				Tick(Time.deltaTime);
 			}

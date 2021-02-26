@@ -51,14 +51,17 @@ namespace teleport
 		}
 		public static TeleportSettings GetOrCreateSettings()
 		{
-			if(teleportSettings==null)
-				teleportSettings=Resources.Load<TeleportSettings>(k_TeleportSettingsPath + "/" + k_TeleportSettingsFilename);
-#if UNITY_EDITOR
-			if (teleportSettings == null)
+			if(teleportSettings == null)
 			{
-				teleportSettings = ScriptableObject.CreateInstance<TeleportSettings>();
+				teleportSettings = Resources.Load<TeleportSettings>(k_TeleportSettingsPath + "/" + k_TeleportSettingsFilename);
+			}
+
+#if UNITY_EDITOR
+			if(teleportSettings == null)
+			{
+				teleportSettings = CreateInstance<TeleportSettings>();
 				EnsureAssetPath("Assets/Resources" + k_TeleportSettingsPath);
-				AssetDatabase.CreateAsset(teleportSettings, "Assets/Resources/" + k_TeleportSettingsPath + "/"+ k_TeleportSettingsFilename+".asset");
+				AssetDatabase.CreateAsset(teleportSettings, "Assets/Resources/" + k_TeleportSettingsPath + "/" + k_TeleportSettingsFilename + ".asset");
 				AssetDatabase.SaveAssets();
 			}
 #endif

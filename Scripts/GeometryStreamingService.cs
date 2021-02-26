@@ -39,20 +39,32 @@ namespace teleport
 		private static extern void Client_UpdateNodeMovement(uid clientID, avs.MovementUpdate[] updates, int updateAmount);
 		#endregion
 
-		private readonly Teleport_SessionComponent session;
-		private readonly TeleportSettings teleportSettings;
+		private readonly Teleport_SessionComponent session = null;
+		private readonly TeleportSettings teleportSettings = null;
 
 		private List<Collider> streamedColliders = new List<Collider>();
 		private List<GameObject> streamedGameObjects = new List<GameObject>();
+		private List<Teleport_Streamable> streamedHierarchies = new List<Teleport_Streamable>();
 		private List<GameObject> failedGameObjects = new List<GameObject>(); //Objects that have already failed to stream, and as such we won't attempt to stream again.
 		private Dictionary<uid,Light> streamedLights = new Dictionary<uid, Light>();
 
-		//Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
-		// Roderick's note: this does not appear to work. Instead, we get null pointers.
-		//private Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
-
-		private Dictionary<uid, avs.MovementUpdate> previousMovements = new Dictionary<uid, avs.MovementUpdate>();
 		private float timeSincePositionUpdate = 0;
+
+		static public bool IsClientRenderingParent(uid clientID, GameObject gameObject)
+		{
+			if(gameObject.transform.parent)
+			{
+				uid parentID = GeometrySource.GetGeometrySource().FindResourceID(gameObject.transform.parent.gameObject);
+				if(parentID == 0)
+				{
+					return false;
+				}
+
+				return Client_IsClientRenderingNodeID(clientID, parentID);
+			}
+
+			return false;
+		}
 
 		public GeometryStreamingService(Teleport_SessionComponent parentComponent)
 		{
@@ -68,9 +80,9 @@ namespace teleport
 
 			streamedColliders.Clear();
 			streamedGameObjects.Clear();
+			streamedHierarchies.Clear();
 			failedGameObjects.Clear();
 			streamedLights.Clear();
-			previousMovements.Clear();
 
 			if(session.HasClient())
 			{
@@ -277,6 +289,7 @@ namespace teleport
 				Debug.LogError($"Attempted to stream GameObject \"{gameObject.name}\", which has no Teleport_Streamable component!");
 				return false;
 			}
+			streamedHierarchies.Add(streamable);
 
 			uid gameObjectID = AddNode(gameObject);
 			if(gameObjectID != 0)
@@ -339,6 +352,7 @@ namespace teleport
 			if(streamable)
 			{
 				streamable.RemoveStreamingClient(session);
+				streamedHierarchies.Remove(streamable);
 			}
 			else
 			{
@@ -364,10 +378,10 @@ namespace teleport
 			//Remove GameObject's colliders from list.
 			Collider[] colliders = gameObject.GetComponents<Collider>();
 			foreach(Collider collider in colliders)
-				{
+			{
 				streamedColliders.Remove(collider);
-				}
 			}
+		}
 
 		private void DetectInvalidStreamables()
 		{
@@ -390,91 +404,13 @@ namespace teleport
 				return;
 			}
 
-			avs.MovementUpdate[] updates = new avs.MovementUpdate[streamedGameObjects.Count];
-			long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-
-			int i = 0;
-			foreach(GameObject node in streamedGameObjects)
+			List<avs.MovementUpdate> updates = new List<avs.MovementUpdate>();
+			foreach(Teleport_Streamable hierarchy in streamedHierarchies)
 			{
-				if(node == null)
-				{
-					Debug.LogWarning($"Attempted to update movement of \"{node.name}\", but it has an ID of 0!");
-					continue;
-				}
-
-				uid nodeID = geometrySource.FindResourceID(node);
-
-				if(nodeID == 0)
-				{
-					Debug.LogWarning($"Attempted to update movement of \"{node.name}\", but it has an ID of zero.");
-					continue;
-				}
-
-				updates[i].timestamp = timestamp;
-				updates[i].nodeID = nodeID;
-
-				if(IsClientRenderingParent(node))
-				{
-					updates[i].isGlobal = false;
-					updates[i].position = node.transform.localPosition;
-					updates[i].rotation = node.transform.localRotation;
-				}
-				else
-				{
-					updates[i].isGlobal = true;
-					updates[i].position = node.transform.position;
-					updates[i].rotation = node.transform.rotation;
-				}
-
-				if(previousMovements.TryGetValue(nodeID, out avs.MovementUpdate previousMovement))
-				{
-					Vector3 position;
-					Quaternion rotation;
-
-					//Velocity and angular velocity must be calculated in the same basis as the previous movement.
-					if(previousMovement.isGlobal)
-					{
-						position = node.transform.position;
-						rotation = node.transform.rotation;
-					}
-					else
-					{
-						position = node.transform.localPosition;
-						rotation = node.transform.localRotation;
-					}
-
-					//We cast to the unity engine types to take advantage of the existing vector subtraction operators.
-					//We multiply by the amount of move updates per second to get the movement per second, rather than per update.
-					updates[i].velocity = (position - previousMovement.position) * teleportSettings.moveUpdatesPerSecond;
-
-					(rotation * Quaternion.Inverse(previousMovement.rotation)).ToAngleAxis(out updates[i].angularVelocityAngle, out Vector3 angularVelocityAxis);
-					updates[i].angularVelocityAxis = angularVelocityAxis;
-					//Angle needs to be inverted, for some reason.
-					updates[i].angularVelocityAngle *= teleportSettings.moveUpdatesPerSecond * -Mathf.Deg2Rad;
-				}
-
-				previousMovements[nodeID] = updates[i];
-
-				++i;
+				updates.AddRange(hierarchy.GetMovementUpdates(session.GetClientID()));
 			}
 
-			Client_UpdateNodeMovement(session.GetClientID(), updates, updates.Length);
-		}
-
-		private bool IsClientRenderingParent(GameObject child)
-        {
-			if(child.transform.parent)
-			{
-				uid parentID = GeometrySource.GetGeometrySource().FindResourceID(child.transform.parent.gameObject);
-				if(parentID == 0)
-				{
-					return false;
-				}
-
-				return Client_IsClientRenderingNodeID(session.GetClientID(), parentID);
-			}
-
-			return false;
+			Client_UpdateNodeMovement(session.GetClientID(), updates.ToArray(), updates.Count);
 		}
 	}
 }

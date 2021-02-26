@@ -14,8 +14,8 @@ namespace SCServer
 		[Header("General")]
 		[MarshalAs(UnmanagedType.LPWStr)] public string sessionName = "Unity";
 		[MarshalAs(UnmanagedType.LPWStr)] public string clientIP = "127.0.0.1";
-		public Int32 detectionSphereRadius = 1000;
-		public Int32 detectionSphereBufferDistance = 200;
+		public Int32 detectionSphereRadius = 15;
+		public Int32 detectionSphereBufferDistance = 5;
 		public Int32 expectedLag = 0;
 		public Int64 throttleKpS = 0;
 
