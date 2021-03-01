@@ -180,13 +180,15 @@ namespace teleport
 		private uid clientID = 0;
 
 		public Teleport_Head head = null;
-		// The *client* root is the 
 		public Teleport_ClientspaceRoot clientspaceRoot = null;
 		public Teleport_CollisionRoot collisionRoot = null;
 		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
 		public AudioSource inputAudioSource = null;
 
 		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
+
+		private bool resetOrigin = true;
+		private UInt64 originValidCounter = 1;
 
 		private Vector3 last_sent_origin = new Vector3(0, 0, 0);
 		private Vector3 last_received_origin = new Vector3(0, 0, 0);
@@ -222,15 +224,16 @@ namespace teleport
 		{
 			axesStandard = handshake.axesStandard;
 		}
-		
-		public void SetOriginFromClient(UInt64 validCounter,Quaternion newRotation, Vector3 newPosition)
+
+		public void SetOriginFromClient(UInt64 validCounter, Quaternion newRotation, Vector3 newPosition)
 		{
-			if(clientspaceRoot!=null&&validCounter==originValidCounter)
+			if(clientspaceRoot != null && validCounter == originValidCounter)
 			{
-				clientspaceRoot.transform.SetPositionAndRotation(newPosition,newRotation);
-				last_received_origin=newPosition;
+				clientspaceRoot.transform.SetPositionAndRotation(newPosition, newRotation);
+				last_received_origin = newPosition;
 			}
 		}
+
 		public void SetHeadPose(Quaternion newRotation, Vector3 newPosition)
 		{
 			if (!head)
@@ -244,6 +247,7 @@ namespace teleport
 			head.transform.SetPositionAndRotation(newPosition,newRotation);
 			last_received_headPos=newPosition;
 		}
+
 		public void SetControllerInput(int index, UInt32 buttons,float jx,float jy)
 		{
 			if (controllers.ContainsKey(index))
@@ -253,6 +257,7 @@ namespace teleport
 				controller.SetJoystick(jx, jy);
 			}
 		}
+
 		public void SetControllerEvents(int index, UInt32 num, avs.InputEvent[] events)
 		{
 			if (controllers.ContainsKey(index))
@@ -261,7 +266,7 @@ namespace teleport
 				controller.AddEvents(num, events);
 			}
 		}
-
+		
 		public void SetControllerPose(int index, Quaternion newRotation, Vector3 newPosition)
 		{
 			if (!controllers.ContainsKey(index))
@@ -290,6 +295,7 @@ namespace teleport
 				sessions.Remove(clientID);
 			}
 		}
+
 		void GetSingleChild<T>(ref T t)
 		{
 			T[] ts = GetComponentsInChildren<T>();
@@ -302,6 +308,7 @@ namespace teleport
 				t= ts[0];
 			}
 		}
+
 		private void Start()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
@@ -320,52 +327,56 @@ namespace teleport
 
 			networkStats = new avs.NetworkStats();
 		}
-		bool resetOrigin = true;
+
 		public void ResetOrigin()
 		{
 			resetOrigin = true;
 		}
-		UInt64 originValidCounter=1;
+
 		void SendOriginUpdates()
 		{
-			if (teleportSettings.casterSettings.controlModel == SCServer.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
+			if(teleportSettings.casterSettings.controlModel == SCServer.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
 			{
-				if (head != null && clientspaceRoot != null && (!Client_HasOrigin(clientID)) || resetOrigin)//||transform.hasChanged))
+				if(head != null && clientspaceRoot != null)
 				{
-					originValidCounter++;
-					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
-					{
-						last_sent_origin = clientspaceRoot.transform.position;
-						clientspaceRoot.transform.hasChanged = false;
-						resetOrigin = false;
-					}
-				}
-				else if (clientspaceRoot.transform.hasChanged)
-				{
-					Vector3 diff = clientspaceRoot.transform.position - last_received_origin;
-					if (diff.magnitude > 5.0F)
+					if(!Client_HasOrigin(clientID) || resetOrigin)
 					{
 						originValidCounter++;
+						if(Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
+						{
+							last_sent_origin = clientspaceRoot.transform.position;
+							clientspaceRoot.transform.hasChanged = false;
+							resetOrigin = false;
+						}
 					}
-					// Otherwise just a "suggestion" update. ValidCounter is not altered. The client will use the vertical only.
-					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
+					else if(clientspaceRoot.transform.hasChanged)
 					{
-						last_sent_origin = clientspaceRoot.transform.position;
-						clientspaceRoot.transform.hasChanged = false;
+						Vector3 diff = clientspaceRoot.transform.position - last_received_origin;
+						if(diff.magnitude > 5.0F)
+						{
+							originValidCounter++;
+						}
+						// Otherwise just a "suggestion" update. ValidCounter is not altered. The client will use the vertical only.
+						if(Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
+						{
+							last_sent_origin = clientspaceRoot.transform.position;
+							clientspaceRoot.transform.hasChanged = false;
+						}
 					}
 				}
-				if (collisionRoot != null && collisionRoot.transform.hasChanged)
+
+				if(collisionRoot != null && collisionRoot.transform.hasChanged)
 				{
 					collisionRoot.transform.hasChanged = false;
 				}
 			}
 
-			if (teleportSettings.casterSettings.controlModel == SCServer.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
+			if(teleportSettings.casterSettings.controlModel == SCServer.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
 			{
-				if (head != null && clientspaceRoot != null && (!Client_HasOrigin(clientID)) || resetOrigin||clientspaceRoot.transform.hasChanged)
+				if(head != null && clientspaceRoot != null && (!Client_HasOrigin(clientID)) || resetOrigin || clientspaceRoot.transform.hasChanged)
 				{
 					originValidCounter++;
-					if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position,clientspaceRoot.transform.rotation))
+					if(Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
 					{
 						last_sent_origin = clientspaceRoot.transform.position;
 						clientspaceRoot.transform.hasChanged = false;
@@ -374,6 +385,7 @@ namespace teleport
 				}
 			}
 		}
+
 		private void LateUpdate()
 		{
 			if(clientID == 0)

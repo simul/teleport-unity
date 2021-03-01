@@ -999,8 +999,6 @@ namespace teleport
 
 			skin.rootTransform = avs.Transform.FromGlobalUnityTransform(skinnedMeshRenderer.rootBone.parent);
 
-		
-
 			StoreSkin(skinID, skin);
 			return skinID;
 		}
