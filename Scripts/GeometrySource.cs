@@ -566,7 +566,7 @@ namespace teleport
 			}
 		}
 
-		public uid AddNode(GameObject node, bool forceUpdate = false)
+		public uid AddNode(GameObject node, bool forceUpdate = false, bool addChildren = true)
 		{
 			if(!node)
 			{
@@ -591,7 +591,7 @@ namespace teleport
 			extractedNode.name = Marshal.StringToBSTR(node.name);
 			extractedNode.transform = avs.Transform.FromLocalUnityTransform(node.transform);
 
-			ExtractNodeHierarchy(node, ref extractedNode, forceUpdate);
+			ExtractNodeHierarchy(node, ref extractedNode, forceUpdate, addChildren);
 			ExtractNodeSubType(node, ref extractedNode, forceUpdate);
 
 			extractedNode.dataType = avs.NodeDataType.None;
@@ -830,18 +830,23 @@ namespace teleport
 #endif
 		}
 
-		private void ExtractNodeHierarchy(GameObject source, ref avs.Node extractTo, bool forceUpdate)
+		private void ExtractNodeHierarchy(GameObject source, ref avs.Node extractTo, bool forceUpdate, bool addChildren = true)
 		{
 			if(source.transform.parent)
 			{
-				extractTo.parentID = AddNode(source.transform.parent.gameObject, forceUpdate);
+				extractTo.parentID = AddNode(source.transform.parent.gameObject, forceUpdate, false);
 			}
 
+			if (!addChildren)
+			{
+				return;
+			}
+			
 			//Extract children of node, through transform hierarchy.
 			List<uid> childIDs = new List<uid>();
 			for(int i = 0; i < source.transform.childCount; i++)
 			{
-				uid childID = AddNode(source.transform.GetChild(i).gameObject);
+				uid childID = AddNode(source.transform.GetChild(i).gameObject, forceUpdate, true);
 
 				if(childID != 0)
 				{
