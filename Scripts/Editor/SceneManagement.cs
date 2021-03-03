@@ -11,23 +11,21 @@ namespace teleport
         public static void OpenResourceWindow()
         {
             var settings = TeleportSettings.GetOrCreateSettings();
-            string extension = ".unity";
-            string scene = settings.defaultScene;
-            if (scene.Length > 0 && !scene.EndsWith(extension))
-            {
-                scene += extension;
-            }
-            EditorSceneManager.OpenScene(scene);
 
-            scene = settings.additiveScene;
-               
+            OpenScene(settings.defaultScene);
+            OpenScene(settings.additiveScene, OpenSceneMode.Additive); 
+        }
+
+        private static void OpenScene(string scene, OpenSceneMode mode = OpenSceneMode.Single)
+        {
+            string extension = ".unity";
             if (scene.Length > 0)
             {
                 if (!scene.EndsWith(extension))
                 {
                     scene += extension;
                 }
-                EditorSceneManager.OpenScene(scene, OpenSceneMode.Additive);
+                EditorSceneManager.OpenScene(scene, mode);
             }
         }
     }
