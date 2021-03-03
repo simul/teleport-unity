@@ -343,11 +343,20 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreMaterial(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Material material);
 		[DllImport("SimulCasterServer")]
-		private static extern bool IsMaterialStored(uid id);
-		[DllImport("SimulCasterServer")]
 		private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture texture, string basisFileLocation);
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreShadowMap(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture shadowMap);
+
+		[DllImport("SimulCasterServer")]
+		private static extern bool IsNodeStored(uid id);
+		[DllImport("SimulCasterServer")]
+		private static extern bool IsSkinStored(uid id);
+		[DllImport("SimulCasterServer")]
+		private static extern bool IsMeshStored(uid id);
+		[DllImport("SimulCasterServer")]
+		private static extern bool IsMaterialStored(uid id);
+		[DllImport("SimulCasterServer")]
+		private static extern bool IsTextureStored(uid id);
 
 		[DllImport("SimulCasterServer")]
 		private static extern void RemoveNode(uid id);
@@ -385,13 +394,13 @@ namespace teleport
 
 		public static GeometrySource GetGeometrySource()
 		{
-			if (geometrySource == null)
+			if(geometrySource == null)
 			{
 				geometrySource = Resources.Load<GeometrySource>(k_GeometrySourcePath + "/" + k_GeometryFilename);
 			}
 
 #if UNITY_EDITOR
-			if (geometrySource == null)
+			if(geometrySource == null)
 			{
 				TeleportSettings.EnsureAssetPath("Assets/Resources/" + k_GeometrySourcePath);
 				string assetPath = "Assets/Resources/" + k_GeometrySourcePath + "/" + k_GeometryFilename + ".asset";
@@ -402,7 +411,7 @@ namespace teleport
 
 				ClearGeometryStore();
 				Debug.LogWarning("Created Geometry Source at: " + assetPath);
-			}	
+			}
 #endif
 
 			return geometrySource;
@@ -418,9 +427,9 @@ namespace teleport
 		public void OnAfterDeserialize()
 		{
 			//Don't run during boot.
-			if (isAwake)
+			if(isAwake)
 			{
-				for (int i = 0; i < processedResources_keys.Length; i++)
+				for(int i = 0; i < processedResources_keys.Length; i++)
 				{
 					processedResources[processedResources_keys[i]] = processedResources_values[i];
 					//Debug.Log("Restoring resource " + processedResources_values[i]);// ;
@@ -430,15 +439,12 @@ namespace teleport
 
 		public void Awake()
 		{
-			//We only want to load from disk when the project is loaded.
-			if (Application.isPlaying)
+			//We already have a GeometrySource, don't load from disk again and break the IDs.
+			if(geometrySource != null)
 			{
 				return;
 			}
 
-			//Clear resources on boot.
-			processedResources.Clear();
-			resourceMap.Clear();
 			LoadFromDisk();
 
 			isAwake = true;
@@ -446,11 +452,14 @@ namespace teleport
 
 		public void OnEnable()
 		{
+			//Initialise static instance in GeometrySource when it is enabled after a hot-reload.
+			GetGeometrySource();
+
 			compressedTexturesFolderPath = Application.persistentDataPath + "/Basis Universal/";
 
 			//Remove nodes that have been lost due to level change.
 			var pairsToDelete = processedResources.Where(pair => pair.Key == null).ToArray();
-			foreach (var pair in pairsToDelete)
+			foreach(var pair in pairsToDelete)
 			{
 				RemoveNode(pair.Value);
 				processedResources.Remove(pair.Key);
@@ -470,9 +479,9 @@ namespace teleport
 
 		public void LoadFromDisk()
 		{
-			// This is PRESUMABLY necessary, or we'll have a list of invalid uids...
 			processedResources.Clear();
 			resourceMap.Clear();
+
 			//Load data from files.
 			LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 materialAmount, out IntPtr loadedMaterials);
 
@@ -500,7 +509,7 @@ namespace teleport
 		//Returns the ID of the resource if it has been processed, or zero if the resource has not been processed or was passed in null.
 		public uid FindResourceID(UnityEngine.Object resource)
 		{
-			if (!resource)
+			if(!resource)
 			{
 				return 0;
 			}
@@ -555,35 +564,21 @@ namespace teleport
 			return streamedObjects;
 		}
 
-		//Adds all streamable objects to GeometrySource; updating any already extracted objects.
-		public void UpdateStreamableObjects()
-		{
-			List<GameObject> streamableObjects = GetStreamableObjects();
-			foreach(GameObject gameObject in streamableObjects)
-			{
-				//NOTE: This will also cause materials to be re-extracted.
-				AddNode(gameObject, true);
-			}
-		}
-
-		public uid AddNode(GameObject node, bool forceUpdate = false, bool addChildren = true)
+		public uid AddNode(GameObject node, bool forceUpdate = false)
 		{
 			if(!node)
 			{
-				Debug.LogError("Null GameObject passed to AddNode(...).");
+				Debug.LogError("Failed to extract node from GameObject! Passed GameObject was null!");
 				return 0;
 			}
 
-			processedResources.TryGetValue(node, out uid nodeID);
-			if(!forceUpdate && nodeID != 0)
+			//Just return the ID; if we have already processed the GameObject, the node can be found on the unmanaged side, and we are not forcing an update.
+			if(processedResources.TryGetValue(node, out uid nodeID) && IsNodeStored(nodeID) && !forceUpdate)
 			{
 				return nodeID;
 			}
 
-			if(nodeID == 0)
-			{
-				nodeID = GenerateID();
-			}
+			nodeID = nodeID == 0 ? GenerateID() : nodeID;
 			processedResources[node] = nodeID;
 			resourceMap[nodeID] = node;
 
@@ -591,7 +586,7 @@ namespace teleport
 			extractedNode.name = Marshal.StringToBSTR(node.name);
 			extractedNode.transform = avs.Transform.FromLocalUnityTransform(node.transform);
 
-			ExtractNodeHierarchy(node, ref extractedNode, forceUpdate, addChildren);
+			ExtractNodeHierarchy(node, ref extractedNode, forceUpdate);
 			ExtractNodeSubType(node, ref extractedNode, forceUpdate);
 
 			extractedNode.dataType = avs.NodeDataType.None;
@@ -599,7 +594,7 @@ namespace teleport
 			{
 				ExtractNodeMeshData(node, ref extractedNode, forceUpdate);
 			}
-			if (extractedNode.dataType == avs.NodeDataType.None)
+			if(extractedNode.dataType == avs.NodeDataType.None)
 			{
 				ExtractNodeSkinnedMeshData(node, ref extractedNode, forceUpdate);
 			}
@@ -617,24 +612,28 @@ namespace teleport
 		{
 			if(!mesh)
 			{
-				Debug.LogError("Passed null mesh to AddMesh(...) in GeometrySource!");
+				Debug.LogError("Mesh extraction failure! Null mesh passed to AddMesh(...) in GeometrySource!");
 				return 0;
 			}
 
+			//We can't extract an unreadable mesh.
 			if(!mesh.isReadable)
 			{
-				Debug.LogWarning($"Passed unreadable mesh \"{mesh.name}\" to AddMesh(...) in GeometrySource!");
+				Debug.LogWarning($"Failed to extract mesh \"{mesh.name}\"! Mesh is unreadable!");
 				return 0;
 			}
 
-			if(!processedResources.TryGetValue(mesh, out uid meshID))
+			//Just return the ID; if we have already processed the mesh and the mesh can be found on the unmanaged side.
+			if(processedResources.TryGetValue(mesh, out uid meshID) && IsMeshStored(meshID))
 			{
-				meshID = GenerateID();
-				processedResources[mesh] = meshID;
-
-				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID);
-				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID);
+				return meshID;
 			}
+
+			meshID = meshID == 0 ? GenerateID() : meshID;
+			processedResources[mesh] = meshID;
+
+			ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID);
+			ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID);
 
 			return meshID;
 		}
@@ -646,93 +645,81 @@ namespace teleport
 				return 0;
 			}
 
-			processedResources.TryGetValue(material, out uid materialID);
-			if(forceUpdate || materialID == 0)
+			//Just return the ID; if we have already processed the material, the material can be found on the unmanaged side, and we are not forcing an update.
+			if(processedResources.TryGetValue(material, out uid materialID) && IsMaterialStored(materialID) && !forceUpdate)
 			{
-				avs.Material extractedMaterial = new avs.Material();
-				extractedMaterial.name = Marshal.StringToBSTR(material.name);
+				return materialID;
+			}
 
-				extractedMaterial.pbrMetallicRoughness.baseColorTexture.index = AddTexture(material.mainTexture);
-				extractedMaterial.pbrMetallicRoughness.baseColorTexture.tiling = material.mainTextureScale;
-				extractedMaterial.pbrMetallicRoughness.baseColorFactor = material.color;
+			materialID = materialID == 0 ? GenerateID() : materialID;
+			processedResources[material] = materialID;
 
-				Texture metallicRoughness = material.GetTexture("_MetallicGlossMap");
-				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index = AddTexture(metallicRoughness);
-				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling = material.mainTextureScale;
+			avs.Material extractedMaterial = new avs.Material();
+			extractedMaterial.name = Marshal.StringToBSTR(material.name);
 
-				extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : (material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 0.0f); //Unity doesn't use the factor when the texture is set.
+			extractedMaterial.pbrMetallicRoughness.baseColorTexture.index = AddTexture(material.mainTexture);
+			extractedMaterial.pbrMetallicRoughness.baseColorTexture.tiling = material.mainTextureScale;
+			extractedMaterial.pbrMetallicRoughness.baseColorFactor = material.color;
 
-				float smoothness = metallicRoughness ? material.GetFloat("_GlossMapScale") : (material.HasProperty("_Glossiness") ? material.GetFloat("_Glossiness") : 0.0f);
-				extractedMaterial.pbrMetallicRoughness.roughnessFactor = 1 - smoothness;
-				extractedMaterial.pbrMetallicRoughness.roughnessMode = avs.RoughnessMode.MULTIPLY_REVERSE;
+			Texture metallicRoughness = material.GetTexture("_MetallicGlossMap");
+			extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index = AddTexture(metallicRoughness);
+			extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling = material.mainTextureScale;
 
-				Texture normal = material.GetTexture("_BumpMap");
-				extractedMaterial.normalTexture.index = AddTexture(normal);
-				extractedMaterial.normalTexture.tiling = material.mainTextureScale;
-				if(material.HasProperty("_BumpScale"))
-				{
-					extractedMaterial.normalTexture.strength = material.GetFloat("_BumpScale");
-				}
-				else
-				{
-					extractedMaterial.normalTexture.strength = 1.0F;
-				}
+			extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : (material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 0.0f); //Unity doesn't use the factor when the texture is set.
 
-				Texture occlusion = material.GetTexture("_OcclusionMap");
-				extractedMaterial.occlusionTexture.index = AddTexture(occlusion);
-				extractedMaterial.occlusionTexture.tiling = material.mainTextureScale;
-				if(material.HasProperty("_OcclusionStrength"))
-				{
-					extractedMaterial.occlusionTexture.strength = material.GetFloat("_OcclusionStrength");
-				}
-				else
-				{
-					extractedMaterial.occlusionTexture.strength = 1.0F;
-				}
+			float smoothness = metallicRoughness ? material.GetFloat("_GlossMapScale") : (material.HasProperty("_Glossiness") ? material.GetFloat("_Glossiness") : 0.0f);
+			extractedMaterial.pbrMetallicRoughness.roughnessFactor = 1 - smoothness;
+			extractedMaterial.pbrMetallicRoughness.roughnessMode = avs.RoughnessMode.MULTIPLY_REVERSE;
 
-				//Extract emission properties only if emission is active.
-				if(!material.globalIlluminationFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack))
-				{
-					Texture emission = material.GetTexture("_EmissionMap");
-					extractedMaterial.emissiveTexture.index = AddTexture(emission);
-					extractedMaterial.emissiveTexture.tiling = material.mainTextureScale;
-					if(material.HasProperty("_BumpScale"))
-					{
-						extractedMaterial.emissiveFactor = material.GetColor("_EmissionColor");
-					}
-					else
-					{
-						extractedMaterial.emissiveFactor = new avs.Vector3(0, 0, 0);
-					}
-
-				}
-
-				extractedMaterial.extensionAmount = 0;
-				extractedMaterial.extensionIDs = null;
-				extractedMaterial.extensions = null;
-
-#if UNITY_EDITOR
-				AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long _);
-
-				if(materialID == 0)
-				{
-					materialID = GenerateID();
-				}
-
-				processedResources[material] = materialID;
-				StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)), extractedMaterial);
-				//Debug.Log("Stored material " + materialID + ": " + material.name);
-#endif
+			Texture normal = material.GetTexture("_BumpMap");
+			extractedMaterial.normalTexture.index = AddTexture(normal);
+			extractedMaterial.normalTexture.tiling = material.mainTextureScale;
+			if(material.HasProperty("_BumpScale"))
+			{
+				extractedMaterial.normalTexture.strength = material.GetFloat("_BumpScale");
 			}
 			else
 			{
-				//Debug.Log("Already processed material " + materialID + ": " + material.name);
-				// But do we REALLY have it?
-				if(!IsMaterialStored(materialID))
-				{
-					Debug.LogError("But material " + materialID + " is not in the store!");
-				}
+				extractedMaterial.normalTexture.strength = 1.0F;
 			}
+
+			Texture occlusion = material.GetTexture("_OcclusionMap");
+			extractedMaterial.occlusionTexture.index = AddTexture(occlusion);
+			extractedMaterial.occlusionTexture.tiling = material.mainTextureScale;
+			if(material.HasProperty("_OcclusionStrength"))
+			{
+				extractedMaterial.occlusionTexture.strength = material.GetFloat("_OcclusionStrength");
+			}
+			else
+			{
+				extractedMaterial.occlusionTexture.strength = 1.0F;
+			}
+
+			//Extract emission properties only if emission is active.
+			if(!material.globalIlluminationFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack))
+			{
+				Texture emission = material.GetTexture("_EmissionMap");
+				extractedMaterial.emissiveTexture.index = AddTexture(emission);
+				extractedMaterial.emissiveTexture.tiling = material.mainTextureScale;
+				if(material.HasProperty("_BumpScale"))
+				{
+					extractedMaterial.emissiveFactor = material.GetColor("_EmissionColor");
+				}
+				else
+				{
+					extractedMaterial.emissiveFactor = new avs.Vector3(0, 0, 0);
+				}
+
+			}
+
+			extractedMaterial.extensionAmount = 0;
+			extractedMaterial.extensionIDs = null;
+			extractedMaterial.extensions = null;
+
+#if UNITY_EDITOR
+			AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long _);
+			StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)), extractedMaterial);
+#endif
 
 			return materialID;
 		}
@@ -786,16 +773,28 @@ namespace teleport
 		//	boneList : Array of bones; usually taken from skinned mesh renderer.
 		public uid AddBone(Transform bone, Transform[] boneList)
 		{
-			processedResources.TryGetValue(bone, out uid boneID);
-			if(boneID != 0 || !boneList.Contains(bone))
-				return boneID;
+			if(!boneList.Contains(bone))
+			{
+				return 0;
+			}
 
-			boneID = GenerateID();
+			//Just return the ID; if we have already processed the transform and the bone can be found on the unmanaged side.
+			if(processedResources.TryGetValue(bone, out uid boneID) && IsNodeStored(boneID))
+			{
+				return boneID;
+			}
+
+			//Add to processedResources first to prevent a stack overflow from recursion. 
+			boneID = boneID == 0 ? GenerateID() : boneID;
 			processedResources[bone] = boneID;
+
+			//Avoid stack overflow by finding parent ID first; we don't get the chance to store the node in unmanaged code before we link up the bone hierarchy.
+			uid parentID = FindResourceID(bone.parent);
+			parentID = parentID == 0 ? AddBone(bone.parent, boneList) : parentID;
 
 			avs.Node boneNode = new avs.Node();
 			boneNode.name = Marshal.StringToBSTR(bone.name);
-			boneNode.parentID = AddBone(bone.parent, boneList);
+			boneNode.parentID = parentID;
 			boneNode.transform = avs.Transform.FromLocalUnityTransform(bone);
 			boneNode.dataType = avs.NodeDataType.Bone;
 
@@ -830,23 +829,18 @@ namespace teleport
 #endif
 		}
 
-		private void ExtractNodeHierarchy(GameObject source, ref avs.Node extractTo, bool forceUpdate, bool addChildren = true)
+		private void ExtractNodeHierarchy(GameObject source, ref avs.Node extractTo, bool forceUpdate)
 		{
 			if(source.transform.parent)
 			{
-				extractTo.parentID = AddNode(source.transform.parent.gameObject, forceUpdate, false);
+				extractTo.parentID = FindResourceID(source.transform.parent.gameObject);
 			}
 
-			if (!addChildren)
-			{
-				return;
-			}
-			
 			//Extract children of node, through transform hierarchy.
 			List<uid> childIDs = new List<uid>();
 			for(int i = 0; i < source.transform.childCount; i++)
 			{
-				uid childID = AddNode(source.transform.GetChild(i).gameObject, forceUpdate, true);
+				uid childID = AddNode(source.transform.GetChild(i).gameObject, true);
 
 				if(childID != 0)
 				{
@@ -876,12 +870,12 @@ namespace teleport
 				if(materialID != 0)
 				{
 					materialIDs.Add(materialID);
-					
+
 					//Check GeometryStore to see if material actually exists, if it doesn't then there is a mismatch between the mananged code data and the unmanaged code data.
 					if(!IsMaterialStored(materialID))
 					{
 						Debug.LogError($"Missing material {material.name}({materialID}), which was added to \"{extractTo.name}\".");
-		}
+					}
 				}
 				else
 				{
@@ -986,7 +980,15 @@ namespace teleport
 
 		private uid AddSkin(SkinnedMeshRenderer skinnedMeshRenderer)
 		{
-			uid skinID = GenerateID();
+			//Just return the ID; if we have already processed the skin and the skin can be found on the unmanaged side.
+			if(processedResources.TryGetValue(skinnedMeshRenderer, out uid skinID) && IsSkinStored(skinID))
+			{
+				return skinID;
+			}
+
+			skinID = skinID == 0 ? GenerateID() : skinID;
+			processedResources[skinnedMeshRenderer] = skinID;
+
 			avs.Skin skin = new avs.Skin();
 			skin.name = Marshal.StringToBSTR(skinnedMeshRenderer.name);
 
@@ -1586,55 +1588,59 @@ namespace teleport
 				return 0;
 			}
 
-			if(!processedResources.TryGetValue(texture, out uid textureID))
+			//Just return the ID; if we have already processed the texture and the texture can be found on the unmanaged side.
+			if(processedResources.TryGetValue(texture, out uid textureID) && IsTextureStored(textureID))
 			{
-				if(Application.isPlaying)
-				{
-					Debug.LogWarning("Texture <b>" + texture.name + "</b> has not been extracted, but is being used on streamed geometry!");
-					return 0;
-				}
-
-				avs.Texture extractedTexture = new avs.Texture()
-				{
-					name = Marshal.StringToBSTR(texture.name),
-
-					width = (uint)texture.width,
-					height = (uint)texture.height,
-					mipCount = 1,
-
-					format = avs.TextureFormat.INVALID, //Assumed
-					compression = avs.TextureCompression.UNCOMPRESSED, //Assumed
-
-					samplerID = 0
-				};
-
-				switch(texture)
-				{
-					case Texture2D texture2D:
-						extractedTexture.depth = 1;
-						extractedTexture.arrayCount = 1;
-						extractedTexture.mipCount = (uint)texture2D.mipmapCount;
-						break;
-					case Texture2DArray texture2DArray:
-						extractedTexture.depth = 1;
-						extractedTexture.arrayCount = (uint)texture2DArray.depth;
-						extractedTexture.bytesPerPixel = GetBytesPerPixel(texture2DArray.format);
-						break;
-					case Texture3D texture3D:
-						extractedTexture.depth = (uint)texture3D.depth;
-						extractedTexture.arrayCount = 1;
-						extractedTexture.bytesPerPixel = GetBytesPerPixel(texture3D.format);
-						break;
-					default:
-						Debug.LogError("Passed texture was unsupported type: " + texture.GetType() + "!");
-						return 0;
-				}
-
-				textureID = GenerateID();
-				processedResources[texture] = textureID;
-				texturesWaitingForExtraction.Add(new TextureExtractionData { id = textureID, unityTexture = texture, textureData = extractedTexture });
+				return textureID;
 			}
 
+			//We can't extract textures in play-mode.
+			if(Application.isPlaying)
+			{
+				Debug.LogWarning("Texture <b>" + texture.name + "</b> has not been extracted, but is being used on streamed geometry!");
+				return 0;
+			}
+
+			textureID = textureID == 0 ? GenerateID() : textureID;
+			processedResources[texture] = textureID;
+
+			avs.Texture extractedTexture = new avs.Texture()
+			{
+				name = Marshal.StringToBSTR(texture.name),
+
+				width = (uint)texture.width,
+				height = (uint)texture.height,
+				mipCount = 1,
+
+				format = avs.TextureFormat.INVALID, //Assumed
+				compression = avs.TextureCompression.UNCOMPRESSED, //Assumed
+
+				samplerID = 0
+			};
+
+			switch(texture)
+			{
+				case Texture2D texture2D:
+					extractedTexture.depth = 1;
+					extractedTexture.arrayCount = 1;
+					extractedTexture.mipCount = (uint)texture2D.mipmapCount;
+					break;
+				case Texture2DArray texture2DArray:
+					extractedTexture.depth = 1;
+					extractedTexture.arrayCount = (uint)texture2DArray.depth;
+					extractedTexture.bytesPerPixel = GetBytesPerPixel(texture2DArray.format);
+					break;
+				case Texture3D texture3D:
+					extractedTexture.depth = (uint)texture3D.depth;
+					extractedTexture.arrayCount = 1;
+					extractedTexture.bytesPerPixel = GetBytesPerPixel(texture3D.format);
+					break;
+				default:
+					Debug.LogError("Passed texture was unsupported type: " + texture.GetType() + "!");
+					return 0;
+			}
+
+			texturesWaitingForExtraction.Add(new TextureExtractionData { id = textureID, unityTexture = texture, textureData = extractedTexture });
 			return textureID;
 		}
 

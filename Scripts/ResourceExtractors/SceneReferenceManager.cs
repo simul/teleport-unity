@@ -58,11 +58,13 @@ public class SceneReferenceManager : ScriptableObject, ISerializationCallbackRec
 		}
 
 		references.mesh = GetMesh(gameObject);
-		//
-		//Debug.Log("Game Object " + gameObject.name + " adds reference to mesh "+ references.mesh.name+" with path "+ gameObjectPath);
-		//Remove first, so we can overwrite current value with updated value.
-		gameObjectReferences.Remove(gameObjectPath);
-		gameObjectReferences.Add(gameObjectPath, references);
+		//Don't edit the lookup table when we are playing, as the data may be incorrect; i.e. statically-combined meshes will give you null.
+		if(Application.isPlaying)
+		{
+			return references;
+		}
+
+		gameObjectReferences[gameObjectPath] = references;
 		return references;
 	}
 
@@ -73,13 +75,9 @@ public class SceneReferenceManager : ScriptableObject, ISerializationCallbackRec
 		string gameObjectPath = GetGameObjectPath(gameObject);
 
 		//We want to re-extract the references if we are not in play-mode; i.e. we want to update to changes made in the editor.
-		if (!Application.isPlaying || !gameObjectReferences.TryGetValue(gameObjectPath, out ResourceReferences references))
+		if(!Application.isPlaying || !gameObjectReferences.TryGetValue(gameObjectPath, out ResourceReferences references))
 		{
 			references = AddGameObject(gameObject, gameObjectPath);
-		}
-		else
-		{
-			//	Debug.Log("Game Object " + gameObject.name + " has reference to mesh " + references.mesh.name + " with path " + gameObjectPath);
 		}
 
 		return references.mesh;
