@@ -429,6 +429,11 @@ namespace teleport
 			return clientID;
 		}
 
+		public avs.NetworkStats GetNetworkStats()
+		{
+			return networkStats;
+		}
+
 		public bool HasClient()
 		{
 			return clientID != 0;
@@ -446,9 +451,9 @@ namespace teleport
 			string str = string.Format("Client {0} {1}", clientID, Client_GetClientIPAddr(clientID));
 			int dy = 14;
 			GUI.Label(new Rect(x, y += dy, 300, 20), str, font);
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("avg bandwidth\t{0} mb/s", networkStats.avgRequiredBandwidth), font);
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("max bandwidth\t{0} mb/s", networkStats.maxRequiredBandwidth), font);
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("min bandwidth\t{0} mb/s", networkStats.minRequiredBandwidth), font);
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("available bandwidth\t{0:F3} mb/s", networkStats.bandwidth), font);
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("avg bandwidth used\t{0:F3} mb/s", networkStats.avgBandwidthUsed), font);
+			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("max bandwidth used\t{0:F3} mb/s", networkStats.maxBandwidthUsed), font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("origin pos\t{0}", StringOf(origPosition)), font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("sent origin\t{0}", StringOf(last_sent_origin)), font);
 			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("received origin\t{0}", StringOf(last_received_origin)), font);
