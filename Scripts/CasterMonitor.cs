@@ -14,11 +14,6 @@ namespace teleport
 		[SerializeField]
 		private GameObject body = default, leftHand = default, rightHand = default;
 
-		// Reference to the global (per-project) TeleportSettings asset.
-		private TeleportSettings teleportSettings = null;
-
-		private GeometrySource geometrySource = null;
-
 		private static bool initialised = false;
 		private static CasterMonitor instance; //There should only be one CasterMonitor instance at a time.
 
@@ -164,13 +159,6 @@ namespace teleport
 
 		private void Awake()
 		{
-			teleportSettings=TeleportSettings.GetOrCreateSettings();
-			//If the geometry source is not assigned; find an existing one, or create one.
-			if (geometrySource == null)
-			{
-				geometrySource = GeometrySource.GetGeometrySource();
-			}
-
 			overlayFont.normal.textColor = Color.yellow;
 			overlayFont.fontSize = 14;
 			clientFont.fontSize = 14;
@@ -182,9 +170,6 @@ namespace teleport
 				title += ": Current rendering pipeline is not TeleportRenderPipeline!";
 				Debug.LogError(title);
 			}
-
-			//Force streamable objects to be updated, if they were changed but extract was not pressed in the Resource Window.
-			geometrySource.UpdateStreamableObjects();
 
 			//Add Teleport_Streamable component to all player body parts.
 			List<GameObject> playerBodyParts = GetPlayerBodyParts();
@@ -211,6 +196,7 @@ namespace teleport
 				return;
 			}
 
+			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 			InitialiseState initialiseState = new InitialiseState
 			{
 				showNode = ShowNode,
@@ -264,7 +250,7 @@ namespace teleport
 			}
 
 			//Add the Teleport_Streamable component to all streamable objects.
-			List<GameObject> teleportStreamableObjects = geometrySource.GetStreamableObjects();
+			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects();
 			foreach(GameObject gameObject in teleportStreamableObjects)
 			{
 				//Objects with collision will have a Teleport_Streamable component added, as they can be streamed as root objects.
@@ -301,7 +287,7 @@ namespace teleport
 				int y = 0;
 				GUI.Label(new Rect(x, y, 100, 20), title, overlayFont);
 		
-				GUI.Label(new Rect(x,y+=14, 100, 20), string.Format("Discovering on port {0}", teleportSettings.discoveryPort), overlayFont);
+				GUI.Label(new Rect(x,y+=14, 100, 20), string.Format("Discovering on port {0}", TeleportSettings.GetOrCreateSettings().discoveryPort), overlayFont);
 				foreach(var s in Teleport_SessionComponent.sessions)
 				{
 					s.Value.ShowOverlay(x,y, clientFont);
@@ -313,7 +299,7 @@ namespace teleport
 		{
 			if(Application.isPlaying)
 			{
-				teleportSettings = TeleportSettings.GetOrCreateSettings();
+				TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 				UpdateCasterSettings(teleportSettings.casterSettings);
 			}
 		}

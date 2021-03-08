@@ -11,11 +11,6 @@ namespace teleport
 {
 	public class Teleport_SceneCaptureComponent : MonoBehaviour
 	{
-		#region DLLImports
-		[DllImport("SimulCasterServer")]
-		public static extern float GetBandwidthInKbps(uid clientID);
-		#endregion
-
 		public uid clientID = 0; // This needs to be set by a session component instance after start
 		public RenderTexture videoTexture = null;
 		public RenderTexture rendererTexture = null;
@@ -31,7 +26,7 @@ namespace teleport
 
 		TeleportSettings teleportSettings=null;
 
-		List<float> bandwidths = new List<float>();
+		List<double> bandwidths = new List<double>();
 		float settingsDuration = 0.0f;
 
 		public VideoEncoder VideoEncoder
@@ -109,7 +104,10 @@ namespace teleport
 
 			if (cam && videoTexture)
 			{
-				ManagePerformance();
+				if(clientID != 0)
+				{
+					ManagePerformance();
+				}
 				RenderToTexture();
 			}
 		}
@@ -166,10 +164,17 @@ namespace teleport
 
 			settingsDuration += Time.deltaTime * 1000;
 
-			bandwidths.Add(GetBandwidthInKbps(clientID) / 1000.0f);
+			var session = Teleport_SessionComponent.sessions[clientID];
+			if (!session)
+			{
+				return;
+			}
+			var stats = session.GetNetworkStats();
+			bandwidths.Add(stats.bandwidth);
+
 			if (settingsDuration >= teleportSettings.casterSettings.bandwidthCalculationInterval)
 			{
-				float bandwidth = GetMedianBandwidth();
+				double bandwidth = GetMedianBandwidth();
 				bandwidths.Clear();
 				settingsDuration = 0.0f;
 
@@ -229,7 +234,7 @@ namespace teleport
 			}		
 		}
 
-		void ChangeQuality(float bandwidth)
+		void ChangeQuality(double bandwidth)
 		{
 			var settings = teleportSettings.casterSettings;
 
@@ -243,7 +248,7 @@ namespace teleport
 			}
 		}
 
-		float GetMedianBandwidth()
+		double GetMedianBandwidth()
 		{
 			var size = bandwidths.Count;
 

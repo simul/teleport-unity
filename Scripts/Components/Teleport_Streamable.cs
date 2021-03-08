@@ -80,6 +80,7 @@ namespace teleport
 
 		private void OnEnable()
 		{
+			GeometrySource.GetGeometrySource().AddNode(gameObject, true);
 			CreateChildHierarchy();
 		}
 

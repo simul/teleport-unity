@@ -343,11 +343,20 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreMaterial(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Material material);
 		[DllImport("SimulCasterServer")]
-		private static extern bool IsMaterialStored(uid id);
-		[DllImport("SimulCasterServer")]
 		private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture texture, string basisFileLocation);
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreShadowMap(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture shadowMap);
+
+		[DllImport("SimulCasterServer")]
+		private static extern bool IsNodeStored(uid id);
+		[DllImport("SimulCasterServer")]
+		private static extern bool IsSkinStored(uid id);
+		[DllImport("SimulCasterServer")]
+		private static extern bool IsMeshStored(uid id);
+		[DllImport("SimulCasterServer")]
+		private static extern bool IsMaterialStored(uid id);
+		[DllImport("SimulCasterServer")]
+		private static extern bool IsTextureStored(uid id);
 
 		[DllImport("SimulCasterServer")]
 		private static extern void RemoveNode(uid id);
@@ -430,15 +439,12 @@ namespace teleport
 
 		public void Awake()
 		{
-			//We only want to load from disk when the project is loaded.
-			if (Application.isPlaying)
+			//We already have a GeometrySource, don't load from disk again and break the IDs.
+			if(geometrySource != null)
 			{
 				return;
 			}
 
-			//Clear resources on boot.
-			processedResources.Clear();
-			resourceMap.Clear();
 			LoadFromDisk();
 
 			isAwake = true;
@@ -446,6 +452,9 @@ namespace teleport
 
 		public void OnEnable()
 		{
+			//Initialise static instance in GeometrySource when it is enabled after a hot-reload.
+			GetGeometrySource();
+
 			compressedTexturesFolderPath = Application.persistentDataPath + "/Basis Universal/";
 
 			//Remove nodes that have been lost due to level change.
@@ -470,9 +479,9 @@ namespace teleport
 
 		public void LoadFromDisk()
 		{
-			// This is PRESUMABLY necessary, or we'll have a list of invalid uids...
 			processedResources.Clear();
 			resourceMap.Clear();
+
 			//Load data from files.
 			LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 materialAmount, out IntPtr loadedMaterials);
 
@@ -555,35 +564,21 @@ namespace teleport
 			return streamedObjects;
 		}
 
-		//Adds all streamable objects to GeometrySource; updating any already extracted objects.
-		public void UpdateStreamableObjects()
-		{
-			List<GameObject> streamableObjects = GetStreamableObjects();
-			foreach(GameObject gameObject in streamableObjects)
-			{
-				//NOTE: This will also cause materials to be re-extracted.
-				AddNode(gameObject, true);
-			}
-		}
-
 		public uid AddNode(GameObject node, bool forceUpdate = false)
 		{
 			if(!node)
 			{
-				Debug.LogError("Null GameObject passed to AddNode(...).");
+				Debug.LogError("Failed to extract node from GameObject! Passed GameObject was null!");
 				return 0;
 			}
 
-			processedResources.TryGetValue(node, out uid nodeID);
-			if(!forceUpdate && nodeID != 0)
+			//Just return the ID; if we have already processed the GameObject, the node can be found on the unmanaged side, and we are not forcing an update.
+			if(processedResources.TryGetValue(node, out uid nodeID) && IsNodeStored(nodeID) && !forceUpdate)
 			{
 				return nodeID;
 			}
 
-			if(nodeID == 0)
-			{
-				nodeID = GenerateID();
-			}
+			nodeID = nodeID == 0 ? GenerateID() : nodeID;
 			processedResources[node] = nodeID;
 			resourceMap[nodeID] = node;
 
@@ -617,24 +612,28 @@ namespace teleport
 		{
 			if(!mesh)
 			{
-				Debug.LogError("Passed null mesh to AddMesh(...) in GeometrySource!");
+				Debug.LogError("Mesh extraction failure! Null mesh passed to AddMesh(...) in GeometrySource!");
 				return 0;
 			}
 
+			//We can't extract an unreadable mesh.
 			if(!mesh.isReadable)
 			{
-				Debug.LogWarning($"Passed unreadable mesh \"{mesh.name}\" to AddMesh(...) in GeometrySource!");
+				Debug.LogWarning($"Failed to extract mesh \"{mesh.name}\"! Mesh is unreadable!");
 				return 0;
 			}
 
-			if(!processedResources.TryGetValue(mesh, out uid meshID))
+			//Just return the ID; if we have already processed the mesh and the mesh can be found on the unmanaged side.
+			if(processedResources.TryGetValue(mesh, out uid meshID) && IsMeshStored(meshID))
 			{
-				meshID = GenerateID();
+				return meshID;
+			}
+
+			meshID = meshID == 0 ? GenerateID() : meshID;
 				processedResources[mesh] = meshID;
 
 				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID);
 				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID);
-			}
 
 			return meshID;
 		}
@@ -646,9 +645,15 @@ namespace teleport
 				return 0;
 			}
 
-			processedResources.TryGetValue(material, out uid materialID);
-			if(forceUpdate || materialID == 0)
+			//Just return the ID; if we have already processed the material, the material can be found on the unmanaged side, and we are not forcing an update.
+			if(processedResources.TryGetValue(material, out uid materialID) && IsMaterialStored(materialID) && !forceUpdate)
 			{
+				return materialID;
+			}
+
+			materialID = materialID == 0 ? GenerateID() : materialID;
+			processedResources[material] = materialID;
+
 				avs.Material extractedMaterial = new avs.Material();
 				extractedMaterial.name = Marshal.StringToBSTR(material.name);
 
@@ -728,26 +733,8 @@ namespace teleport
 
 #if UNITY_EDITOR
 				AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long _);
-
-				if(materialID == 0)
-				{
-					materialID = GenerateID();
-				}
-
-				processedResources[material] = materialID;
 				StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)), extractedMaterial);
-				//Debug.Log("Stored material " + materialID + ": " + material.name);
 #endif
-			}
-			else
-			{
-				//Debug.Log("Already processed material " + materialID + ": " + material.name);
-				// But do we REALLY have it?
-				if(!IsMaterialStored(materialID))
-				{
-					Debug.LogError("But material " + materialID + " is not in the store!");
-				}
-			}
 
 			return materialID;
 		}
@@ -801,16 +788,28 @@ namespace teleport
 		//	boneList : Array of bones; usually taken from skinned mesh renderer.
 		public uid AddBone(Transform bone, Transform[] boneList)
 		{
-			processedResources.TryGetValue(bone, out uid boneID);
-			if(boneID != 0 || !boneList.Contains(bone))
-				return boneID;
+			if(!boneList.Contains(bone))
+			{
+				return 0;
+			}
 
-			boneID = GenerateID();
+			//Just return the ID; if we have already processed the transform and the bone can be found on the unmanaged side.
+			if(processedResources.TryGetValue(bone, out uid boneID) && IsNodeStored(boneID))
+			{
+				return boneID;
+			}
+
+			//Add to processedResources first to prevent a stack overflow from recursion. 
+			boneID = boneID == 0 ? GenerateID() : boneID;
 			processedResources[bone] = boneID;
+
+			//Avoid stack overflow by finding parent ID first; we don't get the chance to store the node in unmanaged code before we link up the bone hierarchy.
+			uid parentID = FindResourceID(bone.parent);
+			parentID = parentID == 0 ? AddBone(bone.parent, boneList) : parentID;
 
 			avs.Node boneNode = new avs.Node();
 			boneNode.name = Marshal.StringToBSTR(bone.name);
-			boneNode.parentID = AddBone(bone.parent, boneList);
+			boneNode.parentID = parentID;
 			boneNode.transform = avs.Transform.FromLocalUnityTransform(bone);
 			boneNode.dataType = avs.NodeDataType.Bone;
 
@@ -851,14 +850,14 @@ namespace teleport
 			{
 				// Roderick: let's not do this. If a parent is to be streamed, let's make that explicit.
 				// otherwise, we're proliferating huge numbers of streamables.
-				//extractTo.parentID = AddNode(source.transform.parent.gameObject, forceUpdate);
+				//extractTo.parentID = FindResourceID(source.transform.parent.gameObject);
 			}
 
 			//Extract children of node, through transform hierarchy.
 			List<uid> childIDs = new List<uid>();
 			for(int i = 0; i < source.transform.childCount; i++)
 			{
-				uid childID = AddNode(source.transform.GetChild(i).gameObject);
+				uid childID = AddNode(source.transform.GetChild(i).gameObject, true);
 
 				if(childID != 0)
 				{
@@ -998,7 +997,15 @@ namespace teleport
 
 		private uid AddSkin(SkinnedMeshRenderer skinnedMeshRenderer)
 		{
-			uid skinID = GenerateID();
+			//Just return the ID; if we have already processed the skin and the skin can be found on the unmanaged side.
+			if(processedResources.TryGetValue(skinnedMeshRenderer, out uid skinID) && IsSkinStored(skinID))
+			{
+				return skinID;
+			}
+
+			skinID = skinID == 0 ? GenerateID() : skinID;
+			processedResources[skinnedMeshRenderer] = skinID;
+
 			avs.Skin skin = new avs.Skin();
 			skin.name = Marshal.StringToBSTR(skinnedMeshRenderer.name);
 
@@ -1015,8 +1022,6 @@ namespace teleport
 			skin.jointAmount = jointIDs.Count;
 
 			skin.rootTransform = avs.Transform.FromGlobalUnityTransform(skinnedMeshRenderer.rootBone.parent);
-
-		
 
 			StoreSkin(skinID, skin);
 			return skinID;
@@ -1600,13 +1605,21 @@ namespace teleport
 				return 0;
 			}
 
-			if(!processedResources.TryGetValue(texture, out uid textureID))
+			//Just return the ID; if we have already processed the texture and the texture can be found on the unmanaged side.
+			if(processedResources.TryGetValue(texture, out uid textureID) && IsTextureStored(textureID))
 			{
+				return textureID;
+			}
+
+			//We can't extract textures in play-mode.
 				if(Application.isPlaying)
 				{
 					Debug.LogWarning("Texture <b>" + texture.name + "</b> has not been extracted, but is being used on streamed geometry!");
 					return 0;
 				}
+
+			textureID = textureID == 0 ? GenerateID() : textureID;
+			processedResources[texture] = textureID;
 
 				avs.Texture extractedTexture = new avs.Texture()
 				{
@@ -1644,11 +1657,7 @@ namespace teleport
 						return 0;
 				}
 
-				textureID = GenerateID();
-				processedResources[texture] = textureID;
 				texturesWaitingForExtraction.Add(new TextureExtractionData { id = textureID, unityTexture = texture, textureData = extractedTexture });
-			}
-
 			return textureID;
 		}
 

@@ -32,7 +32,8 @@ namespace teleport
 		public LayerMask LayersToStream;
 
 		[Header("Utility")]
-		public string defaultScene="";
+		public string defaultScene = "";
+		public string additiveScene = "";
 
 		public static void EnsureAssetPath(string requiredPath)
 		{

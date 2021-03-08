@@ -114,7 +114,7 @@ namespace teleport
 			}
 			else
 			{
-				Client_AddNode(session.GetClientID(), nodeID, avs.Transform.FromGlobalUnityTransform(node.transform));
+				Client_AddNode(session.GetClientID(), nodeID, avs.Transform.FromLocalUnityTransform(node.transform));
 			}
 
 			return nodeID;
