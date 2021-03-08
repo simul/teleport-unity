@@ -134,7 +134,7 @@ namespace teleport
 			var buffer = new CommandBuffer();
 			buffer.name = "Generate Specular Mips";
 			// Only do 3 mips.
-			for (int i = 0; i < SpecularCubeTexture.mipmapCount&&i<3; i++)
+			for (int i = 0; i < SpecularCubeTexture.mipmapCount; i++)
 			{
 				SpecularRoughnessMip(buffer, SourceCubeTexture, SpecularCubeTexture, face,i,mip_offset);
 			}
@@ -302,12 +302,11 @@ namespace teleport
 			var buffer = new CommandBuffer();
 			buffer.name = "EncodeLightingCubemaps";
 			// 3 mips each of specular and rough-specular texture.
-			Decompose(buffer, sceneCaptureComponent.SpecularCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.specularOffset, face,Math.Min(3,sceneCaptureComponent.SpecularCubeTexture.mipmapCount));
+			Decompose(buffer, sceneCaptureComponent.SpecularCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.specularOffset, face,Math.Min(6,sceneCaptureComponent.SpecularCubeTexture.mipmapCount));
 
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 			buffer = new CommandBuffer();
-			Decompose(buffer, sceneCaptureComponent.RoughSpecularCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.roughOffset, face, Math.Min(3, sceneCaptureComponent.RoughSpecularCubeTexture.mipmapCount));
 			Decompose(buffer, sceneCaptureComponent.DiffuseCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.diffuseOffset, face,1);
 			//Decompose(context, sceneCaptureComponent.LightingCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.lightOffset, face);
 
@@ -768,13 +767,15 @@ namespace teleport
 				return;
 			var oldPos = camera.transform.position;
 			var oldRot = camera.transform.rotation;
-			camera.transform.position = Teleport_SessionComponent.sessions[ClientID].head.transform.position;
+			var session= Teleport_SessionComponent.sessions[ClientID];
+			camera.transform.position = session.head.transform.position;
 			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
 			if (ClientID != 0)
 				UpdateStreamables(context, ClientID, camera);
 
 			CullingResults cullingResultsAll;
-		
+			float nearClip=camera.nearClipPlane;
+			camera.nearClipPlane= teleportSettings.casterSettings.detectionSphereRadius*0.5F;
 			if (Cull(context, camera, out cullingResultsAll, true))
 			{
 				TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
@@ -802,6 +803,7 @@ namespace teleport
 					videoEncoder.CreateEncodeCommands(context, camera, tagDataID);
 				}
 			}
+			camera.nearClipPlane= nearClip;
 			camera.transform.position = oldPos;
 			camera.transform.rotation = oldRot;
 		}
@@ -859,7 +861,7 @@ namespace teleport
 			view.m23 *= -1f;
 			faceViewMatrices[face] = view;
 			int layerMask = 0x7FFFFFFF;
-			uint renderingMask =  (uint)((1 << 25)|0x7);	// canvasrenderers hard coded to have mask 0x7..!
+			uint renderingMask = 0x7FFFFFFF;//(uint)((1 << 25)|0x7);	// canvasrenderers hard coded to have mask 0x7..!
 			camera.worldToCameraMatrix = view;
 			string samplename = camera.gameObject.name + " Face " + face;
 			StartSample(context, samplename);
@@ -874,8 +876,8 @@ namespace teleport
 				DrawTransparentGeometry(context, camera, layerMask, renderingMask);
 				videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture,face);
 				videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face,0);
-				videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.RoughSpecularCubeTexture, face, 3);
-				videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.RoughSpecularCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face);
+				//videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.RoughSpecularCubeTexture, face, 3);
+				videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face);
 				videoEncoding.EncodeColor(context, camera, face);
 				videoEncoding.EncodeDepth(context, camera, depthViewport, face);
 				videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, new Vector2Int(3*(int)depthViewport.width,2* (int)faceSize), face);

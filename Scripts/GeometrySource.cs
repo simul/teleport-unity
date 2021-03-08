@@ -156,8 +156,8 @@ namespace avs
 	public enum RoughnessMode : byte
 	{
 		CONSTANT = 0,
-		MULTIPLY,
-		MULTIPLY_REVERSE
+		MULTIPLY_SMOOTHNESS,
+		MULTIPLY_ROUGHNESS
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -178,8 +178,8 @@ namespace avs
 
 		public TextureAccessor metallicRoughnessTexture = new TextureAccessor();
 		public float metallicFactor = 1.0f;
-		public float roughnessFactor = 1.0f;
-		public RoughnessMode roughnessMode = RoughnessMode.MULTIPLY_REVERSE;
+		public float roughOrSmoothMultiplier=-1.0f;
+		public float roughOffset = 1.0f;
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -654,20 +654,31 @@ namespace teleport
 
 				extractedMaterial.pbrMetallicRoughness.baseColorTexture.index = AddTexture(material.mainTexture);
 				extractedMaterial.pbrMetallicRoughness.baseColorTexture.tiling = material.mainTextureScale;
+				if (material.HasProperty("_Color"))
 				extractedMaterial.pbrMetallicRoughness.baseColorFactor = material.color;
+				else
+					extractedMaterial.pbrMetallicRoughness.baseColorFactor =new Color(1.0F,1.0F,1.0F,1.0F);
 
-				Texture metallicRoughness = material.GetTexture("_MetallicGlossMap");
+				Texture metallicRoughness=null;
+				if (material.HasProperty("_MetallicGlossMap"))
+					metallicRoughness = material.GetTexture("_MetallicGlossMap");
+				float glossMapScale=1.0f;
+				if (material.HasProperty("_GlossMapScale"))
+					glossMapScale =material.GetFloat("_GlossMapScale");
 				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index = AddTexture(metallicRoughness);
 				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling = material.mainTextureScale;
 
-				extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : (material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 0.0f); //Unity doesn't use the factor when the texture is set.
+				extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : (material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 1.0f); //Unity doesn't use the factor when the texture is set.
 
-				float smoothness = metallicRoughness ? material.GetFloat("_GlossMapScale") : (material.HasProperty("_Glossiness") ? material.GetFloat("_Glossiness") : 0.0f);
-				extractedMaterial.pbrMetallicRoughness.roughnessFactor = 1 - smoothness;
-				extractedMaterial.pbrMetallicRoughness.roughnessMode = avs.RoughnessMode.MULTIPLY_REVERSE;
-
-				Texture normal = material.GetTexture("_BumpMap");
+				float smoothness = metallicRoughness ? glossMapScale : (material.HasProperty("_Glossiness") ? material.GetFloat("_Glossiness") : 1.0f);
+				extractedMaterial.pbrMetallicRoughness.roughOrSmoothMultiplier = -smoothness;
+				extractedMaterial.pbrMetallicRoughness.roughOffset = 1.0F;
+				Texture normal=null;
+				if (material.HasProperty("_BumpMap"))
+				{
+					normal = material.GetTexture("_BumpMap");
 				extractedMaterial.normalTexture.index = AddTexture(normal);
+				}
 				extractedMaterial.normalTexture.tiling = material.mainTextureScale;
 				if(material.HasProperty("_BumpScale"))
 				{
@@ -678,8 +689,12 @@ namespace teleport
 					extractedMaterial.normalTexture.strength = 1.0F;
 				}
 
-				Texture occlusion = material.GetTexture("_OcclusionMap");
+				Texture occlusion = null;
+				if (material.HasProperty("_OcclusionMap"))
+				{
+					occlusion = material.GetTexture("_OcclusionMap");
 				extractedMaterial.occlusionTexture.index = AddTexture(occlusion);
+				}
 				extractedMaterial.occlusionTexture.tiling = material.mainTextureScale;
 				if(material.HasProperty("_OcclusionStrength"))
 				{
@@ -834,7 +849,9 @@ namespace teleport
 		{
 			if(source.transform.parent)
 			{
-				extractTo.parentID = AddNode(source.transform.parent.gameObject, forceUpdate);
+				// Roderick: let's not do this. If a parent is to be streamed, let's make that explicit.
+				// otherwise, we're proliferating huge numbers of streamables.
+				//extractTo.parentID = AddNode(source.transform.parent.gameObject, forceUpdate);
 			}
 
 			//Extract children of node, through transform hierarchy.

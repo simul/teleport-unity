@@ -74,6 +74,8 @@ namespace teleport
 		}
 		public string ClientName = "Client1";
 		public int Layer = 6;
+		[SerializeField]
+		avs.AxesStandard _axesStandard = avs.AxesStandard.NotInitialised;
 
 		// Aidan: This is temporary for the capture component
 		public static uid GetLastClientID()
@@ -217,10 +219,16 @@ namespace teleport
 			inputAudioSource.Play();
 		}
 
-		public avs.AxesStandard axesStandard = new avs.AxesStandard();
+		public avs.AxesStandard axesStandard
+		{
+			get
+			{
+				return _axesStandard;
+			}
+		}
 		public void ReportHandshake(avs.Handshake handshake)
 		{
-			axesStandard = handshake.axesStandard;
+			_axesStandard = handshake.axesStandard;
 		}
 		
 		public void SetOriginFromClient(UInt64 validCounter,Quaternion newRotation, Vector3 newPosition)

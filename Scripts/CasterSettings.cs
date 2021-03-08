@@ -78,7 +78,7 @@ namespace SCServer
 
 		[Header("Lighting")]
 		public Int32 specularCubemapSize = 64;
-		public Int32 roughCubemapSize = 64;
+		public Int32 specularMips =7;
 		public Int32 diffuseCubemapSize = 64;
 		public Int32 lightCubemapSize = 64;
 

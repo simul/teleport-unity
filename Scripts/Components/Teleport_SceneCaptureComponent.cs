@@ -26,7 +26,6 @@ namespace teleport
 		public Camera cam = null;
 		public Vector2Int specularOffset;
 		public Vector2Int diffuseOffset;
-		public Vector2Int roughOffset;
 		public Vector2Int lightOffset;
 		public WebCamTexture webcamTexture = null;
 
@@ -60,7 +59,6 @@ namespace teleport
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
 			specularOffset = new Vector2Int(0, 0);
 			diffuseOffset = specularOffset + new Vector2Int(0, teleportSettings.casterSettings.specularCubemapSize * 2);
-			roughOffset = new Vector2Int((3 * teleportSettings.casterSettings.specularCubemapSize*7)/4, 0);
 			lightOffset = diffuseOffset + new Vector2Int(teleportSettings.casterSettings.specularCubemapSize * 3 / 2, teleportSettings.casterSettings.specularCubemapSize * 2);
 			Initialize();
 		}

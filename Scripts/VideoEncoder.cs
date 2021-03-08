@@ -239,14 +239,19 @@ namespace teleport
 				{
 					if(lightData.lightType == avs.LightType.Directional)
 						lightData.position = perFramePerCameraLightProperties.cascades[0].viewMatrix.inverse.GetPosition();
+					var viewMatrix= perFramePerCameraLightProperties.cascades[0].viewMatrix;
+					//DataTypes.ConvertViewMatrrix(session.axesStandard, ref viewMatrix);
 					lightData.worldToShadowMatrix = ShadowUtils.GetShadowTransformForRender(
 																			perFramePerCameraLightProperties.cascades[0].projectionMatrix
-																			,perFramePerCameraLightProperties.cascades[0].viewMatrix);
+																			, viewMatrix);
 				}
 				else
 				{
 					if (perFrameLightProperties != null)
+					{
 						lightData.worldToShadowMatrix = perFrameLightProperties.worldToLightMatrix;
+						//DataTypes.ConvertViewMatrrix(session.axesStandard, ref lightData.worldToShadowMatrix);
+					}
 				}
 				// Unity lights shine in the z direction...
 				// viewMatrix no good because Unity has view matrices that are not rotational!
@@ -268,6 +273,8 @@ namespace teleport
 					lightData.textureSize = perFrameLightProperties.sizeOnTexture;
 				}
 				lightData.worldTransform = light.transform.localToWorldMatrix;
+				// doesn't matter, we don't use it.
+				//ConvertTransform(avs.AxesStandard.UnityStyle, session.axesStandard, ref lightData.worldTransform);
 				lightData.uid = uid;
 				ConvertPosition(avs.AxesStandard.UnityStyle, session.axesStandard, ref lightData.position);
 				ConvertRotation(avs.AxesStandard.UnityStyle, session.axesStandard, ref lightData.orientation);

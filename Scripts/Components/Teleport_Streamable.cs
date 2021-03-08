@@ -10,6 +10,8 @@ namespace teleport
 	[DisallowMultipleComponent]
 	public class Teleport_Streamable : MonoBehaviour
 	{
+		// Track the reasons why we're streaming this. A set of bit flags, when it goes to zero you can stop streaming it.
+		public UInt32 streaming_reason=0;
 		//The child objects that have no collision, so are streamed automatically with the GameObject the component is attached to.
 		public List<GameObject> childHierarchy = new List<GameObject>();
 

@@ -85,6 +85,52 @@ namespace avs
 				m.SetColumn(2, y);// { position.x, position.z, position.y };
 			}
 		}
+		// A view matrix converts from xyz in world/object space into xy,z in view space, where z is depth. So even in different object space systems,
+		// the final frame is the same.
+		public static void ConvertViewMatrrix(AxesStandard toStandard, ref Matrix4x4 m)
+		{
+			var y = m.GetColumn(1);
+			var z = m.GetColumn(2);
+			// The source has y and z messed about in the input, but converts to a correct xy position with z=depth.
+			// So we swap and flip columns to get to the correct matrix.
+			if (toStandard == AxesStandard.GlStyle)
+			{
+				m.SetColumn(2, -z);// { position.x, position.y, -position.z };
+			}
+			if (toStandard == AxesStandard.EngineeringStyle)
+			{
+				m.SetColumn(1, z);
+				m.SetColumn(2, y);// { position.x, position.z, position.y };
+			}
+		}
+		
+		public static void ConvertTransformMatrix(AxesStandard toStandard, ref Matrix4x4 m)
+		{
+			var y = m.GetColumn(1);
+			var z = m.GetColumn(2);
+			// The source has y and z messed about in the input, but converts to a correct xy position with z=depth.
+			// So we swap and flip columns to get to the correct matrix.
+			if (toStandard == AxesStandard.GlStyle)
+			{
+				m.SetColumn(2, -z);// { position.x, position.y, -position.z };
+			}
+			if (toStandard == AxesStandard.EngineeringStyle)
+			{
+				m.SetColumn(1, z);
+				m.SetColumn(2, y);// { position.x, position.z, position.y };
+			}
+			var ry = m.GetRow(1);
+			var rz = m.GetRow(2);
+			if (toStandard == AxesStandard.GlStyle)
+			{
+				m.SetRow(2, -rz);
+			}
+			if (toStandard == AxesStandard.EngineeringStyle)
+			{
+				m.SetRow(1, rz);
+				m.SetRow(2, ry);
+			}
+		}
 		private static float copysign(float sizeval, float signval)
 		{
 			return Mathf.Sign(signval) == 1 ? Mathf.Abs(sizeval) : -Mathf.Abs(sizeval);

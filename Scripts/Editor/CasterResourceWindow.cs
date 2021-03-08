@@ -146,8 +146,45 @@ namespace teleport
 			{
 				geometrySource.LoadFromDisk();
 			}
-		}
+			EditorGUILayout.LabelField("Scene: ");
 
+			string[] options = new string[SceneManager.sceneCount];
+			for (int n = 0; n < SceneManager.sceneCount; ++n)
+			{
+				options[n]= SceneManager.GetSceneAt(n).name;
+			}
+			/*
+			sceneIndex = EditorGUILayout.Popup(sceneIndex, options);
+			Scene scene = SceneManager.GetActiveScene();
+			if(sceneIndex<SceneManager.sceneCount)
+				scene= SceneManager.GetSceneAt(sceneIndex);*/
+			if(teleportSettings.TagToStream.Length>0)
+			{ 
+				GameObject[] gameObjectsTagged = GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream);
+				EditorGUILayout.LabelField(gameObjectsTagged.Length+" with tag ");
+				if (GUILayout.Button("Clear Tag "+ teleportSettings.TagToStream+" from all"))
+				{
+					foreach(var gameObject in gameObjectsTagged)
+					{
+						gameObject.tag="Untagged";
+					}
+				}
+				if (GUILayout.Button("Apply Tag " + teleportSettings.TagToStream + " to selected"))
+				{
+					foreach(var gameObject in UnityEditor.Selection.gameObjects)
+					{
+						var collider=gameObject.GetComponent<Collider>();
+						var mesh=gameObject.GetComponentsInChildren<MeshFilter>();
+						if(collider!=null&&mesh.Length>0&&gameObject.tag=="Untagged")
+						{
+							gameObject.tag= teleportSettings.TagToStream;
+						}
+					}
+				}
+				EditorGUILayout.LabelField("Applies the tag to objects with collision.");
+			}
+		}
+		int sceneIndex=0;
 		private void FindSceneStreamables()
 		{
 			streamedSceneObjects = geometrySource.GetStreamableObjects();
@@ -230,7 +267,17 @@ namespace teleport
 				TextureImporter textureImporter = (TextureImporter)AssetImporter.GetAtPath(path);
 				TextureImporterType textureType = textureImporter ? textureImporter.textureType : TextureImporterType.Default;
 
-				int kernelHandle = textureShader.FindKernel((textureType == UnityEditor.TextureImporterType.NormalMap ? "ExtractNormalMap" : "ExtractTexture") + (UnityEditor.PlayerSettings.colorSpace == ColorSpace.Gamma ? "Gamma" : "Linear"));
+				string shaderName="";
+				if(textureType == UnityEditor.TextureImporterType.NormalMap)
+					shaderName= "ExtractNormalMap";
+				else
+					shaderName = "ExtractTexture";
+				if(UnityEditor.PlayerSettings.colorSpace == ColorSpace.Gamma)
+					shaderName+="Gamma";
+				else
+					shaderName+="Linear";
+
+				int kernelHandle = textureShader.FindKernel(shaderName);
 
 				textureShader.SetTexture(kernelHandle, "Source", sourceTexture);
 				textureShader.SetTexture(kernelHandle, "Result", renderTextures[i]);
