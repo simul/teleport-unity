@@ -91,12 +91,8 @@ namespace teleport
 			{
 				if(session.GeometryStreamingService != null)
 				{
-					session.GeometryStreamingService.StopStreamingGameObject(gameObject);
-
-					foreach(GameObject child in childHierarchy)
-					{
-						session.GeometryStreamingService.StopStreamingGameObject(child);
-					}
+					// stop streaming no matter what the reason.
+					session.GeometryStreamingService.StopStreaming(this,0xFFFFFFFF);
 				}
 			}
 		}

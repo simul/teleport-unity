@@ -87,7 +87,7 @@ namespace avs
 		}
 		// A view matrix converts from xyz in world/object space into xy,z in view space, where z is depth. So even in different object space systems,
 		// the final frame is the same.
-		public static void ConvertViewMatrrix(AxesStandard toStandard, ref Matrix4x4 m)
+		public static void ConvertViewMatrix(AxesStandard toStandard, ref Matrix4x4 m)
 		{
 			var y = m.GetColumn(1);
 			var z = m.GetColumn(2);

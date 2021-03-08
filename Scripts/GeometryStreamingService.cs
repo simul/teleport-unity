@@ -45,7 +45,8 @@ namespace teleport
 		private List<Collider> streamedColliders = new List<Collider>();
 		private List<GameObject> streamedGameObjects = new List<GameObject>();
 		private List<Teleport_Streamable> streamedHierarchies = new List<Teleport_Streamable>();
-		private List<GameObject> failedGameObjects = new List<GameObject>(); //Objects that have already failed to stream, and as such we won't attempt to stream again.
+		//Objects that have already failed to stream, and as such we won't attempt to stream again.
+		private List<GameObject> failedGameObjects = new List<GameObject>();
 		private Dictionary<uid,Light> streamedLights = new Dictionary<uid, Light>();
 
 		private float timeSincePositionUpdate = 0;
@@ -152,7 +153,7 @@ namespace teleport
 				}
 				if (!streamedGameObjects.Contains(streamable.gameObject))
 				{
-					StartStreamingGameObject(streamable.gameObject);
+					StartStreaming(streamable,4);
 				}
 				var uid = streamable.GetUid();
 				if (uid == 0)
@@ -174,7 +175,7 @@ namespace teleport
 						var streamable = u.Value.GetComponentInParent<Teleport_Streamable>();
 						if (streamable != null)
 						{
-							StopStreamingGameObject(streamable.gameObject);
+							StopStreaming(streamable,4);
 						}
 					}
 					break;
@@ -225,7 +226,8 @@ namespace teleport
 			List<GameObject> bodyParts = monitor.GetPlayerBodyParts();
 			foreach(GameObject part in bodyParts)
 			{
-				StartStreamingGameObject(part);
+				Teleport_Streamable streamable = part.GetComponent<Teleport_Streamable>();
+				StartStreaming(streamable,2);
 			}
 		}
 
@@ -245,13 +247,15 @@ namespace teleport
 					//Skip game objects without the streaming tag.
 					if (teleportSettings.TagToStream.Length == 0 || collider.CompareTag(teleportSettings.TagToStream))
 					{
-						StartStreamingGameObject(collider.gameObject);
+						Teleport_Streamable streamable = collider.gameObject.GetComponent<Teleport_Streamable>();
+						StartStreaming(streamable, 1);
 					}
 				}
 
 				foreach(Collider collider in lostColliders)
 				{
-					StopStreamingGameObject(collider.gameObject);
+					Teleport_Streamable streamable = collider.gameObject.GetComponent<Teleport_Streamable>();
+					StopStreaming(streamable, 1);
 				}
 			}
 			else
@@ -269,9 +273,10 @@ namespace teleport
 				SendPositionUpdates();
 			}
 		}
-
-		private bool StartStreamingGameObject(GameObject gameObject)
+		// Start streaming the given streamable gameObject and its hierarchy.
+		private bool StartStreaming(Teleport_Streamable streamable, UInt32 streaming_reason)
 		{
+			GameObject gameObject= streamable.gameObject;
 			if (failedGameObjects.Contains(gameObject))
 			{
 				return false;
@@ -279,16 +284,17 @@ namespace teleport
 
 			if (streamedGameObjects.Contains(gameObject))
 			{
-				Debug.LogError($"StartStreamingGameObject called on {gameObject.name}, which is already streamed.");
-				return false;
+				if((streamable.streaming_reason & streaming_reason) != 0)
+				{ 
+					Debug.LogError($"StartStreaming called on {gameObject.name} for reason {streaming_reason}, but this was already known.");
 			}
-
-			Teleport_Streamable streamable = gameObject.GetComponent<Teleport_Streamable>();
-			if (streamable == null)
+				else
 			{
-				Debug.LogError($"Attempted to stream GameObject \"{gameObject.name}\", which has no Teleport_Streamable component!");
+					streamable.streaming_reason |= streaming_reason;
+				}
 				return false;
 			}
+			streamable.streaming_reason |= streaming_reason;
 			streamedHierarchies.Add(streamable);
 
 			uid gameObjectID = AddNode(gameObject);
@@ -339,8 +345,12 @@ namespace teleport
 			return true;
 		}
 
-		public void StopStreamingGameObject(GameObject gameObject)
+		public bool StopStreaming(Teleport_Streamable streamable, UInt32 streaming_reason)
 		{
+			GameObject gameObject = streamable.gameObject;
+			streamable.streaming_reason &= (~streaming_reason);
+			if(streamable.streaming_reason!=0)
+				return false;
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 			uid gameObjectID = geometrySource.FindResourceID(gameObject);
 
@@ -348,16 +358,8 @@ namespace teleport
 			Client_RemoveNodeByID(session.GetClientID(), gameObjectID);
 			Client_NodeLeftBounds(session.GetClientID(), gameObjectID);
 
-			Teleport_Streamable streamable = gameObject.GetComponent<Teleport_Streamable>();
-			if(streamable)
-			{
 				streamable.RemoveStreamingClient(session);
 				streamedHierarchies.Remove(streamable);
-			}
-			else
-			{
-				Debug.LogError($"GameObject \"{gameObject.name}\" has no Teleport_Streamable component.");
-			}
 
 			//Stop streaming child hierarchy.
 			foreach(GameObject child in streamable.childHierarchy)
@@ -381,6 +383,7 @@ namespace teleport
 			{
 				streamedColliders.Remove(collider);
 			}
+			return true;
 		}
 
 		private void DetectInvalidStreamables()
@@ -390,7 +393,8 @@ namespace teleport
 				Collider collider = streamedColliders[i];
 				if(!collider.CompareTag(teleportSettings.TagToStream))
 				{
-					StopStreamingGameObject(collider.gameObject);
+					Teleport_Streamable streamable = collider.gameObject.GetComponent<Teleport_Streamable>();
+					StopStreaming(streamable,1);
 				}
 			}
 		}
