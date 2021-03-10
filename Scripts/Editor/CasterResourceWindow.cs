@@ -169,6 +169,20 @@ namespace teleport
 						gameObject.tag="Untagged";
 					}
 				}
+				if (GUILayout.Button("Add Collision to selected"))
+				{
+					foreach (var gameObject in UnityEditor.Selection.gameObjects)
+					{
+						var collider = gameObject.GetComponent<Collider>();
+						var mesh = gameObject.GetComponent<MeshFilter>();
+						if (mesh != null && collider==null)
+						{
+							BoxCollider bc=gameObject.AddComponent<BoxCollider>();
+							bc.isTrigger=true;
+						}
+					}
+				}
+				EditorGUILayout.LabelField("Adds trigger box collision where collision is not already present.");
 				if (GUILayout.Button("Apply Tag " + teleportSettings.TagToStream + " to selected"))
 				{
 					foreach(var gameObject in UnityEditor.Selection.gameObjects)

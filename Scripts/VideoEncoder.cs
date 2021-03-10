@@ -229,7 +229,8 @@ namespace teleport
 					perFrameLightProperties.perFramePerCameraLightProperties.TryGetValue(camera, out perFramePerCameraLightProperties);
 					lightData.worldTransform = perFrameLightProperties.visibleLight.localToWorldMatrix;
 				}
-				lightData.color = new avs.Vector4(light.color.linear.r, light.color.linear.g, light.color.linear.b, light.color.linear.a);
+				var clr=light.intensity* light.color.linear;
+				lightData.color = new avs.Vector4(clr.r, clr.g, clr.b, clr.a);
 				lightData.range = light.range;// visibleLight.range; 
 				lightData.spotAngle = light.spotAngle;// visibleLight.spotAngle;
 				lightData.lightType = DataTypes.UnityToTeleport(light.type);
