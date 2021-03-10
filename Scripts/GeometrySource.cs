@@ -1021,7 +1021,7 @@ namespace teleport
 			skin.jointIDs = jointIDs.ToArray();
 			skin.jointAmount = jointIDs.Count;
 
-			skin.rootTransform = avs.Transform.FromGlobalUnityTransform(skinnedMeshRenderer.rootBone.parent);
+			skin.rootTransform = avs.Transform.FromLocalUnityTransform(skinnedMeshRenderer.rootBone.parent);
 
 			StoreSkin(skinID, skin);
 			return skinID;

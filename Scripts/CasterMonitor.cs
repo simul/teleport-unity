@@ -11,6 +11,8 @@ namespace teleport
 	[ExecuteInEditMode]
 	public class CasterMonitor : MonoBehaviour
 	{
+		public Vector3 bodyOffsetFromHead = default;
+
 		[SerializeField]
 		private GameObject body = default, leftHand = default, rightHand = default;
 
@@ -72,7 +74,9 @@ namespace teleport
 			public uint SERVICE_PORT;
 			public ReportHandshakeFn reportHandshake;
 			public OnAudioInputReceived audioInputReceived;
+			public avs.Vector3 bodyOffsetFromHead;
 		};
+
 		[DllImport("SimulCasterServer")]
 		public static extern UInt64 SizeOf(string name);
 		[DllImport("SimulCasterServer")]
@@ -210,7 +214,8 @@ namespace teleport
 				SERVICE_PORT = teleportSettings.listenPort,
 				DISCOVERY_PORT = teleportSettings.discoveryPort,
 				reportHandshake = ReportHandshake,
-				audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput
+				audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput,
+				bodyOffsetFromHead = bodyOffsetFromHead
 			};
 
 			initialised = Initialise(initialiseState);

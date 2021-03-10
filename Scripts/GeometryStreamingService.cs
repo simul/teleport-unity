@@ -84,22 +84,13 @@ namespace teleport
 			streamedHierarchies.Clear();
 			failedGameObjects.Clear();
 			streamedLights.Clear();
-
-			if(session.HasClient())
-			{
-				StreamPlayerBody();
-			}
         }
 
 		public void RemoveAllNodes()
 		{
-			foreach(GameObject gameObject in streamedGameObjects)
+			foreach(Teleport_Streamable streamableComponent in streamedHierarchies)
 			{
-				var sComp = gameObject.GetComponent<Teleport_Streamable>();
-				if (sComp != null)
-				{
-					Client_RemoveNodeByID(session.GetClientID(), sComp.GetUid());
-				}			
+				Client_RemoveNodeByID(session.GetClientID(), streamableComponent.GetUid());
 			}
 		}
 
