@@ -871,7 +871,7 @@ namespace teleport
 				context.SetupCameraProperties(camera);
 				Clear(context, camera);
 				PrepareForSceneWindow(context, camera);
-				//Clear(context, 0 * direction_colours[face]);
+				
 				DrawOpaqueGeometry(context, camera, layerMask, renderingMask,lightingOrder);
 				DrawTransparentGeometry(context, camera, layerMask, renderingMask);
 				videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture,face);

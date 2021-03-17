@@ -252,7 +252,8 @@ namespace teleport
 			// Therefore we use SetPositionAndRotation, which is absolute, not position=, rotation= which are relative.
 			//head.transform.position = clientspaceRoot.transform.position + newPosition;
 			//head.transform
-			head.transform.SetPositionAndRotation(newPosition,newRotation);
+			if(head.movementEnabled)
+				head.transform.SetPositionAndRotation(newPosition,newRotation);
 			last_received_headPos=newPosition;
 		}
 

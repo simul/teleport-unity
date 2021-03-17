@@ -7,8 +7,10 @@
 #pragma kernel EncodeWebcamCS
 
 #include "Common.cginc"
-
+// Conventional layout
 static const int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
+// GL Layout
+//static const int2 FaceOffsets[] = { {2,1},{1,1},{0,0},{1,0},{2,0},{0,1} };
 
 Texture2D<float4> InputColorTexture;
 TextureCube<float4> InputCubemapTexture;
@@ -22,6 +24,7 @@ int2 TagDataIdOffset;
 int TagDataId;
 int Face;
 mat4 FaceToWorldMatrix;
+
 // Here. we will encode the id of the video tag data in 4x4 blocks of monochrome colour.
 [numthreads(32, 4, 1)]
 void EncodeTagDataIdCS(uint2 ThreadID : SV_DispatchThreadID)
@@ -56,7 +59,7 @@ void EncodeColorCS(uint2 ThreadID : SV_DispatchThreadID)
 	SceneColor.y = sqrt(SceneColor.y);
 	SceneColor.z = sqrt(SceneColor.z);
 
-	pos += Offset+FaceOffsets[Face] * InputW;
+	pos =pos.xy+ Offset+FaceOffsets[Face] * InputW;
 
 	RWOutputColorTexture[pos] = SceneColor;
 }

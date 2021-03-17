@@ -24,10 +24,12 @@ namespace teleport
 		private Vector2 scrollPosition_textures;
 		private bool foldout_gameObjects = false;
 		private bool foldout_textures = false;
+		static GUIStyle redStyle =new GUIStyle();
 
 		[MenuItem("Teleport VR/Resource Manager")]
 		public static void OpenResourceWindow()
 		{
+			redStyle.normal.textColor = Color.red;
 			CasterResourceWindow window = GetWindow<CasterResourceWindow>(false, "TeleportVR Resource Manager");
 			window.minSize = new Vector2(600, 200);
 			window.Show();
@@ -35,6 +37,7 @@ namespace teleport
 
 		private void Awake()
 		{
+			redStyle.normal.textColor = Color.red;
 			geometrySource = GeometrySource.GetGeometrySource();
 
 			string shaderGUID = AssetDatabase.FindAssets("ExtractTextureData t:ComputeShader")[0];
@@ -45,6 +48,7 @@ namespace teleport
 
         private void OnGUI()
 		{
+			redStyle.normal.textColor = Color.red;
 			foldout_gameObjects = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_gameObjects, "GameObjects (" + streamedSceneObjects.Count + ")");
 			if(foldout_gameObjects)
 			{
@@ -196,6 +200,14 @@ namespace teleport
 					}
 				}
 				EditorGUILayout.LabelField("Applies the tag to objects with collision.");
+				foreach(var o in gameObjectsTagged)
+				{
+					var collisions=o.GetComponents<Collider>();
+					if(collisions.Length>1)
+					{
+						EditorGUILayout.LabelField("Warning: "+o.name+" has "+collisions.Length+" collision components.", redStyle);
+					}
+				}
 			}
 		}
 		int sceneIndex=0;

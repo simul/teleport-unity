@@ -62,6 +62,7 @@ Shader "Teleport/CopyCubemap"
         vec4 res    =CubeSampleLevel (_SourceCubemapTexture, view, (float)MipIndex) ;
 	    return res;
     }
+    
     fixed4 mip_frag (v2f i) : SV_Target
     {
         vec3 view   =CubeFaceAndTexCoordsToView(Face,i.uv);

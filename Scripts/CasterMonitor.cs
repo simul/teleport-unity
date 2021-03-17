@@ -107,6 +107,19 @@ namespace teleport
 			// We only want one instance, so delete duplicates.
 			if (instance == null)
 			{
+				for (int i = 0; i < SceneManager.sceneCount; i++)
+				{
+					var objs=SceneManager.GetSceneAt(i).GetRootGameObjects();
+				foreach(var o in objs)
+					{
+						var m=o.GetComponentInChildren<CasterMonitor>();
+						if(m)
+						{
+							instance=m;
+							return instance;
+						}
+					}
+				}
 				instance = FindObjectOfType<CasterMonitor>();
 				if(instance==null)
 				{
@@ -222,6 +235,10 @@ namespace teleport
 
 			// Sets connection timeouts for peers (milliseconds)
 			SetConnectionTimeout(teleportSettings.connectionTimeout);
+			for(int i=0;i<SceneManager.sceneCount;i++)
+			{
+				//OnSceneLoaded(SceneManager.GetSceneAt(i),LoadSceneMode.Additive);
+			}
 			SceneManager.sceneLoaded += OnSceneLoaded;
 		}
 
@@ -230,7 +247,20 @@ namespace teleport
 			SceneManager.sceneLoaded -= OnSceneLoaded;
 			Shutdown();
 		}
+		private void SetMaskRecursive(GameObject gameObject,uint mask)
+		{
+			Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
+			foreach (Renderer renderer in renderers)
+			{
+				renderer.renderingLayerMask = mask;
+			}
 
+			SkinnedMeshRenderer[] skinnedMeshRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
+			foreach (SkinnedMeshRenderer renderer in skinnedMeshRenderers)
+			{
+				renderer.renderingLayerMask = mask;
+			}
+		}
 		private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
 		{
 			// clear masks corresponding to streamed objects.
@@ -241,17 +271,7 @@ namespace teleport
 			GameObject[] rootGameObjects = scene.GetRootGameObjects();
 			foreach(GameObject gameObject in rootGameObjects)
 			{
-				Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
-				foreach(Renderer renderer in renderers)
-				{
-					renderer.renderingLayerMask = invStreamedMask;
-				}
-
-				SkinnedMeshRenderer[] skinnedMeshRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
-				foreach(SkinnedMeshRenderer renderer in skinnedMeshRenderers)
-				{
-					renderer.renderingLayerMask = invStreamedMask;
-				}
+				SetMaskRecursive(gameObject, invStreamedMask);
 			}
 
 			//Add the Teleport_Streamable component to all streamable objects.

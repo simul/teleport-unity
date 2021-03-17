@@ -4,8 +4,9 @@ using UnityEngine;
 
 public class Teleport_Head : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+	public bool movementEnabled=true;
+	// Start is called before the first frame update
+	void Start()
     {
         
     }
