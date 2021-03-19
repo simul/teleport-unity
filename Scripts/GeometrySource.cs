@@ -1428,7 +1428,7 @@ namespace teleport
 					{
 						BitConverter.GetBytes(data[i].x).CopyTo(newBuffer.data, i * stride + 0);
 						BitConverter.GetBytes(data[i].y).CopyTo(newBuffer.data, i * stride + 4);
-						BitConverter.GetBytes(data[i].z).CopyTo(newBuffer.data, i * stride + 8);
+						BitConverter.GetBytes(-data[i].z).CopyTo(newBuffer.data, i * stride + 8);
 					}
 
 					break;
@@ -1480,7 +1480,7 @@ namespace teleport
 					{
 						BitConverter.GetBytes(data[i].x).CopyTo(newBuffer.data, i * stride + 0);
 						BitConverter.GetBytes(data[i].y).CopyTo(newBuffer.data, i * stride + 4);
-						BitConverter.GetBytes(data[i].z).CopyTo(newBuffer.data, i * stride + 8);
+						BitConverter.GetBytes(-data[i].z).CopyTo(newBuffer.data, i * stride + 8);
 						BitConverter.GetBytes(data[i].w).CopyTo(newBuffer.data, i * stride + 12);
 					}
 
