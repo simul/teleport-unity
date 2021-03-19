@@ -437,7 +437,8 @@ namespace avs
 		public byte framerate;					// In hertz
 		public byte usingHands ;				//Whether to send the hand nodes to the client.
 		public byte isVR;
-		public UInt64 resourceCount ;			//	Number of resources the client has, these are appended to the handshake.
+		public UInt64 resourceCount;            //	Number of resources the client has, these are appended to the handshake.
+		public UInt32 maxLightsSupported;		// Maximum number of lights the client can render.
 	};
 
 	enum InputEventType : byte

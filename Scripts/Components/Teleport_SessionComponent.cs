@@ -75,7 +75,7 @@ namespace teleport
 		public string ClientName = "Client1";
 		public int Layer = 6;
 		[SerializeField]
-		avs.AxesStandard _axesStandard = avs.AxesStandard.NotInitialised;
+		avs.Handshake _handshake = new avs.Handshake();
 
 		// Aidan: This is temporary for the capture component
 		public static uid GetLastClientID()
@@ -225,12 +225,19 @@ namespace teleport
 		{
 			get
 			{
-				return _axesStandard;
+				return _handshake.axesStandard;
+			}
+		}
+		public avs.Handshake handshake
+		{
+			get
+			{
+				return _handshake;
 			}
 		}
 		public void ReportHandshake(avs.Handshake handshake)
 		{
-			_axesStandard = handshake.axesStandard;
+			_handshake= handshake;
 		}
 
 		public void SetOriginFromClient(UInt64 validCounter, Quaternion newRotation, Vector3 newPosition)

@@ -201,6 +201,7 @@ namespace teleport
 				Marshal.StructureToPtr(cubeTagDataWrapper, dataPtr, true);
 			}
 		}
+		int warn_count = 1;
 
 		void CreateLightingData(Camera camera, out List<avs.LightTagData> lightDataList)
 		{
@@ -213,6 +214,14 @@ namespace teleport
 			var session = Teleport_SessionComponent.sessions[clientID];
 		
 			var streamedLights=session.GeometryStreamingService.GetStreamedLights();
+			if(streamedLights.Count>session.handshake.maxLightsSupported)
+			{
+				if(warn_count>0)
+				{
+					Debug.LogWarning("Have " + streamedLights.Count + " but client supports only " + session.handshake.maxLightsSupported + ".");
+					warn_count--;
+				}
+			}
 			foreach(var l in streamedLights)
 			{
 				var uid = l.Key;
@@ -221,6 +230,8 @@ namespace teleport
 				{
 					continue;
 				}
+				if(lightDataList.Count>= session.handshake.maxLightsSupported)
+					break;
 				PerFrameLightProperties perFrameLightProperties = null;
 				PerFramePerCameraLightProperties perFramePerCameraLightProperties=null;
 				var lightData = new avs.LightTagData();
