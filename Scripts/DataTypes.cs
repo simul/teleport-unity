@@ -488,13 +488,6 @@ namespace avs
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
-	public struct SceneCapture2DTagData
-	{
-		public uint id;
-		public Transform cameraTransform;
-	};
-
-	[StructLayout(LayoutKind.Sequential)]
 	public struct SceneCaptureCubeTagData
 	{
 		public uint id;

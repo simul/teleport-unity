@@ -33,14 +33,6 @@ namespace teleport
 		};
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct SceneCapture2DTagDataWrapper
-		{
-			public uid clientID;
-			public UInt64 dataSize;
-			public avs.SceneCapture2DTagData data;
-		};
-
-		[StructLayout(LayoutKind.Sequential)]
 		public struct SceneCaptureCubeTagDataWrapper
 		{
 			public uid clientID;
@@ -60,6 +52,7 @@ namespace teleport
 
 		bool initalized = false;
 		bool _reconfigure = false;
+		int lightWarnCount = 1;
 
 
 		public bool Reconfigure
@@ -101,8 +94,8 @@ namespace teleport
 			var teleportSettings = TeleportSettings.GetOrCreateSettings();
 			if (teleportSettings.casterSettings.usePerspectiveRendering)
 			{
-				paramsWrapper.videoEncodeParams.encodeWidth = teleportSettings.casterSettings.sceneCaptureWidth;
-				paramsWrapper.videoEncodeParams.encodeHeight = teleportSettings.casterSettings.sceneCaptureHeight;
+				paramsWrapper.videoEncodeParams.encodeWidth = teleportSettings.casterSettings.perspectiveWidth;
+				paramsWrapper.videoEncodeParams.encodeHeight = (int)(teleportSettings.casterSettings.perspectiveHeight * 1.5f);
 			}
 			else
 			{
@@ -158,50 +151,32 @@ namespace teleport
 			commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 2, ptr);
 		}
 
-		public SceneCapture2DTagDataWrapper t2dTagDataWrapper = new SceneCapture2DTagDataWrapper();
 		public SceneCaptureCubeTagDataWrapper cubeTagDataWrapper = new SceneCaptureCubeTagDataWrapper();
 		void CreateTagDataWrapper(Camera camera, UInt32 tagDataID, out IntPtr dataPtr)
 		{
 			var teleportSettings = TeleportSettings.GetOrCreateSettings();
-			if (teleportSettings.casterSettings.usePerspectiveRendering)
-			{
-				t2dTagDataWrapper.clientID = clientID;
-				t2dTagDataWrapper.dataSize = (UInt64)Marshal.SizeOf(typeof(avs.SceneCapture2DTagData));
-				t2dTagDataWrapper.data = new avs.SceneCapture2DTagData();
-				t2dTagDataWrapper.data.id = tagDataID;
-				t2dTagDataWrapper.data.cameraTransform = new avs.Transform();
-				t2dTagDataWrapper.data.cameraTransform.position = camera.transform.position;
-				t2dTagDataWrapper.data.cameraTransform.rotation = camera.transform.parent.rotation;
-				t2dTagDataWrapper.data.cameraTransform.scale = new avs.Vector3(1, 1, 1);
+			
+			List<avs.LightTagData> lightDataList;
+			CreateLightingData(camera, out lightDataList);
+			var lightSizeInBytes = Marshal.SizeOf(typeof(avs.LightTagData)) * lightDataList.Count;
 
-				dataPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(SceneCapture2DTagDataWrapper)));
-				Marshal.StructureToPtr(t2dTagDataWrapper, dataPtr, true);
-			}
-			else
-			{
-				List<avs.LightTagData> lightDataList;
-				CreateLightingData(camera, out lightDataList);
-				var lightSizeInBytes = Marshal.SizeOf(typeof(avs.LightTagData)) * lightDataList.Count;
+			cubeTagDataWrapper.clientID = clientID;
+			cubeTagDataWrapper.dataSize = (UInt64)(Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData)) + lightSizeInBytes);
+			cubeTagDataWrapper.data = new avs.SceneCaptureCubeTagData();
+			cubeTagDataWrapper.data.id = tagDataID;
+			cubeTagDataWrapper.data.cameraTransform = new avs.Transform();
+			cubeTagDataWrapper.data.cameraTransform.position = camera.transform.position;
+			cubeTagDataWrapper.data.cameraTransform.rotation = camera.transform.rotation;
+			cubeTagDataWrapper.data.cameraTransform.scale = new avs.Vector3(1, 1, 1);
+			cubeTagDataWrapper.data.lightCount = (uint)lightDataList.Count;
 
-				cubeTagDataWrapper.clientID = clientID;
-				cubeTagDataWrapper.dataSize = (UInt64)(Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData)) + lightSizeInBytes);
-				cubeTagDataWrapper.data = new avs.SceneCaptureCubeTagData();
-				cubeTagDataWrapper.data.id = tagDataID;
-				cubeTagDataWrapper.data.cameraTransform = new avs.Transform();
-				cubeTagDataWrapper.data.cameraTransform.position = camera.transform.position;
-				cubeTagDataWrapper.data.cameraTransform.rotation = camera.transform.rotation;
-				cubeTagDataWrapper.data.cameraTransform.scale = new avs.Vector3(1, 1, 1);
-				cubeTagDataWrapper.data.lightCount = (uint)lightDataList.Count;
+			// If this doesn't work, do Array.copy
+			cubeTagDataWrapper.data.lights = lightDataList.ToArray();
 
-				// If this doesn't work, do Array.copy
-				cubeTagDataWrapper.data.lights = lightDataList.ToArray();
-
-				var wrapperSize = Marshal.SizeOf(typeof(SceneCaptureCubeTagDataWrapper)) + lightSizeInBytes;
-				dataPtr = Marshal.AllocHGlobal(wrapperSize);
-				Marshal.StructureToPtr(cubeTagDataWrapper, dataPtr, true);
-			}
+			var wrapperSize = Marshal.SizeOf(typeof(SceneCaptureCubeTagDataWrapper)) + lightSizeInBytes;
+			dataPtr = Marshal.AllocHGlobal(wrapperSize);
+			Marshal.StructureToPtr(cubeTagDataWrapper, dataPtr, true);
 		}
-		int warn_count = 1;
 
 		void CreateLightingData(Camera camera, out List<avs.LightTagData> lightDataList)
 		{
@@ -216,10 +191,10 @@ namespace teleport
 			var streamedLights=session.GeometryStreamingService.GetStreamedLights();
 			if(streamedLights.Count>session.handshake.maxLightsSupported)
 			{
-				if(warn_count>0)
+				if(lightWarnCount > 0)
 				{
 					Debug.LogWarning("Have " + streamedLights.Count + " but client supports only " + session.handshake.maxLightsSupported + ".");
-					warn_count--;
+					lightWarnCount--;
 				}
 			}
 			foreach(var l in streamedLights)

@@ -130,7 +130,7 @@ namespace teleport
 			if (teleportSettings.casterSettings.usePerspectiveRendering)
 			{
 				cam.fieldOfView = teleportSettings.casterSettings.perspectiveFOV;
-				cam.aspect = (float)teleportSettings.casterSettings.sceneCaptureWidth  / (float)(teleportSettings.casterSettings.sceneCaptureHeight - 4);
+				cam.aspect = (float)teleportSettings.casterSettings.perspectiveWidth  / (float)(teleportSettings.casterSettings.perspectiveHeight);
 			}
 			else
 			{
@@ -180,27 +180,27 @@ namespace teleport
 
 				if (settings.usePerspectiveRendering)
 				{
-					int prevWidth = settings.sceneCaptureWidth;
-					int prevHeight = settings.sceneCaptureHeight;
+					int prevWidth = settings.perspectiveWidth;
+					int prevHeight = settings.perspectiveHeight;
 
 					// Add 4 pixels to height for tag id
 					if (bandwidth > 50)
 					{
-						settings.sceneCaptureWidth = 3840;
-						settings.sceneCaptureHeight = 2164;
+						settings.perspectiveWidth = 1024;
+						settings.perspectiveHeight = 1024;
 					}
 					else if (bandwidth > 25)
 					{
-						settings.sceneCaptureWidth = 1920;
-						settings.sceneCaptureHeight = 1084;
+						settings.perspectiveWidth = 1024;
+						settings.perspectiveHeight = 1024;
 					}
 					else
 					{
-						settings.sceneCaptureWidth = 1280;
-						settings.sceneCaptureHeight = 724;
+						settings.perspectiveWidth = 768;
+						settings.perspectiveHeight = 768;
 					}
 
-					if (prevWidth != settings.sceneCaptureWidth || prevHeight != settings.sceneCaptureHeight)
+					if (prevWidth != settings.perspectiveWidth || prevHeight != settings.perspectiveHeight)
 					{
 						ChangeQuality(bandwidth);
 					}
@@ -289,8 +289,9 @@ namespace teleport
 		{
 			var settings = teleportSettings.casterSettings;
 			if (settings.usePerspectiveRendering)
-			{	// Minus 4 used for tag data id from renderer texture height
-				CreateTextures(settings.sceneCaptureWidth, settings.sceneCaptureHeight, settings.sceneCaptureWidth, settings.sceneCaptureHeight - 4, 24);
+			{
+				int captureHeight = (int)(settings.perspectiveHeight * 1.5f);
+				CreateTextures(settings.perspectiveWidth, captureHeight, settings.perspectiveWidth, settings.perspectiveHeight, 24);
 			}
 			else
 			{
