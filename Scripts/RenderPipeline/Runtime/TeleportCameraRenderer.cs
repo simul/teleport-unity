@@ -181,7 +181,7 @@ namespace teleport
 			buffer.Release();
 		}
 
-		public void EncodeDepth(ScriptableRenderContext context, Camera camera, Rect viewport, int face)
+		public void EncodeDepth(ScriptableRenderContext context, Camera camera, Rect viewport)
 		{
 			if (!computeShader)
 				InitShaders();
@@ -690,47 +690,8 @@ namespace teleport
 			EndSample(context, samplename);
 			EndCamera(context, camera);
 		}
-		public void RenderToSceneCapture(ScriptableRenderContext context, Camera camera)
-		{
-			if (teleportSettings.casterSettings.usePerspectiveRendering)
-			{
-				RenderToSceneCapture2D(context, camera);
-			}
-			else
-			{
-				RenderToSceneCaptureCubemap(context, camera);
-			}
-		}
 		int m = 0;
-		public void RenderToSceneCapture2D(ScriptableRenderContext context, Camera camera)
-		{
-			RenderTexture videoTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
-
-			if (!videoTexture)
-			{
-				Debug.LogError("The video encoder texture must not be null");
-				return;
-			}
-
-			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
-			//if (clientID != 0)
-			//UpdateStreamables(context, clientID, camera);
-
-			int layerMask = 0xFFFFFFF;
-			uint renderingMask = (uint)((1 << 25) | 0x7);
-			Render(context, camera, layerMask, renderingMask);
-			videoEncoding.EncodeColor(context, camera, 0);
-
-			videoEncoding.EncodeTagID(context, camera);
-			context.Submit();
-
-			var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
-			if (ClientID != 0 && teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
-			{
-				var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
-				videoEncoder.CreateEncodeCommands(context, camera, tagDataID);
-			}
-		}
+	
 		public uid ClientID
 		{
 			get
@@ -752,7 +713,7 @@ namespace teleport
 				return null;
 			} 
 		}
-		public void RenderToSceneCaptureCubemap(ScriptableRenderContext context, Camera camera)
+		public void RenderToSceneCapture(ScriptableRenderContext context, Camera camera)
 		{
 			if (!Teleport_SceneCaptureComponent.RenderingSceneCapture)
 				return;
@@ -784,15 +745,27 @@ namespace teleport
 				teleportLighting.renderSettings = renderSettings;
 				teleportLighting.RenderShadows(context, camera, cullingResultsAll, lightingOrder);
 
-				for (int i = 0; i < VideoEncoding.NumFaces; ++i)
+				if (teleportSettings.casterSettings.usePerspectiveRendering)
 				{
-					DrawCubemapFace(context, camera, lightingOrder, i);
+					DrawPerspective(context, camera, lightingOrder);
 				}
+				else
+				{
+					for (int i = 0; i < VideoEncoding.NumFaces; ++i)
+					{
+						DrawCubemapFace(context, camera, lightingOrder, i);
+					}
+				}
+				
 
 				int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
 				var shadowmapOffset = new Vector2Int(3 * faceSize / 2, 2 * faceSize + 2 * Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + Teleport_SceneCaptureComponent.RenderingSceneCapture.diffuseOffset;
 				videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, lightingOrder, teleportLighting, shadowmapOffset);
-				videoEncoding.EncodeWebcam(context, camera);
+				if (!teleportSettings.casterSettings.usePerspectiveRendering)
+				{
+					videoEncoding.EncodeWebcam(context, camera);
+				}
+				
 				videoEncoding.EncodeTagID(context, camera);
 				context.Submit();
 
@@ -861,10 +834,11 @@ namespace teleport
 			view.m23 *= -1f;
 			faceViewMatrices[face] = view;
 			int layerMask = 0x7FFFFFFF;
-			uint renderingMask = 0x7FFFFFFF;//(uint)((1 << 25)|0x7);	// canvasrenderers hard coded to have mask 0x7..!
+			uint renderingMask = 0x7FFFFFFF;
+			//(uint)((1 << 25)|0x7);	// canvasrenderers hard coded to have mask 0x7..!
 			camera.worldToCameraMatrix = view;
-			string samplename = camera.gameObject.name + " Face " + face;
-			StartSample(context, samplename);
+			string sampleName = camera.gameObject.name + " Face " + face;
+			StartSample(context, sampleName);
 			{
 				DrawDepthPass(context, camera, layerMask, renderingMask, cullingResultsAll);
 				teleportLighting.RenderScreenspaceShadows(context, camera, lightingOrder, cullingResultsAll, depthTexture);
@@ -876,16 +850,58 @@ namespace teleport
 				DrawTransparentGeometry(context, camera, layerMask, renderingMask);
 				videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture,face);
 				videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face,0);
-				//videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.RoughSpecularCubeTexture, face, 3);
 				videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face);
 				videoEncoding.EncodeColor(context, camera, face);
-				videoEncoding.EncodeDepth(context, camera, depthViewport, face);
+				videoEncoding.EncodeDepth(context, camera, depthViewport);
 				videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, new Vector2Int(3*(int)depthViewport.width,2* (int)faceSize), face);
 #if UNITY_EDITOR
 				DrawUnsupportedShaders(context, camera);
 #endif
 			}
-			EndSample(context, samplename);
+			EndSample(context, sampleName);
+			EndCamera(context, camera);
+		}
+
+		void DrawPerspective(ScriptableRenderContext context, Camera camera, TeleportRenderPipeline.LightingOrder lightingOrder)
+		{
+			CullingResults cullingResultsAll;
+			if (!Cull(context, camera, out cullingResultsAll))
+			{
+				return;
+			}
+			CasterMonitor monitor = CasterMonitor.GetCasterMonitor();
+			int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
+			int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
+
+			Color[] direction_colours = { new Color(.5F, 0.0F, 0.0F), new Color(.01F, 0.0F, 0.0F), new Color(0.0F, .5F, 0.0F), new Color(0.0F, .005F, 0.0F), new Color(0.0F, 0.0F, 0.5F), new Color(0.0F, 0.0F, 0.01F) };
+
+			var depthViewport = new Rect(0, perspectiveHeight, perspectiveWidth / 2, perspectiveHeight / 2);
+
+			int layerMask = 0x7FFFFFFF;
+			uint renderingMask = 0x7FFFFFFF;
+			string sampleName = camera.gameObject.name + " Perspective";
+			
+			StartSample(context, sampleName);
+			{
+				DrawDepthPass(context, camera, layerMask, renderingMask, cullingResultsAll);
+				teleportLighting.RenderScreenspaceShadows(context, camera, lightingOrder, cullingResultsAll, depthTexture);
+				context.SetupCameraProperties(camera);
+				Clear(context, camera);
+				PrepareForSceneWindow(context, camera);
+
+				DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder);
+				DrawTransparentGeometry(context, camera, layerMask, renderingMask);
+				//videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, face);
+				//videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face, 0);
+				//videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face);
+				videoEncoding.EncodeColor(context, camera, 0);
+				videoEncoding.EncodeDepth(context, camera, depthViewport);
+				//videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, new Vector2Int(3 * (int)depthViewport.width, 2 * (int)faceSize), face);
+#if UNITY_EDITOR
+				DrawUnsupportedShaders(context, camera);
+#endif
+			}
+			EndSample(context, sampleName);
 			EndCamera(context, camera);
 		}
 	}

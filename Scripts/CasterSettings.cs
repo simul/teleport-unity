@@ -78,12 +78,11 @@ namespace SCServer
 
 		[Header("Lighting")]
 		public Int32 specularCubemapSize = 64;
-		public Int32 specularMips =7;
+		public Int32 specularMips = 7;
 		public Int32 diffuseCubemapSize = 64;
 		public Int32 lightCubemapSize = 64;
 
 		[Header("Input")]
-		public bool lockPlayerHeight = true;
-		public ControlModel controlModel=ControlModel.SERVER_ORIGIN_CLIENT_LOCAL;
+		public ControlModel controlModel = ControlModel.SERVER_ORIGIN_CLIENT_LOCAL;
 	}
 }

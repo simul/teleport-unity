@@ -130,7 +130,7 @@ namespace teleport
 			if (teleportSettings.casterSettings.usePerspectiveRendering)
 			{
 				cam.fieldOfView = teleportSettings.casterSettings.perspectiveFOV;
-				cam.aspect = (float)teleportSettings.casterSettings.perspectiveWidth  / (float)(teleportSettings.casterSettings.perspectiveHeight);
+				cam.aspect = teleportSettings.casterSettings.perspectiveWidth  / (teleportSettings.casterSettings.perspectiveHeight);
 			}
 			else
 			{
