@@ -503,6 +503,7 @@ namespace teleport
 		{
 			processedResources.Clear();
 			texturesWaitingForExtraction.Clear();
+			sceneReferenceManager.Clear();
 			ClearGeometryStore();
 		}
 
@@ -1339,12 +1340,12 @@ namespace teleport
 
 #if UNITY_EDITOR
 			AssetDatabase.TryGetGUIDAndLocalFileIdentifier(mesh, out string guid, out long _);
-
+			long last_modified=GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid));
 			StoreMesh
 			(
 				meshID,
 				guid,
-				GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)),
+				last_modified,
 				new avs.Mesh
 				{
 					name = Marshal.StringToBSTR(mesh.name),
@@ -1663,7 +1664,15 @@ namespace teleport
 
 		private long GetAssetWriteTimeUTC(string filePath)
 		{
-			return File.GetLastWriteTimeUtc(filePath).ToFileTimeUtc();
+			try
+			{
+				return File.GetLastWriteTimeUtc(filePath).ToFileTimeUtc();
+			}
+			catch(Exception e)
+			{
+				Debug.LogError("Failed to get last write time for "+filePath);
+				return 0;
+			}
 		}
 
 		//Confirms resources loaded from disk of a certain Unity asset type still exist, and creates a pairing of their old IDs and their newly assigned IDs.

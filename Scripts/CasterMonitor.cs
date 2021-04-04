@@ -110,7 +110,7 @@ namespace teleport
 				for (int i = 0; i < SceneManager.sceneCount; i++)
 				{
 					var objs=SceneManager.GetSceneAt(i).GetRootGameObjects();
-				foreach(var o in objs)
+					foreach(var o in objs)
 					{
 						var m=o.GetComponentInChildren<CasterMonitor>();
 						if(m)
@@ -247,7 +247,7 @@ namespace teleport
 			SceneManager.sceneLoaded -= OnSceneLoaded;
 			Shutdown();
 		}
-		private void SetMaskRecursive(GameObject gameObject,uint mask)
+		static public void SetMaskRecursive(GameObject gameObject,uint mask)
 		{
 			Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
 			foreach (Renderer renderer in renderers)
@@ -259,6 +259,21 @@ namespace teleport
 			foreach (SkinnedMeshRenderer renderer in skinnedMeshRenderers)
 			{
 				renderer.renderingLayerMask = mask;
+			}
+		}
+		static public void UnsetMaskRecursive(GameObject gameObject, uint mask)
+		{
+			uint inverse_mask=~mask;
+			Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
+			foreach (Renderer renderer in renderers)
+			{
+				renderer.renderingLayerMask = renderer.renderingLayerMask&inverse_mask;
+			}
+
+			SkinnedMeshRenderer[] skinnedMeshRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
+			foreach (SkinnedMeshRenderer renderer in skinnedMeshRenderers)
+			{
+				renderer.renderingLayerMask = renderer.renderingLayerMask & inverse_mask;
 			}
 		}
 		private void OnSceneLoaded(Scene scene, LoadSceneMode mode)

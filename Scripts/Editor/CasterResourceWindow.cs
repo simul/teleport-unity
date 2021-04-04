@@ -198,6 +198,7 @@ namespace teleport
 							gameObject.tag= teleportSettings.TagToStream;
 						}
 					}
+					EditorMask.Initialize();
 				}
 				EditorGUILayout.LabelField("Applies the tag to objects with collision.");
 				foreach(var o in gameObjectsTagged)
@@ -223,7 +224,8 @@ namespace teleport
 			{
 				GameObject gameObject = streamedSceneObjects[i];
 
-				EditorUtility.DisplayCancelableProgressBar("Extracting Scene Geometry", "Processing " + gameObject.name, i / streamedSceneObjects.Count);
+				if(EditorUtility.DisplayCancelableProgressBar("Extracting Scene Geometry", "Processing " + gameObject.name, i / streamedSceneObjects.Count))
+					return;
 				geometrySource.AddNode(gameObject, true);
 			}
 			ExtractTextures();
@@ -261,7 +263,7 @@ namespace teleport
 			//According to the Unity docs, we need to call Release() on any render textures we are done with.
 			for(int i = geometrySource.texturesWaitingForExtraction.Count; i < renderTextures.Length; i++)
 			{
-				if(renderTextures[i])
+				if (renderTextures[i])
 				{
 					renderTextures[i].Release();
 				}
@@ -274,8 +276,11 @@ namespace teleport
 			{
 				Texture2D sourceTexture = (Texture2D)geometrySource.texturesWaitingForExtraction[i].unityTexture;
 
+				if (EditorUtility.DisplayCancelableProgressBar("Extracting Textures", "Processing " + sourceTexture.name, i / renderTextures.Length))
+					return;
 				//If we always created a new render texture, then reloading would lose the link to the render texture in the inspector.
-				if(renderTextures[i] == null) renderTextures[i] = new RenderTexture(sourceTexture.width, sourceTexture.height, 0);
+				if (renderTextures[i] == null)
+					renderTextures[i] = new RenderTexture(sourceTexture.width, sourceTexture.height, 0);
 				else
 				{
 					renderTextures[i].Release();

@@ -6,6 +6,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+// A singleton, stored in the singleton GeometrySource.
 [Serializable]
 public class SceneReferenceManager : ScriptableObject, ISerializationCallbackReceiver
 {
@@ -215,7 +216,11 @@ public class SceneReferenceManager : ScriptableObject, ISerializationCallbackRec
 		return new ResourceReferences();
 #endif
 	}
-
+	public void Clear()
+	{
+		gameObjectReferences.Clear();
+		SaveToDisk();
+	}
 	//Saves ResourceReferences to disk.
 	private void SaveToDisk()
 	{
@@ -259,7 +264,8 @@ public class SceneReferenceManager : ScriptableObject, ISerializationCallbackRec
 		{
 			return false;
 		}
-
+		// Clear out old data.
+		gameObjectReferences.Clear();
 		BinaryFormatter binaryFormatter = new BinaryFormatter();
 		int referenceCount = (int)binaryFormatter.Deserialize(file);
 		for(int i = 0; i < referenceCount; i++)

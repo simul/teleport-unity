@@ -656,7 +656,10 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
-
+		static public void SetStreamableHighlightMaskOnObjects()
+		{
+			EditorMask editorMask = EditorMask.GetInstance();
+		}
 		public void Render(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask)
 		{
 			CullingResults cullingResultsAll;
@@ -681,6 +684,12 @@ namespace teleport
 			if (Application.isPlaying)
 			{
 				renderingMask = (uint)(1 << 26);   // Render ONLY the items that are streamed to this client.
+				DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder, true);
+			}
+			else
+			{
+				SetStreamableHighlightMaskOnObjects();
+				renderingMask = (uint)1 << 31;   // When not playing, only streamables have this bit set.
 				DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder, true);
 			}
 #if UNITY_EDITOR
