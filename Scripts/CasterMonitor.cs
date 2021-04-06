@@ -8,7 +8,6 @@ using UnityEngine.SceneManagement;
 
 namespace teleport
 {
-	[ExecuteInEditMode]
 	public class CasterMonitor : MonoBehaviour
 	{
 		public Vector3 bodyOffsetFromHead = default;
