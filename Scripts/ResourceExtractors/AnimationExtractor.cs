@@ -393,7 +393,7 @@ namespace teleport
 						newAnimation.boneKeyframes[j].rotationKeyframes[k].value.x = curves.rotationX != null ? curves.rotationX.Evaluate(t) : 0.0F;
 						newAnimation.boneKeyframes[j].rotationKeyframes[k].value.y = curves.rotationY != null ? curves.rotationY.Evaluate(t) : 0.0F;
 						newAnimation.boneKeyframes[j].rotationKeyframes[k].value.z = curves.rotationZ != null ? curves.rotationZ.Evaluate(t) : 0.0F;
-						newAnimation.boneKeyframes[j].rotationKeyframes[k].value.w = curves.rotationW != null ? curves.rotationW.Evaluate(t) : 0.0F;
+						newAnimation.boneKeyframes[j].rotationKeyframes[k].value.w = curves.rotationW != null ? curves.rotationW.Evaluate(t) : 1.0F;
 					}
 					++j;
 				}
