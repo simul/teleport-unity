@@ -167,6 +167,9 @@ vec4 Diffuse(samplerCUBE sourceCubemap,vec3 view)
 		result	+= NoL*lookup;
 		Weight	+= NoL;
 	}
+
+
+
 	outp = result / Weight;
 	return vec4(outp.rgb, 1.0);
 }
