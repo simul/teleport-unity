@@ -157,11 +157,7 @@ namespace teleport
 			{
 				options[n]= SceneManager.GetSceneAt(n).name;
 			}
-			/*
-			sceneIndex = EditorGUILayout.Popup(sceneIndex, options);
-			Scene scene = SceneManager.GetActiveScene();
-			if(sceneIndex<SceneManager.sceneCount)
-				scene= SceneManager.GetSceneAt(sceneIndex);*/
+	
 			if(teleportSettings.TagToStream.Length>0)
 			{ 
 				GameObject[] gameObjectsTagged = GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream);
@@ -195,11 +191,20 @@ namespace teleport
 						var mesh=gameObject.GetComponentsInChildren<MeshFilter>();
 						if(collider!=null&&mesh.Length>0&&gameObject.tag=="Untagged")
 						{
-							gameObject.tag= teleportSettings.TagToStream;
+							gameObject.tag = teleportSettings.TagToStream;
 						}
 					}
 					EditorMask.Initialize();
 				}
+				if (GUILayout.Button("Setup selected and children for streaming."))
+				{
+					foreach (var gameObject in UnityEditor.Selection.gameObjects)
+					{
+						SetupGameObjectAndChildrenForStreaming(gameObject);
+					}
+				}
+				EditorGUILayout.LabelField("Recursively adds box collision and tag to selected and children where appropriate.");
+
 				EditorGUILayout.LabelField("Applies the tag to objects with collision.");
 				foreach(var o in gameObjectsTagged)
 				{
@@ -211,7 +216,30 @@ namespace teleport
 				}
 			}
 		}
-		int sceneIndex=0;
+
+		private void SetupGameObjectAndChildrenForStreaming(GameObject o)
+		{
+			foreach (var r in o.GetComponentsInChildren<MeshFilter>())
+			{
+				var go = r.gameObject;
+				if (go.GetComponent<Collider>() != null)
+				{
+					go.tag = teleportSettings.TagToStream;
+					continue;
+				}
+ 
+				// Will use a parent's collider if it has a parent with a mesh filter.
+				// Otherwise a box collision will be added.
+				if (go.GetComponentsInParent<MeshFilter>().Length ==
+					go.GetComponents<MeshFilter>().Length)
+				{
+					go.tag = teleportSettings.TagToStream;
+					BoxCollider bc = go.AddComponent<BoxCollider>();
+					bc.isTrigger = true;
+				}
+			}	
+		}
+
 		private void FindSceneStreamables()
 		{
 			streamedSceneObjects = geometrySource.GetStreamableObjects();
