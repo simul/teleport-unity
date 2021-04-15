@@ -47,9 +47,9 @@ public class TransformAnimationMarshaler : ICustomMarshaler
 		Marshal.WriteInt64(ptr, byteOffset, animation.boneAmount);
 		byteOffset += Marshal.SizeOf<Int64>();
 
-		IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.TransformKeyframe>() * animation.boneAmount));
+		IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.TransformKeyframeList>() * animation.boneAmount));
 		int arrayByteOffset = 0;
-		foreach(avs.TransformKeyframe boneKeyframe in animation.boneKeyframes)
+		foreach(avs.TransformKeyframeList boneKeyframe in animation.boneKeyframes)
 		{
 			Marshal.StructureToPtr(boneKeyframe, arrayPtr + arrayByteOffset, false);
 			arrayByteOffset += Marshal.SizeOf(boneKeyframe);

@@ -41,10 +41,10 @@ namespace avs
 		public IntPtr name;
 
 		public Int64 boneAmount;
-		public TransformKeyframe[] boneKeyframes;
+		public TransformKeyframeList[] boneKeyframes;
 	}
 
-	public struct TransformKeyframe
+	public struct TransformKeyframeList
 	{
 		public uid nodeID;
 
@@ -139,28 +139,59 @@ namespace teleport
 
 		public static avs.TransformAnimation[] ExtractHumanAnimationData(Animator animator)
 		{
+			Transform[] transforms = animator.gameObject.GetComponentsInChildren<Transform>();
+			Transform[] storedTransforms=new Transform[transforms.Length];
+			for(int i=0;i< transforms.Length;i++)
+			{
+				storedTransforms[i].localPosition= transforms[i].localPosition;
+				storedTransforms[i].localRotation = transforms[i].localRotation;
+			}
 			HumanBone[] humanBones = animator.avatar.humanDescription.human;
+			// store the current position.
 			Dictionary<string, GameObject> humanToBone = new Dictionary<string, GameObject>();
 
 			foreach(HumanBone bone in humanBones)
 			{
-				Transform boneTransform = FindChildTransformWithName(animator.transform, bone.boneName);
+				Transform boneTransform = FindChildTransformWithName(animator.gameObject.transform, bone.boneName);
 				humanToBone[bone.humanName] = boneTransform.gameObject;
 				//Debug.Log($"{bone.humanName} | {boneTransform.gameObject.name}");
 			}
 
 			AnimationClip[] animationClips = animator.runtimeAnimatorController.animationClips;
 			avs.TransformAnimation[] animations = new avs.TransformAnimation[animationClips.Length];
-			for(int i = 0; i < animationClips.Length; i++)
+			var humanDescription = animator.avatar.humanDescription;
+			// A clip is a single animation or movement for a whole object, stored as a sequence of keyframes.
+			AnimationClip emptyClip=null;
+			for (int i = 0; i < animationClips.Length; i++)
 			{
 				AnimationClip clip = animationClips[i];
+				
 				EditorCurveBinding[] curveBindings = AnimationUtility.GetCurveBindings(clip);
-
+				if(curveBindings.Length==0)
+				{
+					emptyClip=clip;
+					continue;
+				}
+				float length_seconds=clip.length;
 				Dictionary<string, InterimAnimation> nodeCurves = new Dictionary<string, InterimAnimation>();
+				Dictionary <string, HumanLimit> limits= new Dictionary<string, HumanLimit>();
 				foreach(EditorCurveBinding binding in curveBindings)
 				{
 					AnimationCurve curve = AnimationUtility.GetEditorCurve(clip, binding);
-
+					var words= binding.propertyName.Split(' ');
+				/*	foreach(var h in humanDescription.human)
+					{
+						if(h.humanName==words[0])
+						{
+							if(h.limit.useDefaultValues)
+							{
+							}
+							else
+							{
+								limits[h.boneName]=h.limit;
+							}
+						}
+					}*/
 					//Attempt to extract transform animation data.
 					int index = binding.propertyName.IndexOf("T.");
 					if(index != -1)
@@ -215,7 +246,7 @@ namespace teleport
 					if(index != -1)
 					{
 						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationZ = curve;
+						nodeCurve.rotationY = curve;
 						nodeCurves[humanBoneName] = nodeCurve;
 
 						continue;
@@ -236,7 +267,7 @@ namespace teleport
 					if(index != -1)
 					{
 						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationY = curve;
+						nodeCurve.rotationZ = curve;
 						nodeCurves[humanBoneName] = nodeCurve;
 
 						continue;
@@ -246,7 +277,7 @@ namespace teleport
 					if(index != -1)
 					{
 						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationZ = curve;
+						nodeCurve.rotationY = curve;
 						nodeCurves[humanBoneName] = nodeCurve;
 
 						continue;
@@ -256,7 +287,7 @@ namespace teleport
 					if(index != -1)
 					{
 						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationZ = curve;
+						nodeCurve.rotationY = curve;
 						nodeCurves[humanBoneName] = nodeCurve;
 
 						continue;
@@ -317,7 +348,7 @@ namespace teleport
 
 				avs.TransformAnimation newAnimation = new avs.TransformAnimation();
 				newAnimation.boneAmount = nodeCurves.Count;
-				newAnimation.boneKeyframes = new avs.TransformKeyframe[newAnimation.boneAmount];
+				newAnimation.boneKeyframes = new avs.TransformKeyframeList[newAnimation.boneAmount];
 
 				int j = 0;
 				foreach(string humanName in nodeCurves.Keys)
@@ -378,36 +409,55 @@ namespace teleport
 						num_k = Math.Max(num_k, curves.rotationZ.keys.Length);
 						max_t = Math.Max(max_t, curves.rotationZ.keys.Last().time);
 					}
+					num_k=2;
 					newAnimation.boneKeyframes[j].positionAmount=num_k;
 					newAnimation.boneKeyframes[j].rotationAmount = num_k;
 					newAnimation.boneKeyframes[j].positionKeyframes=new avs.Vector3Keyframe[num_k];
 					newAnimation.boneKeyframes[j].rotationKeyframes = new avs.Vector4Keyframe[num_k];
-					for (int k=0;k<num_k;k++)
+					for (int k=0;k< num_k; k++)
 					{
-						float t=(float)k/(float)num_k*max_t;
+						float t0=0.0f;//(float)k/(float)num_k*max_t;
+						float t = (float)k/(float)(num_k -1)* 10.0f;
+
+						// for each time value:
+						//You can't use SampleAnimation for sampling a sub-object of an animation. You have to sample the whole object (the parent object).
+						clip.SampleAnimation(animator.gameObject, t);
 						newAnimation.boneKeyframes[j].positionKeyframes[k].time=t;
-						newAnimation.boneKeyframes[j].positionKeyframes[k].value.x = curves.positionX != null?curves.positionX.Evaluate(t):0.0F;
-						newAnimation.boneKeyframes[j].positionKeyframes[k].value.y = curves.positionY != null ? curves.positionY.Evaluate(t) : 0.0F;
-						newAnimation.boneKeyframes[j].positionKeyframes[k].value.z = curves.positionZ != null ? curves.positionZ.Evaluate(t) : 0.0F;
+						newAnimation.boneKeyframes[j].positionKeyframes[k].value.x = boneObject.transform.localPosition.x;//curves.positionX != null ? curves.positionX.Evaluate(t) : 0.0F;
+						newAnimation.boneKeyframes[j].positionKeyframes[k].value.y = boneObject.transform.localPosition.y;//curves.positionY != null ? curves.positionY.Evaluate(t) : 0.0F;
+						newAnimation.boneKeyframes[j].positionKeyframes[k].value.z = boneObject.transform.localPosition.z;//curves.positionZ != null ? curves.positionZ.Evaluate(t) : 0.0F;
 						newAnimation.boneKeyframes[j].rotationKeyframes[k].time = t;
-						newAnimation.boneKeyframes[j].rotationKeyframes[k].value.x = curves.rotationX != null ? curves.rotationX.Evaluate(t) : 0.0F;
-						newAnimation.boneKeyframes[j].rotationKeyframes[k].value.y = curves.rotationY != null ? curves.rotationY.Evaluate(t) : 0.0F;
-						newAnimation.boneKeyframes[j].rotationKeyframes[k].value.z = curves.rotationZ != null ? curves.rotationZ.Evaluate(t) : 0.0F;
-						newAnimation.boneKeyframes[j].rotationKeyframes[k].value.w = curves.rotationW != null ? curves.rotationW.Evaluate(t) : 1.0F;
+						// Is it a quaternion?
+						//if(curves.rotationW != null)
+							//else
+						{ 
+							newAnimation.boneKeyframes[j].rotationKeyframes[k].value.x =boneObject.transform.localRotation.x;//curves.rotationX != null ? curves.rotationX.Evaluate(t) : 0.0F;
+							newAnimation.boneKeyframes[j].rotationKeyframes[k].value.y =boneObject.transform.localRotation.y;//curves.rotationY != null ? curves.rotationY.Evaluate(t) : 0.0F;
+							newAnimation.boneKeyframes[j].rotationKeyframes[k].value.z =boneObject.transform.localRotation.z;//curves.rotationZ != null ? curves.rotationZ.Evaluate(t) : 0.0F;
+							newAnimation.boneKeyframes[j].rotationKeyframes[k].value.w = boneObject.transform.localRotation.w;//curves.rotationW != null ? curves.rotationW.Evaluate(t) : 1.0F;
+						}
 					}
 					++j;
 				}
+				
 				// ignore the unfilled values:
 				animations[i]= new avs.TransformAnimation();
 				animations[i].boneAmount=j;
-				animations[i].boneKeyframes = new avs.TransformKeyframe[animations[i].boneAmount];
+				animations[i].boneKeyframes = new avs.TransformKeyframeList[animations[i].boneAmount];
 				for (int k=0;k<j;k++)
 				{
 					animations[i].boneKeyframes[k] = newAnimation.boneKeyframes[k];
 				}
 				animations[i].name = Marshal.StringToBSTR(clip.name);
 			}
-
+			if(emptyClip==null)
+				emptyClip= new AnimationClip();
+			emptyClip.SampleAnimation(animator.gameObject,0.0f);
+			for (int i = 0; i < transforms.Length; i++)
+			{	
+				transforms[i].localRotation= storedTransforms[i].localRotation;
+				transforms[i].localPosition = storedTransforms[i].localPosition;
+			}
 			return animations;
 		}
 
@@ -504,13 +554,13 @@ namespace teleport
 					nodeCurves[bone] = interimAnimation;
 				}
 
-				animation.boneKeyframes = new avs.TransformKeyframe[nodeCurves.Count];
+				animation.boneKeyframes = new avs.TransformKeyframeList[nodeCurves.Count];
 				for(int j = 0; j < nodeCurves.Count; j++)
 				{
 					Transform bone = nodeCurves.Keys.ToArray()[j];
 					InterimAnimation interim = nodeCurves[bone];
 
-					avs.TransformKeyframe transformKeyframe = new avs.TransformKeyframe();
+					avs.TransformKeyframeList transformKeyframe = new avs.TransformKeyframeList();
 					transformKeyframe.nodeID = GeometrySource.GetGeometrySource().FindResourceID(bone);
 
 					if(transformKeyframe.nodeID == 0)
