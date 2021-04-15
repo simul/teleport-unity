@@ -343,7 +343,7 @@ namespace teleport
 			DiffuseCubeTexture.autoGenerateMips = false;
 			DiffuseCubeTexture.enableRandomWrite = true;
 			DiffuseCubeTexture.Create();
-
+			
 			SpecularCubeTexture = new RenderTexture(teleportSettings.casterSettings.specularCubemapSize, teleportSettings.casterSettings.specularCubemapSize, 1, format, RenderTextureReadWrite.Default);
 			SpecularCubeTexture.name = "Specular Cube";
 			SpecularCubeTexture.dimension = TextureDimension.Cube;

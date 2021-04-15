@@ -91,7 +91,7 @@ namespace teleport
 		static Vector4 nonImportantY = Vector4.zero;
 		static Vector4 nonImportantZ = Vector4.zero;
 		static Vector4 nonImportantAtten = Vector4.one;
-		const string k_SetupLightConstants = "Setup Light Constants";
+		public const string k_SetupLightConstants = "Setup Light Constants";
 		const string k_SetupShadowConstants = "Setup Shadow Constants";
 
 		const string bufferName = "Lighting";
@@ -216,9 +216,22 @@ namespace teleport
 					shadows.RenderScreenspaceShadows(context, camera, cullingResults, perFrameLightProperties[light], 1, depthTexture);
 			}
 		}
-		public void SetupForwardBasePass(ScriptableRenderContext context, Camera camera,CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder)
+		public void SetupForwardBasePass(ScriptableRenderContext context, Camera camera,CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder, RenderTexture renderTarget = null, int face = -1)
 		{
 			CommandBuffer buffer = CommandBufferPool.Get(k_SetupLightConstants);
+
+			if (renderTarget != null)
+			{
+				if (face >= 0)
+				{
+					buffer.SetRenderTarget(renderTarget, 0, (CubemapFace)face);
+				}
+				else
+				{
+					buffer.SetRenderTarget(renderTarget);
+				}
+			}
+
 			buffer.BeginSample(bufferName);
 			NativeArray<VisibleLight> visibleLights = lightingOrder.visibleLights;
 			RenderTexture screenspaceShadowTexture = null;
@@ -323,9 +336,23 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			CommandBufferPool.Release(buffer);
 		}
-		public bool SetupForwardAddPass(ScriptableRenderContext context, Camera camera,CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder,int additionalLightIndex)
+		public bool SetupForwardAddPass(ScriptableRenderContext context, Camera camera,CullingResults cullingResults, TeleportRenderPipeline.LightingOrder lightingOrder,int additionalLightIndex, RenderTexture renderTarget = null, int face = -1)
 		{
 			CommandBuffer buffer = CommandBufferPool.Get(k_SetupLightConstants);
+
+			if (renderTarget != null)
+			{
+				if (face >= 0)
+				{
+					buffer.SetRenderTarget(renderTarget, 0, (CubemapFace)face);
+				}
+				else
+				{
+					buffer.SetRenderTarget(renderTarget);
+				}
+			}
+			
+
 			NativeArray<VisibleLight> visibleLights = lightingOrder.visibleLights;
 			if (additionalLightIndex < 0|| additionalLightIndex>= visibleLights.Length)
 				return false;
