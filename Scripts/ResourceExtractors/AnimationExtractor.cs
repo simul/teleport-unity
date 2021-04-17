@@ -182,19 +182,6 @@ namespace teleport
 				{
 					AnimationCurve curve = AnimationUtility.GetEditorCurve(clip, binding);
 					var words= binding.propertyName.Split(' ');
-				/*	foreach(var h in humanDescription.human)
-					{
-						if(h.humanName==words[0])
-						{
-							if(h.limit.useDefaultValues)
-							{
-							}
-							else
-							{
-								limits[h.boneName]=h.limit;
-							}
-						}
-					}*/
 					//Attempt to extract transform animation data.
 					int index = binding.propertyName.IndexOf("T.");
 					if(index != -1)
@@ -245,108 +232,9 @@ namespace teleport
 					int muscleIndex = System.Array.IndexOf(HumanTrait.MuscleName, muscleName);
 					string humanBoneName = HumanTrait.BoneName[HumanTrait.BoneFromMuscle(muscleIndex)];
 
-					index = binding.propertyName.IndexOf("Front-Back");
-					if(index != -1)
-					{
-						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationY = curve;
-						nodeCurves[humanBoneName] = nodeCurve;
-
-						continue;
-					}
-
-					index = binding.propertyName.IndexOf("Left-Right Twist");
-					if(index != -1)
-					{
-						Debug.LogError("Left-Right Twist");
-						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationX = curve;
-						nodeCurves[humanBoneName] = nodeCurve;
-
-						continue;
-					}
-
-					index = binding.propertyName.IndexOf("Left-Right");
-					if(index != -1)
-					{
-						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationZ = curve;
-						nodeCurves[humanBoneName] = nodeCurve;
-
-						continue;
-					}
-
-					index = binding.propertyName.IndexOf("Up-Down");
-					if(index != -1)
-					{
-						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationY = curve;
-						nodeCurves[humanBoneName] = nodeCurve;
-
-						continue;
-					}
-
-					index = binding.propertyName.IndexOf("Down-Up");
-					if(index != -1)
-					{
-						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationY = curve;
-						nodeCurves[humanBoneName] = nodeCurve;
-
-						continue;
-					}
-
-					index = binding.propertyName.IndexOf("Twist In-Out");
-					if(index != -1)
-					{
-						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationX = curve;
-						nodeCurves[humanBoneName] = nodeCurve;
-
-						continue;
-					}
-
-					index = binding.propertyName.IndexOf("In-Out");
-					if(index != -1)
-					{
-						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationY = curve;
-						nodeCurves[humanBoneName] = nodeCurve;
-
-						continue;
-					}
-
-					index = binding.propertyName.IndexOf("Stretch");
-					if(index != -1)
-					{
-						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationZ = curve;
-						nodeCurves[humanBoneName] = nodeCurve;
-
-						continue;
-					}
-
-					index = binding.propertyName.IndexOf("Spread");
-					if(index != -1)
-					{
-						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationY = curve;
-						nodeCurves[humanBoneName] = nodeCurve;
-
-						continue;
-					}
-
-					index = binding.propertyName.IndexOf("Close");
-					if(index != -1)
-					{
-						nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
-						nodeCurve.rotationZ = curve;
-						nodeCurves[humanBoneName] = nodeCurve;
-
-						continue;
-					}
-
-					Debug.LogWarning($"Failed to extract animation curve \"{binding.propertyName}\" with {curve.keys.Length} keys.");
+					nodeCurves.TryGetValue(humanBoneName, out InterimAnimation nodeCurve);
+					nodeCurve.positionX = curve;
+					nodeCurves[humanBoneName] = nodeCurve;
 				}
 
 				avs.TransformAnimation newAnimation = new avs.TransformAnimation();
@@ -375,52 +263,15 @@ namespace teleport
 					{
 						continue;
 					} 
-					int num_k=0;
-					float max_t = 0.0F;
-					if (curves.positionX!=null)
-					{
-						num_k= curves.positionX.keys.Length;
-						max_t = Math.Max(max_t, curves.positionX.keys.Last().time);
-					}
-					if (curves.positionY != null)
-					{
-						num_k = Math.Max(num_k, curves.positionY.keys.Length);
-						max_t = Math.Max(max_t,curves.positionY.keys.Last().time);
-					}
-					if (curves.positionZ != null)
-					{ 
-						num_k = Math.Max(num_k, curves.positionZ.keys.Length);
-						max_t = Math.Max(max_t, curves.positionZ.keys.Last().time);
-					}
-					if (curves.rotationW != null)
-					{	
-						num_k = Math.Max(num_k, curves.rotationW.keys.Length);
-						max_t = Math.Max(max_t, curves.rotationW.keys.Last().time);
-					}
-					if (curves.rotationX != null)
-					{
-						num_k = Math.Max(num_k, curves.rotationX.keys.Length);
-						max_t = Math.Max(max_t, curves.rotationX.keys.Last().time);
-					}
-					if (curves.rotationY != null)
-					{
-						num_k = Math.Max(num_k, curves.rotationY.keys.Length);
-						max_t = Math.Max(max_t, curves.rotationY.keys.Last().time);
-					}
-					if (curves.rotationZ != null)
-					{
-						num_k = Math.Max(num_k, curves.rotationZ.keys.Length);
-						max_t = Math.Max(max_t, curves.rotationZ.keys.Last().time);
-					}
-					num_k=2;
+					int num_k= curves.positionX.keys.Length;
+					float max_t =  curves.positionX.keys.Last().time;
 					newAnimation.boneKeyframes[j].positionAmount=num_k;
-					newAnimation.boneKeyframes[j].rotationAmount = num_k;
+					newAnimation.boneKeyframes[j].rotationAmount=num_k;
 					newAnimation.boneKeyframes[j].positionKeyframes=new avs.Vector3Keyframe[num_k];
 					newAnimation.boneKeyframes[j].rotationKeyframes = new avs.Vector4Keyframe[num_k];
 					for (int k=0;k< num_k; k++)
 					{
-						float t0=0.0f;//(float)k/(float)num_k*max_t;
-						float t = (float)k/(float)(num_k -1)* 10.0f;
+						float t = (float)k/(float)(num_k -1)* max_t;
 
 						// for each time value:
 						//You can't use SampleAnimation for sampling a sub-object of an animation. You have to sample the whole object (the parent object).
