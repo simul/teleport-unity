@@ -140,11 +140,14 @@ namespace teleport
 		public static avs.TransformAnimation[] ExtractHumanAnimationData(Animator animator)
 		{
 			Transform[] transforms = animator.gameObject.GetComponentsInChildren<Transform>();
-			Transform[] storedTransforms=new Transform[transforms.Length];
-			for(int i=0;i< transforms.Length;i++)
+			Vector3[] storedPositions=new Vector3[transforms.Length];
+			Quaternion[] storedRotations= new Quaternion[transforms.Length];
+			for (int i=0;i< transforms.Length;i++)
 			{
-				storedTransforms[i].localPosition= transforms[i].localPosition;
-				storedTransforms[i].localRotation = transforms[i].localRotation;
+				storedPositions[i]= new Vector3(0,0,0);
+				storedRotations[i] = new Quaternion();
+				storedPositions[i]= transforms[i].localPosition;
+				storedRotations[i] = transforms[i].localRotation;
 			}
 			HumanBone[] humanBones = animator.avatar.humanDescription.human;
 			// store the current position.
@@ -455,8 +458,8 @@ namespace teleport
 			emptyClip.SampleAnimation(animator.gameObject,0.0f);
 			for (int i = 0; i < transforms.Length; i++)
 			{	
-				transforms[i].localRotation= storedTransforms[i].localRotation;
-				transforms[i].localPosition = storedTransforms[i].localPosition;
+				transforms[i].localRotation= storedRotations[i];
+				transforms[i].localPosition = storedPositions[i];
 			}
 			return animations;
 		}
