@@ -135,24 +135,58 @@ namespace teleport
 			sessions[clientID].SetControllerPose(index, latestRotation, latestPosition);
 		}
 
-		public static void StaticProcessInput(uid clientID, in avs.InputState inputState, in IntPtr inputEventsPtr)
+		public static void StaticProcessInput(uid clientID, in avs.InputState inputState, in IntPtr binaryEventsPtr, in IntPtr analogueEventsPtr, in IntPtr motionEventsPtr)
 		{
-			if (!StaticDoesSessionExist(clientID))
-				return;
-			sessions[clientID].SetControllerInput(inputState.controllerId, inputState.buttonsPressed,inputState.joystickAxisX,inputState.joystickAxisY);
-			if (inputEventsPtr != null)
+			if(!StaticDoesSessionExist(clientID))
 			{
-				int EventSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(avs.InputEvent));
-				//convert the pointer array into a struct array
-				avs.InputEvent[] inputEvents = new avs.InputEvent[inputState.numEvents];
-				IntPtr ptr=  inputEventsPtr;
-				for (int i = 0; i < inputState.numEvents; i++)
-				{
-					inputEvents[i]=Marshal.PtrToStructure<avs.InputEvent>(ptr);
-					ptr += EventSize;
-				}
-				sessions[clientID].SetControllerEvents(inputState.controllerId, inputState.numEvents, inputEvents);
+				return;
 			}
+
+			sessions[clientID].SetControllerInput(inputState.controllerID, inputState.buttonsDown, inputState.joystickAxisX, inputState.joystickAxisY);
+
+			avs.InputEventBinary[] binaryEvents = new avs.InputEventBinary[inputState.binaryEventAmount];
+			if(inputState.binaryEventAmount != 0)
+			{
+				int binaryEventSize = Marshal.SizeOf<avs.InputEventBinary>();
+
+				//Convert the pointer array into a struct array.
+				IntPtr positionPtr = binaryEventsPtr;
+				for(int i = 0; i < inputState.binaryEventAmount; i++)
+				{
+					binaryEvents[i] = Marshal.PtrToStructure<avs.InputEventBinary>(positionPtr);
+					positionPtr += binaryEventSize;
+				}
+			}
+
+			avs.InputEventAnalogue[] analogueEvents = new avs.InputEventAnalogue[inputState.analogueEventAmount];
+			if(inputState.analogueEventAmount != 0)
+			{
+				int analogueEventSize = Marshal.SizeOf<avs.InputEventAnalogue>();
+				
+				//Convert the pointer array into a struct array.
+				IntPtr positionPtr = analogueEventsPtr;
+				for(int i = 0; i < inputState.analogueEventAmount; i++)
+				{
+					analogueEvents[i] = Marshal.PtrToStructure<avs.InputEventAnalogue>(positionPtr);
+					positionPtr += analogueEventSize;
+				}
+			}
+
+			avs.InputEventMotion[] motionEvents = new avs.InputEventMotion[inputState.motionEventAmount];
+			if(inputState.motionEventAmount != 0)
+			{
+				int motionEventSize = Marshal.SizeOf<avs.InputEventMotion>();
+
+				//Convert the pointer array into a struct array.
+				IntPtr positionPtr = motionEventsPtr;
+				for(int i = 0; i < inputState.motionEventAmount; i++)
+				{
+					motionEvents[i] = Marshal.PtrToStructure<avs.InputEventMotion>(positionPtr);
+					positionPtr += motionEventSize;
+				}
+			}
+
+			sessions[clientID].ProcessControllerEvents(inputState.controllerID, binaryEvents, analogueEvents, motionEvents);
 		}
 
 		public static void StaticProcessAudioInput(uid clientID, in IntPtr dataPtr, UInt64 dataSize)
@@ -264,22 +298,20 @@ namespace teleport
 			last_received_headPos=newPosition;
 		}
 
-		public void SetControllerInput(int index, UInt32 buttons,float jx,float jy)
+		public void SetControllerInput(int controllerID, UInt32 buttons, float stickX, float stickY)
 		{
-			if (controllers.ContainsKey(index))
+			if(controllers.TryGetValue(controllerID, out Teleport_Controller controller))
 			{
-				var controller = controllers[index];
 				controller.SetButtons(buttons);
-				controller.SetJoystick(jx, jy);
+				controller.SetJoystick(stickX, stickY);
 			}
 		}
 
-		public void SetControllerEvents(int index, UInt32 num, avs.InputEvent[] events)
+		public void ProcessControllerEvents(int controllerID, avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
 		{
-			if (controllers.ContainsKey(index))
+			if(controllers.TryGetValue(controllerID, out Teleport_Controller controller))
 			{
-				var controller = controllers[index];
-				controller.AddEvents(num, events);
+				controller.ProcessInputEvents(binaryEvents, analogueEvents, motionEvents);
 			}
 		}
 		

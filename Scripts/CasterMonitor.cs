@@ -25,6 +25,7 @@ namespace teleport
 		private static StringBuilder logCritical = new StringBuilder();
 
 		#region DLLDelegates
+
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate byte OnShowNode(uid clientID, uid nodeID);
 
@@ -41,7 +42,7 @@ namespace teleport
 		delegate void OnSetControllerPose(uid clientID, int index, in avs.Pose newHeadPose);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate void OnNewInput(uid clientID, in avs.InputState newInput, in IntPtr newInputEvents);
+		delegate void OnNewInput(uid clientID, in avs.InputState inputState, in IntPtr binaryEventsPtr, in IntPtr analogueEventsPtr, in IntPtr motionEventsPtr);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void OnDisconnect(uid clientID);
