@@ -377,40 +377,37 @@ namespace teleport
 		#endregion
 
 		public List<TextureExtractionData> texturesWaitingForExtraction = new List<TextureExtractionData>();
-		public string compressedTexturesFolderPath;
-		// <GameObject, ID of extracted data in native plug-in>
-		private readonly Dictionary<UnityEngine.Object, uid> processedResources = new Dictionary<UnityEngine.Object, uid>();
+		[HideInInspector] public string compressedTexturesFolderPath;
+
+		private const string RESOURCES_PATH = "Assets/Resources/";
+		private const string TELEPORT_VR_PATH = "TeleportVR/";
+
+		private readonly Dictionary<UnityEngine.Object, uid> processedResources = new Dictionary<UnityEngine.Object, uid>(); //<Resource, ResourceID>
 		private bool isAwake = false;
 
+		[SerializeField] private SceneReferenceManager sceneReferenceManager = null;
+
 		private static GeometrySource geometrySource = null;
-
-		[SerializeField, HideInInspector] private SceneReferenceManager sceneReferenceManager = null;
-
-		private Dictionary<uid, UnityEngine.Object> resourceMap = new Dictionary<uid, UnityEngine.Object>();
-
-		// We always store the settings in this path:
-		public const string k_GeometrySourcePath = "TeleportVR/GeometrySource";
-		public const string k_GeometryFilename = "GeometrySource";
 
 		public static GeometrySource GetGeometrySource()
 		{
 			if (geometrySource == null)
 			{
-				geometrySource = Resources.Load<GeometrySource>(k_GeometrySourcePath + "/" + k_GeometryFilename);
+				geometrySource = Resources.Load<GeometrySource>(TELEPORT_VR_PATH + nameof(GeometrySource));
 			}
 
 #if UNITY_EDITOR
 			if (geometrySource == null)
 			{
-				TeleportSettings.EnsureAssetPath("Assets/Resources/" + k_GeometrySourcePath);
-				string assetPath = "Assets/Resources/" + k_GeometrySourcePath + "/" + k_GeometryFilename + ".asset";
+				TeleportSettings.EnsureAssetPath(RESOURCES_PATH + TELEPORT_VR_PATH);
+				string assetPath = RESOURCES_PATH + TELEPORT_VR_PATH + nameof(GeometrySource) + ".asset";
 
 				geometrySource = CreateInstance<GeometrySource>();
 				AssetDatabase.CreateAsset(geometrySource, assetPath);
 				AssetDatabase.SaveAssets();
 
 				ClearGeometryStore();
-				Debug.LogWarning("Created Geometry Source at: " + assetPath);
+				Debug.LogWarning($"Geometry Source asset created with path \"{assetPath}\"!");
 			}	
 #endif
 
@@ -463,24 +460,20 @@ namespace teleport
 			{
 				RemoveNode(pair.Value);
 				processedResources.Remove(pair.Key);
-				resourceMap.Remove(pair.Value);
 			}
 
-			if(sceneReferenceManager == null)
-			{
-				sceneReferenceManager = CreateInstance<SceneReferenceManager>();
-			}
+			sceneReferenceManager = SceneReferenceManager.GetSceneReferenceManager();
 		}
 
 		public void SaveToDisk()
 		{
+			sceneReferenceManager.SaveToDisk();
 			SaveGeometryStore();
 		}
 
 		public void LoadFromDisk()
 		{
 			processedResources.Clear();
-			resourceMap.Clear();
 
 			//Load data from files.
 			LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 materialAmount, out IntPtr loadedMaterials);
@@ -581,7 +574,6 @@ namespace teleport
 
 			nodeID = nodeID == 0 ? GenerateID() : nodeID;
 			processedResources[node] = nodeID;
-			resourceMap[nodeID] = node;
 
 			avs.Node extractedNode = new avs.Node();
 			extractedNode.name = Marshal.StringToBSTR(node.name);
@@ -1668,7 +1660,7 @@ namespace teleport
 			{
 				return File.GetLastWriteTimeUtc(filePath).ToFileTimeUtc();
 			}
-			catch(Exception e)
+			catch(Exception)
 			{
 				Debug.LogError("Failed to get last write time for "+filePath);
 				return 0;
@@ -1724,7 +1716,6 @@ namespace teleport
 						// Not spamming here unless debugging this feature:
 						//Debug.Log("Reaffirmed resource was " + metaResource.oldID + " now " + newID + " loaded from disk, " + assetPath);
 						processedResources[asset] = newID;
-						resourceMap[newID] = asset;
 					}
 				}
 				else
