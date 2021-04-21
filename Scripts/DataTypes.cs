@@ -467,16 +467,19 @@ namespace avs
 		public UInt32 numEvents;
 	}
 
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct Pose
 	{
 		public Vector4 orientation;
 		public Vector3 position;
 	}
 
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct MovementUpdate
 	{
-		public long timestamp;
-		public bool isGlobal;
+		public UInt64 timestamp;
+		public byte isGlobal;	// really a bool, but C# treats bool as 4 bytes....!
 
 		public uid nodeID;
 		public avs.Vector3 position;

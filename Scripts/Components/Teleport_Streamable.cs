@@ -153,18 +153,18 @@ namespace teleport
 			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node, false);
 
 			avs.MovementUpdate update = new avs.MovementUpdate();
-			update.timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+			update.timestamp =(UInt64) DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 			update.nodeID = nodeID;
 
 			if(GeometryStreamingService.IsClientRenderingParent(clientID, node))
 			{
-				update.isGlobal = false;
+				update.isGlobal = (byte)0;
 				update.position = node.transform.localPosition;
 				update.rotation = node.transform.localRotation;
 			}
 			else
 			{
-				update.isGlobal = true;
+				update.isGlobal = (byte)1;
 				update.position = node.transform.position;
 				update.rotation = node.transform.rotation;
 			}
@@ -176,7 +176,7 @@ namespace teleport
 				Quaternion rotation;
 
 				//Velocity and angular velocity must be calculated in the same basis as the previous movement.
-				if(previousMovement.isGlobal)
+				if(previousMovement.isGlobal!=0)
 				{
 					position = node.transform.position;
 					rotation = node.transform.rotation;
