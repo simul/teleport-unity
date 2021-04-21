@@ -63,6 +63,83 @@ namespace avs
 		Invalid = 0,
 		PCM
 	};
+
+	public enum InputList
+	{
+		INVALID,
+
+		BUTTON01,
+		BUTTON02,
+		BUTTON03,
+		BUTTON04,
+		BUTTON05,
+		BUTTON06,
+		BUTTON07,
+		BUTTON08,
+		BUTTON09,
+		BUTTON10,
+
+		TRIGGER01,
+		TRIGGER02,
+		TRIGGER03,
+		TRIGGER04,
+		TRIGGER05,
+		TRIGGER06,
+		TRIGGER07,
+		TRIGGER08,
+		TRIGGER09,
+		TRIGGER10,
+
+		MOTION01,
+		MOTION02,
+		MOTION03,
+		MOTION04,
+		MOTION05,
+		MOTION06,
+		MOTION07,
+		MOTION08,
+		MOTION09,
+		MOTION10,
+
+		//Button aliases.
+		BUTTON_A = BUTTON01,
+		BUTTON_B = BUTTON02,
+		BUTTON_X = BUTTON03,
+		BUTTON_Y = BUTTON04,
+
+		BUTTON_LEFT_STICK = BUTTON05,
+		BUTTON_RIGHT_STICK = BUTTON06,
+
+		BUTTON_HOME = BUTTON07,
+
+		//Single stick alias.
+		BUTTON_STICK = BUTTON_LEFT_STICK,
+
+		//Trigger aliases.
+		TRIGGER_LEFT_BACK = TRIGGER01,
+		TRIGGER_RIGHT_BACK = TRIGGER02,
+		TRIGGER_LEFT_FRONT = TRIGGER03,
+		TRIGGER_RIGHT_FRONT = TRIGGER04,
+		TRIGGER_LEFT_GRIP = TRIGGER05,
+		TRIGGER_RIGHT_GRIP = TRIGGER06,
+
+		//Single trigger aliases.
+		TRIGGER_BACK = TRIGGER_LEFT_BACK,
+		TRIGGER_FRONT = TRIGGER_LEFT_FRONT,
+		TRIGGER_GRIP = TRIGGER_LEFT_GRIP,
+
+		//Motion aliases.
+		STICK_LEFT = MOTION01,
+		STICK_RIGHT = MOTION02,
+
+		TRACKPAD_LEFT = MOTION03,
+		TRACKPAD_RIGHT = MOTION04,
+
+		//Single motion aliases.
+		STICK = STICK_LEFT,
+		TRACKPAD = TRACKPAD_LEFT,
+	};
+
 	public static class DataTypes
 	{
 		public static LightType UnityToTeleport(UnityEngine.LightType unity)
@@ -75,11 +152,11 @@ namespace avs
 			var z = m.GetColumn(2);
 			// The source has y and z messed about in the input, but converts to a correct xy position with z=depth.
 			// So we swap and flip columns to get to the correct matrix.
-			if (toStandard == AxesStandard.GlStyle)
+			if(toStandard == AxesStandard.GlStyle)
 			{
 				m.SetColumn(2, -z);// { position.x, position.y, -position.z };
 			}
-			if (toStandard == AxesStandard.EngineeringStyle)
+			if(toStandard == AxesStandard.EngineeringStyle)
 			{
 				m.SetColumn(1, z);
 				m.SetColumn(2, y);// { position.x, position.z, position.y };
@@ -93,39 +170,39 @@ namespace avs
 			var z = m.GetColumn(2);
 			// The source has y and z messed about in the input, but converts to a correct xy position with z=depth.
 			// So we swap and flip columns to get to the correct matrix.
-			if (toStandard == AxesStandard.GlStyle)
+			if(toStandard == AxesStandard.GlStyle)
 			{
 				m.SetColumn(2, -z);// { position.x, position.y, -position.z };
 			}
-			if (toStandard == AxesStandard.EngineeringStyle)
+			if(toStandard == AxesStandard.EngineeringStyle)
 			{
 				m.SetColumn(1, z);
 				m.SetColumn(2, y);// { position.x, position.z, position.y };
 			}
 		}
-		
+
 		public static void ConvertTransformMatrix(AxesStandard toStandard, ref Matrix4x4 m)
 		{
 			var y = m.GetColumn(1);
 			var z = m.GetColumn(2);
 			// The source has y and z messed about in the input, but converts to a correct xy position with z=depth.
 			// So we swap and flip columns to get to the correct matrix.
-			if (toStandard == AxesStandard.GlStyle)
+			if(toStandard == AxesStandard.GlStyle)
 			{
 				m.SetColumn(2, -z);// { position.x, position.y, -position.z };
 			}
-			if (toStandard == AxesStandard.EngineeringStyle)
+			if(toStandard == AxesStandard.EngineeringStyle)
 			{
 				m.SetColumn(1, z);
 				m.SetColumn(2, y);// { position.x, position.z, position.y };
 			}
 			var ry = m.GetRow(1);
 			var rz = m.GetRow(2);
-			if (toStandard == AxesStandard.GlStyle)
+			if(toStandard == AxesStandard.GlStyle)
 			{
 				m.SetRow(2, -rz);
 			}
-			if (toStandard == AxesStandard.EngineeringStyle)
+			if(toStandard == AxesStandard.EngineeringStyle)
 			{
 				m.SetRow(1, rz);
 				m.SetRow(2, ry);
@@ -189,7 +266,7 @@ namespace avs
 		}
 		public override bool Equals(object obj)
 		{
-			if (!(obj is Vector2))
+			if(!(obj is Vector2))
 			{
 				return false;
 			}
@@ -235,7 +312,7 @@ namespace avs
 		}
 		public override bool Equals(object obj)
 		{
-			if (!(obj is Vector3))
+			if(!(obj is Vector3))
 			{
 				return false;
 			}
@@ -292,7 +369,7 @@ namespace avs
 		}
 		public override bool Equals(object obj)
 		{
-			if (!(obj is Vector4))
+			if(!(obj is Vector4))
 			{
 				return false;
 			}
@@ -429,42 +506,61 @@ namespace avs
 	{
 		public UInt32 display_width;
 		public UInt32 display_height;
-		public float MetresPerUnit ;
-		public float FOV ;
-		public UInt32 udpBufferSize ;
-		public UInt32 maxBandwidthKpS ;     
-		public AxesStandard axesStandard ;
-		public byte framerate;					// In hertz
-		public byte usingHands ;				//Whether to send the hand nodes to the client.
+		public float MetresPerUnit;
+		public float FOV;
+		public UInt32 udpBufferSize;
+		public UInt32 maxBandwidthKpS;
+		public AxesStandard axesStandard;
+		public byte framerate;                  // In hertz
+		public byte usingHands;             //Whether to send the hand nodes to the client.
 		public byte isVR;
 		public UInt64 resourceCount;            //	Number of resources the client has, these are appended to the handshake.
-		public UInt32 maxLightsSupported;		// Maximum number of lights the client can render.
+		public UInt32 maxLightsSupported;       // Maximum number of lights the client can render.
 	};
 
 	enum InputEventType : byte
 	{
-		None=0,
+		None = 0,
 		Click
 	};
 
-	[StructLayout(LayoutKind.Sequential, Pack = 1)]
-	public struct InputEvent
+	[StructLayout(LayoutKind.Sequential)]
+	public struct InputEventBinary
 	{
-		public UInt32 eventId;		 //< A monotonically increasing event identifier.
-		public uid inputUid;       //< e.g. the uniqe identifier for this button or control.
-		public UInt32 intValue;
-	};
+		public UInt32 eventID;
+		public InputList inputID;
+		public bool activated;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct InputEventAnalogue
+	{
+		public UInt32 eventID;
+		public InputList inputID;
+		public float strength;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct InputEventMotion
+	{
+		public UInt32 eventID;
+		public InputList inputID;
+		public avs.Vector2 motion;
+	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct InputState
 	{
-		public Int32 controllerId;
-		public UInt32 buttonsPressed;
+		public Int32 controllerID;
+		public UInt32 buttonsDown;
 		public float trackpadAxisX;
 		public float trackpadAxisY;
 		public float joystickAxisX;
 		public float joystickAxisY;
-		public UInt32 numEvents;
+
+		public UInt32 binaryEventAmount;
+		public UInt32 analogueEventAmount;
+		public UInt32 motionEventAmount;
 	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
