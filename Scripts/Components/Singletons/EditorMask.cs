@@ -34,7 +34,7 @@ namespace teleport
 					var tempObject = new GameObject("EditorMask");
 					//Add Components
 					tempObject.AddComponent<EditorMask>();
-					EditorMask.Initialize();
+					Initialize();
 					instance = tempObject.GetComponent<EditorMask>();
 				}
 			}

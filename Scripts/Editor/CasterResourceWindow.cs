@@ -219,9 +219,14 @@ namespace teleport
 
 		private void SetupGameObjectAndChildrenForStreaming(GameObject o)
 		{
-			foreach (var r in o.GetComponentsInChildren<MeshFilter>())
+			foreach (var mf in o.GetComponentsInChildren<MeshFilter>())
 			{
-				var go = r.gameObject;
+				if (mf.gameObject.GetComponent<Renderer>() == null || !mf.gameObject.GetComponent<Renderer>().isVisible)
+				{
+					continue;
+				}
+
+				var go = mf.gameObject;
 				if (go.GetComponent<Collider>() != null)
 				{
 					go.tag = teleportSettings.TagToStream;
