@@ -1,11 +1,9 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEditor.SceneManagement;
 
 namespace teleport
 {
-    public class SceneManagement
+    public class SceneManagement 
     {
         [MenuItem("Teleport VR/Open Default Scene")]
         public static void OpenResourceWindow()

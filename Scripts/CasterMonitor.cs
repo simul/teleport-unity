@@ -253,24 +253,12 @@ namespace teleport
 			{
 				renderer.renderingLayerMask = mask;
 			}
-
-			SkinnedMeshRenderer[] skinnedMeshRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
-			foreach (SkinnedMeshRenderer renderer in skinnedMeshRenderers)
-			{
-				renderer.renderingLayerMask = mask;
-			}
 		}
 		static public void UnsetMaskRecursive(GameObject gameObject, uint mask)
 		{
 			uint inverse_mask=~mask;
 			Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
 			foreach (Renderer renderer in renderers)
-			{
-				renderer.renderingLayerMask = renderer.renderingLayerMask&inverse_mask;
-			}
-
-			SkinnedMeshRenderer[] skinnedMeshRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
-			foreach (SkinnedMeshRenderer renderer in skinnedMeshRenderers)
 			{
 				renderer.renderingLayerMask = renderer.renderingLayerMask & inverse_mask;
 			}

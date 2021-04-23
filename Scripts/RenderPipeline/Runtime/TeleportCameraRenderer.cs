@@ -665,6 +665,7 @@ namespace teleport
 		{
 			EditorMask editorMask = EditorMask.GetInstance();
 		}
+
 		public void Render(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask)
 		{
 			CullingResults cullingResultsAll;
@@ -689,14 +690,14 @@ namespace teleport
 			if (Application.isPlaying)
 			{
 				renderingMask = (uint)(1 << 26);   // Render ONLY the items that are streamed to this client.
-				DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder, true);
 			}
 			else
 			{
 				SetStreamableHighlightMaskOnObjects();
 				renderingMask = (uint)1 << 31;   // When not playing, only streamables have this bit set.
-				DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder, true);
 			}
+			DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder, true);
+			
 #if UNITY_EDITOR
 			DrawUnsupportedShaders(context, camera);
 #endif
@@ -740,18 +741,25 @@ namespace teleport
 			}
 			if (!Teleport_SessionComponent.sessions.ContainsKey(ClientID))
 				return;
-			var oldPos = camera.transform.position;
-			var oldRot = camera.transform.rotation;
 			
 			var session = Teleport_SessionComponent.sessions[ClientID];
 			camera.transform.position = session.head.transform.position;
+			camera.transform.rotation = session.head.transform.rotation;
+
+			var oldPos = camera.transform.position;
+			var oldRot = camera.transform.rotation;
+
 			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
 			if (ClientID != 0)
 				UpdateStreamables(context, ClientID, camera);
 
 			CullingResults cullingResultsAll;
-			float nearClip=camera.nearClipPlane;
-			camera.nearClipPlane= teleportSettings.casterSettings.detectionSphereRadius*0.5F;
+			float oldNearClip = camera.nearClipPlane;
+			if (teleportSettings.casterSettings.isStreamingGeometry)
+			{
+				camera.nearClipPlane = teleportSettings.casterSettings.detectionSphereRadius;
+			}
+			
 			if (Cull(context, camera, out cullingResultsAll, true))
 			{
 				TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
@@ -764,7 +772,6 @@ namespace teleport
 				if (teleportSettings.casterSettings.usePerspectiveRendering)
 				{
 					// Draw scene
-					camera.transform.rotation = session.head.transform.rotation;
 					camera.fieldOfView = teleportSettings.casterSettings.perspectiveFOV;
 					DrawPerspective(context, camera, lightingOrder);
 
@@ -774,9 +781,6 @@ namespace teleport
 					{
 						DrawCubemapFace(context, camera, lightingOrder, i);
 					}
-
-					// Reset for tag data
-					camera.transform.rotation = oldRot;
 
 					int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
 					int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
@@ -798,6 +802,10 @@ namespace teleport
 				videoEncoding.EncodeTagID(context, camera);
 				context.Submit();
 
+				camera.nearClipPlane = oldNearClip;
+				camera.transform.position = oldPos;
+				camera.transform.rotation = oldRot;
+
 				var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
 				if (ClientID != 0 && teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
 				{
@@ -805,9 +813,6 @@ namespace teleport
 					videoEncoder.CreateEncodeCommands(context, camera, tagDataID);
 				}
 			}
-			camera.nearClipPlane = nearClip;
-			camera.transform.position = oldPos;
-			camera.transform.rotation = oldRot;
 		}
 
 		// This function leverages the Unity rendering pipeline functionality to get information about what lights etc should be visible to the client.

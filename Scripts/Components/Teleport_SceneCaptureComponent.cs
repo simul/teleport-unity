@@ -270,13 +270,6 @@ namespace teleport
 
 		void RenderToTexture()
 		{
-			cam.transform.position = transform.position;
-
-			if (teleportSettings.casterSettings.usePerspectiveRendering)
-			{
-				cam.transform.rotation = transform.rotation;
-			}
-
 			// Update name in case client ID changed
 			cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
 			RenderingSceneCapture = this;

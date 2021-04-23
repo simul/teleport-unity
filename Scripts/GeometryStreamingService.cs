@@ -229,10 +229,9 @@ namespace teleport
 			{
 				List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.casterSettings.detectionSphereRadius, teleportSettings.LayersToStream));
 				List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.casterSettings.detectionSphereRadius + teleportSettings.casterSettings.detectionSphereBufferDistance, teleportSettings.LayersToStream));
-
 				List<Collider> gainedColliders = new List<Collider>(innerSphereCollisions.Except(streamedColliders));
 				List<Collider> lostColliders = new List<Collider>(streamedColliders.Except(outerSphereCollisions));
-
+				
 				foreach (Collider collider in gainedColliders)
 				{			
 					//Skip game objects without the streaming tag.
