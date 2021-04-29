@@ -10,6 +10,8 @@ namespace teleport
 {
 	public class CasterResourceWindow : EditorWindow
 	{
+		enum ResourceWindowCategories {EXTRACTION, SETUP, DEBUG};
+
 		//References to assets.
 		private GeometrySource geometrySource;
 		private ComputeShader textureShader;
@@ -19,17 +21,23 @@ namespace teleport
 		private List<GameObject> streamedSceneObjects = new List<GameObject>(); //Game objects that were found to be valid streamables in the opened scenes.
 		private RenderTexture[] renderTextures = new RenderTexture[0];
 
+		//Text styles.
+		private GUIStyle richText = new GUIStyle();
+		private GUIStyle warningText = new GUIStyle();
+		private GUIStyle errorText = new GUIStyle();
+
 		//GUI variables that control user-changeable properties.
 		private Vector2 scrollPosition_gameObjects;
 		private Vector2 scrollPosition_textures;
 		private bool foldout_gameObjects = false;
 		private bool foldout_textures = false;
-		static GUIStyle redStyle =new GUIStyle();
+
+		private string[] categories;
+		private int selectedCategory = 0;
 
 		[MenuItem("Teleport VR/Resource Manager")]
 		public static void OpenResourceWindow()
 		{
-			redStyle.normal.textColor = Color.red;
 			CasterResourceWindow window = GetWindow<CasterResourceWindow>(false, "TeleportVR Resource Manager");
 			window.minSize = new Vector2(600, 200);
 			window.Show();
@@ -37,7 +45,6 @@ namespace teleport
 
 		private void Awake()
 		{
-			redStyle.normal.textColor = Color.red;
 			geometrySource = GeometrySource.GetGeometrySource();
 
 			string shaderGUID = AssetDatabase.FindAssets("ExtractTextureData t:ComputeShader")[0];
@@ -46,9 +53,49 @@ namespace teleport
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
 		}
 
-        private void OnGUI()
+		//Use this to setup variables that are likely to change on a hot-reload.
+		private void OnFocus()
 		{
-			redStyle.normal.textColor = Color.red;
+			richText.normal.textColor = Color.white;
+			richText.richText = true;
+			
+			warningText.normal.textColor = new Color(1.0f, 1.0f, 0.0f);
+			errorText.normal.textColor = Color.red;
+
+			//Fill categories array with enumeration names.
+			categories = Enum.GetNames(typeof(ResourceWindowCategories));
+			//Change names to title-case; i.e. EXTRACTION -> Extraction.
+			for(int i = 0; i < categories.Length; i++)
+			{
+				categories[i] = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(categories[i].ToLower());
+			}
+		}
+
+		private void OnGUI()
+		{
+			EditorGUILayout.BeginHorizontal();
+			selectedCategory = GUILayout.SelectionGrid(selectedCategory, categories, 1, GUILayout.ExpandWidth(false));
+
+			EditorGUILayout.BeginVertical();
+			switch((ResourceWindowCategories)selectedCategory)
+			{
+				case ResourceWindowCategories.EXTRACTION:
+					DrawExtractionLayout();
+					break;
+				case ResourceWindowCategories.SETUP:
+					DrawSetupLayout();
+					break;
+				case ResourceWindowCategories.DEBUG:
+					DrawDebugLayout();
+					break;
+			}
+			EditorGUILayout.EndVertical();
+
+			EditorGUILayout.EndHorizontal();
+		}
+
+		private void DrawExtractionLayout()
+		{
 			foldout_gameObjects = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_gameObjects, "GameObjects (" + streamedSceneObjects.Count + ")");
 			if(foldout_gameObjects)
 			{
@@ -111,9 +158,92 @@ namespace teleport
 			}
 
 			EditorGUILayout.EndHorizontal();
+		}
 
-			EditorGUILayout.LabelField("Debug Controls");
+		private void DrawSetupLayout()
+		{
+			//Names of the loaded scenes from the SceneManager.
+			string loadedScenes = "";
+			for(int i = 0; i < SceneManager.sceneCount; i++)
+			{
+				loadedScenes += SceneManager.GetSceneAt(i).name;
 
+				//Include separator if this isn't the last index.
+				if(i != SceneManager.sceneCount - 1)
+				{
+					loadedScenes += ", ";
+				}
+			}
+			//Display list of all loaded scenes.
+			EditorGUILayout.LabelField($"Loaded Scenes: {loadedScenes}");
+
+			//Only display following GUI when the tag is set.
+			if(teleportSettings.TagToStream.Length > 0)
+			{
+				GameObject[] gameObjectsTagged = GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream);
+
+				EditorGUILayout.LabelField($"There are <b>{gameObjectsTagged.Length}</b> GameObjects with the '{teleportSettings.TagToStream}' tag.", richText);
+
+				foreach(GameObject gameObject in gameObjectsTagged)
+				{
+					Collider[] colliders = gameObject.GetComponents<Collider>();
+					if(colliders.Length > 1)
+					{
+						EditorGUILayout.LabelField("Warning: " + gameObject.name + " has " + colliders.Length + " collision components.", warningText);
+					}
+				}
+
+				if(GUILayout.Button($"Clear tag '{teleportSettings.TagToStream}' from all GameObjects."))
+				{
+					foreach(var gameObject in gameObjectsTagged)
+					{
+						gameObject.tag = "Untagged";
+					}
+				}
+
+				EditorGUILayout.LabelField("Applies the tag to objects with collision.");
+				if(GUILayout.Button($"Apply {teleportSettings.TagToStream} tag to selected GameObjects."))
+				{
+					foreach(var gameObject in UnityEditor.Selection.gameObjects)
+					{
+						var collider = gameObject.GetComponent<Collider>();
+						var mesh = gameObject.GetComponentsInChildren<MeshFilter>();
+						if(collider != null && mesh.Length > 0 && gameObject.tag == "Untagged")
+						{
+							gameObject.tag = teleportSettings.TagToStream;
+						}
+					}
+					EditorMask.Initialize();
+				}
+			}
+
+			EditorGUILayout.LabelField("Adds a trigger box collider to selected GameObjects with a MeshFilter, but without a collider.");
+			if(GUILayout.Button("Add box collider to selected GameObjects."))
+			{
+				foreach(var gameObject in Selection.gameObjects)
+				{
+					var collider = gameObject.GetComponent<Collider>();
+					var meshFilter = gameObject.GetComponent<MeshFilter>();
+					if(meshFilter != null && collider == null)
+					{
+						BoxCollider bc = gameObject.AddComponent<BoxCollider>();
+						bc.isTrigger = true;
+					}
+				}
+			}
+
+			EditorGUILayout.LabelField("Recursively adds box collision and tag to selected and children where appropriate.");
+			if(GUILayout.Button("Setup selected and children for streaming."))
+			{
+				foreach(var gameObject in Selection.gameObjects)
+				{
+					SetupGameObjectAndChildrenForStreaming(gameObject);
+				}
+			}
+		}
+
+		private void DrawDebugLayout()
+		{
 			EditorGUILayout.BeginHorizontal();
 
 			if(GUILayout.Button("Clear Cached Data"))
@@ -138,111 +268,12 @@ namespace teleport
 				System.Diagnostics.Process.Start("explorer.exe", geometrySource.compressedTexturesFolderPath.Replace('/', '\\'));
 			}
 
-			if(GUILayout.Button("Force Extract"))
-			{
-				geometrySource.ClearData();
-				ExtractSceneGeometry();
-			}
-
 			EditorGUILayout.EndHorizontal();
 
-			if(GUILayout.Button("Reload From Disk"))
+			if(GUILayout.Button("Reload Geometry From Disk"))
 			{
 				geometrySource.LoadFromDisk();
 			}
-			EditorGUILayout.LabelField("Scene: ");
-
-			string[] options = new string[SceneManager.sceneCount];
-			for (int n = 0; n < SceneManager.sceneCount; ++n)
-			{
-				options[n]= SceneManager.GetSceneAt(n).name;
-			}
-	
-			if(teleportSettings.TagToStream.Length>0)
-			{ 
-				GameObject[] gameObjectsTagged = GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream);
-				EditorGUILayout.LabelField(gameObjectsTagged.Length+" with tag ");
-				if (GUILayout.Button("Clear Tag "+ teleportSettings.TagToStream+" from all"))
-				{
-					foreach(var gameObject in gameObjectsTagged)
-					{
-						gameObject.tag="Untagged";
-					}
-				}
-				if (GUILayout.Button("Add Collision to selected"))
-				{
-					foreach (var gameObject in UnityEditor.Selection.gameObjects)
-					{
-						var collider = gameObject.GetComponent<Collider>();
-						var mesh = gameObject.GetComponent<MeshFilter>();
-						if (mesh != null && collider==null)
-						{
-							BoxCollider bc=gameObject.AddComponent<BoxCollider>();
-							bc.isTrigger=true;
-						}
-					}
-				}
-				EditorGUILayout.LabelField("Adds trigger box collision where collision is not already present.");
-				if (GUILayout.Button("Apply Tag " + teleportSettings.TagToStream + " to selected"))
-				{
-					foreach(var gameObject in UnityEditor.Selection.gameObjects)
-					{
-						var collider=gameObject.GetComponent<Collider>();
-						var mesh=gameObject.GetComponentsInChildren<MeshFilter>();
-						if(collider!=null&&mesh.Length>0&&gameObject.tag=="Untagged")
-						{
-							gameObject.tag = teleportSettings.TagToStream;
-						}
-					}
-					EditorMask.Initialize();
-				}
-				if (GUILayout.Button("Setup selected and children for streaming."))
-				{
-					foreach (var gameObject in UnityEditor.Selection.gameObjects)
-					{
-						SetupGameObjectAndChildrenForStreaming(gameObject);
-					}
-				}
-				EditorGUILayout.LabelField("Recursively adds box collision and tag to selected and children where appropriate.");
-
-				EditorGUILayout.LabelField("Applies the tag to objects with collision.");
-				foreach(var o in gameObjectsTagged)
-				{
-					var collisions=o.GetComponents<Collider>();
-					if(collisions.Length>1)
-					{
-						EditorGUILayout.LabelField("Warning: "+o.name+" has "+collisions.Length+" collision components.", redStyle);
-					}
-				}
-			}
-		}
-
-		private void SetupGameObjectAndChildrenForStreaming(GameObject o)
-		{
-			foreach (var mf in o.GetComponentsInChildren<MeshFilter>())
-			{
-				if (mf.gameObject.GetComponent<Renderer>() == null || !mf.gameObject.GetComponent<Renderer>().isVisible)
-				{
-					continue;
-				}
-
-				var go = mf.gameObject;
-				if (go.GetComponent<Collider>() != null)
-				{
-					go.tag = teleportSettings.TagToStream;
-					continue;
-				}
- 
-				// Will use a parent's collider if it has a parent with a mesh filter.
-				// Otherwise a box collision will be added.
-				if (go.GetComponentsInParent<MeshFilter>().Length ==
-					go.GetComponents<MeshFilter>().Length)
-				{
-					go.tag = teleportSettings.TagToStream;
-					BoxCollider bc = go.AddComponent<BoxCollider>();
-					bc.isTrigger = true;
-				}
-			}	
 		}
 
 		private void FindSceneStreamables()
@@ -394,5 +425,35 @@ namespace teleport
 
 			geometrySource.CompressTextures();
 		}
+
+
+		private void SetupGameObjectAndChildrenForStreaming(GameObject o)
+		{
+			foreach(var mf in o.GetComponentsInChildren<MeshFilter>())
+			{
+				if(mf.gameObject.GetComponent<Renderer>() == null || !mf.gameObject.GetComponent<Renderer>().isVisible)
+				{
+					continue;
+				}
+
+				var go = mf.gameObject;
+				if(go.GetComponent<Collider>() != null)
+				{
+					go.tag = teleportSettings.TagToStream;
+					continue;
+				}
+
+				// Will use a parent's collider if it has a parent with a mesh filter.
+				// Otherwise a box collision will be added.
+				if(go.GetComponentsInParent<MeshFilter>().Length ==
+					go.GetComponents<MeshFilter>().Length)
+				{
+					go.tag = teleportSettings.TagToStream;
+					BoxCollider bc = go.AddComponent<BoxCollider>();
+					bc.isTrigger = true;
+				}
+			}
+		}
+
 	}
 }

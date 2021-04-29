@@ -54,6 +54,7 @@ namespace avs
 		public int rotationAmount;
 		public Vector4Keyframe[] rotationKeyframes;
 	}
+
 	public struct FloatKeyframe
 	{
 		public float time;
