@@ -356,8 +356,16 @@ namespace teleport
 			else
 			{
 				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
-				skinnedMeshRenderer.renderingLayerMask &= invStreamedMask;
-				skinnedMeshRenderer.renderingLayerMask |= clientMask;
+				if (skinnedMeshRenderer)
+				{
+					skinnedMeshRenderer.renderingLayerMask &= invStreamedMask;
+					skinnedMeshRenderer.renderingLayerMask |= clientMask;
+				}
+				else
+				{
+					Debug.LogError("Trying to show node: " + gameObject.name + " but it has no renderer or skinned mesh renderer children!");
+				}
+				
 			}
 			return (byte)1;
 		}
