@@ -97,7 +97,10 @@ namespace teleport
 				sessions[clientID].Disconnect();
 				sessions.Remove(clientID);
 			}
+			// This MUST be called for connection / reconnection to work properly.
+		    Client_StopStreaming(clientID);
 		}
+
 		public static void StaticSetOriginFromClient(uid clientID, UInt64 validCounter, in avs.Pose newPose)
 		{
 			if (!StaticDoesSessionExist(clientID))
