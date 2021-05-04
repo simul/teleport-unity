@@ -75,6 +75,7 @@ namespace teleport
 			public ReportHandshakeFn reportHandshake;
 			public OnAudioInputReceived audioInputReceived;
 			public avs.Vector3 bodyOffsetFromHead;
+			public string clientIP;
 		};
 
 		[DllImport("SimulCasterServer")]
@@ -207,7 +208,8 @@ namespace teleport
 		{
 			ulong unmanagedSize = SizeOf("CasterSettings");
 			ulong managedSize = (ulong)Marshal.SizeOf(typeof(SCServer.CasterSettings));
-			if(managedSize != unmanagedSize)
+		
+			if (managedSize != unmanagedSize)
 			{
 				Debug.LogError($"CasterMonitor failed to initialise! {nameof(SCServer.CasterSettings)} struct size mismatch between unmanaged code({unmanagedSize}) and managed code({managedSize})!");
 				return;
@@ -228,7 +230,8 @@ namespace teleport
 				DISCOVERY_PORT = teleportSettings.discoveryPort,
 				reportHandshake = ReportHandshake,
 				audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput,
-				bodyOffsetFromHead = bodyOffsetFromHead
+				bodyOffsetFromHead = bodyOffsetFromHead,
+				clientIP = teleportSettings.clientIP
 			};
 
 			initialised = Initialise(initialiseState);

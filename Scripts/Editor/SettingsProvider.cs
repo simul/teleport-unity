@@ -60,8 +60,8 @@ namespace teleport
 		Tuple<int, string, bool>[] headers =
 		{
 			Tuple.Create(1,  "SRT", false),
-			Tuple.Create(6,  "General", false),
-			Tuple.Create(4,  "Geometry", false),
+			Tuple.Create(3,  "General", false),
+			Tuple.Create(5,  "Geometry", false),
 			Tuple.Create(25, "Video", false),
 			Tuple.Create(2,  "Audio", false),
 			Tuple.Create(6,  "Debugging", false),
@@ -83,8 +83,8 @@ namespace teleport
 			teleportSettings.discoveryPort = (uint)EditorGUILayout.IntField("Discovery Port", (int)teleportSettings.discoveryPort);
 			teleportSettings.listenPort = (uint)EditorGUILayout.IntField("Listen Port", (int)teleportSettings.listenPort);
 			teleportSettings.connectionTimeout = EditorGUILayout.IntField("Timeout", teleportSettings.connectionTimeout);
-			//EditorGUILayout.PropertyField(m_TeleportSettings.FindProperty("TagToStream"));
-			
+			teleportSettings.clientIP = EditorGUILayout.TextField("Client IP", teleportSettings.clientIP);
+
 
 			foreach (var prop in typeof(SCServer.CasterSettings).GetProperties())
 			{

@@ -39,7 +39,7 @@ namespace avs
 		UnityStyle = 64 | LeftHanded | YVertical,
 	}
 
-	public enum RateControlMode
+	public enum RateControlMode : byte
 	{
 		RC_CONSTQP = 0, /*< Constant QP mode */
 		RC_VBR = 1, /*< Variable bitrate mode */
@@ -49,7 +49,7 @@ namespace avs
 		RC_VBR_HQ = 5 /*< VBR, high quality (slower) */
 	};
 
-	public enum VideoCodec
+	public enum VideoCodec : byte
 	{
 		Any = 0,
 		Invalid = 0,

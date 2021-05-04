@@ -23,13 +23,13 @@ namespace teleport
 		public uint listenPort = 10500u;
 		public uint discoveryPort = 10600u;
 		public int connectionTimeout = 90000; //How many millseconds to wait before automatically disconnecting from the client.
-										  //! Mask of the physics layers the user can choose to stream.
+		public string clientIP = "127.0.0.1";                                
 
 		[Header("Geometry")]
 		public uint moveUpdatesPerSecond = 20;
 
 		public CasterSettings casterSettings =new CasterSettings();
-		public LayerMask LayersToStream;
+		public LayerMask LayersToStream;  //! Mask of the physics layers the user can choose to stream.
 
 		[Header("Utility")]
 		public string defaultScene = "";

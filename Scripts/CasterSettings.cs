@@ -5,25 +5,23 @@ using UnityEditor;
 
 namespace SCServer
 {
-	[StructLayout(LayoutKind.Sequential), Serializable]
+	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
     public class CasterSettings
     {
 		[Header("SRT")]
 		public Int32 requiredLatencyMs = 30;
 
 		[Header("General")]
-		[MarshalAs(UnmanagedType.LPWStr)] public string sessionName = "Unity";
-		[MarshalAs(UnmanagedType.LPWStr)] public string clientIP = "127.0.0.1";
 		public Int32 detectionSphereRadius = 15;
 		public Int32 detectionSphereBufferDistance = 5;
-		public Int32 expectedLag = 0;
 		public Int64 throttleKpS = 0;
 
 		[Header("Geometry")]
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingGeometry = true;
-		public byte geometryTicksPerSecond = 2;
-		public Int32 geometryBufferCutoffSize = 1048576; //Byte amount we stop encoding nodes at.
-		public float confirmationWaitTime = 15; //Seconds to wait before resending a resource.
+		public Int32 geometryTicksPerSecond = 2;
+		public Int32 geometryBufferCutoffSize = 1048576; // Byte amount we stop encoding nodes at.
+		public float confirmationWaitTime = 15; // Seconds to wait before resending a resource.
+		public float clientDrawDistance = 10; // Distance pixels are clipped for geometry on the client.
 
 		[Header("Video")]
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingVideo = true;
@@ -74,7 +72,7 @@ namespace SCServer
 		[Header("Camera")]
 		[MarshalAs(UnmanagedType.U1)] public bool willDisableMainCamera = false;
 		[NonSerialized]
-		[MarshalAs(UnmanagedType.U8)] public byte axesStandard = 64|2|4;
+		[MarshalAs(UnmanagedType.U1)] public byte axesStandard = 64|2|4;
 
 		[Header("Lighting")]
 		public Int32 specularCubemapSize = 64;
