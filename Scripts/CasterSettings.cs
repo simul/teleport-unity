@@ -12,7 +12,7 @@ namespace SCServer
 		public Int32 requiredLatencyMs = 30;
 
 		[Header("General")]
-		public Int32 detectionSphereRadius = 15;
+		public Int32 detectionSphereRadius = 5;
 		public Int32 detectionSphereBufferDistance = 5;
 		public Int64 throttleKpS = 0;
 

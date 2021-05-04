@@ -757,7 +757,7 @@ namespace teleport
 			float oldNearClip = camera.nearClipPlane;
 			if (teleportSettings.casterSettings.isStreamingGeometry)
 			{
-				camera.nearClipPlane = teleportSettings.casterSettings.detectionSphereRadius;
+				camera.nearClipPlane = teleportSettings.casterSettings.detectionSphereRadius * 0.5f;
 			}
 			
 			if (Cull(context, camera, out cullingResultsAll, true))
