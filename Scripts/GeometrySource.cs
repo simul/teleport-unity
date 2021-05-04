@@ -313,6 +313,21 @@ namespace teleport
 			public uid newID;
 		}
 
+		[Flags]
+		public enum ForceExtractionMask
+		{
+			FORCE_NOTHING = 0,
+
+			FORCE_NODES = 1,
+			FORCE_HIERARCHIES = 2,
+			FORCE_SUBRESOURCES = 4,
+
+			FORCE_EVERYTHING = -1,
+
+			//Combinations
+			FORCE_NODES_AND_HIERARCHIES = FORCE_NODES | FORCE_HIERARCHIES
+		}
+
 		#region DLLImports
 		[DllImport("SimulCasterServer")]
 		private static extern void DeleteUnmanagedArray(in IntPtr unmanagedArray);
@@ -558,7 +573,7 @@ namespace teleport
 			return streamedObjects;
 		}
 
-		public uid AddNode(GameObject node, bool forceUpdate = false)
+		public uid AddNode(GameObject node, ForceExtractionMask forceMask = ForceExtractionMask.FORCE_NOTHING, bool isChildExtraction = false)
 		{
 			if(!node)
 			{
@@ -566,8 +581,17 @@ namespace teleport
 				return 0;
 			}
 
-			//Just return the ID; if we have already processed the GameObject, the node can be found on the unmanaged side, and we are not forcing an update.
-			if(processedResources.TryGetValue(node, out uid nodeID) && IsNodeStored(nodeID) && !forceUpdate)
+			//Just return the ID; if we have already processed the GameObject, the node can be found on the unmanaged side,
+			//we are not forcing an extraction of nodes, and we are not forcing an extraction on the hierarchy of a node.
+			if
+			(
+				processedResources.TryGetValue(node, out uid nodeID) &&
+				IsNodeStored(nodeID) &&
+				(
+					!isChildExtraction && (forceMask & ForceExtractionMask.FORCE_NODES) == ForceExtractionMask.FORCE_NOTHING ||
+					(isChildExtraction && (forceMask & ForceExtractionMask.FORCE_HIERARCHIES) == ForceExtractionMask.FORCE_NOTHING)
+				)
+			)
 			{
 				return nodeID;
 			}
@@ -579,21 +603,21 @@ namespace teleport
 			extractedNode.name = Marshal.StringToBSTR(node.name);
 			extractedNode.transform = avs.Transform.FromLocalUnityTransform(node.transform);
 
-			ExtractNodeHierarchy(node, ref extractedNode, forceUpdate);
-			ExtractNodeSubType(node, ref extractedNode, forceUpdate);
+			ExtractNodeHierarchy(node, ref extractedNode, forceMask);
+			ExtractNodeSubType(node, ref extractedNode);
 
 			extractedNode.dataType = avs.NodeDataType.None;
 			if(extractedNode.dataType == avs.NodeDataType.None)
 			{
-				ExtractNodeMeshData(node, ref extractedNode, forceUpdate);
+				ExtractNodeMeshData(node, ref extractedNode, forceMask);
 			}
 			if (extractedNode.dataType == avs.NodeDataType.None)
 			{
-				ExtractNodeSkinnedMeshData(node, ref extractedNode, forceUpdate);
+				ExtractNodeSkinnedMeshData(node, ref extractedNode, forceMask);
 			}
 			if(extractedNode.dataType == avs.NodeDataType.None)
 			{
-				ExtractNodeLightData(node, ref extractedNode, forceUpdate);
+				ExtractNodeLightData(node, ref extractedNode, forceMask);
 			}
 
 			//Store extracted node.
@@ -601,7 +625,7 @@ namespace teleport
 			return nodeID;
 		}
 
-		public uid AddMesh(Mesh mesh)
+		public uid AddMesh(Mesh mesh, ForceExtractionMask forceMask)
 		{
 			if(!mesh)
 			{
@@ -616,22 +640,22 @@ namespace teleport
 				return 0;
 			}
 
-			//Just return the ID; if we have already processed the mesh and the mesh can be found on the unmanaged side.
-			if(processedResources.TryGetValue(mesh, out uid meshID) && IsMeshStored(meshID))
+			//Just return the ID; if we have already processed the mesh, the mesh can be found on the unmanaged side, and we are not forcing extraction.
+			if(processedResources.TryGetValue(mesh, out uid meshID) && IsMeshStored(meshID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
 			{
 				return meshID;
 			}
 
 			meshID = meshID == 0 ? GenerateID() : meshID;
-				processedResources[mesh] = meshID;
+			processedResources[mesh] = meshID;
 
-				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID);
-				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID);
+			ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID);
+			ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID);
 
 			return meshID;
 		}
 
-		public uid AddMaterial(Material material, bool forceUpdate = false)
+		public uid AddMaterial(Material material, ForceExtractionMask forceMask)
 		{
 			if(!material)
 			{
@@ -639,7 +663,7 @@ namespace teleport
 			}
 
 			//Just return the ID; if we have already processed the material, the material can be found on the unmanaged side, and we are not forcing an update.
-			if(processedResources.TryGetValue(material, out uid materialID) && IsMaterialStored(materialID) && !forceUpdate)
+			if(processedResources.TryGetValue(material, out uid materialID) && IsMaterialStored(materialID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
 			{
 				return materialID;
 			}
@@ -647,96 +671,77 @@ namespace teleport
 			materialID = materialID == 0 ? GenerateID() : materialID;
 			processedResources[material] = materialID;
 
-				avs.Material extractedMaterial = new avs.Material();
-				extractedMaterial.name = Marshal.StringToBSTR(material.name);
+			avs.Material extractedMaterial = new avs.Material();
+			extractedMaterial.name = Marshal.StringToBSTR(material.name);
 
-				extractedMaterial.pbrMetallicRoughness.baseColorTexture.index = AddTexture(material.mainTexture);
-				extractedMaterial.pbrMetallicRoughness.baseColorTexture.tiling = material.mainTextureScale;
-				if (material.HasProperty("_Color"))
-				extractedMaterial.pbrMetallicRoughness.baseColorFactor = material.color;
-				else
-					extractedMaterial.pbrMetallicRoughness.baseColorFactor =new Color(1.0F,1.0F,1.0F,1.0F);
+			//Albedo/Diffuse
 
-				Texture metallicRoughness=null;
-				if (material.HasProperty("_MetallicGlossMap"))
-					metallicRoughness = material.GetTexture("_MetallicGlossMap");
-				float glossMapScale=1.0f;
-				if (material.HasProperty("_GlossMapScale"))
-					glossMapScale =material.GetFloat("_GlossMapScale");
-				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index = AddTexture(metallicRoughness);
+			extractedMaterial.pbrMetallicRoughness.baseColorTexture.index = AddTexture(material.mainTexture, forceMask);
+			extractedMaterial.pbrMetallicRoughness.baseColorTexture.tiling = material.mainTextureScale;
+			extractedMaterial.pbrMetallicRoughness.baseColorFactor = material.HasProperty("_Color") ? material.color : new Color(1.0f, 1.0f, 1.0f, 1.0f);
+
+			//Metallic-Roughness
+
+			Texture metallicRoughness = null;
+			if(material.HasProperty("_MetallicGlossMap"))
+			{
+				metallicRoughness = material.GetTexture("_MetallicGlossMap");
+				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index = AddTexture(metallicRoughness, forceMask);
 				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling = material.mainTextureScale;
+			}
+			extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : (material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 1.0f); //Unity doesn't use the factor when the texture is set.
 
-				extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : (material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 1.0f); //Unity doesn't use the factor when the texture is set.
+			float glossMapScale = material.HasProperty("_GlossMapScale") ? glossMapScale = material.GetFloat("_GlossMapScale") : 1.0f;
+			float smoothness = metallicRoughness ? glossMapScale : (material.HasProperty("_Glossiness") ? material.GetFloat("_Glossiness") : 1.0f);
+			extractedMaterial.pbrMetallicRoughness.roughOrSmoothMultiplier = -smoothness;
+			extractedMaterial.pbrMetallicRoughness.roughOffset = 1.0f;
+			
+			//Normal
 
-				float smoothness = metallicRoughness ? glossMapScale : (material.HasProperty("_Glossiness") ? material.GetFloat("_Glossiness") : 1.0f);
-				extractedMaterial.pbrMetallicRoughness.roughOrSmoothMultiplier = -smoothness;
-				extractedMaterial.pbrMetallicRoughness.roughOffset = 1.0F;
-				Texture normal=null;
-				if (material.HasProperty("_BumpMap"))
-				{
-					normal = material.GetTexture("_BumpMap");
-				extractedMaterial.normalTexture.index = AddTexture(normal);
-				}
+			if(material.HasProperty("_BumpMap"))
+			{
+				Texture normal = material.GetTexture("_BumpMap");
+				extractedMaterial.normalTexture.index = AddTexture(normal, forceMask);
 				extractedMaterial.normalTexture.tiling = material.mainTextureScale;
-				if(material.HasProperty("_BumpScale"))
-				{
-					extractedMaterial.normalTexture.strength = material.GetFloat("_BumpScale");
-				}
-				else
-				{
-					extractedMaterial.normalTexture.strength = 1.0F;
-				}
+			}
+			extractedMaterial.normalTexture.strength = material.HasProperty("_BumpScale") ? material.GetFloat("_BumpScale") : 1.0f;
 
-				Texture occlusion = null;
-				if (material.HasProperty("_OcclusionMap"))
-				{
-					occlusion = material.GetTexture("_OcclusionMap");
-				extractedMaterial.occlusionTexture.index = AddTexture(occlusion);
-				}
+			//Occlusion
+
+			if(material.HasProperty("_OcclusionMap"))
+			{
+				Texture occlusion = material.GetTexture("_OcclusionMap");
+				extractedMaterial.occlusionTexture.index = AddTexture(occlusion, forceMask);
 				extractedMaterial.occlusionTexture.tiling = material.mainTextureScale;
-				if(material.HasProperty("_OcclusionStrength"))
-				{
-					extractedMaterial.occlusionTexture.strength = material.GetFloat("_OcclusionStrength");
-				}
-				else
-				{
-					extractedMaterial.occlusionTexture.strength = 1.0F;
-				}
+			}
+			extractedMaterial.occlusionTexture.strength = material.HasProperty("_OcclusionStrength") ? material.GetFloat("_OcclusionStrength") : 1.0f;
 
-				//Extract emission properties only if emission is active.
-				if(!material.globalIlluminationFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack))
+			//Emission
+
+			//Extract emission properties only if emission is active.
+			if(!material.globalIlluminationFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack))
+			{
+				if(material.HasProperty("_EmissionMap"))
 				{
 					Texture emission = material.GetTexture("_EmissionMap");
-					extractedMaterial.emissiveTexture.index = AddTexture(emission);
+					extractedMaterial.emissiveTexture.index = AddTexture(emission, forceMask);
 					extractedMaterial.emissiveTexture.tiling = material.mainTextureScale;
-					if(material.HasProperty("_BumpScale"))
-					{
-						extractedMaterial.emissiveFactor = material.GetColor("_EmissionColor");
-					}
-					else
-					{
-						extractedMaterial.emissiveFactor = new avs.Vector3(0, 0, 0);
-					}
-
 				}
+				extractedMaterial.emissiveFactor = material.HasProperty("_BumpScale") ? (avs.Vector3)material.GetColor("_EmissionColor") : new avs.Vector3(0.0f, 0.0f, 0.0f);
+			}
 
-				extractedMaterial.extensionAmount = 0;
-				extractedMaterial.extensionIDs = null;
-				extractedMaterial.extensions = null;
+			//Extensions
+
+			extractedMaterial.extensionAmount = 0;
+			extractedMaterial.extensionIDs = null;
+			extractedMaterial.extensions = null;
 
 #if UNITY_EDITOR
-				AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long _);
-				StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)), extractedMaterial);
+			AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long _);
+			StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)), extractedMaterial);
 #endif
 
 			return materialID;
-		}
-
-		public uid AddShadowMap(Texture shadowMap)
-		{
-			if(!shadowMap) return 0;
-
-			throw new NotImplementedException();
 		}
 
 		public void AddTextureData(Texture texture, avs.Texture textureData)
@@ -779,7 +784,7 @@ namespace teleport
 		//Extract bone and add to processed resources; will also add parent and child bones.
 		//	bone : The bone we are extracting.
 		//	boneList : Array of bones; usually taken from skinned mesh renderer.
-		public uid AddBone(Transform bone, Transform[] boneList)
+		public uid AddBone(Transform bone, Transform[] boneList, ForceExtractionMask forceMask)
 		{
 			if(!boneList.Contains(bone))
 			{
@@ -787,7 +792,7 @@ namespace teleport
 			}
 
 			//Just return the ID; if we have already processed the transform and the bone can be found on the unmanaged side.
-			if(processedResources.TryGetValue(bone, out uid boneID) && IsNodeStored(boneID))
+			if(processedResources.TryGetValue(bone, out uid boneID) && IsNodeStored(boneID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
 			{
 				return boneID;
 			}
@@ -798,7 +803,7 @@ namespace teleport
 
 			//Avoid stack overflow by finding parent ID first; we don't get the chance to store the node in unmanaged code before we link up the bone hierarchy.
 			uid parentID = FindResourceID(bone.parent);
-			parentID = parentID == 0 ? AddBone(bone.parent, boneList) : parentID;
+			parentID = parentID == 0 ? AddBone(bone.parent, boneList, forceMask) : parentID;
 
 			avs.Node boneNode = new avs.Node();
 			boneNode.name = Marshal.StringToBSTR(bone.name);
@@ -811,7 +816,7 @@ namespace teleport
 
 			for(int i = 0; i < bone.childCount; i++)
 			{
-				boneNode.childIDs[i] = AddBone(bone.GetChild(i), boneList);
+				boneNode.childIDs[i] = AddBone(bone.GetChild(i), boneList, forceMask);
 			}
 
 			StoreNode(boneID, boneNode);
@@ -827,55 +832,47 @@ namespace teleport
 			{
 				string compressionMessage = GetMessageForNextCompressedTexture(i, totalTexturesToCompress);
 
-				bool cancelled = UnityEditor.EditorUtility.DisplayCancelableProgressBar("Compressing Textures", compressionMessage, i / (float)totalTexturesToCompress);
+				bool cancelled = EditorUtility.DisplayCancelableProgressBar("Compressing Textures", compressionMessage, (float)(i + 1) / totalTexturesToCompress);
 				if(cancelled) break;
 
 				CompressNextTexture();
 			}
 
-			UnityEditor.EditorUtility.ClearProgressBar();
+			EditorUtility.ClearProgressBar();
 #endif
 		}
 
-		private void ExtractNodeHierarchy(GameObject source, ref avs.Node extractTo, bool forceUpdate)
+		private void ExtractNodeHierarchy(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask)
 		{
 			if(source.transform.parent)
 			{
-				// Roderick: let's not do this. If a parent is to be streamed, let's make that explicit.
-				// otherwise, we're proliferating huge numbers of streamables.
-				//extractTo.parentID = FindResourceID(source.transform.parent.gameObject);
+				extractTo.parentID = FindResourceID(source.transform.parent.gameObject);
 			}
 
 			//Extract children of node, through transform hierarchy.
-			List<uid> childIDs = new List<uid>();
+			uid[] childIDs = new uid[source.transform.childCount];
 			for(int i = 0; i < source.transform.childCount; i++)
 			{
-				uid childID = AddNode(source.transform.GetChild(i).gameObject, true);
+				GameObject child = source.transform.GetChild(i).gameObject;
+				uid childID = AddNode(child, forceMask, true);
 
-				if(childID != 0)
-				{
-					childIDs.Add(childID);
-				}
-				else
-				{
-					Debug.LogWarning("Received 0 for ID of child on game object: " + source.name);
-				}
+				childIDs[i] = childID;
 			}
-			extractTo.childAmount = (ulong)childIDs.Count;
+			extractTo.childAmount = (UInt64)source.transform.childCount;
 			extractTo.childIDs = childIDs.ToArray();
 		}
 
-		private void ExtractNodeSubType(GameObject source, ref avs.Node extractTo, bool forceUpdate)
+		private void ExtractNodeSubType(GameObject source, ref avs.Node extractTo)
 		{
 			extractTo.dataSubtype = CasterMonitor.GetCasterMonitor().GetGameObjectBodyPart(source);
 		}
 
-		private void ExtractNodeMaterials(Material[] sourceMaterials, ref avs.Node extractTo, bool forceUpdate)
+		private void ExtractNodeMaterials(Material[] sourceMaterials, ref avs.Node extractTo, ForceExtractionMask forceMask)
 		{
 			List<uid> materialIDs = new List<uid>();
 			foreach(Material material in sourceMaterials)
 			{
-				uid materialID = AddMaterial(material, forceUpdate);
+				uid materialID = AddMaterial(material, forceMask);
 
 				if(materialID != 0)
 				{
@@ -896,7 +893,7 @@ namespace teleport
 			extractTo.materialIDs = materialIDs.ToArray();
 		}
 
-		private bool ExtractNodeMeshData(GameObject source, ref avs.Node extractTo, bool forceUpdate)
+		private bool ExtractNodeMeshData(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask)
 		{
 			MeshFilter meshFilter = source.GetComponent<MeshFilter>();
 			MeshRenderer meshRenderer = source.GetComponent<MeshRenderer>();
@@ -907,7 +904,7 @@ namespace teleport
 
 			//Extract mesh used on node.
 			Mesh mesh = sceneReferenceManager.GetGameObjectMesh(source);
-			extractTo.dataID = AddMesh(mesh);
+			extractTo.dataID = AddMesh(mesh, forceMask);
 
 			//Can't create a node with no data.
 			if(extractTo.dataID == 0)
@@ -917,12 +914,12 @@ namespace teleport
 			}
 			extractTo.dataType = avs.NodeDataType.Mesh;
 
-			ExtractNodeMaterials(meshRenderer.sharedMaterials, ref extractTo, forceUpdate);
+			ExtractNodeMaterials(meshRenderer.sharedMaterials, ref extractTo, forceMask);
 
 			return true;
 		}
 
-		private bool ExtractNodeSkinnedMeshData(GameObject source, ref avs.Node extractTo, bool forceUpdate)
+		private bool ExtractNodeSkinnedMeshData(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask)
 		{
 			SkinnedMeshRenderer skinnedMeshRenderer = source.GetComponent<SkinnedMeshRenderer>();
 			if(!skinnedMeshRenderer || !skinnedMeshRenderer.enabled || !skinnedMeshRenderer.rootBone)
@@ -932,7 +929,7 @@ namespace teleport
 
 			//Extract mesh used on node.
 			Mesh mesh = sceneReferenceManager.GetGameObjectMesh(source);
-			extractTo.dataID = AddMesh(mesh);
+			extractTo.dataID = AddMesh(mesh, forceMask);
 
 			//Can't create a node with no data.
 			if(extractTo.dataID == 0)
@@ -942,7 +939,7 @@ namespace teleport
 			}
 			extractTo.dataType = avs.NodeDataType.Mesh;
 
-			extractTo.skinID = AddSkin(skinnedMeshRenderer);
+			extractTo.skinID = AddSkin(skinnedMeshRenderer, forceMask);
 
 			//Animator component usually appears on the parent GameObject, so we need to use that instead for searching the children.
 			GameObject animatorSource = (source.transform.parent) ? source.transform.parent.gameObject : source.transform.gameObject;
@@ -958,12 +955,12 @@ namespace teleport
 				extractTo.animationAmount = 0;
 			}
 
-			ExtractNodeMaterials(skinnedMeshRenderer.sharedMaterials, ref extractTo, forceUpdate);
+			ExtractNodeMaterials(skinnedMeshRenderer.sharedMaterials, ref extractTo, forceMask);
 
 			return true;
 			}
 
-		private bool ExtractNodeLightData(GameObject source, ref avs.Node extractTo, bool forceUpdate)
+		private bool ExtractNodeLightData(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask)
 		{
 			Light light = source.GetComponent<Light>();
 			if(!light || !light.isActiveAndEnabled)
@@ -988,10 +985,10 @@ namespace teleport
 			return true;
 		}
 
-		private uid AddSkin(SkinnedMeshRenderer skinnedMeshRenderer)
+		private uid AddSkin(SkinnedMeshRenderer skinnedMeshRenderer, ForceExtractionMask forceMask)
 		{
 			//Just return the ID; if we have already processed the skin and the skin can be found on the unmanaged side.
-			if(processedResources.TryGetValue(skinnedMeshRenderer, out uid skinID) && IsSkinStored(skinID))
+			if(processedResources.TryGetValue(skinnedMeshRenderer, out uid skinID) && IsSkinStored(skinID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
 			{
 				return skinID;
 			}
@@ -1008,7 +1005,7 @@ namespace teleport
 			List<uid> jointIDs = new List<uid>();
 			foreach(Transform bone in skinnedMeshRenderer.bones)
 			{
-				jointIDs.Add(AddBone(bone, skinnedMeshRenderer.bones));
+				jointIDs.Add(AddBone(bone, skinnedMeshRenderer.bones, forceMask));
 			}
 
 			skin.jointIDs = jointIDs.ToArray();
@@ -1591,7 +1588,7 @@ namespace teleport
 			}
 		}
 
-		private uid AddTexture(Texture texture)
+		private uid AddTexture(Texture texture, ForceExtractionMask forceMask)
 		{
 			if(!texture)
 			{
@@ -1599,7 +1596,7 @@ namespace teleport
 			}
 
 			//Just return the ID; if we have already processed the texture and the texture can be found on the unmanaged side.
-			if(processedResources.TryGetValue(texture, out uid textureID) && IsTextureStored(textureID))
+			if(processedResources.TryGetValue(texture, out uid textureID) && IsTextureStored(textureID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
 			{
 				return textureID;
 			}

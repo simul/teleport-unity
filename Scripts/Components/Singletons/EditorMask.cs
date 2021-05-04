@@ -70,7 +70,7 @@ namespace teleport
 				CasterMonitor.UnsetMaskRecursive(o, streamable_mask);
 			}
 
-			//Add the Teleport_Streamable component to all streamable objects.
+			//Set the mask on all streamable objects.
 			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects();
 			foreach (GameObject o in teleportStreamableObjects)
 			{

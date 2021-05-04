@@ -17,8 +17,8 @@ namespace teleport
 		private ComputeShader textureShader;
 		private TeleportSettings teleportSettings;
 
-		//List of found/extracted data.
-		private List<GameObject> streamedSceneObjects = new List<GameObject>(); //Game objects that were found to be valid streamables in the opened scenes.
+		//List of data that was extracted in the last extraction operation.
+		private List<GameObject> lastExtractedGameObjects = new List<GameObject>();
 		private RenderTexture[] renderTextures = new RenderTexture[0];
 
 		//Text styles.
@@ -96,12 +96,59 @@ namespace teleport
 
 		private void DrawExtractionLayout()
 		{
-			foldout_gameObjects = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_gameObjects, "GameObjects (" + streamedSceneObjects.Count + ")");
+			if(GUILayout.Button("Find Scene Streamables"))
+			{
+				FindSceneStreamables();
+			}
+
+			EditorGUILayout.BeginHorizontal();
+
+			if(GUILayout.Button("Extract Selected Geometry"))
+			{
+				ExtractSelectedGeometry(GeometrySource.ForceExtractionMask.FORCE_NODES);
+			}
+
+			if(GUILayout.Button("Force Selected Geometry Extraction"))
+			{
+				ExtractSelectedGeometry(GeometrySource.ForceExtractionMask.FORCE_EVERYTHING);
+			}
+
+			EditorGUILayout.EndHorizontal();
+
+			EditorGUILayout.BeginHorizontal();
+
+			if(GUILayout.Button("Extract Scene Geometry"))
+			{
+				ExtractSceneGeometry(GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
+			}
+
+			if(GUILayout.Button("Force Scene Geometry Extraction"))
+			{
+				ExtractSceneGeometry(GeometrySource.ForceExtractionMask.FORCE_EVERYTHING);
+			}
+
+			EditorGUILayout.EndHorizontal();
+
+			EditorGUILayout.BeginHorizontal();
+
+			if(GUILayout.Button("Extract Project Geometry"))
+			{
+				ExtractProjectGeometry(GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
+			}
+
+			if(GUILayout.Button("Force Project Geometry Extraction"))
+			{
+				ExtractProjectGeometry(GeometrySource.ForceExtractionMask.FORCE_EVERYTHING);
+			}
+
+			EditorGUILayout.EndHorizontal();
+
+			foldout_gameObjects = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_gameObjects, "Last Extracted GameObjects (" + lastExtractedGameObjects.Count + ")");
 			if(foldout_gameObjects)
 			{
 				scrollPosition_gameObjects = EditorGUILayout.BeginScrollView(scrollPosition_gameObjects);
 
-				foreach(GameObject gameObject in streamedSceneObjects)
+				foreach(GameObject gameObject in lastExtractedGameObjects)
 				{
 					EditorGUILayout.BeginHorizontal();
 
@@ -117,7 +164,7 @@ namespace teleport
 			}
 			EditorGUILayout.EndFoldoutHeaderGroup();
 
-			foldout_textures = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_textures, "Textures (" + renderTextures.Length + ")");
+			foldout_textures = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_textures, "Last Extracted Textures (" + renderTextures.Length + ")");
 			if(foldout_textures)
 			{
 				scrollPosition_textures = EditorGUILayout.BeginScrollView(scrollPosition_textures);
@@ -139,25 +186,6 @@ namespace teleport
 				EditorGUILayout.EndScrollView();
 			}
 			EditorGUILayout.EndFoldoutHeaderGroup();
-
-			EditorGUILayout.BeginHorizontal();
-
-			if(GUILayout.Button("Find Scene Streamables"))
-			{
-				FindSceneStreamables();
-			}
-
-			if(GUILayout.Button("Extract Scene Geometry"))
-			{
-				ExtractSceneGeometry();
-			}
-
-			if(GUILayout.Button("Extract Project Geometry"))
-			{
-				ExtractProjectGeometry();
-			}
-
-			EditorGUILayout.EndHorizontal();
 		}
 
 		private void DrawSetupLayout()
@@ -249,7 +277,7 @@ namespace teleport
 			if(GUILayout.Button("Clear Cached Data"))
 			{
 				geometrySource.ClearData();
-				streamedSceneObjects = new List<GameObject>();
+				lastExtractedGameObjects = new List<GameObject>();
 
 				foreach(RenderTexture texture in renderTextures)
 				{
@@ -278,26 +306,40 @@ namespace teleport
 
 		private void FindSceneStreamables()
 		{
-			streamedSceneObjects = geometrySource.GetStreamableObjects();
+			lastExtractedGameObjects = geometrySource.GetStreamableObjects();
 		}
 
-		private void ExtractSceneGeometry()
+		private void ExtractGeometry(List<GameObject> extractionList, GeometrySource.ForceExtractionMask forceMask)
 		{
-			FindSceneStreamables();
-			for(int i = 0; i < streamedSceneObjects.Count; i++)
+			for(int i = 0; i < extractionList.Count; i++)
 			{
-				GameObject gameObject = streamedSceneObjects[i];
+				GameObject gameObject = extractionList[i];
 
-				if(EditorUtility.DisplayCancelableProgressBar("Extracting Scene Geometry", "Processing " + gameObject.name, i / streamedSceneObjects.Count))
+				if(EditorUtility.DisplayCancelableProgressBar($"Extracting Geometry ({i + 1} / {extractionList.Count})", $"Processing \"{gameObject.name}\".", (float)(i + 1) / extractionList.Count))
+				{
 					return;
-				geometrySource.AddNode(gameObject, true);
+				}
+
+				geometrySource.AddNode(gameObject, forceMask);
 			}
 			ExtractTextures();
 
 			geometrySource.SaveToDisk();
 		}
 
-		private void ExtractProjectGeometry()
+		private void ExtractSelectedGeometry(GeometrySource.ForceExtractionMask forceMask)
+		{
+			lastExtractedGameObjects = new List<GameObject>(Selection.gameObjects);
+			ExtractGeometry(lastExtractedGameObjects, forceMask);
+		}
+
+		private void ExtractSceneGeometry(GeometrySource.ForceExtractionMask forceMask)
+		{
+			lastExtractedGameObjects = geometrySource.GetStreamableObjects();
+			ExtractGeometry(lastExtractedGameObjects, forceMask);
+		}
+
+		private void ExtractProjectGeometry(GeometrySource.ForceExtractionMask forceMask)
         {
 			string[] originalScenes = new string[SceneManager.sceneCount];
 			//Store scenes that were originally open.
@@ -311,7 +353,7 @@ namespace teleport
 			{
 				EditorSceneManager.OpenScene(buildScene.path, OpenSceneMode.Single);
 
-				ExtractSceneGeometry();
+				ExtractSceneGeometry(forceMask);
 			}
 
 			//Re-open scenes that were originally open.
@@ -340,11 +382,16 @@ namespace teleport
 			{
 				Texture2D sourceTexture = (Texture2D)geometrySource.texturesWaitingForExtraction[i].unityTexture;
 
-				if (EditorUtility.DisplayCancelableProgressBar("Extracting Textures", "Processing " + sourceTexture.name, i / renderTextures.Length))
+				if(EditorUtility.DisplayCancelableProgressBar($"Extracting Textures ({i + 1} / {renderTextures.Length})", $"Processing \"{sourceTexture.name}\".", (float)(i + 1) / renderTextures.Length))
+				{
 					return;
+				}
+
 				//If we always created a new render texture, then reloading would lose the link to the render texture in the inspector.
-				if (renderTextures[i] == null)
+				if(renderTextures[i] == null)
+				{
 					renderTextures[i] = new RenderTexture(sourceTexture.width, sourceTexture.height, 0);
+				}
 				else
 				{
 					renderTextures[i].Release();
@@ -354,7 +401,7 @@ namespace teleport
 				}
 
 				renderTextures[i].enableRandomWrite = true;
-				renderTextures[i].name = $"{geometrySource.texturesWaitingForExtraction[i].unityTexture.name} ({geometrySource.texturesWaitingForExtraction[i].id.ToString()})";
+				renderTextures[i].name = $"{geometrySource.texturesWaitingForExtraction[i].unityTexture.name} ({geometrySource.texturesWaitingForExtraction[i].id})";
 				renderTextures[i].Create();
 
 				//Normal maps need to be extracted differently; i.e. convert from DXT5nm format.
@@ -362,18 +409,10 @@ namespace teleport
 				TextureImporter textureImporter = (TextureImporter)AssetImporter.GetAtPath(path);
 				TextureImporterType textureType = textureImporter ? textureImporter.textureType : TextureImporterType.Default;
 
-				string shaderName="";
-				if(textureType == UnityEditor.TextureImporterType.NormalMap)
-					shaderName= "ExtractNormalMap";
-				else
-					shaderName = "ExtractTexture";
-				if(UnityEditor.PlayerSettings.colorSpace == ColorSpace.Gamma)
-					shaderName+="Gamma";
-				else
-					shaderName+="Linear";
-
+				string shaderName = textureType == UnityEditor.TextureImporterType.NormalMap ? "ExtractNormalMap" : "ExtractTexture";
+				shaderName += UnityEditor.PlayerSettings.colorSpace == ColorSpace.Gamma ? "Gamma" : "Linear";
+				
 				int kernelHandle = textureShader.FindKernel(shaderName);
-
 				textureShader.SetTexture(kernelHandle, "Source", sourceTexture);
 				textureShader.SetTexture(kernelHandle, "Result", renderTextures[i]);
 				textureShader.Dispatch(kernelHandle, sourceTexture.width / 8, sourceTexture.height / 8, 1);
@@ -424,8 +463,8 @@ namespace teleport
 			}
 
 			geometrySource.CompressTextures();
+			geometrySource.texturesWaitingForExtraction.Clear();
 		}
-
 
 		private void SetupGameObjectAndChildrenForStreaming(GameObject o)
 		{

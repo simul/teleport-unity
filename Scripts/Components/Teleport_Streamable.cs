@@ -80,7 +80,7 @@ namespace teleport
 
 		private void OnEnable()
 		{
-			GeometrySource.GetGeometrySource().AddNode(gameObject, true);
+			GeometrySource.GetGeometrySource().AddNode(gameObject, GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
 			CreateChildHierarchy();
 		}
 
@@ -150,7 +150,7 @@ namespace teleport
 		private avs.MovementUpdate GetNodeMovementUpdate(GameObject node, uid clientID)
 		{
 			//Node should already have been added; but AddNode(...) will do the equivalent of FindResourceID(...), but with a fallback.
-			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node, false);
+			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node);
 
 			avs.MovementUpdate update = new avs.MovementUpdate();
 			update.timestamp =(UInt64) DateTimeOffset.UtcNow.ToUnixTimeSeconds();
