@@ -257,15 +257,29 @@ namespace teleport
 		private Mesh GetMesh(GameObject gameObject)
 		{
 			MeshFilter meshFilter = gameObject.GetComponentInChildren<MeshFilter>();
-			if(meshFilter && meshFilter.sharedMesh.isReadable)
+			if(meshFilter)
 			{
-				return meshFilter.sharedMesh;
+				if(meshFilter.sharedMesh.isReadable)
+				{
+					return meshFilter.sharedMesh;
+				}
+				else
+				{
+					Debug.LogWarning($"Can't extract {meshFilter.sharedMesh} on {gameObject.name}, as the mesh is not readable!");
+				}
 			}
 
 			SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
-			if(skinnedMeshRenderer && skinnedMeshRenderer.sharedMesh.isReadable)
+			if(skinnedMeshRenderer)
 			{
-				return skinnedMeshRenderer.sharedMesh;
+				if(skinnedMeshRenderer.sharedMesh.isReadable)
+				{
+					return skinnedMeshRenderer.sharedMesh;
+				}
+				else
+				{
+					Debug.LogWarning($"Can't extract {skinnedMeshRenderer.sharedMesh} on {gameObject.name}, as the mesh is not readable!");
+				}
 			}
 
 			return null;

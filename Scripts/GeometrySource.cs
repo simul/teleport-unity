@@ -515,6 +515,34 @@ namespace teleport
 			ClearGeometryStore();
 		}
 
+		//Add a resource to the GeometrySource; for external extractors.
+		//	resource : Resource that will be tracked by the GeometrySource.
+		//	resourceID : ID of the resource on the unmanaged side.
+		//Returns whether the operation succeeded; it will fail if 'resource' is null or 'resourceID' is zero.
+		public bool AddResource(UnityEngine.Object resource, uid resourceID)
+		{
+			if(resource == null)
+			{
+				Debug.LogError("Failed to add the resource to the GeometrySource! Attempted to add a null resource!");
+				return false;
+			}
+
+			if(resourceID == 0)
+			{
+				Debug.LogError($"Failed to add the resource \"{resource.name}\" to the GeometrySource! Attempted to add a resource with an ID of zero!");
+				return false;
+			}
+
+			processedResources[resource] = resourceID;
+			return true;
+		}
+
+		//Returns whether the GeometrySource has processed the resource.
+		public bool HasResource(UnityEngine.Object resource)
+		{
+			return processedResources.ContainsKey(resource);
+		}
+
 		//Returns the ID of the resource if it has been processed, or zero if the resource has not been processed or was passed in null.
 		public uid FindResourceID(UnityEngine.Object resource)
 		{
@@ -527,9 +555,9 @@ namespace teleport
 			return nodeID;
 		}
 
-		public UnityEngine.Object FindResource(uid nodeID)
+		public UnityEngine.Object FindResource(uid resourceID)
 		{
-			return (nodeID == 0) ? null : processedResources.FirstOrDefault(x => x.Value == nodeID).Key;
+			return (resourceID == 0) ? null : processedResources.FirstOrDefault(x => x.Value == resourceID).Key;
 		}
 
 		//If the passed collision layer is streamed.
@@ -946,7 +974,7 @@ namespace teleport
 			Animator animator = animatorSource.GetComponentInChildren<Animator>();
 			if(animator)
 			{
-				extractTo.animationIDs = AnimationExtractor.AddAnimations(animator);
+				extractTo.animationIDs = AnimationExtractor.AddAnimations(animator, forceMask);
 				extractTo.animationAmount = (ulong)extractTo.animationIDs.Length;
 			}
 			else

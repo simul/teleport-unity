@@ -9,33 +9,6 @@ using uid = System.UInt64;
 
 namespace avs
 {
-	public class PropertyAnimation
-	{
-		public Int64 boneAmount;
-		public PropertyKeyframe[] boneKeyframes;
-	}
-
-	public struct PropertyKeyframe
-	{
-		public uid nodeID;
-
-		public int positionXAmount;
-		public int positionYAmount;
-		public int positionZAmount;
-		public FloatKeyframe[] positionXKeyframes;
-		public FloatKeyframe[] positionYKeyframes;
-		public FloatKeyframe[] positionZKeyframes;
-
-		public int rotationXAmount;
-		public int rotationYAmount;
-		public int rotationZAmount;
-		public int rotationWAmount;
-		public FloatKeyframe[] rotationXKeyframes;
-		public FloatKeyframe[] rotationYKeyframes;
-		public FloatKeyframe[] rotationZKeyframes;
-		public FloatKeyframe[] rotationWKeyframes;
-	}
-
 	public class TransformAnimation
 	{
 		public IntPtr name;
@@ -46,7 +19,7 @@ namespace avs
 
 	public struct TransformKeyframeList
 	{
-		public uid nodeID;
+		public UInt64 boneIndex;
 
 		public int positionAmount;
 		public Vector3Keyframe[] positionKeyframes;
@@ -99,63 +72,46 @@ namespace teleport
 		private static extern uid GenerateID();
 
 		[DllImport("SimulCasterServer")]
-		private static extern void StorePropertyAnimation(uid id, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(PropertyAnimationMarshaler))] avs.PropertyAnimation animation);
-		[DllImport("SimulCasterServer")]
 		private static extern void StoreTransformAnimation(uid id, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(TransformAnimationMarshaler))] avs.TransformAnimation animation);
 		#endregion
 
-		public static uid[] AddAnimations(Animator animator)
+		public static uid[] AddAnimations(Animator animator, GeometrySource.ForceExtractionMask forceMask)
 		{
 			uid[] animationIDs = new uid[0];
 			if(!animator)
+			{
 				return animationIDs;
+			}
 
 			if(animator.isHuman)
 			{
-				avs.TransformAnimation[] animations = ExtractHumanAnimationData(animator);
-
-				animationIDs = new uid[animations.Length];
-				for(int i = 0; i < animations.Length; i++)
-				{
-					uid id = GenerateID();
-					animationIDs[i] = id;
-					StoreTransformAnimation(id, animations[i]);
-				}
+				animationIDs = ExtractHumanAnimationData(animator, forceMask);
 			}
 			else
 			{
-				avs.TransformAnimation[] animations = ExtractNonHumanAnimationData(animator);
-
-				animationIDs = new uid[animations.Length];
-				for(int i = 0; i < animations.Length; i++)
-				{
-					uid id = GenerateID();
-					animationIDs[i] = id;
-					StoreTransformAnimation(id, animations[i]);
-				}
+				animationIDs = ExtractNonHumanAnimationData(animator, forceMask);
 			}
 
 			return animationIDs;
 		}
 
-		public static avs.TransformAnimation[] ExtractHumanAnimationData(Animator animator)
+		public static uid[] ExtractHumanAnimationData(Animator animator, GeometrySource.ForceExtractionMask forceMask)
 		{
-			SkinnedMeshRenderer skinnedMeshRenderer=animator.gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
-			GameObject rootObject=skinnedMeshRenderer.rootBone.gameObject;
+			SkinnedMeshRenderer skinnedMeshRenderer = animator.gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
+			GameObject rootObject = skinnedMeshRenderer.rootBone.gameObject;
+
+			//Store transform components, so they can be reset at the end.
 			Transform[] transforms = animator.gameObject.GetComponentsInChildren<Transform>();
-			Vector3[] storedPositions=new Vector3[transforms.Length];
-			Quaternion[] storedRotations= new Quaternion[transforms.Length];
-			for (int i=0;i< transforms.Length;i++)
+			Vector3[] storedPositions = new Vector3[transforms.Length];
+			Quaternion[] storedRotations = new Quaternion[transforms.Length];
+			for(int i = 0; i < transforms.Length; i++)
 			{
-				storedPositions[i]= new Vector3(0,0,0);
-				storedRotations[i] = new Quaternion();
-				storedPositions[i]= transforms[i].localPosition;
+				storedPositions[i] = transforms[i].localPosition;
 				storedRotations[i] = transforms[i].localRotation;
 			}
-			HumanBone[] humanBones = animator.avatar.humanDescription.human;
-			// store the current position.
-			Dictionary<string, GameObject> humanToBone = new Dictionary<string, GameObject>();
 
+			HumanBone[] humanBones = animator.avatar.humanDescription.human;
+			Dictionary<string, GameObject> humanToBone = new Dictionary<string, GameObject>();
 			foreach(HumanBone bone in humanBones)
 			{
 				Transform boneTransform = FindChildTransformWithName(animator.gameObject.transform, bone.boneName);
@@ -163,21 +119,27 @@ namespace teleport
 				//Debug.Log($"{bone.humanName} | {boneTransform.gameObject.name}");
 			}
 
+			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+
 			AnimationClip[] animationClips = animator.runtimeAnimatorController.animationClips;
-			avs.TransformAnimation[] animations = new avs.TransformAnimation[animationClips.Length];
-			var humanDescription = animator.avatar.humanDescription;
-			// A clip is a single animation or movement for a whole object, stored as a sequence of keyframes.
-			AnimationClip emptyClip=null;
-			for (int i = 0; i < animationClips.Length; i++)
+			uid[] animationIDs = new uid[animationClips.Length];
+			for(int i = 0; i < animationClips.Length; i++)
 			{
 				AnimationClip clip = animationClips[i];
-				
-				EditorCurveBinding[] curveBindings = AnimationUtility.GetCurveBindings(clip);
-				if(curveBindings.Length==0)
+
+				uid animationID = geometrySource.FindResourceID(clip);
+				if(animationID != 0 && (forceMask & GeometrySource.ForceExtractionMask.FORCE_SUBRESOURCES) == GeometrySource.ForceExtractionMask.FORCE_NOTHING)
 				{
-					emptyClip=clip;
+					animationIDs[i] = animationID;
 					continue;
 				}
+
+				EditorCurveBinding[] curveBindings = AnimationUtility.GetCurveBindings(clip);
+				if(curveBindings.Length == 0)
+				{
+					continue;
+				}
+
 				float length_seconds=clip.length;
 				Dictionary<string, InterimAnimation> nodeCurves = new Dictionary<string, InterimAnimation>();
 				Dictionary <string, HumanLimit> limits= new Dictionary<string, HumanLimit>();
@@ -258,11 +220,13 @@ namespace teleport
 						Debug.LogWarning($"Couldn't find bone gameobject with bone name of: {humanName}");
 						continue;
 					}
-					newAnimation.boneKeyframes[j].nodeID = GeometrySource.GetGeometrySource().FindResourceID(boneObject.transform);
-					if(newAnimation.boneKeyframes[j].nodeID==0)
+
+					if(!geometrySource.HasResource(boneObject.transform))
 					{
 						continue;
-					} 
+					}
+					newAnimation.boneKeyframes[j].boneIndex = (ulong)Array.FindIndex(skinnedMeshRenderer.bones, x => x.transform == boneObject.transform);
+
 					int num_k= curves.positionX.keys.Length;
 					float end_t =  curves.positionX.keys.Last().time;
 					newAnimation.boneKeyframes[j].positionAmount=num_k;
@@ -302,53 +266,80 @@ namespace teleport
 					}
 					++j;
 				}
-				
-				// ignore the unfilled values:
-				animations[i]= new avs.TransformAnimation();
-				animations[i].boneAmount=j;
-				animations[i].boneKeyframes = new avs.TransformKeyframeList[animations[i].boneAmount];
-				for (int k=0;k<j;k++)
+
+				//Create a new TransformAnimation where we ignore the unfilled values of the interim one.
+				avs.TransformAnimation animation = new avs.TransformAnimation();
+				animation.name = Marshal.StringToBSTR(clip.name);
+
+				animation.boneAmount = j;
+				animation.boneKeyframes = new avs.TransformKeyframeList[animation.boneAmount];
+				for(int k = 0; k < j; k++)
 				{
-					animations[i].boneKeyframes[k] = newAnimation.boneKeyframes[k];
+					animation.boneKeyframes[k] = newAnimation.boneKeyframes[k];
 				}
-				animations[i].name = Marshal.StringToBSTR(clip.name);
+
+				//Generate an ID, if we don't have one.
+				if(animationID == 0)
+				{
+					animationID = GenerateID();
+				}
+				animationIDs[i] = animationID;
+
+				//Add resource to the GeometrySource, so we know if it has been added before.
+				geometrySource.AddResource(clip, animationID);
+				//Store animation on unmanaged side.
+				StoreTransformAnimation(animationID, animation);
 			}
-			if(emptyClip==null)
-				emptyClip= new AnimationClip();
-			emptyClip.SampleAnimation(animator.gameObject,0.0f);
+
+			//Reset the animator's GameObject's transform.
+			//Won't this just zero the values? Won't this be incorrect most of the time? Is this really necessary with the next block?
+			AnimationClip emptyClip = new AnimationClip();
+			emptyClip.SampleAnimation(animator.gameObject, 0.0f);
+
+			//Reset transforms to their default stored values.
 			for (int i = 0; i < transforms.Length; i++)
 			{	
 				transforms[i].localRotation= storedRotations[i];
 				transforms[i].localPosition= storedPositions[i];
 			}
-			return animations;
+
+			return animationIDs;
 		}
 
-		public static avs.TransformAnimation[] ExtractNonHumanAnimationData(Animator animator)
+		public static uid[] ExtractNonHumanAnimationData(Animator animator, GeometrySource.ForceExtractionMask forceMask)
 		{
 			if(animator == null)
 			{
-				Debug.LogWarning($"Null animator passed to ExtractNonHumanAnimationData(...).");
-				return new avs.TransformAnimation[0];
+				Debug.LogWarning($"Failed to extract non-human animations! Passed animator was null!");
+				return new uid[0];
 			}
 
 			if(animator.runtimeAnimatorController == null)
 			{
-				Debug.LogWarning($"Null runtimeAnimatorController for {animator.gameObject.name}.");
-				return new avs.TransformAnimation[0];
+				Debug.LogWarning($"Failed to extract non-human animations from {animator.gameObject.name}! RuntimeAnimationController was null!");
+				return new uid[0];
 			}
 
-			avs.TransformAnimation[] animations = new avs.TransformAnimation[animator.runtimeAnimatorController.animationClips.Length];
+			uid[] animationIDs = new uid[animator.runtimeAnimatorController.animationClips.Length];
 
 			SkinnedMeshRenderer skinnedMeshRenderer = animator.gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
 			if (!skinnedMeshRenderer)
 			{
-				Debug.LogWarning($"No skinned mesh renderer found for game object tree: {animator.gameObject.name}! If an bone is not found it will just assume it is not meant to be there.");
+				Debug.LogWarning($"No skinned mesh renderer found for game object tree: {animator.gameObject.name}! All transforms will be used as bones, regardless whether they are a bone.");
 			}
 
+			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 			for(int i = 0; i < animator.runtimeAnimatorController.animationClips.Length; i++)
 			{
 				AnimationClip clip = animator.runtimeAnimatorController.animationClips[i];
+
+				uid animationID = geometrySource.FindResourceID(clip);
+				if(animationID != 0 && (forceMask & GeometrySource.ForceExtractionMask.FORCE_SUBRESOURCES) == GeometrySource.ForceExtractionMask.FORCE_NOTHING)
+				{
+					animationIDs[i] = animationID;
+					continue;
+				}
+
 				avs.TransformAnimation animation = new avs.TransformAnimation();
 				animation.name = Marshal.StringToBSTR(clip.name);
 
@@ -421,16 +412,15 @@ namespace teleport
 				for(int j = 0; j < nodeCurves.Count; j++)
 				{
 					Transform bone = nodeCurves.Keys.ToArray()[j];
-					InterimAnimation interim = nodeCurves[bone];
-
-					avs.TransformKeyframeList transformKeyframe = new avs.TransformKeyframeList();
-					transformKeyframe.nodeID = GeometrySource.GetGeometrySource().FindResourceID(bone);
-
-					if(transformKeyframe.nodeID == 0)
+					if(!geometrySource.HasResource(bone))
 					{
 						Debug.LogWarning($"Bone \"{bone.name}\" has animation properties, but could not be found in the geometry source!");
 						continue;
 					}
+
+					InterimAnimation interim = nodeCurves[bone];
+					avs.TransformKeyframeList transformKeyframe = new avs.TransformKeyframeList();
+					transformKeyframe.boneIndex = (ulong)Array.FindIndex(skinnedMeshRenderer.bones, x => x.transform == bone);
 
 					if(interim.positionX != null)
 					{
@@ -480,10 +470,20 @@ namespace teleport
 				}
 				animation.boneAmount = animation.boneKeyframes.Length;
 
-				animations[i] = animation;
+				//Generate an ID, if we don't have one.
+				if(animationID == 0)
+				{
+					animationID = GenerateID();
+				}
+				animationIDs[i] = animationID;
+
+				//Add resource to the GeometrySource, so we know if it has been added before.
+				geometrySource.AddResource(clip, animationID);
+				//Store animation on unmanaged side.
+				StoreTransformAnimation(animationID, animation);
 			}
 
-			return animations;
+			return animationIDs;
 		}
 
 		private static Transform FindChildTransformWithName(Transform startTransform, string name)
