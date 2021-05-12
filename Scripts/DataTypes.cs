@@ -570,11 +570,10 @@ namespace avs
 		public Vector3 position;
 	}
 
-
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct MovementUpdate
 	{
-		public UInt64 timestamp;
+		public Int64 timestamp;
 		public byte isGlobal;	// really a bool, but C# treats bool as 4 bytes....!
 
 		public uid nodeID;
@@ -584,6 +583,15 @@ namespace avs
 		public avs.Vector3 velocity;
 		public avs.Vector3 angularVelocityAxis;
 		public float angularVelocityAngle;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct NodeUpdateAnimation
+	{
+		public Int64 timestamp; //When the animation change was detected.
+
+		public uid nodeID; //ID of the node the animation is playing on.
+		public uid animationID; //ID of the animation that is now playing.
 	}
 
 	[StructLayout(LayoutKind.Sequential)]

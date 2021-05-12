@@ -51,6 +51,12 @@ namespace teleport
 			sessions.Remove(sessionComponent);
 		}
 
+		//Returns hashset of sessions this hierarchy is in.
+		public HashSet<Teleport_SessionComponent> GetActiveSessions()
+		{
+			return sessions;
+		}
+
 		public List<avs.MovementUpdate> GetMovementUpdates(uid clientID)
 		{
 			///TODO: Cache result every <frame/movement update tick>, so we don't calculate it per client.
@@ -130,6 +136,14 @@ namespace teleport
 			{
 				AddToHierarchy(component.transform, exploredGameObjects);
 			}
+
+			//Add animator trackers to nodes in streamed hierarchy with animator components.
+			//We don't want to use GetComponentInChildren(...), as we need to restrict the search to the streamed hierarchy rather than the entire hierarchy.
+			AddAnimatorTracker(gameObject);
+			foreach(GameObject child in childHierarchy)
+			{
+				AddAnimatorTracker(child);
+			}
 		}
 
 		private void AddToHierarchy(Transform transform, List<GameObject> exploredGameObjects)
@@ -147,13 +161,22 @@ namespace teleport
 			}
 		}
 
+		private void AddAnimatorTracker(GameObject node)
+		{
+			if(node.TryGetComponent(out Animator _))
+			{
+				Teleport_AnimatorTracker tracker = node.AddComponent<Teleport_AnimatorTracker>();
+				tracker.hierarchyRoot = this;
+			}
+		}
+
 		private avs.MovementUpdate GetNodeMovementUpdate(GameObject node, uid clientID)
 		{
 			//Node should already have been added; but AddNode(...) will do the equivalent of FindResourceID(...), but with a fallback.
 			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node);
 
 			avs.MovementUpdate update = new avs.MovementUpdate();
-			update.timestamp =(UInt64) DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+			update.timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 			update.nodeID = nodeID;
 
 			if(GeometryStreamingService.IsClientRenderingParent(clientID, node))

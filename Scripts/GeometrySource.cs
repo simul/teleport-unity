@@ -400,6 +400,10 @@ namespace teleport
 		private readonly Dictionary<UnityEngine.Object, uid> processedResources = new Dictionary<UnityEngine.Object, uid>(); //<Resource, ResourceID>
 		private bool isAwake = false;
 
+		[SerializeField]
+		private List<AnimationClip> processedAnimations = new List<AnimationClip>(); //AnimationClips stored in the GeometrySource that we need to add an event to.
+		private AnimationEvent teleportAnimationHook = new AnimationEvent(); //Animation event that is added to animation clips, so we can detect when a new animation starts playing.
+
 		[SerializeField] private SceneReferenceManager sceneReferenceManager = null;
 
 		private static GeometrySource geometrySource = null;
@@ -533,6 +537,20 @@ namespace teleport
 				return false;
 			}
 
+			//We only want to add the animation clip to the list once.
+			if(resource is AnimationClip && !processedResources.TryGetValue(resource, out uid _))
+			{
+				AnimationClip animation = (AnimationClip)resource;
+				processedAnimations.Add(animation);
+
+				//If this animation was extracted in play mode then we need to add the event.
+				if(Application.isPlaying)
+				{
+					teleportAnimationHook.objectReferenceParameter = animation;
+					animation.AddEvent(teleportAnimationHook);
+				}
+			}
+
 			processedResources[resource] = resourceID;
 			return true;
 		}
@@ -600,6 +618,23 @@ namespace teleport
 
 			return streamedObjects;
 		}
+
+		//Adds animations events to all extracted AnimationClips, so we can detect when they start playing.
+		public void AddAnimationEventHooks()
+		{
+			teleportAnimationHook.functionName = "SetPlayingAnimation";
+			teleportAnimationHook.time = 0.0f;
+			//Animation clip may be attached to an object that isn't streamed, and we don't want error messages when it hits the event and doesn't have a receiver.
+			teleportAnimationHook.messageOptions = SendMessageOptions.DontRequireReceiver;
+
+			foreach(AnimationClip clip in processedAnimations)
+			{
+				teleportAnimationHook.objectReferenceParameter = clip;
+				clip.AddEvent(teleportAnimationHook);
+			}
+		}
+
+		///GEOMETRY EXTRACTION
 
 		public uid AddNode(GameObject node, ForceExtractionMask forceMask = ForceExtractionMask.FORCE_NOTHING, bool isChildExtraction = false)
 		{

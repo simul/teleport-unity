@@ -133,6 +133,7 @@ namespace teleport
 			return instance;
 		}
 
+		//Returns list of body part hierarchy root GameObjects. 
 		public List<GameObject> GetPlayerBodyParts()
 		{
 			List<GameObject> bodyParts = new List<GameObject>();
@@ -155,6 +156,7 @@ namespace teleport
 			return bodyParts;
 		}
 
+		//Returns which body part the GameObject is.
 		public avs.NodeDataSubtype GetGameObjectBodyPart(GameObject gameObject)
 		{
 			if(gameObject == body)
@@ -202,6 +204,9 @@ namespace teleport
 				//We want the client to control the client-side transform of the body parts for reduced latency.
 				streamableComponent.sendMovementUpdates = false;
 			}
+			
+			//We need to add the animation events on play, so we can detect when an animation starts.
+			GeometrySource.GetGeometrySource().AddAnimationEventHooks();
 		}
 
 		private void OnEnable()
