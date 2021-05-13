@@ -22,6 +22,14 @@ namespace teleport
 
 		private HashSet<Teleport_SessionComponent> sessions = new HashSet<Teleport_SessionComponent>();
 
+		static int clientLayer = 25;
+		// Add the 0x7 because that's used to show canvases, so we must remove it also from the inverse mask.
+		// clear clientLayer and set (clientLayer+1)
+		static uint clientMask = (uint)(((int)1) << clientLayer) | (uint)0x7;
+		static uint invClientMask = ~clientMask;
+		static uint streamedClientMask = (uint)(((int)1) << (clientLayer + 1));
+		static uint invStreamedMask = ~streamedClientMask;
+
 		public void SetUid(uid u)
 		{
 			if(uid != 0 && u != uid)
@@ -199,6 +207,45 @@ namespace teleport
 
 			previousMovements[nodeID] = update;
 			return update;
+		}
+
+		public void ShowHierarchy()
+		{
+			foreach (var child in childHierarchy)
+			{
+				AddClientMask(child);
+			}		
+		}
+
+		void AddClientMask(GameObject gameObject)
+		{
+			Renderer nodeRenderer = gameObject.GetComponent<Renderer>();
+			if (nodeRenderer)
+			{
+				nodeRenderer.renderingLayerMask &= invStreamedMask;
+				nodeRenderer.renderingLayerMask |= clientMask;
+			}
+		}
+
+		public void HideHierarchy()
+		{
+			foreach (var child in childHierarchy)
+			{
+				RemoveClientMask(child);
+			}
+		}
+
+		void RemoveClientMask(GameObject gameObject)
+		{
+			Renderer nodeRenderer = gameObject.GetComponent<Renderer>();
+			if (nodeRenderer)
+			{
+				if (nodeRenderer)
+				{
+					nodeRenderer.renderingLayerMask &= invClientMask;
+					nodeRenderer.renderingLayerMask |= streamedClientMask;
+				}
+			}
 		}
 	}
 }
