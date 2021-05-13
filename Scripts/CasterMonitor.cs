@@ -351,30 +351,15 @@ namespace teleport
 			}
 
 			GameObject gameObject = (GameObject)obj;
-			int clientLayer = 25;
-			uint clientMask = (uint)(((int)1) << clientLayer) | (uint)0x7;
-			uint streamedClientMask = (uint)(((int)1) << (clientLayer + 1));
-			uint invStreamedMask = ~streamedClientMask;
-			Renderer nodeRenderer = gameObject.GetComponent<Renderer>();
-			if(nodeRenderer)
+
+			var ts = gameObject.GetComponent<Teleport_Streamable>();
+			if (!ts)
 			{
-				nodeRenderer.renderingLayerMask &= invStreamedMask;
-				nodeRenderer.renderingLayerMask |= clientMask;
+				return (byte)0; 
 			}
-			else
-			{
-				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
-				if (skinnedMeshRenderer)
-				{
-					skinnedMeshRenderer.renderingLayerMask &= invStreamedMask;
-					skinnedMeshRenderer.renderingLayerMask |= clientMask;
-				}
-				else
-				{
-					Debug.LogError("Trying to show node: " + gameObject.name + " but it has no renderer or skinned mesh renderer children!");
-				}
-				
-			}
+
+			ts.ShowHierarchy();
+
 			return (byte)1;
 		}
 
@@ -384,31 +369,18 @@ namespace teleport
 			if (!obj || obj.GetType() != typeof(GameObject))
 			{
 				return (byte)0;
-			}	
+			}
 
 			GameObject gameObject = (GameObject)obj;
-			int clientLayer = 25;
-			// Add the 0x7 because that's used to show canvases, so we must remove it also from the inverse mask.
-			// clear clientLayer and set (clientLayer+1)
-			uint clientMask = (uint)(((int)1) << clientLayer)|(uint)0x7;
-			uint invClientMask = ~clientMask;
-			uint streamedClientMask = (uint)(((int)1) << (clientLayer + 1));
 
-			Renderer nodeRenderer = gameObject.GetComponent<Renderer>();
-			if (nodeRenderer)
+			var ts = gameObject.GetComponent<Teleport_Streamable>();
+			if (!ts)
 			{
-				nodeRenderer.renderingLayerMask &= invClientMask;
-				nodeRenderer.renderingLayerMask |= streamedClientMask; 
+				return (byte)0;
 			}
-			else
-			{
-				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
-				if(skinnedMeshRenderer)
-				{
-					skinnedMeshRenderer.renderingLayerMask &= invClientMask;
-					skinnedMeshRenderer.renderingLayerMask |= streamedClientMask;
-				}
-			}
+
+			ts.HideHierarchy();
+
 			return (byte)1;
 		}
 
