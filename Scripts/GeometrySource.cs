@@ -277,7 +277,7 @@ namespace avs
 		public TextureAccessor normalTexture = new TextureAccessor();
 		public TextureAccessor occlusionTexture = new TextureAccessor();
 		public TextureAccessor emissiveTexture = new TextureAccessor();
-		public Vector3 emissiveFactor = new Vector3(1.0f, 1.0f, 1.0f);
+		public Vector3 emissiveFactor = new Vector3(0.0f,0.0f,0.0f);
 
 		public UInt64 extensionAmount;
 		[MarshalAs(UnmanagedType.ByValArray)]
@@ -797,8 +797,11 @@ namespace teleport
 				if(material.HasProperty("_EmissionMap"))
 				{
 					Texture emission = material.GetTexture("_EmissionMap");
-					extractedMaterial.emissiveTexture.index = AddTexture(emission, forceMask);
-					extractedMaterial.emissiveTexture.tiling = material.mainTextureScale;
+					if(emission!=null)
+					{ 
+						extractedMaterial.emissiveTexture.index = AddTexture(emission, forceMask);
+						extractedMaterial.emissiveTexture.tiling = material.mainTextureScale;
+					}
 				}
 				extractedMaterial.emissiveFactor = material.HasProperty("_BumpScale") ? (avs.Vector3)material.GetColor("_EmissionColor") : new avs.Vector3(0.0f, 0.0f, 0.0f);
 			}

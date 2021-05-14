@@ -578,7 +578,8 @@ namespace avs
 
 		public uid nodeID;
 		public avs.Vector3 position;
-		public avs.Vector4 rotation;
+		public avs.Vector4 rotation; 
+		public avs.Vector3 scale;
 
 		public avs.Vector3 velocity;
 		public avs.Vector3 angularVelocityAxis;
