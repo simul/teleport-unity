@@ -21,7 +21,7 @@ namespace SCServer
 		public Int32 geometryTicksPerSecond = 2;
 		public Int32 geometryBufferCutoffSize = 1048576; // Byte amount we stop encoding nodes at.
 		public float confirmationWaitTime = 15; // Seconds to wait before resending a resource.
-		public float clientDrawDistance = 10; // Distance pixels are clipped for geometry on the client.
+		public float clientDrawDistanceOffset = 0; // Distance pixels are clipped for geometry on the client.
 
 		[Header("Video")]
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingVideo = true;

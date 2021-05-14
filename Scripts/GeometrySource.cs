@@ -198,6 +198,7 @@ namespace avs
 		public Vector4 lightColour;
 		public Vector3 lightDirection;
 		public float lightRadius;
+		public float lightRange;
 		public byte lightType;
 
 		public UInt64 animationAmount;
@@ -578,7 +579,16 @@ namespace teleport
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 
 			//Find all GameObjects in open scenes that have the correct tag and collision layer to be streamed.
-			List<GameObject> streamedObjects = new List<GameObject>(teleportSettings.TagToStream.Length > 0 ? GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream) : FindObjectsOfType<GameObject>());
+			List<GameObject> streamedObjects;
+			if (teleportSettings.TagToStream.Length > 0)
+			{ 
+				var objs= Resources.FindObjectsOfTypeAll<GameObject>().Where(g => g.CompareTag(teleportSettings.TagToStream)).ToArray<GameObject>();
+				streamedObjects = new List<GameObject>(objs);
+			}
+			else
+			{
+				streamedObjects = new List<GameObject>(Resources.FindObjectsOfTypeAll<GameObject>());
+			}
 			for(int i = streamedObjects.Count - 1; i >= 0; i--)
 			{
 				GameObject gameObject = streamedObjects[i];
@@ -986,7 +996,7 @@ namespace teleport
 			ExtractNodeMaterials(skinnedMeshRenderer.sharedMaterials, ref extractTo, forceMask);
 
 			return true;
-			}
+		}
 
 		private bool ExtractNodeLightData(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask)
 		{
@@ -1006,6 +1016,7 @@ namespace teleport
 			Color lightColour = light.color;
 			extractTo.lightColour = (PlayerSettings.colorSpace == ColorSpace.Linear) ? lightColour.linear * light.intensity : lightColour.gamma * light.intensity;
 			extractTo.lightType = (byte)light.type;
+			extractTo.lightRange = light.range ;
 			extractTo.lightRadius = light.range / 5.0F;
 			// For Unity, lights point along the X-axis, so:
 			extractTo.lightDirection = new avs.Vector3(0, 0, 1.0F);
