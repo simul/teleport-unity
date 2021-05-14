@@ -90,6 +90,7 @@ namespace teleport
 		{
 			foreach(Teleport_Streamable streamableComponent in streamedHierarchies)
 			{
+				streamableComponent.RemoveStreamingClient(session);
 				Client_RemoveNodeByID(session.GetClientID(), streamableComponent.GetUid());
 			}
 		}
@@ -348,8 +349,8 @@ namespace teleport
 			Client_RemoveNodeByID(session.GetClientID(), gameObjectID);
 			Client_NodeLeftBounds(session.GetClientID(), gameObjectID);
 
-				streamable.RemoveStreamingClient(session);
-				streamedHierarchies.Remove(streamable);
+			streamable.RemoveStreamingClient(session);
+			streamedHierarchies.Remove(streamable);
 
 			//Stop streaming child hierarchy.
 			foreach(GameObject child in streamable.childHierarchy)

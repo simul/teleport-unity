@@ -277,11 +277,8 @@ namespace teleport
 			Renderer nodeRenderer = gameObject.GetComponent<Renderer>();
 			if (nodeRenderer)
 			{
-				if (nodeRenderer)
-				{
-					nodeRenderer.renderingLayerMask &= invClientMask;
-					nodeRenderer.renderingLayerMask |= streamedClientMask;
-				}
+				nodeRenderer.renderingLayerMask &= invClientMask;
+				nodeRenderer.renderingLayerMask |= streamedClientMask;	
 			}
 		}
 	}
