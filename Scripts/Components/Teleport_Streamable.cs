@@ -6,10 +6,18 @@ using uid = System.UInt64;
 
 namespace teleport
 {
-	//This component is automatically added to GameObjects that meets the criteria for geometry streaming.
+	//This component is automatically added to streamable GameObjects and their children.
+	[DisallowMultipleComponent]
+	public class Teleport_StreamableTracker : MonoBehaviour
+	{
+	}
+
+	//This component is automatically added to GameObjects that meet the criteria for geometry streaming.
 	[DisallowMultipleComponent]
 	public class Teleport_Streamable : MonoBehaviour
 	{
+		// This is public so that it will be visible on the inspector. Do not edit this value though.
+		public uid uid = 0;
 		// Track the reasons why we're streaming this. A set of bit flags, when it goes to zero you can stop streaming it.
 		public UInt32 streaming_reason=0;
 		//The child objects that have no collision, so are streamed automatically with the GameObject the component is attached to.
@@ -17,7 +25,6 @@ namespace teleport
 
 		public bool sendMovementUpdates = true;
 
-		private uid uid = 0;
 		private Dictionary<uid, avs.MovementUpdate> previousMovements = new Dictionary<uid, avs.MovementUpdate>();
 
 		private HashSet<Teleport_SessionComponent> sessions = new HashSet<Teleport_SessionComponent>();
@@ -98,6 +105,10 @@ namespace teleport
 			CreateChildHierarchy();
 		}
 
+		private void OnDestroy()
+		{
+			OnDisable();
+		}
 		private void OnDisable()
 		{
 			//Remove GameObject from sessions.
