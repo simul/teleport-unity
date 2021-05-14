@@ -22,6 +22,14 @@ namespace teleport
 
 		private HashSet<Teleport_SessionComponent> sessions = new HashSet<Teleport_SessionComponent>();
 
+		static int clientLayer = 25;
+		// Add the 0x7 because that's used to show canvases, so we must remove it also from the inverse mask.
+		// clear clientLayer and set (clientLayer+1)
+		static uint clientMask = (uint)(((int)1) << clientLayer) | (uint)0x7;
+		static uint invClientMask = ~clientMask;
+		static uint streamedClientMask = (uint)(((int)1) << (clientLayer + 1));
+		static uint invStreamedMask = ~streamedClientMask;
+
 		public void SetUid(uid u)
 		{
 			if(uid != 0 && u != uid)
@@ -49,6 +57,12 @@ namespace teleport
 		public void RemoveStreamingClient(Teleport_SessionComponent sessionComponent)
 		{
 			sessions.Remove(sessionComponent);
+		}
+
+		//Returns hashset of sessions this hierarchy is in.
+		public HashSet<Teleport_SessionComponent> GetActiveSessions()
+		{
+			return sessions;
 		}
 
 		public List<avs.MovementUpdate> GetMovementUpdates(uid clientID)
@@ -130,6 +144,14 @@ namespace teleport
 			{
 				AddToHierarchy(component.transform, exploredGameObjects);
 			}
+
+			//Add animator trackers to nodes in streamed hierarchy with animator components.
+			//We don't want to use GetComponentInChildren(...), as we need to restrict the search to the streamed hierarchy rather than the entire hierarchy.
+			AddAnimatorTracker(gameObject);
+			foreach(GameObject child in childHierarchy)
+			{
+				AddAnimatorTracker(child);
+			}
 		}
 
 		private void AddToHierarchy(Transform transform, List<GameObject> exploredGameObjects)
@@ -147,13 +169,22 @@ namespace teleport
 			}
 		}
 
+		private void AddAnimatorTracker(GameObject node)
+		{
+			if(node.TryGetComponent(out Animator _))
+			{
+				Teleport_AnimatorTracker tracker = node.AddComponent<Teleport_AnimatorTracker>();
+				tracker.hierarchyRoot = this;
+			}
+		}
+
 		private avs.MovementUpdate GetNodeMovementUpdate(GameObject node, uid clientID)
 		{
 			//Node should already have been added; but AddNode(...) will do the equivalent of FindResourceID(...), but with a fallback.
 			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node);
 
 			avs.MovementUpdate update = new avs.MovementUpdate();
-			update.timestamp =(UInt64) DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+			update.timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 			update.nodeID = nodeID;
 
 			if(GeometryStreamingService.IsClientRenderingParent(clientID, node))
@@ -199,6 +230,45 @@ namespace teleport
 
 			previousMovements[nodeID] = update;
 			return update;
+		}
+
+		public void ShowHierarchy()
+		{
+			foreach (var child in childHierarchy)
+			{
+				AddClientMask(child);
+			}		
+		}
+
+		void AddClientMask(GameObject gameObject)
+		{
+			Renderer nodeRenderer = gameObject.GetComponent<Renderer>();
+			if (nodeRenderer)
+			{
+				nodeRenderer.renderingLayerMask &= invStreamedMask;
+				nodeRenderer.renderingLayerMask |= clientMask;
+			}
+		}
+
+		public void HideHierarchy()
+		{
+			foreach (var child in childHierarchy)
+			{
+				RemoveClientMask(child);
+			}
+		}
+
+		void RemoveClientMask(GameObject gameObject)
+		{
+			Renderer nodeRenderer = gameObject.GetComponent<Renderer>();
+			if (nodeRenderer)
+			{
+				if (nodeRenderer)
+				{
+					nodeRenderer.renderingLayerMask &= invClientMask;
+					nodeRenderer.renderingLayerMask |= streamedClientMask;
+				}
+			}
 		}
 	}
 }
