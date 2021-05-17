@@ -275,6 +275,9 @@ namespace teleport
 		public void ReportHandshake(avs.Handshake handshake)
 		{
 			_handshake= handshake;
+
+			//Send initial animation state on receiving the handshake, as the connection is now ready for commands.
+			geometryStreamingService.SendAnimationState();
 		}
 
 		public void SetOriginFromClient(UInt64 validCounter, Quaternion newRotation, Vector3 newPosition)

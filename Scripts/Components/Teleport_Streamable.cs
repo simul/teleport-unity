@@ -26,9 +26,13 @@ namespace teleport
 
 		public bool sendMovementUpdates = true;
 
-		private Dictionary<uid, avs.MovementUpdate> previousMovements = new Dictionary<uid, avs.MovementUpdate>();
-
+		
 		private HashSet<Teleport_SessionComponent> sessions = new HashSet<Teleport_SessionComponent>();
+
+		//Animator trackers in this TeleportStreamable's hierarchy.
+		private List<Teleport_AnimatorTracker> animatorTrackers = new List<Teleport_AnimatorTracker>(); 
+
+		private Dictionary<uid, avs.MovementUpdate> previousMovements = new Dictionary<uid, avs.MovementUpdate>();
 
 		static int clientLayer = 25;
 		// Add the 0x7 because that's used to show canvases, so we must remove it also from the inverse mask.
@@ -100,6 +104,15 @@ namespace teleport
 			return updates;
 		}
 
+		//Send the playing animations on this hierarchy to the client.
+		public void SendAnimationState(uid clientID)
+		{
+			foreach(Teleport_AnimatorTracker tracker in animatorTrackers)
+			{
+				tracker.SendPlayingAnimation(clientID);
+			}
+		}
+
 		private void OnEnable()
 		{
 			GeometrySource.GetGeometrySource().AddNode(gameObject, GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
@@ -166,6 +179,9 @@ namespace teleport
 			}
 		}
 
+		//Adds the GameObject of the passed transform to the hierarchy, if it has not already been explored in a depth-first search.
+		//	transform : Transform of the GameObject we will add the the hierarchy, if unexplored.
+		//	exploredGameObjects : GameObjects that have already been explored by the depth-first search, or we just don't want added to the hierarchy.
 		private void AddToHierarchy(Transform transform, List<GameObject> exploredGameObjects)
 		{
 			if(transform)
@@ -181,12 +197,20 @@ namespace teleport
 			}
 		}
 
+		//Adds the Teleport_AnimatorTracker component to the passed node, if it has an Animator component.
+		//	node : Node in the hierarchy we will add the Teleport_AnimatorTracker to, if it has an Animator component.
 		private void AddAnimatorTracker(GameObject node)
 		{
 			if(node.TryGetComponent(out Animator _))
 			{
-				Teleport_AnimatorTracker tracker = node.AddComponent<Teleport_AnimatorTracker>();
-				tracker.hierarchyRoot = this;
+				//A hot-reload will cause this to be called again, so we need to check the component hasn't already been added.
+				if(!node.TryGetComponent(out Teleport_AnimatorTracker tracker))
+				{
+					tracker = node.AddComponent<Teleport_AnimatorTracker>();
+					tracker.hierarchyRoot = this;
+
+					animatorTrackers.Add(tracker);
+				}
 			}
 		}
 

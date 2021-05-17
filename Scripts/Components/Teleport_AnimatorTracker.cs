@@ -21,6 +21,11 @@ namespace teleport
 
 		private SkinnedMeshRenderer skinnedMeshRenderer;
 
+		//Animation update that last occurred.
+		private avs.NodeUpdateAnimation lastAnimationUpdate;
+
+		//Sets the streamed playing animation on this node.
+		//Called by an AnimationEvent added to all extracted animations while in play-mode.
 		public void SetPlayingAnimation(AnimationClip playingClip)
 		{
 			uid animationID = GeometrySource.GetGeometrySource().FindResourceID(playingClip);
@@ -30,16 +35,22 @@ namespace teleport
 				return;
 			}
 
-			avs.NodeUpdateAnimation animationUpdate = new avs.NodeUpdateAnimation();
-			animationUpdate.timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+			lastAnimationUpdate = new avs.NodeUpdateAnimation();
+			lastAnimationUpdate.timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-			animationUpdate.nodeID = GeometrySource.GetGeometrySource().FindResourceID(skinnedMeshRenderer.gameObject);
-			animationUpdate.animationID = animationID;
+			lastAnimationUpdate.nodeID = GeometrySource.GetGeometrySource().FindResourceID(skinnedMeshRenderer.gameObject);
+			lastAnimationUpdate.animationID = animationID;
 
 			foreach(Teleport_SessionComponent session in hierarchyRoot.GetActiveSessions())
 			{
-				Client_UpdateNodeAnimation(session.GetClientID(), animationUpdate);
+				SendPlayingAnimation(session.GetClientID());
 			}
+		}
+
+		//Sends the currently playing animation to the client with the passed ID.
+		public void SendPlayingAnimation(uid clientID)
+		{
+			Client_UpdateNodeAnimation(clientID, lastAnimationUpdate);
 		}
 
 		private void Awake()

@@ -95,7 +95,7 @@ namespace teleport
 			}
 		}
 
-		uid AddNode(GameObject node)
+		private uid AddNode(GameObject node)
 		{
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 
@@ -220,6 +220,14 @@ namespace teleport
 			{
 				Teleport_Streamable streamable = part.GetComponent<Teleport_Streamable>();
 				StartStreaming(streamable,2);
+			}
+		}
+
+		public void SendAnimationState()
+		{
+			foreach(Teleport_Streamable streamable in streamedHierarchies)
+			{
+				streamable.SendAnimationState(session.GetClientID());
 			}
 		}
 

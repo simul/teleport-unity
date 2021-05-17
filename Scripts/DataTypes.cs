@@ -586,7 +586,7 @@ namespace avs
 		public float angularVelocityAngle;
 	}
 
-	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
 	public struct NodeUpdateAnimation
 	{
 		public Int64 timestamp; //When the animation change was detected.
