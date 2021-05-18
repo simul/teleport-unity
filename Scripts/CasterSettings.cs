@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using UnityEngine;
-using UnityEditor;
 
 namespace SCServer
 {
@@ -21,7 +20,7 @@ namespace SCServer
 		public Int32 geometryTicksPerSecond = 2;
 		public Int32 geometryBufferCutoffSize = 1048576; // Byte amount we stop encoding nodes at.
 		public float confirmationWaitTime = 15; // Seconds to wait before resending a resource.
-		public float clientDrawDistanceOffset = 0; // Distance pixels are clipped for geometry on the client.
+		public float clientDrawDistanceOffset = 0; // Offset for distance pixels are clipped at for geometry on the client.
 
 		[Header("Video")]
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingVideo = true;
@@ -44,9 +43,9 @@ namespace SCServer
 		[MarshalAs(UnmanagedType.U1)] public bool use10BitEncoding = false;
 		[MarshalAs(UnmanagedType.U1)] public bool useYUV444Decoding = false;
 		[MarshalAs(UnmanagedType.U1)] public bool usePerspectiveRendering = false;
-		public Int32 perspectiveWidth = 1024;
-		public Int32 perspectiveHeight = 1024; 
-		public float perspectiveFOV = 110;
+		public Int32 perspectiveWidth = 836;
+		public Int32 perspectiveHeight = 836; 
+		public float perspectiveFOV = 130;
 		[MarshalAs(UnmanagedType.U1)] public bool useDynamicQuality = false;
 		public Int32 bandwidthCalculationInterval = 5000;
 
