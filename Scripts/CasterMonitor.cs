@@ -56,12 +56,19 @@ namespace teleport
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void OnAudioInputReceived(uid clientID, in IntPtr dataPtr, UInt64 dataSize);
 
+		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+		delegate Int64 GetUnixTimestampFn();
+
 		#endregion
 
 		#region DLLImport
 
 		struct InitialiseState
 		{
+			public string clientIP;
+			public uint DISCOVERY_PORT;
+			public uint SERVICE_PORT;
+
 			public OnShowNode showNode;
 			public OnHideNode hideNode;
 			public OnSetHeadPose headPoseSetter;
@@ -70,12 +77,11 @@ namespace teleport
 			public OnNewInput newInputProcessing;
 			public OnDisconnect disconnect;
 			public OnMessageHandler messageHandler;
-			public uint DISCOVERY_PORT;
-			public uint SERVICE_PORT;
 			public ReportHandshakeFn reportHandshake;
 			public OnAudioInputReceived audioInputReceived;
+			public GetUnixTimestampFn getUnixTimestamp;
+
 			public avs.Vector3 bodyOffsetFromHead;
-			public string clientIP;
 		};
 
 		[DllImport("SimulCasterServer")]
@@ -175,6 +181,11 @@ namespace teleport
 			return avs.NodeDataSubtype.None;
 		}
 
+		public static Int64 GetUnixTimestamp()
+		{
+			return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		}
+
 		///MONOBEHAVIOUR FUNCTIONS
 
 		private void Awake()
@@ -235,6 +246,7 @@ namespace teleport
 				DISCOVERY_PORT = teleportSettings.discoveryPort,
 				reportHandshake = ReportHandshake,
 				audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput,
+				getUnixTimestamp = GetUnixTimestamp,
 				bodyOffsetFromHead = bodyOffsetFromHead,
 				clientIP = teleportSettings.clientIP
 			};
@@ -255,6 +267,7 @@ namespace teleport
 			SceneManager.sceneLoaded -= OnSceneLoaded;
 			Shutdown();
 		}
+
 		static public void SetMaskRecursive(GameObject gameObject,uint mask)
 		{
 			Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
@@ -263,6 +276,7 @@ namespace teleport
 				renderer.renderingLayerMask = mask;
 			}
 		}
+
 		static public void UnsetMaskRecursive(GameObject gameObject, uint mask)
 		{
 			uint inverse_mask=~mask;
@@ -272,6 +286,7 @@ namespace teleport
 				renderer.renderingLayerMask = renderer.renderingLayerMask & inverse_mask;
 			}
 		}
+
 		private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
 		{
 			// clear masks corresponding to streamed objects.

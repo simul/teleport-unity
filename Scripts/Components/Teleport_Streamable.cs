@@ -220,7 +220,7 @@ namespace teleport
 			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node);
 
 			avs.MovementUpdate update = new avs.MovementUpdate();
-			update.timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+			update.timestamp = CasterMonitor.GetUnixTimestamp();
 			update.nodeID = nodeID;
 
 			if(GeometryStreamingService.IsClientRenderingParent(clientID, node))

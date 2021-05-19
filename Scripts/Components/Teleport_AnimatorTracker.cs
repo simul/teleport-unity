@@ -36,7 +36,7 @@ namespace teleport
 			}
 
 			lastAnimationUpdate = new avs.NodeUpdateAnimation();
-			lastAnimationUpdate.timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+			lastAnimationUpdate.timestamp = CasterMonitor.GetUnixTimestamp();
 
 			lastAnimationUpdate.nodeID = GeometrySource.GetGeometrySource().FindResourceID(skinnedMeshRenderer.gameObject);
 			lastAnimationUpdate.animationID = animationID;
