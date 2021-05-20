@@ -235,7 +235,7 @@ namespace teleport
 			buffer.Release();
 		}
 
-		public void EncodeWebcam(ScriptableRenderContext context, Camera camera)
+		public void EncodeWebcam(ScriptableRenderContext context, Camera camera, Vector2Int offset)
 		{
 			if (!computeShader)
 				InitShaders();
@@ -262,8 +262,7 @@ namespace teleport
 			computeShader.SetTexture(encodeWebcamKernel, "InputColorTexture", inputTexture);
 			computeShader.SetTexture(encodeWebcamKernel, "RWOutputColorTexture", outputTexture);
 			
-			int[] offset = { halfFaceSize * 3, halfFaceSize * 5 };
-			computeShader.SetInts("Offset", offset);
+			computeShader.SetInts("Offset", offset.x,offset.y);
 			computeShader.SetInts("WebcamCubemapSize", webcamCubemapSize);
 
 			var buffer = new CommandBuffer();
@@ -798,7 +797,8 @@ namespace teleport
 				}
 
 				videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, lightingOrder, teleportLighting, shadowmapOffset);
-				videoEncoding.EncodeWebcam(context, camera);	
+
+				videoEncoding.EncodeWebcam(context, camera, Teleport_SceneCaptureComponent.RenderingSceneCapture.webcamOffset);	
 				videoEncoding.EncodeTagID(context, camera);
 				context.Submit();
 

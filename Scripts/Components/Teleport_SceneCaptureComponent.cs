@@ -22,6 +22,7 @@ namespace teleport
 		public Vector2Int specularOffset;
 		public Vector2Int diffuseOffset;
 		public Vector2Int lightOffset;
+		public Vector2Int webcamOffset;
 		public WebCamTexture webcamTexture = null;
 
 		TeleportSettings teleportSettings=null;
@@ -52,9 +53,23 @@ namespace teleport
 		void Start()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
+			int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
+			int halfFaceSize = faceSize / 2;
+			var depthViewport = new Rect(0, (faceSize * 2), halfFaceSize, halfFaceSize);
 			specularOffset = new Vector2Int(0, 0);
 			diffuseOffset = specularOffset + new Vector2Int(0, teleportSettings.casterSettings.specularCubemapSize * 2);
 			lightOffset = diffuseOffset + new Vector2Int(teleportSettings.casterSettings.specularCubemapSize * 3 / 2, teleportSettings.casterSettings.specularCubemapSize * 2);
+
+			if (teleportSettings.casterSettings.usePerspectiveRendering)
+			{ 
+				webcamOffset =new Vector2Int(teleportSettings.casterSettings.perspectiveWidth / 2, teleportSettings.casterSettings.perspectiveHeight);
+
+			}
+			else
+			{
+				webcamOffset=new Vector2Int(3 * halfFaceSize, 2 * faceSize);
+			}
+			webcamOffset+= new Vector2Int(teleportSettings.casterSettings.specularCubemapSize * 6, teleportSettings.casterSettings.specularCubemapSize * 2);
 			Initialize();
 		}
 
@@ -373,12 +388,7 @@ namespace teleport
 			{
 				webcamTexture.deviceName = devices[0].name;
 			}
-
-			//int size = (int)teleportSettings.casterSettings.captureCubeTextureSize;
-			//int height = size / 2;
-			
-			//float aspect = webcamTexture.width / webcamTexture.height;
-			//int width = (int)(height * aspect);
+			webcamTexture.deviceName = devices[0].name;
 			webcamTexture.Play();
 		}
 	}

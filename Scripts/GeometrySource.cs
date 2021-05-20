@@ -592,7 +592,7 @@ namespace teleport
 			return (streamingTag.Length == 0 || gameObject.CompareTag(streamingTag)) && IsCollisionLayerStreamed(gameObject.layer);
 		}
 
-		public List<GameObject> GetStreamableObjects()
+		public List<GameObject> GetStreamableObjects(bool includePlayerParts)
 		{
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 
@@ -618,14 +618,16 @@ namespace teleport
 
 			//Add player body parts to list of streamed objects.
 			CasterMonitor casterMonitor = CasterMonitor.GetCasterMonitor();
-			List<GameObject> playerParts = casterMonitor.GetPlayerBodyParts();
-			foreach(GameObject playerPart in playerParts)
-			{
-				//We don't want to duplicate it, so we remove it first; which only affects performance.
-				streamedObjects.Remove(playerPart);
-				streamedObjects.Add(playerPart);
+			if(includePlayerParts)
+			{ 
+				List<GameObject> playerParts = casterMonitor.GetPlayerBodyParts();
+				foreach(GameObject playerPart in playerParts)
+				{
+					//We don't want to duplicate it, so we remove it first; which only affects performance.
+					streamedObjects.Remove(playerPart);
+					streamedObjects.Add(playerPart);
+				}
 			}
-
 			return streamedObjects;
 		}
 
