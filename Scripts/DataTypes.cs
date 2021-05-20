@@ -598,6 +598,8 @@ namespace avs
 	[StructLayout(LayoutKind.Sequential)]
 	public struct SceneCaptureCubeTagData
 	{
+		public Int64 timestamp;
+
 		public uint id;
 		public Transform cameraTransform;
 		public uint lightCount;

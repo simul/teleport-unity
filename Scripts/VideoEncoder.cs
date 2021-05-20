@@ -163,6 +163,7 @@ namespace teleport
 			cubeTagDataWrapper.clientID = clientID;
 			cubeTagDataWrapper.dataSize = (UInt64)(Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData)) + lightSizeInBytes);
 			cubeTagDataWrapper.data = new avs.SceneCaptureCubeTagData();
+			cubeTagDataWrapper.data.timestamp = CasterMonitor.GetUnixTimestamp();
 			cubeTagDataWrapper.data.id = tagDataID;
 			cubeTagDataWrapper.data.cameraTransform = new avs.Transform();
 			cubeTagDataWrapper.data.cameraTransform.position = camera.transform.position;
