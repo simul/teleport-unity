@@ -27,10 +27,10 @@ namespace teleport
 		#region DLLDelegates
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate byte OnShowNode(uid clientID, uid nodeID);
+		delegate bool OnShowNode(uid clientID, uid nodeID);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate byte OnHideNode(uid clientID, uid nodeID);
+		delegate bool OnHideNode(uid clientID, uid nodeID);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void OnSetHeadPose(uid clientID, in avs.Pose newHeadPose);
@@ -357,46 +357,72 @@ namespace teleport
 
 		///DLL CALLBACK FUNCTIONS
 
-		private static byte ShowNode(uid clientID, uid nodeID)
+		[return: MarshalAs(UnmanagedType.U1)]
+		private static bool ShowNode(uid clientID, uid nodeID)
 		{
 			UnityEngine.Object obj = GeometrySource.GetGeometrySource().FindResource(nodeID);
-			if(!obj || obj.GetType() != typeof(GameObject))
+			if(!obj)
 			{
-				return (byte)0;
+				Debug.LogWarning($"Failed to show node! Could not find a resource with ID {nodeID}!");
+				return false;
+			}
+
+			if(obj.GetType() != typeof(GameObject))
+			{
+				Debug.LogWarning($"Failed to show node! Resource found for ID {nodeID} was of type {obj.GetType().Name}, when we require a {nameof(GameObject)}!");
+				return false;
 			}
 
 			GameObject gameObject = (GameObject)obj;
 
-			var ts = gameObject.GetComponent<Teleport_Streamable>();
-			if (!ts)
+			if(!gameObject.TryGetComponent(out Teleport_Streamable streamable))
 			{
-				return (byte)0; 
+				/*
+				Debug.LogWarning($"Failed to show node! \"{gameObject}\" does not have a {nameof(Teleport_Streamable)} component!");
+				return false;
+				*/
+
+				//We still succeeded in ensuring the GameObject was in the correct state; the hierarchy root will show the node.
+				return true;
 			}
 
-			ts.ShowHierarchy();
+			streamable.ShowHierarchy();
 
-			return (byte)1;
+			return true;
 		}
 
-		private static byte HideNode(uid clientID, uid nodeID)
+		[return: MarshalAs(UnmanagedType.U1)]
+		private static bool HideNode(uid clientID, uid nodeID)
 		{
 			UnityEngine.Object obj = GeometrySource.GetGeometrySource().FindResource(nodeID);
-			if (!obj || obj.GetType() != typeof(GameObject))
+			if(!obj)
 			{
-				return (byte)0;
+				Debug.LogWarning($"Failed to hide node! Could not find a resource with ID {nodeID}!");
+				return false;
+			}
+
+			if(obj.GetType() != typeof(GameObject))
+			{
+				Debug.LogWarning($"Failed to hide node! Resource found for ID {nodeID} was of type {obj.GetType().Name}, when we require a {nameof(GameObject)}!");
+				return false;
 			}
 
 			GameObject gameObject = (GameObject)obj;
 
-			var ts = gameObject.GetComponent<Teleport_Streamable>();
-			if (!ts)
+			if(!gameObject.TryGetComponent(out Teleport_Streamable streamable))
 			{
-				return (byte)0;
+				/*
+				Debug.LogWarning($"Failed to hide node! \"{gameObject}\" does not have a {nameof(Teleport_Streamable)} component!");
+				return false;
+				*/
+
+				//We still succeeded in ensuring the GameObject was in the correct state; the hierarchy root will hide the node.
+				return true;
 			}
 
-			ts.HideHierarchy();
+			streamable.HideHierarchy();
 
-			return (byte)1;
+			return true;
 		}
 
 		private static void ReportHandshake(uid clientID,in avs.Handshake handshake)

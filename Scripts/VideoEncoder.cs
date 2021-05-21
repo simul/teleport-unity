@@ -194,7 +194,7 @@ namespace teleport
 			{
 				if(lightWarnCount > 0)
 				{
-					Debug.LogWarning("Have " + streamedLights.Count + " but client supports only " + session.handshake.maxLightsSupported + ".");
+					Debug.LogWarning($"Can't support all lights! The scene has {streamedLights.Count} lights, but the client only supports {session.handshake.maxLightsSupported}!");
 					lightWarnCount--;
 				}
 			}
