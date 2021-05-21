@@ -8,6 +8,9 @@ using UnityEngine.SceneManagement;
 
 namespace teleport
 {
+#if UNITY_EDITOR
+	[UnityEditor.InitializeOnLoad]
+#endif
 	public class CasterMonitor : MonoBehaviour
 	{
 		public Vector3 bodyOffsetFromHead = default;
@@ -98,8 +101,7 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void Tick(float deltaTime);
 		[DllImport("SimulCasterServer")]
-		/// Tock executes when not playing e.g in Edit Mode.
-		private static extern void Tock();
+		private static extern void EditorTick();
 		[DllImport("SimulCasterServer")]
 		private static extern void Shutdown();
 		#endregion
@@ -108,7 +110,14 @@ namespace teleport
 		private GUIStyle clientFont = new GUIStyle();
 
 		private string title = "Teleport";
-		
+
+#if UNITY_EDITOR
+		static CasterMonitor()
+		{
+			UnityEditor.EditorApplication.update += EditorTick;
+		}
+#endif
+
 		public static CasterMonitor GetCasterMonitor()
 		{
 			// We only want one instance, so delete duplicates.
@@ -231,6 +240,8 @@ namespace teleport
 				return;
 			}
 
+			SceneManager.sceneLoaded += OnSceneLoaded;
+
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 			InitialiseState initialiseState = new InitialiseState
 			{
@@ -255,11 +266,7 @@ namespace teleport
 
 			// Sets connection timeouts for peers (milliseconds)
 			SetConnectionTimeout(teleportSettings.connectionTimeout);
-			for(int i=0;i<SceneManager.sceneCount;i++)
-			{
-				//OnSceneLoaded(SceneManager.GetSceneAt(i),LoadSceneMode.Additive);
-			}
-			SceneManager.sceneLoaded += OnSceneLoaded;
+			
 		}
 
 		private void OnDisable()
@@ -320,13 +327,9 @@ namespace teleport
 
 		private void Update()
 		{
-			if(initialised && Application.isPlaying)
+			if(initialised)
 			{
 				Tick(Time.deltaTime);
-			}
-			else
-			{
-				Tock();
 			}
 		}
 
