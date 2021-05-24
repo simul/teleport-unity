@@ -35,6 +35,9 @@ namespace teleport
 		public string defaultScene = "";
 		public string additiveScene = "";
 
+		[Header("Webcam")]
+		public string webcam;
+
 		public static void EnsureAssetPath(string requiredPath)
 		{
 			var settings_folders = requiredPath.Split('/');
