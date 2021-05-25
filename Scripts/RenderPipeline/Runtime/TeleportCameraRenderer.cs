@@ -299,28 +299,29 @@ namespace teleport
 				w /= 2;
 			}
 		}
-		public void EncodeLightingCubemaps(ScriptableRenderContext context, Teleport_SceneCaptureComponent sceneCaptureComponent, Vector2Int StartOffset, int face)
+		public void EncodeLightingCubemaps(ScriptableRenderContext context, Teleport_SceneCaptureComponent sceneCaptureComponent,Teleport_SessionComponent session, int face)
 		{
 			if (!computeShader)
 				InitShaders();
 			var buffer = new CommandBuffer();
 			buffer.name = "EncodeLightingCubemaps";
+			
 			// 3 mips each of specular and rough-specular texture.
-			Decompose(buffer, sceneCaptureComponent.SpecularCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.specularOffset, face,Math.Min(6,sceneCaptureComponent.SpecularCubeTexture.mipmapCount));
+			Decompose(buffer, sceneCaptureComponent.SpecularCubeTexture, sceneCaptureComponent.videoTexture, session.clientSettings.specularPos, face,Math.Min(6,sceneCaptureComponent.SpecularCubeTexture.mipmapCount));
 
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 			buffer = new CommandBuffer();
-			Decompose(buffer, sceneCaptureComponent.DiffuseCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.diffuseOffset, face,1);
+			Decompose(buffer, sceneCaptureComponent.DiffuseCubeTexture, sceneCaptureComponent.videoTexture, session.clientSettings.diffusePos, face,1);
 			//Decompose(context, sceneCaptureComponent.LightingCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.lightOffset, face);
 
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
-		public void EncodeShadowmaps(ScriptableRenderContext context, Camera camera,CullingResults cullingResults, Teleport_SceneCaptureComponent sceneCaptureComponent, TeleportRenderPipeline.LightingOrder lightingOrder, TeleportLighting teleportLighting, Vector2Int StartOffset)
+		public void EncodeShadowmaps(ScriptableRenderContext context, Camera camera,CullingResults cullingResults, Teleport_SceneCaptureComponent sceneCaptureComponent, Teleport_SessionComponent session, TeleportRenderPipeline.LightingOrder lightingOrder, TeleportLighting teleportLighting)
 		{
 			// For each shadowcasting light, write the shadowmap to the video.
-			Vector2Int CurrentOffset= StartOffset;
+			Vector2Int CurrentOffset= session.clientSettings.shadowmapPos;
 			if (lightingOrder.MainLightIndex > -1 && lightingOrder.MainLightIndex < lightingOrder.visibleLights.Length)
 			{
 				var l= lightingOrder.visibleLights[lightingOrder.MainLightIndex].light;
@@ -780,10 +781,6 @@ namespace teleport
 					{
 						DrawCubemapFace(context, camera, lightingOrder, i);
 					}
-
-					int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
-					int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
-					shadowmapOffset = new Vector2Int(perspectiveWidth / 2, perspectiveHeight + 2 * Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + Teleport_SceneCaptureComponent.RenderingSceneCapture.diffuseOffset;
 				}
 				else
 				{
@@ -791,14 +788,11 @@ namespace teleport
 					{
 						DrawCubemapFace(context, camera, lightingOrder, i);
 					}
-
-					int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
-					shadowmapOffset = new Vector2Int(3 * faceSize / 2, 2 * faceSize + 2 * Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + Teleport_SceneCaptureComponent.RenderingSceneCapture.diffuseOffset;
 				}
 
-				videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, lightingOrder, teleportLighting, shadowmapOffset);
+				videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent,lightingOrder, teleportLighting);
 
-				videoEncoding.EncodeWebcam(context, camera, Teleport_SceneCaptureComponent.RenderingSceneCapture.webcamOffset);	
+				videoEncoding.EncodeWebcam(context, camera, SessionComponent.clientSettings.webcamPos);	
 				videoEncoding.EncodeTagID(context, camera);
 				context.Submit();
 
@@ -878,7 +872,7 @@ namespace teleport
 		
 					videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face, 0);
 					videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face);
-					videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, new Vector2Int(teleportSettings.casterSettings.perspectiveWidth / 2, teleportSettings.casterSettings.perspectiveHeight), face);
+					videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent,face);
 				}
 				else
 				{
@@ -901,7 +895,7 @@ namespace teleport
 					videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face);
 					videoEncoding.EncodeColor(context, camera, face);
 					videoEncoding.EncodeDepth(context, camera, depthViewport);
-					videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, new Vector2Int(3 * (int)depthViewport.width, 2 * faceSize), face);
+					videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent, face);
 #if UNITY_EDITOR
 					DrawUnsupportedShaders(context, camera);
 #endif

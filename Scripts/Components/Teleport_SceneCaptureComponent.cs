@@ -17,12 +17,7 @@ namespace teleport
 		public RenderTexture DiffuseCubeTexture = null;
 		public RenderTexture UnfilteredCubeTexture = null; 
 		public RenderTexture SpecularCubeTexture = null; 
-		public RenderTexture RoughSpecularCubeTexture = null;
 		public Camera cam = null;
-		public Vector2Int specularOffset;
-		public Vector2Int diffuseOffset;
-		public Vector2Int lightOffset;
-		public Vector2Int webcamOffset;
 		public WebCamTexture webcamTexture = null;
 
 		TeleportSettings teleportSettings=null;
@@ -52,24 +47,6 @@ namespace teleport
 		}
 		void Start()
 		{
-			teleportSettings = TeleportSettings.GetOrCreateSettings();
-			int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
-			int halfFaceSize = faceSize / 2;
-			var depthViewport = new Rect(0, (faceSize * 2), halfFaceSize, halfFaceSize);
-			specularOffset = new Vector2Int(0, 0);
-			diffuseOffset = specularOffset + new Vector2Int(0, teleportSettings.casterSettings.specularCubemapSize * 2);
-			lightOffset = diffuseOffset + new Vector2Int(teleportSettings.casterSettings.specularCubemapSize * 3 / 2, teleportSettings.casterSettings.specularCubemapSize * 2);
-
-			if (teleportSettings.casterSettings.usePerspectiveRendering)
-			{ 
-				webcamOffset =new Vector2Int(teleportSettings.casterSettings.perspectiveWidth / 2, teleportSettings.casterSettings.perspectiveHeight);
-
-			}
-			else
-			{
-				webcamOffset=new Vector2Int(3 * halfFaceSize, 2 * faceSize);
-			}
-			webcamOffset+= new Vector2Int(teleportSettings.casterSettings.specularCubemapSize * 6, teleportSettings.casterSettings.specularCubemapSize * 2);
 			Initialize();
 		}
 
@@ -90,7 +67,6 @@ namespace teleport
 			rendererTexture = null;
 			DiffuseCubeTexture = null;
 			SpecularCubeTexture = null;
-			RoughSpecularCubeTexture = null;
 			UnfilteredCubeTexture = null;
 			webcamTexture = null;
 			VideoEncoder = null;
@@ -142,6 +118,7 @@ namespace teleport
 		
 			cam.nearClipPlane = 0.05f;
 			cam.farClipPlane = 1000;
+			teleportSettings = TeleportSettings.GetOrCreateSettings();
 			if (teleportSettings.casterSettings.usePerspectiveRendering)
 			{
 				cam.fieldOfView = teleportSettings.casterSettings.perspectiveFOV;
@@ -336,7 +313,7 @@ namespace teleport
 			rendererTexture.enableRandomWrite = false;
 			rendererTexture.Create();
 
-			UnfilteredCubeTexture = new RenderTexture(teleportSettings.casterSettings.specularCubemapSize, teleportSettings.casterSettings.specularCubemapSize, 1, format, RenderTextureReadWrite.Default);
+			UnfilteredCubeTexture = new RenderTexture(teleportSettings.casterSettings.defaultSpecularCubemapSize, teleportSettings.casterSettings.defaultSpecularCubemapSize, 1, format, RenderTextureReadWrite.Default);
 			UnfilteredCubeTexture.name = "Unfiltered Cube";
 			UnfilteredCubeTexture.dimension = TextureDimension.Cube;
 			UnfilteredCubeTexture.useMipMap = false;
@@ -344,7 +321,7 @@ namespace teleport
 			UnfilteredCubeTexture.enableRandomWrite = true;
 			UnfilteredCubeTexture.Create();
 
-			DiffuseCubeTexture = new RenderTexture(teleportSettings.casterSettings.diffuseCubemapSize, teleportSettings.casterSettings.diffuseCubemapSize, 1, format, RenderTextureReadWrite.Default);
+			DiffuseCubeTexture = new RenderTexture(teleportSettings.casterSettings.defaultDiffuseCubemapSize, teleportSettings.casterSettings.defaultDiffuseCubemapSize, 1, format, RenderTextureReadWrite.Default);
 			DiffuseCubeTexture.name = "Diffuse Cube";
 			DiffuseCubeTexture.dimension = TextureDimension.Cube;
 			DiffuseCubeTexture.useMipMap = true;
@@ -352,21 +329,13 @@ namespace teleport
 			DiffuseCubeTexture.enableRandomWrite = true;
 			DiffuseCubeTexture.Create();
 			
-			SpecularCubeTexture = new RenderTexture(teleportSettings.casterSettings.specularCubemapSize, teleportSettings.casterSettings.specularCubemapSize, 1, format, RenderTextureReadWrite.Default);
+			SpecularCubeTexture = new RenderTexture(teleportSettings.casterSettings.defaultSpecularCubemapSize, teleportSettings.casterSettings.defaultSpecularCubemapSize, 1, format, RenderTextureReadWrite.Default);
 			SpecularCubeTexture.name = "Specular Cube";
 			SpecularCubeTexture.dimension = TextureDimension.Cube;
 			SpecularCubeTexture.useMipMap = true;
 			SpecularCubeTexture.autoGenerateMips = false;
 			SpecularCubeTexture.enableRandomWrite = true;
 			SpecularCubeTexture.Create();
-
-			RoughSpecularCubeTexture = new RenderTexture(teleportSettings.casterSettings.specularCubemapSize, teleportSettings.casterSettings.specularCubemapSize, 1, format, RenderTextureReadWrite.Default);
-			RoughSpecularCubeTexture.name = "Rough Specular Cube";
-			RoughSpecularCubeTexture.dimension = TextureDimension.Cube;
-			RoughSpecularCubeTexture.useMipMap = true;
-			RoughSpecularCubeTexture.autoGenerateMips = false;
-			RoughSpecularCubeTexture.enableRandomWrite = true;
-			RoughSpecularCubeTexture.Create();
 		}
 
 		void CreateWebTexture()

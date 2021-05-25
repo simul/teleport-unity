@@ -301,7 +301,7 @@ namespace teleport
 			}
 
 			//Add the Teleport_Streamable component to all streamable objects.
-			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects();
+			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects(true);
 			foreach(GameObject gameObject in teleportStreamableObjects)
 			{
 				//Objects with collision will have a Teleport_Streamable component added, as they can be streamed as root objects.

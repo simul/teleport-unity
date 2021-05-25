@@ -51,6 +51,10 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern uid GetUnlinkedClientID();
 
+		// Set the client-specific settings, e.g. video layout.
+		[DllImport("SimulCasterServer")]
+		private static extern void Client_SetClientSettings(uid clientID, SCServer.ClientSettings clientSettings);
+
 		// C# treats bool as 4 bytes, like C, but not like C++, which correctly uses only one byte.
 		[DllImport("SimulCasterServer")]
 		private static extern bool Client_SetOrigin(uid clientID, UInt64 validCounter, Vector3 pos, [MarshalAs(UnmanagedType.I1)] bool set_rel, Vector3 rel_pos, Quaternion orientation);
@@ -207,7 +211,7 @@ namespace teleport
 
 		//One per session, as we stream geometry on a per-client basis.
 		private GeometryStreamingService geometryStreamingService = null;
-
+		public SCServer.ClientSettings clientSettings =new SCServer.ClientSettings();
 		public GeometryStreamingService GeometryStreamingService
 		{
 			get
@@ -362,7 +366,10 @@ namespace teleport
 				t= ts[0];
 			}
 		}
+		Teleport_SessionComponent()
+		{
 
+		}
 		private void Start()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
@@ -461,6 +468,46 @@ namespace teleport
 				sessions[clientID] = this;
 
 				geometryStreamingService.StreamPlayerBody();
+
+
+				teleportSettings = TeleportSettings.GetOrCreateSettings();
+				clientSettings.specularCubemapSize= teleportSettings.casterSettings.defaultSpecularCubemapSize;
+				clientSettings.specularMips = teleportSettings.casterSettings.defaultSpecularMips;
+				clientSettings.diffuseCubemapSize = teleportSettings.casterSettings.defaultDiffuseCubemapSize;
+				clientSettings.lightCubemapSize = teleportSettings.casterSettings.defaultLightCubemapSize;
+				clientSettings.shadowmapSize = teleportSettings.casterSettings.defaultShadowmapSize;
+				int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
+				int halfFaceSize = faceSize / 2;
+				var depthViewport = new Rect(0, (faceSize * 2), halfFaceSize, halfFaceSize);
+
+				if (teleportSettings.casterSettings.usePerspectiveRendering)
+				{
+					clientSettings.specularPos = new Vector2Int(teleportSettings.casterSettings.perspectiveWidth / 2, teleportSettings.casterSettings.perspectiveHeight);
+				}
+				else
+				{
+					clientSettings.specularPos = new Vector2Int(3 * (int)depthViewport.width, 2 * faceSize);
+				}
+
+				clientSettings.diffusePos= clientSettings.specularPos + new Vector2Int(0, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
+				clientSettings.lightPos = clientSettings.diffusePos + new Vector2Int(teleportSettings.casterSettings.defaultSpecularCubemapSize * 3 / 2, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
+
+				if (teleportSettings.casterSettings.usePerspectiveRendering)
+				{
+					int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
+					int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
+					clientSettings.shadowmapPos = new Vector2Int(perspectiveWidth / 2, perspectiveHeight + 2 * Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + clientSettings.diffusePos;
+					clientSettings.webcamPos = new Vector2Int(perspectiveWidth / 2, perspectiveHeight);
+				}
+				else
+				{
+					clientSettings.specularPos = new Vector2Int(3 * (int)depthViewport.width, 2 * faceSize);
+					clientSettings.shadowmapPos = new Vector2Int(3 * faceSize / 2, 2 * faceSize + 2 * Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + clientSettings.diffusePos;
+					clientSettings.webcamPos = new Vector2Int(3 * halfFaceSize, 2 * faceSize);
+				}
+				clientSettings.webcamPos += new Vector2Int(teleportSettings.casterSettings.defaultSpecularCubemapSize * 6, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
+				clientSettings.webcamSize=new Vector2Int(64,48);
+				Client_SetClientSettings(clientID,clientSettings);
 			}
 
 			if(Client_IsConnected(clientID))

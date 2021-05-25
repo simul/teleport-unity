@@ -74,12 +74,31 @@ namespace SCServer
 		[MarshalAs(UnmanagedType.U1)] public byte axesStandard = 64|2|4;
 
 		[Header("Lighting")]
-		public Int32 specularCubemapSize = 64;
-		public Int32 specularMips = 7;
-		public Int32 diffuseCubemapSize = 64;
-		public Int32 lightCubemapSize = 64;
+		public Int32 defaultSpecularCubemapSize = 64;
+		public Int32 defaultSpecularMips = 7;
+		public Int32 defaultDiffuseCubemapSize = 64;
+		public Int32 defaultLightCubemapSize = 64;
+		public Int32 defaultShadowmapSize = 0;
 
 		[Header("Input")]
 		public ControlModel controlModel = ControlModel.SERVER_ORIGIN_CLIENT_LOCAL;
+	}
+	/// <summary>
+	/// Settings specific to a given client, as decided engine-side.
+	/// </summary>
+	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
+	public class ClientSettings
+	{
+		public Vector2Int specularPos ;
+		public Int32 specularCubemapSize ;
+		public Int32 specularMips ;
+		public Vector2Int diffusePos;
+		public Int32 diffuseCubemapSize ;
+		public Vector2Int lightPos;
+		public Int32 lightCubemapSize ;
+		public Vector2Int shadowmapPos ;
+		public Int32 shadowmapSize;
+		public Vector2Int webcamPos;
+		public Vector2Int webcamSize; 
 	}
 }
