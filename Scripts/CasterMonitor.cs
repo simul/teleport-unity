@@ -8,6 +8,9 @@ using UnityEngine.SceneManagement;
 
 namespace teleport
 {
+#if UNITY_EDITOR
+	[UnityEditor.InitializeOnLoad]
+#endif
 	public class CasterMonitor : MonoBehaviour
 	{
 		public Vector3 bodyOffsetFromHead = default;
@@ -27,10 +30,10 @@ namespace teleport
 		#region DLLDelegates
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate byte OnShowNode(uid clientID, uid nodeID);
+		delegate bool OnShowNode(uid clientID, uid nodeID);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate byte OnHideNode(uid clientID, uid nodeID);
+		delegate bool OnHideNode(uid clientID, uid nodeID);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void OnSetHeadPose(uid clientID, in avs.Pose newHeadPose);
@@ -98,8 +101,7 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void Tick(float deltaTime);
 		[DllImport("SimulCasterServer")]
-		/// Tock executes when not playing e.g in Edit Mode.
-		private static extern void Tock();
+		private static extern void EditorTick();
 		[DllImport("SimulCasterServer")]
 		private static extern void Shutdown();
 		#endregion
@@ -108,7 +110,14 @@ namespace teleport
 		private GUIStyle clientFont = new GUIStyle();
 
 		private string title = "Teleport";
-		
+
+#if UNITY_EDITOR
+		static CasterMonitor()
+		{
+			UnityEditor.EditorApplication.update += EditorTick;
+		}
+#endif
+
 		public static CasterMonitor GetCasterMonitor()
 		{
 			// We only want one instance, so delete duplicates.
@@ -231,6 +240,8 @@ namespace teleport
 				return;
 			}
 
+			SceneManager.sceneLoaded += OnSceneLoaded;
+
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 			InitialiseState initialiseState = new InitialiseState
 			{
@@ -255,11 +266,7 @@ namespace teleport
 
 			// Sets connection timeouts for peers (milliseconds)
 			SetConnectionTimeout(teleportSettings.connectionTimeout);
-			for(int i=0;i<SceneManager.sceneCount;i++)
-			{
-				//OnSceneLoaded(SceneManager.GetSceneAt(i),LoadSceneMode.Additive);
-			}
-			SceneManager.sceneLoaded += OnSceneLoaded;
+			
 		}
 
 		private void OnDisable()
@@ -320,13 +327,9 @@ namespace teleport
 
 		private void Update()
 		{
-			if(initialised && Application.isPlaying)
+			if(initialised)
 			{
 				Tick(Time.deltaTime);
-			}
-			else
-			{
-				Tock();
 			}
 		}
 
@@ -357,46 +360,72 @@ namespace teleport
 
 		///DLL CALLBACK FUNCTIONS
 
-		private static byte ShowNode(uid clientID, uid nodeID)
+		[return: MarshalAs(UnmanagedType.U1)]
+		private static bool ShowNode(uid clientID, uid nodeID)
 		{
 			UnityEngine.Object obj = GeometrySource.GetGeometrySource().FindResource(nodeID);
-			if(!obj || obj.GetType() != typeof(GameObject))
+			if(!obj)
 			{
-				return (byte)0;
+				Debug.LogWarning($"Failed to show node! Could not find a resource with ID {nodeID}!");
+				return false;
+			}
+
+			if(obj.GetType() != typeof(GameObject))
+			{
+				Debug.LogWarning($"Failed to show node! Resource found for ID {nodeID} was of type {obj.GetType().Name}, when we require a {nameof(GameObject)}!");
+				return false;
 			}
 
 			GameObject gameObject = (GameObject)obj;
 
-			var ts = gameObject.GetComponent<Teleport_Streamable>();
-			if (!ts)
+			if(!gameObject.TryGetComponent(out Teleport_Streamable streamable))
 			{
-				return (byte)0; 
+				/*
+				Debug.LogWarning($"Failed to show node! \"{gameObject}\" does not have a {nameof(Teleport_Streamable)} component!");
+				return false;
+				*/
+
+				//We still succeeded in ensuring the GameObject was in the correct state; the hierarchy root will show the node.
+				return true;
 			}
 
-			ts.ShowHierarchy();
+			streamable.ShowHierarchy();
 
-			return (byte)1;
+			return true;
 		}
 
-		private static byte HideNode(uid clientID, uid nodeID)
+		[return: MarshalAs(UnmanagedType.U1)]
+		private static bool HideNode(uid clientID, uid nodeID)
 		{
 			UnityEngine.Object obj = GeometrySource.GetGeometrySource().FindResource(nodeID);
-			if (!obj || obj.GetType() != typeof(GameObject))
+			if(!obj)
 			{
-				return (byte)0;
+				Debug.LogWarning($"Failed to hide node! Could not find a resource with ID {nodeID}!");
+				return false;
+			}
+
+			if(obj.GetType() != typeof(GameObject))
+			{
+				Debug.LogWarning($"Failed to hide node! Resource found for ID {nodeID} was of type {obj.GetType().Name}, when we require a {nameof(GameObject)}!");
+				return false;
 			}
 
 			GameObject gameObject = (GameObject)obj;
 
-			var ts = gameObject.GetComponent<Teleport_Streamable>();
-			if (!ts)
+			if(!gameObject.TryGetComponent(out Teleport_Streamable streamable))
 			{
-				return (byte)0;
+				/*
+				Debug.LogWarning($"Failed to hide node! \"{gameObject}\" does not have a {nameof(Teleport_Streamable)} component!");
+				return false;
+				*/
+
+				//We still succeeded in ensuring the GameObject was in the correct state; the hierarchy root will hide the node.
+				return true;
 			}
 
-			ts.HideHierarchy();
+			streamable.HideHierarchy();
 
-			return (byte)1;
+			return true;
 		}
 
 		private static void ReportHandshake(uid clientID,in avs.Handshake handshake)

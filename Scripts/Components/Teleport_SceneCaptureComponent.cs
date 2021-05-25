@@ -340,25 +340,14 @@ namespace teleport
 
 		void CreateWebTexture()
 		{
-			WebCamDevice[] devices = WebCamTexture.devices;
-
-			if (devices.Length < 1)
+			if (teleportSettings.webcam != "")
 			{
-				return;
-			}
-
 			webcamTexture = new WebCamTexture();
-
-			if (devices.Length > 1)
-			{
-				webcamTexture.deviceName = devices[1].name;
+				webcamTexture.deviceName = teleportSettings.webcam;
+				webcamTexture.Play();
 			}
-			else
-			{
-				webcamTexture.deviceName = devices[0].name;
 			}
 			webcamTexture.deviceName = devices[0].name;
 			webcamTexture.Play();
 		}
 	}
-}

@@ -464,6 +464,8 @@ namespace teleport
 
 			LoadFromDisk();
 
+			CreateAnimationHook();
+
 			isAwake = true;
 		}
 
@@ -634,11 +636,6 @@ namespace teleport
 		//Adds animations events to all extracted AnimationClips, so we can detect when they start playing.
 		public void AddAnimationEventHooks()
 		{
-			teleportAnimationHook.functionName = "SetPlayingAnimation";
-			teleportAnimationHook.time = 0.0f;
-			//Animation clip may be attached to an object that isn't streamed, and we don't want error messages when it hits the event and doesn't have a receiver.
-			teleportAnimationHook.messageOptions = SendMessageOptions.DontRequireReceiver;
-
 			foreach(AnimationClip clip in processedAnimations)
 			{
 				teleportAnimationHook.objectReferenceParameter = clip;
@@ -1802,6 +1799,14 @@ namespace teleport
 			}
 
 			return reaffirmedResources;
+		}
+
+		private void CreateAnimationHook()
+		{
+			teleportAnimationHook.functionName = "SetPlayingAnimation";
+			teleportAnimationHook.time = 0.0f;
+			//Animation clip may be attached to an object that isn't streamed, and we don't want error messages when it hits the event and doesn't have a receiver.
+			teleportAnimationHook.messageOptions = SendMessageOptions.DontRequireReceiver;
 		}
 	}
 }

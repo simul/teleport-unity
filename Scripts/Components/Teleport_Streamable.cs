@@ -203,13 +203,17 @@ namespace teleport
 		{
 			if(node.TryGetComponent(out Animator _))
 			{
-				//A hot-reload will cause this to be called again, so we need to check the component hasn't already been added.
-				if(!node.TryGetComponent(out Teleport_AnimatorTracker tracker))
+				//AnimatorTracker currently needs a SkinnedMeshRenderer component to operate.
+				if(node.GetComponentInChildren<SkinnedMeshRenderer>() != null)
 				{
-					tracker = node.AddComponent<Teleport_AnimatorTracker>();
-					tracker.hierarchyRoot = this;
+					//A hot-reload will cause this to be called again, so we need to check the component hasn't already been added.
+					if(!node.TryGetComponent(out Teleport_AnimatorTracker tracker))
+					{
+						tracker = node.AddComponent<Teleport_AnimatorTracker>();
+						tracker.hierarchyRoot = this;
 
-					animatorTrackers.Add(tracker);
+						animatorTrackers.Add(tracker);
+					}
 				}
 			}
 		}

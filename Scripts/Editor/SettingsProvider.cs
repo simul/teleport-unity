@@ -45,6 +45,28 @@ namespace teleport
 			layerMask.value = mask;
 			return layerMask;
 		}
+
+		static string WebcamField(string label, string currentValue)
+		{
+			List<string> deviceNames = new List<String>();
+			int selected = 0;
+			for(int i = 0; i < WebCamTexture.devices.Length; ++i)
+			{
+				string name = WebCamTexture.devices[i].name;
+				deviceNames.Add(name);
+				if (name == currentValue)
+				{
+					selected = i;
+				}
+			}
+			selected = EditorGUILayout.Popup(label, selected, deviceNames.ToArray());
+			if (deviceNames.Count > 0)
+			{
+				return deviceNames[selected];
+			}
+			return "";
+		}
+
 		public TeleportSettingsProvider(string path, SettingsScope scope = SettingsScope.Project)
 			: base(path, scope)
 		{
@@ -70,6 +92,7 @@ namespace teleport
 			Tuple.Create(4,  "Lighting", false),
 			Tuple.Create(1,  "Input", false),
 		};
+
 		public override void OnGUI(string searchContext)
 		{
 			if (teleportSettings == null)
@@ -84,7 +107,7 @@ namespace teleport
 			teleportSettings.listenPort = (uint)EditorGUILayout.IntField("Listen Port", (int)teleportSettings.listenPort);
 			teleportSettings.connectionTimeout = EditorGUILayout.IntField("Timeout", teleportSettings.connectionTimeout);
 			teleportSettings.clientIP = EditorGUILayout.TextField("Client IP", teleportSettings.clientIP);
-
+			teleportSettings.webcam = WebcamField("Webcam", teleportSettings.webcam);
 
 			foreach (var prop in typeof(SCServer.CasterSettings).GetProperties())
 			{
@@ -133,10 +156,10 @@ namespace teleport
 						{
 							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.Toggle(field.Name, (bool)field.GetValue(teleportSettings.casterSettings)));
 						}
-						else if (field.FieldType == typeof(object))
-						{
+						//else if (field.FieldType == typeof(object))
+						//{
 						//	field.SetValue(teleportSettings.casterSettings, EditorGUILayout.ObjectField(field.Name, (bool)field.GetValue(teleportSettings.casterSettings)));
-						}
+						//}
 						else if (field.FieldType == typeof(SCServer.ControlModel))
 						{
 							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.EnumPopup(field.Name, (SCServer.ControlModel)field.GetValue(teleportSettings.casterSettings)));
@@ -151,6 +174,11 @@ namespace teleport
 			}
 			// Force it to save:
 			EditorUtility.SetDirty(teleportSettings);
+		}
+
+		public override void OnInspectorUpdate()
+		{
+
 		}
 
 		// Register the SettingsProvider
