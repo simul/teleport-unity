@@ -342,12 +342,10 @@ namespace teleport
 		{
 			if (teleportSettings.webcam != "")
 			{
-			webcamTexture = new WebCamTexture();
+				webcamTexture = new WebCamTexture();
 				webcamTexture.deviceName = teleportSettings.webcam;
 				webcamTexture.Play();
 			}
-			}
-			webcamTexture.deviceName = devices[0].name;
-			webcamTexture.Play();
 		}
 	}
+}
