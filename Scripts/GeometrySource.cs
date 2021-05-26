@@ -594,21 +594,23 @@ namespace teleport
 			return (streamingTag.Length == 0 || gameObject.CompareTag(streamingTag)) && IsCollisionLayerStreamed(gameObject.layer);
 		}
 
-		public List<GameObject> GetStreamableObjects(bool includePlayerParts)
+		public List<GameObject> GetStreamableObjects(bool includePlayerParts = true)
 		{
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 
-			//Find all GameObjects in open scenes that have the correct tag and collision layer to be streamed.
+			//Find all GameObjects in open scenes that have the streamed tag.
 			List<GameObject> streamedObjects;
 			if (teleportSettings.TagToStream.Length > 0)
-			{ 
-				var objs= Resources.FindObjectsOfTypeAll<GameObject>().Where(g => g.CompareTag(teleportSettings.TagToStream)).ToArray<GameObject>();
-				streamedObjects = new List<GameObject>(objs);
+			{
+				GameObject[] taggedGameObjects = Resources.FindObjectsOfTypeAll<GameObject>().Where(g => g.CompareTag(teleportSettings.TagToStream)).ToArray();
+				streamedObjects = new List<GameObject>(taggedGameObjects);
 			}
 			else
 			{
 				streamedObjects = new List<GameObject>(Resources.FindObjectsOfTypeAll<GameObject>());
 			}
+
+			//Remove GameObjects not on a streamed collision layer.
 			for(int i = streamedObjects.Count - 1; i >= 0; i--)
 			{
 				GameObject gameObject = streamedObjects[i];
@@ -619,17 +621,18 @@ namespace teleport
 			}
 
 			//Add player body parts to list of streamed objects.
-			CasterMonitor casterMonitor = CasterMonitor.GetCasterMonitor();
 			if(includePlayerParts)
-			{ 
+			{
+				CasterMonitor casterMonitor = CasterMonitor.GetCasterMonitor();
 				List<GameObject> playerParts = casterMonitor.GetPlayerBodyParts();
 				foreach(GameObject playerPart in playerParts)
 				{
-					//We don't want to duplicate it, so we remove it first; which only affects performance.
+					//We don't want to duplicate it, so we remove it first; which only affects performance in a minor way.
 					streamedObjects.Remove(playerPart);
 					streamedObjects.Add(playerPart);
 				}
 			}
+
 			return streamedObjects;
 		}
 

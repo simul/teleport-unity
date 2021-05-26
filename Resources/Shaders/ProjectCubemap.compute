@@ -14,12 +14,13 @@ static const int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
 
 Texture2D<float4> InputColorTexture;
 TextureCube<float4> InputCubemapTexture;
+SamplerState samplerInputColorTexture;
 SamplerState samplerInputCubemapTexture;
 RWTexture2D<float4> RWOutputColorTexture;
 RWTexture2DArray<float4> RWOutputColorTextureArray;
 
 int2 Offset;
-int2 WebcamCubemapSize;
+int2 WebcamSize;
 int2 TagDataIdOffset;
 int TagDataId;
 int Face;
@@ -93,21 +94,22 @@ void EncodeCubemapFaceCS(uint2 ThreadID : SV_DispatchThreadID)
 [numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
 void EncodeWebcamCS(uint2 ThreadID : SV_DispatchThreadID)
 {
-	if (ThreadID.x >= WebcamCubemapSize.x || ThreadID.y >= WebcamCubemapSize.y)
+	if (int(ThreadID.x) >= WebcamSize.x || int(ThreadID.y) >= WebcamSize.y)
 		return;
 
-	uint InputW, InputH;
-	InputColorTexture.GetDimensions(InputW, InputH);
+	//int2 div = int2(InputW, InputH) / int2(WebcamSize.x, WebcamSize.y);
 
-	int2 div = int2(InputW, InputH) / int2(WebcamCubemapSize.x, WebcamCubemapSize.y);
+	float2 uv = float2(ThreadID) / float2(WebcamSize);
 
-	int2 ipos = int2(ThreadID.x, InputH - 1 - ThreadID.y) * div;
-	float4 color = InputColorTexture[ipos];
+	// Flip for HLSL
+	uv.y = 1.0 - uv.y;
+
+	float4 color = InputColorTexture.SampleLevel(samplerInputColorTexture, uv, 0);
 	color.x = sqrt(color.x);
 	color.y = sqrt(color.y);
 	color.z = sqrt(color.z);
 
-	int2 pos = Offset + ThreadID;
+	int2 pos = Offset + int2(ThreadID);
 
 	RWOutputColorTexture[pos] = color;
 }
