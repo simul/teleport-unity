@@ -18,9 +18,10 @@ namespace teleport
 		private TeleportSettings teleportSettings;
 
 		//List of data that was extracted in the last extraction operation.
-		private List<GameObject> streamableGameObjects = new List<GameObject>();
+		private List<GameObject> lastExtractedGameObjects = new List<GameObject>(); //List of streamable GameObjects that were found during the last operation.
 		private RenderTexture[] renderTextures = new RenderTexture[0];
-		private bool includePlayerParts=true;
+		private bool includePlayerParts = true;
+
 		//Text styles.
 		private GUIStyle richText = new GUIStyle();
 		private GUIStyle warningText = new GUIStyle();
@@ -96,7 +97,8 @@ namespace teleport
 
 		private void DrawExtractionLayout()
 		{
-			includePlayerParts=GUILayout.Toggle(includePlayerParts,"Include Player Parts");
+			includePlayerParts = GUILayout.Toggle(includePlayerParts, "Include Player Parts");
+
 			if (GUILayout.Button("Find Scene Streamables"))
 			{
 				FindSceneStreamables();
@@ -144,12 +146,12 @@ namespace teleport
 
 			EditorGUILayout.EndHorizontal();
 
-			foldout_gameObjects = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_gameObjects, "Streamable Candidate GameObjects (" + streamableGameObjects.Count + ")");
+			foldout_gameObjects = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_gameObjects, "Last Extracted GameObjects (" + lastExtractedGameObjects.Count + ")");
 			if(foldout_gameObjects)
 			{
 				scrollPosition_gameObjects = EditorGUILayout.BeginScrollView(scrollPosition_gameObjects);
 
-				foreach(GameObject gameObject in streamableGameObjects)
+				foreach(GameObject gameObject in lastExtractedGameObjects)
 				{
 					EditorGUILayout.BeginHorizontal();
 
@@ -278,7 +280,7 @@ namespace teleport
 			if(GUILayout.Button("Clear Cached Data"))
 			{
 				geometrySource.ClearData();
-				streamableGameObjects = new List<GameObject>();
+				lastExtractedGameObjects = new List<GameObject>();
 
 				foreach(RenderTexture texture in renderTextures)
 				{
@@ -307,7 +309,7 @@ namespace teleport
 
 		private void FindSceneStreamables()
 		{
-			streamableGameObjects = geometrySource.GetStreamableObjects(includePlayerParts);
+			lastExtractedGameObjects = geometrySource.GetStreamableObjects(includePlayerParts);
 		}
 
 		private void ExtractGeometry(List<GameObject> extractionList, GeometrySource.ForceExtractionMask forceMask)
@@ -330,14 +332,14 @@ namespace teleport
 
 		private void ExtractSelectedGeometry(GeometrySource.ForceExtractionMask forceMask)
 		{
-			streamableGameObjects = new List<GameObject>(Selection.gameObjects);
-			ExtractGeometry(streamableGameObjects, forceMask);
+			lastExtractedGameObjects = new List<GameObject>(Selection.gameObjects);
+			ExtractGeometry(lastExtractedGameObjects, forceMask);
 		}
 
 		private void ExtractSceneGeometry(GeometrySource.ForceExtractionMask forceMask)
 		{
-			streamableGameObjects = geometrySource.GetStreamableObjects(includePlayerParts);
-			ExtractGeometry(streamableGameObjects, forceMask);
+			lastExtractedGameObjects = geometrySource.GetStreamableObjects(includePlayerParts);
+			ExtractGeometry(lastExtractedGameObjects, forceMask);
 		}
 
 		private void ExtractProjectGeometry(GeometrySource.ForceExtractionMask forceMask)

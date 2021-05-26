@@ -14,77 +14,48 @@ namespace teleport
 		#region DLLImports
 
 		[DllImport("SimulCasterServer")]
-		public static extern void Client_StopSession(uid clientID);
-		[DllImport("SimulCasterServer")]
-		public static extern void Client_StopStreaming(uid clientID);
+		private static extern bool Client_IsConnected(uid clientID);
 		[DllImport("SimulCasterServer")]
 		public static extern bool Client_HasHost(uid clientID);
 		[DllImport("SimulCasterServer")]
 		public static extern bool Client_HasPeer(uid clientID);
+
+		[DllImport("SimulCasterServer")]
+		public static extern void Client_StopSession(uid clientID);
+		[DllImport("SimulCasterServer")]
+		public static extern void Client_StopStreaming(uid clientID);
+
 		[DllImport("SimulCasterServer")]
 		public static extern uint Client_GetClientIP(uid clientID, uint bufferLength, StringBuilder buffer);
 		[DllImport("SimulCasterServer")]
+		public static extern UInt16 Client_GetClientPort(uid clientID);
+		[DllImport("SimulCasterServer")]
+		public static extern UInt16 Client_GetServerPort(uid clientID);
+
+		[DllImport("SimulCasterServer")]
 		public static extern bool Client_GetClientNetworkStats(uid clientID, ref avs.NetworkStats stats);
-		
-		public string Client_GetClientIPAddr(uid clientID)
-		{
-			StringBuilder str = new StringBuilder("", 20);
-			try
-			{
-				uint newlen = Client_GetClientIP(clientID,(uint)16, str);
-				if (newlen > 0)
-				{
-					str = new StringBuilder("",(int)newlen + (int)2);
-					Client_GetClientIP(clientID,newlen + 1, str );
-				}
-			}
-			catch (Exception exc)
-			{
-				UnityEngine.Debug.Log(exc.ToString());
-			}
-			return str.ToString();
-		}
-		[DllImport("SimulCasterServer")]
-		public static extern System.UInt16 Client_GetClientPort(uid clientID);
-		[DllImport("SimulCasterServer")]
-		public static extern System.UInt16 Client_GetServerPort(uid clientID);
-		[DllImport("SimulCasterServer")]
-		private static extern uid GetUnlinkedClientID();
 
 		// Set the client-specific settings, e.g. video layout.
 		[DllImport("SimulCasterServer")]
 		private static extern void Client_SetClientSettings(uid clientID, SCServer.ClientSettings clientSettings);
 
-		// C# treats bool as 4 bytes, like C, but not like C++, which correctly uses only one byte.
 		[DllImport("SimulCasterServer")]
-		private static extern bool Client_SetOrigin(uid clientID, UInt64 validCounter, Vector3 pos, [MarshalAs(UnmanagedType.I1)] bool set_rel, Vector3 rel_pos, Quaternion orientation);
-		[DllImport("SimulCasterServer")]
-		private static extern bool Client_IsConnected(uid clientID);
+		private static extern bool Client_SetOrigin(uid clientID, UInt64 validCounter, Vector3 pos, [MarshalAs(UnmanagedType.U1)] bool set_rel, Vector3 rel_pos, Quaternion orientation);
 		[DllImport("SimulCasterServer")]
 		private static extern bool Client_HasOrigin(uid clientID);
+
+		[DllImport("SimulCasterServer")]
+		private static extern uid GetUnlinkedClientID();
+
 		#endregion
 
 		#region StaticCallbacks
 
-		public static bool StaticDoesSessionExist(uid clientID)
-		{
-			if (!sessions.ContainsKey(clientID))
-			{
-				teleport.TeleportLog.LogErrorOnce("No session component found for client with ID: " + clientID);
-				return false;
-			}
-
-			return true;
-		}
-		public string ClientName = "Client1";
-		public int Layer = 6;
-		[SerializeField]
-		avs.Handshake _handshake = new avs.Handshake();
-
 		// Aidan: This is temporary for the capture component
+		//TODO: Replace this with something that is not temporary.
 		public static uid GetLastClientID()
 		{
-			if (sessions.Count > 0)
+			if(sessions.Count > 0)
 			{
 				return sessions.Last().Key;
 			}
@@ -94,62 +65,87 @@ namespace teleport
 			}
 		}
 
+		public static bool HasSessionComponent(uid clientID)
+		{
+			if(!sessions.ContainsKey(clientID))
+			{
+				TeleportLog.LogErrorOnce($"No session component found for Client_{clientID}");
+				return false;
+			}
+
+			return true;
+		}
+
+		public static Teleport_SessionComponent GetSessionComponent(uid clientID)
+		{
+			if(!sessions.TryGetValue(clientID, out Teleport_SessionComponent sessionComponent))
+			{
+				TeleportLog.LogErrorOnce($"No session component found for Client_{clientID}");
+			}
+
+			return sessionComponent;
+		}
+
 		public static void StaticDisconnect(uid clientID)
 		{
-			if (sessions.ContainsKey(clientID))
+			if(sessions.ContainsKey(clientID))
 			{
 				sessions[clientID].Disconnect();
 				sessions.Remove(clientID);
 			}
+
 			// This MUST be called for connection / reconnection to work properly.
-		    Client_StopStreaming(clientID);
+			Client_StopStreaming(clientID);
 		}
 
 		public static void StaticSetOriginFromClient(uid clientID, UInt64 validCounter, in avs.Pose newPose)
 		{
-			if (!StaticDoesSessionExist(clientID))
-				return;
-			Quaternion rotation = new Quaternion();
-			Vector3 position = new Vector3();
-			rotation.Set(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
-			position.Set(newPose.position.x, newPose.position.y, newPose.position.z);
-			//if(position.y>0.6F)
+			Teleport_SessionComponent sessionComponent = GetSessionComponent(clientID);
+			if(!sessionComponent)
 			{
-			//	position.y=0.6F;
+				return;
 			}
-			sessions[clientID].SetOriginFromClient(validCounter, rotation, position);
+
+			Quaternion rotation = new Quaternion(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
+			Vector3 position = new Vector3(newPose.position.x, newPose.position.y, newPose.position.z);
+			sessionComponent.SetOriginFromClient(validCounter, rotation, position);
 		}
 
 		public static void StaticSetHeadPose(uid clientID, in avs.Pose newHeadPose)
 		{
-			if (!StaticDoesSessionExist(clientID))
-				return;
-			Quaternion rotation = new Quaternion();
-			Vector3 position = new Vector3();
-			rotation.Set(newHeadPose.orientation.x, newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
-			position.Set(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
-			sessions[clientID].SetHeadPose(rotation, position);
-		}
-
-		public static void StaticSetControllerPose(uid clientID, int index, in avs.Pose newPose)
-		{
-			if (!StaticDoesSessionExist(clientID))
-				return;
-			Quaternion latestRotation = new Quaternion();
-			Vector3 latestPosition = new Vector3();
-			latestRotation.Set(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
-			latestPosition.Set(newPose.position.x, newPose.position.y, newPose.position.z);
-			sessions[clientID].SetControllerPose(index, latestRotation, latestPosition);
-		}
-
-		public static void StaticProcessInput(uid clientID, in avs.InputState inputState, in IntPtr binaryEventsPtr, in IntPtr analogueEventsPtr, in IntPtr motionEventsPtr)
-		{
-			if(!StaticDoesSessionExist(clientID))
+			Teleport_SessionComponent sessionComponent = GetSessionComponent(clientID);
+			if(!sessionComponent)
 			{
 				return;
 			}
 
-			sessions[clientID].SetControllerInput(inputState.controllerID, inputState.buttonsDown, inputState.joystickAxisX, inputState.joystickAxisY);
+			Quaternion rotation = new Quaternion(newHeadPose.orientation.x, newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
+			Vector3 position = new Vector3(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
+			sessionComponent.SetHeadPose(rotation, position);
+		}
+
+		public static void StaticSetControllerPose(uid clientID, int index, in avs.Pose newPose)
+		{
+			Teleport_SessionComponent sessionComponent = GetSessionComponent(clientID);
+			if(!sessionComponent)
+			{
+				return;
+			}
+
+			Quaternion latestRotation = new Quaternion(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
+			Vector3 latestPosition = new Vector3(newPose.position.x, newPose.position.y, newPose.position.z);
+			sessionComponent.SetControllerPose(index, latestRotation, latestPosition);
+		}
+
+		public static void StaticProcessInput(uid clientID, in avs.InputState inputState, in IntPtr binaryEventsPtr, in IntPtr analogueEventsPtr, in IntPtr motionEventsPtr)
+		{
+			Teleport_SessionComponent sessionComponent = GetSessionComponent(clientID);
+			if(!sessionComponent)
+			{
+				return;
+			}
+
+			sessionComponent.SetControllerInput(inputState.controllerID, inputState.buttonsDown, inputState.joystickAxisX, inputState.joystickAxisY);
 
 			avs.InputEventBinary[] binaryEvents = new avs.InputEventBinary[inputState.binaryEventAmount];
 			if(inputState.binaryEventAmount != 0)
@@ -193,25 +189,28 @@ namespace teleport
 				}
 			}
 
-			sessions[clientID].ProcessControllerEvents(inputState.controllerID, binaryEvents, analogueEvents, motionEvents);
+			sessionComponent.ProcessControllerEvents(inputState.controllerID, binaryEvents, analogueEvents, motionEvents);
 		}
 
 		public static void StaticProcessAudioInput(uid clientID, in IntPtr dataPtr, UInt64 dataSize)
 		{
+			Teleport_SessionComponent sessionComponent = GetSessionComponent(clientID);
+			if(!sessionComponent)
+			{
+				return;
+			}
+
 			float[] data = new float[dataSize / sizeof(float)];
 			Marshal.Copy(dataPtr, data, 0, data.Length);
-			if (sessions.ContainsKey(clientID))
-				sessions[clientID].ProcessAudioInput(data);
+			sessionComponent.ProcessAudioInput(data);
 		}
+
 		#endregion
 
-		public static Dictionary<uid, Teleport_SessionComponent> sessions = new Dictionary<uid, Teleport_SessionComponent>();
-
-		private TeleportSettings teleportSettings = null;
+		//PROPERTIES
 
 		//One per session, as we stream geometry on a per-client basis.
-		private GeometryStreamingService geometryStreamingService = null;
-		public SCServer.ClientSettings clientSettings =new SCServer.ClientSettings();
+		private GeometryStreamingService geometryStreamingService = default;
 		public GeometryStreamingService GeometryStreamingService
 		{
 			get
@@ -220,13 +219,46 @@ namespace teleport
 			}
 		}
 
-		private uid clientID = 0;
+		//Handshake we have received from the client.
+		private avs.Handshake handshake = default;
+		public avs.Handshake Handshake
+		{
+			get
+			{
+				return handshake;
+			}
+		}
+
+		public avs.AxesStandard AxesStandard
+		{
+			get
+			{
+				return handshake.axesStandard;
+			}
+		}
+
+		//PUBLIC MEMBER VARIABLES
+
+		public int maxNodesOnOverlay = 10; //Amount of nodes to show on the overlay before breaking.
+		public int maxLightsOnOverlay = 5; //Amount of lights to show on the overlay before breaking.
 
 		public Teleport_Head head = null;
 		public Teleport_ClientspaceRoot clientspaceRoot = null;
 		public Teleport_CollisionRoot collisionRoot = null;
 		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
 		public AudioSource inputAudioSource = null;
+
+		public SCServer.ClientSettings clientSettings = new SCServer.ClientSettings();
+
+		//PUBLIC STATIC MEMBER VARIABLES
+
+		public static Dictionary<uid, Teleport_SessionComponent> sessions = new Dictionary<uid, Teleport_SessionComponent>();
+
+		//PRIVATE MEMBER VARIABLES
+
+		private TeleportSettings teleportSettings = null;
+
+		private uid clientID = 0;
 
 		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
 
@@ -239,9 +271,11 @@ namespace teleport
 
 		private avs.NetworkStats networkStats;
 
-		public bool IsConnected()
+		//PUBLIC FUNCTIONS
+
+		public avs.NetworkStats GetNetworkStats()
 		{
-			return Client_IsConnected(clientID);
+			return networkStats;
 		}
 
 		public void Disconnect()
@@ -254,31 +288,34 @@ namespace teleport
 			clientID = 0;
 		}
 
-		public void ProcessAudioInput(float[] data)
+		public bool IsConnected()
 		{
-			int numFrames = data.Length / (sizeof(float) * 2);
-			inputAudioSource.clip = AudioClip.Create("Input", numFrames, 2, AudioSettings.outputSampleRate, false);
-			inputAudioSource.clip.SetData(data, 0);
-			inputAudioSource.Play();
+			return Client_IsConnected(clientID);
 		}
 
-		public avs.AxesStandard axesStandard
+		public uid GetClientID()
 		{
-			get
-			{
-				return _handshake.axesStandard;
-			}
+			return clientID;
 		}
-		public avs.Handshake handshake
+
+		public bool HasClient()
 		{
-			get
-			{
-				return _handshake;
-			}
+			return GetClientID() != 0;
 		}
-		public void ReportHandshake(avs.Handshake handshake)
+
+		public void ResetOrigin()
 		{
-			_handshake= handshake;
+			resetOrigin = true;
+		}
+
+		public void SetStreamedLights(Light[] lights)
+		{
+			geometryStreamingService.SetStreamedLights(lights);
+		}
+
+		public void ReportHandshake(avs.Handshake receivedHandshake)
+		{
+			handshake = receivedHandshake;
 
 			//Send initial animation state on receiving the handshake, as the connection is now ready for commands.
 			geometryStreamingService.SendAnimationState();
@@ -295,17 +332,16 @@ namespace teleport
 
 		public void SetHeadPose(Quaternion newRotation, Vector3 newPosition)
 		{
-			if (!head)
+			if(!head)
+			{
 				return;
+			}
 
-			//head.transform.rotation = newRotation;
-			// NOTE: We consider positions received from the client to be worldspace and absolute.
-			// Therefore we use SetPositionAndRotation, which is absolute, not position=, rotation= which are relative.
-			//head.transform.position = clientspaceRoot.transform.position + newPosition;
-			//head.transform
 			if(head.movementEnabled)
-				head.transform.SetPositionAndRotation(newPosition,newRotation);
-			last_received_headPos=newPosition;
+			{
+				head.transform.SetPositionAndRotation(newPosition, newRotation);
+			}
+			last_received_headPos = newPosition;
 		}
 
 		public void SetControllerInput(int controllerID, UInt32 buttons, float stickX, float stickY)
@@ -324,77 +360,272 @@ namespace teleport
 				controller.ProcessInputEvents(binaryEvents, analogueEvents, motionEvents);
 			}
 		}
-		
+
 		public void SetControllerPose(int index, Quaternion newRotation, Vector3 newPosition)
 		{
-			if (!controllers.ContainsKey(index))
+			if(!controllers.ContainsKey(index))
 			{
-				Teleport_Controller[] controller_components = GetComponentsInChildren<Teleport_Controller>();
-				foreach (var c in controller_components)
+				Teleport_Controller[] controllerComponents = GetComponentsInChildren<Teleport_Controller>();
+				foreach(Teleport_Controller childComponent in controllerComponents)
 				{
-					if (c.Index == index)
-						controllers[index] = c;
+					if(childComponent.Index == index)
+					{
+						controllers[index] = childComponent;
+					}
 				}
-				if (!controllers.ContainsKey(index))
-					return;
-			}
-			var controller = controllers[index];
 
-			controller.transform.SetPositionAndRotation(newPosition,newRotation);
-			//  rotation is absolute. Position is absolute
-			//controller.transform.rotation = newRotation;
-			//controller.transform.position = clientspaceRoot.transform.position+ newPosition;
+				if(!controllers.ContainsKey(index))
+				{
+					return;
+				}
+			}
+
+			controllers[index].transform.SetPositionAndRotation(newPosition, newRotation);
+		}
+
+		public void ProcessAudioInput(float[] data)
+		{
+			int numFrames = data.Length / (sizeof(float) * 2);
+			inputAudioSource.clip = AudioClip.Create("Input", numFrames, 2, AudioSettings.outputSampleRate, false);
+			inputAudioSource.clip.SetData(data, 0);
+			inputAudioSource.Play();
+		}
+
+		public string GetClientIP()
+		{
+			StringBuilder ipAddress = new StringBuilder("", 20);
+			try
+			{
+				uint newlen = Client_GetClientIP(clientID, 16, ipAddress);
+				if(newlen > 0)
+				{
+					ipAddress = new StringBuilder("", (int)newlen + 2);
+					Client_GetClientIP(clientID, newlen + 1, ipAddress);
+				}
+			}
+			catch(Exception exc)
+			{
+				Debug.Log(exc.ToString());
+			}
+			return ipAddress.ToString();
+		}
+
+		public void ShowOverlay(int x, int y, GUIStyle font)
+		{
+			Vector3 headPosition = head ? head.transform.position : default;
+			Vector3 originPosition = clientspaceRoot ? clientspaceRoot.transform.position : default;
+
+			int lineHeight = 14;
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Client_{0} {1}", clientID, GetClientIP()), font);
+
+			//Add a break for readability.
+			y += lineHeight;
+
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("available bandwidth\t{0:F3} mb/s", networkStats.bandwidth), font);
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("avg bandwidth used\t{0:F3} mb/s", networkStats.avgBandwidthUsed), font);
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("max bandwidth used\t{0:F3} mb/s", networkStats.maxBandwidthUsed), font);
+
+			//Add a break for readability.
+			y += lineHeight;
+
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("origin pos\t{0}", FormatVectorString(originPosition)), font);
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("sent origin\t{0}", FormatVectorString(last_sent_origin)), font);
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("received origin\t{0}", FormatVectorString(last_received_origin)), font);
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("received head\t{0}", FormatVectorString(last_received_headPos)), font);
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("head position\t{0}", FormatVectorString(headPosition)), font);
+
+			//Add a break for readability.
+			y += lineHeight;
+
+			foreach(var controllerPair in controllers)
+			{
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Controller {0}, {1}", controllerPair.Key, FormatVectorString(controllerPair.Value.transform.position)));
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tbtns:{0} stick:{1:F3},{2:F3}", controllerPair.Value.buttons, controllerPair.Value.joystick.x, controllerPair.Value.joystick.y));
+			}
+
+			if(geometryStreamingService != null)
+			{
+				GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+
+				//Add a break for readability.
+				y += lineHeight;
+
+				//Display amount of nodes.
+				int nodeAmount = geometryStreamingService.GetStreamedObjectCount();
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Nodes {0}", nodeAmount));
+
+				List<GameObject> streamedGameObjects = geometryStreamingService.GetStreamedObjects();
+				//List nodes to the maximum.
+				for(int i = 0; i < nodeAmount && i < maxNodesOnOverlay; i++)
+				{
+					GameObject node = streamedGameObjects[i];
+					uid nodeID = geometrySource.FindResourceID(node);
+					GUI.Label(new Rect(x, y += lineHeight, 500, 20), string.Format("\t{0} {1}", nodeID, node.name));
+				}
+
+				//Display an ellipsis if there are more than the maximum nodes to display.
+				if(nodeAmount > maxNodesOnOverlay)
+				{
+					GUI.Label(new Rect(x, y += lineHeight, 500, 20), "\t...");
+				}
+
+				//Add a break for readability.
+				y += lineHeight;
+
+				//Display amount of lights.
+				int lightAmount = geometryStreamingService.GetStreamedLightCount();
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Lights {0}", lightAmount));
+
+				int validLightIndex = 0;
+				foreach(var lightPair in geometryStreamingService.GetStreamedLights())
+				{
+					Light light = lightPair.Value;
+					if(light != null)
+					{
+						GUI.Label(new Rect(x, y += lineHeight, 500, 20), string.Format("\t{0} {1}: ({2}, {3}, {4})", lightPair.Key, light.name, light.transform.forward.x, light.transform.forward.y, light.transform.forward.z));
+						if(sceneCaptureComponent.VideoEncoder != null && validLightIndex < sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lightCount)
+						{
+							avs.Vector3 shadowPosition = sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lights[validLightIndex].position;
+							GUI.Label(new Rect(x, y += lineHeight, 500, 20), string.Format("\t\tshadow orig ({0}, {1}, {2})", shadowPosition.x, shadowPosition.y, shadowPosition.z));
+						}
+						validLightIndex++;
+					}
+
+					//Break if we have displayed the maximum amount of lights.
+					if(validLightIndex >= maxLightsOnOverlay)
+					{
+						GUI.Label(new Rect(x, y += lineHeight, 500, 20), "\t...");
+						break;
+					}
+				}
+			}
+		}
+
+		//UNITY MESSAGES
+
+		private void Start()
+		{
+			teleportSettings = TeleportSettings.GetOrCreateSettings();
+			geometryStreamingService = new GeometryStreamingService(this);
+			networkStats = new avs.NetworkStats();
+			inputAudioSource = new AudioSource();
+
+			// Bypass effects added by the scene's AudioListener
+			if(inputAudioSource)
+			{
+				inputAudioSource.bypassEffects = true;
+			}
+
+			head = GetSingleComponentFromChildren<Teleport_Head>();
+			clientspaceRoot = GetSingleComponentFromChildren<Teleport_ClientspaceRoot>();
+			collisionRoot = GetSingleComponentFromChildren<Teleport_CollisionRoot>();
+			sceneCaptureComponent = GetSingleComponentFromChildren<Teleport_SceneCaptureComponent>();
 		}
 
 		private void OnDisable()
 		{
-			if (sessions.ContainsKey(clientID))
+			if(sessions.ContainsKey(clientID))
 			{
 				sessions.Remove(clientID);
 			}
 		}
 
-		void GetSingleChild<T>(ref T t)
+		private void OnDestroy()
 		{
-			T[] ts = GetComponentsInChildren<T>();
-			if (ts.Length != 1)
+			if(clientID != 0)
 			{
-				Debug.LogError($"Precisely ONE "+typeof(T).Name+" should be found. <color=red><b>"+ts.Length+ "</b></color> were found!");
-			}
-			if(ts.Length != 0)
-			{
-				t= ts[0];
+				Client_StopSession(clientID);
 			}
 		}
-		Teleport_SessionComponent()
-		{
 
+		private void LateUpdate()
+		{
+			if(clientID == 0)
+			{
+				uid id = GetUnlinkedClientID();
+				if(id == 0)
+				{
+					return;
+				}
+
+				if(sessions.ContainsKey(id))
+				{
+					Debug.LogError($"Error setting up SessionComponent for Client_{id}. There is already a registered session for that client!");
+					return;
+				}
+
+				clientID = id;
+				sessions[clientID] = this;
+
+				geometryStreamingService.StreamPlayerBody();
+
+				UpdateClientSettings();
+			}
+
+			if(Client_IsConnected(clientID))
+			{
+				SendOriginUpdates();
+				Client_GetClientNetworkStats(clientID, ref networkStats);
+			}
+
+			if(teleportSettings.casterSettings.isStreamingGeometry)
+			{
+				if(geometryStreamingService != null)
+				{
+					geometryStreamingService.UpdateGeometryStreaming();
+				}
+			}
 		}
-		private void Start()
+
+		//PRIVATE FUNCTIONS
+
+		private void UpdateClientSettings()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
-			geometryStreamingService = new GeometryStreamingService(this);
+			clientSettings.specularCubemapSize = teleportSettings.casterSettings.defaultSpecularCubemapSize;
+			clientSettings.specularMips = teleportSettings.casterSettings.defaultSpecularMips;
+			clientSettings.diffuseCubemapSize = teleportSettings.casterSettings.defaultDiffuseCubemapSize;
+			clientSettings.lightCubemapSize = teleportSettings.casterSettings.defaultLightCubemapSize;
+			clientSettings.shadowmapSize = teleportSettings.casterSettings.defaultShadowmapSize;
 
-			GetSingleChild(ref head);
-			GetSingleChild(ref clientspaceRoot);
-			GetSingleChild(ref collisionRoot);
-			GetSingleChild(ref sceneCaptureComponent);
+			int faceSize = teleportSettings.casterSettings.captureCubeTextureSize;
+			int doubleFaceSize = faceSize * 2;
+			int halfFaceSize = (int)(faceSize * 0.5);
+			Rect depthViewport = new Rect(0, doubleFaceSize, halfFaceSize, halfFaceSize);
 
-			inputAudioSource = new AudioSource();
+			if(teleportSettings.casterSettings.usePerspectiveRendering)
+			{
+				clientSettings.specularPos = new Vector2Int(teleportSettings.casterSettings.perspectiveWidth / 2, teleportSettings.casterSettings.perspectiveHeight);
+			}
+			else
+			{
+				clientSettings.specularPos = new Vector2Int(3 * (int)depthViewport.width, doubleFaceSize);
+			}
 
-			// Bypass effects added by the scene's AudioListener
-			if(inputAudioSource)
-				inputAudioSource.bypassEffects = true;
+			clientSettings.diffusePos = clientSettings.specularPos + new Vector2Int(0, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
+			clientSettings.lightPos = clientSettings.diffusePos + new Vector2Int(teleportSettings.casterSettings.defaultSpecularCubemapSize * 3 / 2, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
 
-			networkStats = new avs.NetworkStats();
+			int diffuseCubeTextureWidth = Teleport_SceneCaptureComponent.RenderingSceneCapture != null ? Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width : teleportSettings.casterSettings.defaultDiffuseCubemapSize;
+			if(teleportSettings.casterSettings.usePerspectiveRendering)
+			{
+				int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
+				int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
+				clientSettings.shadowmapPos = new Vector2Int(perspectiveWidth / 2, perspectiveHeight + 2 * diffuseCubeTextureWidth) + clientSettings.diffusePos;
+				clientSettings.webcamPos = new Vector2Int(perspectiveWidth / 2, perspectiveHeight);
+			}
+			else
+			{
+				clientSettings.specularPos = new Vector2Int(3 * (int)depthViewport.width, doubleFaceSize);
+				clientSettings.shadowmapPos = new Vector2Int(3 * halfFaceSize, doubleFaceSize + 2 * diffuseCubeTextureWidth) + clientSettings.diffusePos;
+				clientSettings.webcamPos = new Vector2Int(3 * halfFaceSize, doubleFaceSize);
+			}
+
+			clientSettings.webcamPos += new Vector2Int(teleportSettings.casterSettings.defaultSpecularCubemapSize * 3, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
+			clientSettings.webcamSize = new Vector2Int(teleportSettings.casterSettings.webcamWidth, teleportSettings.casterSettings.webcamHeight);
+			Client_SetClientSettings(clientID, clientSettings);
 		}
 
-		public void ResetOrigin()
-		{
-			resetOrigin = true;
-		}
-
-		void SendOriginUpdates()
+		private void SendOriginUpdates()
 		{
 			if(teleportSettings.casterSettings.controlModel == SCServer.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
 			{
@@ -431,186 +662,39 @@ namespace teleport
 					collisionRoot.transform.hasChanged = false;
 				}
 			}
-
-			if(teleportSettings.casterSettings.controlModel == SCServer.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
+			else if(teleportSettings.casterSettings.controlModel == SCServer.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
 			{
-				if(head != null && clientspaceRoot != null && (!Client_HasOrigin(clientID)) || resetOrigin || clientspaceRoot.transform.hasChanged)
+				if(head != null && clientspaceRoot != null)
 				{
-					originValidCounter++;
-					if(Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
+					if(!Client_HasOrigin(clientID) || resetOrigin || clientspaceRoot.transform.hasChanged)
 					{
-						last_sent_origin = clientspaceRoot.transform.position;
-						clientspaceRoot.transform.hasChanged = false;
-						resetOrigin = false;
-					}
-				}
-			}
-		}
-
-		private void LateUpdate()
-		{
-			if(clientID == 0)
-			{
-				uid id = GetUnlinkedClientID();
-				if(id == 0)
-				{
-					return;
-				}
-
-				if (sessions.ContainsKey(id))
-				{
-					Debug.LogError("Session duplicate key!");
-					return;
-				}
-
-				clientID = id;
-
-				sessions[clientID] = this;
-
-				geometryStreamingService.StreamPlayerBody();
-
-
-				teleportSettings = TeleportSettings.GetOrCreateSettings();
-				clientSettings.specularCubemapSize= teleportSettings.casterSettings.defaultSpecularCubemapSize;
-				clientSettings.specularMips = teleportSettings.casterSettings.defaultSpecularMips;
-				clientSettings.diffuseCubemapSize = teleportSettings.casterSettings.defaultDiffuseCubemapSize;
-				clientSettings.lightCubemapSize = teleportSettings.casterSettings.defaultLightCubemapSize;
-				clientSettings.shadowmapSize = teleportSettings.casterSettings.defaultShadowmapSize;
-				int faceSize = teleportSettings.casterSettings.captureCubeTextureSize;
-				int halfFaceSize = faceSize / 2;
-				var depthViewport = new Rect(0, (faceSize * 2), halfFaceSize, halfFaceSize);
-
-				if (teleportSettings.casterSettings.usePerspectiveRendering)
-				{
-					clientSettings.specularPos = new Vector2Int(teleportSettings.casterSettings.perspectiveWidth / 2, teleportSettings.casterSettings.perspectiveHeight);
-				}
-				else
-				{
-					clientSettings.specularPos = new Vector2Int(3 * (int)depthViewport.width, 2 * faceSize);
-				}
-
-				clientSettings.diffusePos= clientSettings.specularPos + new Vector2Int(0, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
-				clientSettings.lightPos = clientSettings.diffusePos + new Vector2Int(teleportSettings.casterSettings.defaultSpecularCubemapSize * 3 / 2, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
-
-				if (teleportSettings.casterSettings.usePerspectiveRendering)
-				{
-					int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
-					int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
-					clientSettings.shadowmapPos = new Vector2Int(perspectiveWidth / 2, perspectiveHeight + 2 * Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + clientSettings.diffusePos;
-					clientSettings.webcamPos = new Vector2Int(perspectiveWidth / 2, perspectiveHeight);
-				}
-				else
-				{
-					clientSettings.specularPos = new Vector2Int(3 * (int)depthViewport.width, 2 * faceSize);
-					clientSettings.shadowmapPos = new Vector2Int(3 * faceSize / 2, 2 * faceSize + 2 * Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + clientSettings.diffusePos;
-					clientSettings.webcamPos = new Vector2Int(3 * halfFaceSize, 2 * faceSize);
-				}
-				clientSettings.webcamPos += new Vector2Int(teleportSettings.casterSettings.defaultSpecularCubemapSize * 3, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
-				clientSettings.webcamSize = new Vector2Int(teleportSettings.casterSettings.webcamWidth, teleportSettings.casterSettings.webcamHeight);
-				Client_SetClientSettings(clientID,clientSettings);
-			}
-
-			if(Client_IsConnected(clientID))
-			{
-				SendOriginUpdates();
-				Client_GetClientNetworkStats(clientID, ref networkStats);
-			}
-
-			if(teleportSettings.casterSettings.isStreamingGeometry)
-			{
-				if(geometryStreamingService != null)
-				{
-					geometryStreamingService.UpdateGeometryStreaming();
-				}
-			}
-		}
-
-		public uid GetClientID()
-		{
-			return clientID;
-		}
-
-		public avs.NetworkStats GetNetworkStats()
-		{
-			return networkStats;
-		}
-
-		public bool HasClient()
-		{
-			return clientID != 0;
-		}
-		string StringOf(Vector3 v)
-		{
-			return string.Format("{0:F3},{1:F3},{2:F3}",v.x,v.y,v.z);
-		}
-		public void ShowOverlay(int x, int y, GUIStyle font)
-		{
-			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-			Vector3 headPosition = head ? head.transform.position : new Vector3();
-			Vector3 origPosition = clientspaceRoot ? clientspaceRoot.transform.position : new Vector3();
-
-			string str = string.Format("Client {0} {1}", clientID, Client_GetClientIPAddr(clientID));
-			int dy = 14;
-			GUI.Label(new Rect(x, y += dy, 300, 20), str, font);
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("available bandwidth\t{0:F3} mb/s", networkStats.bandwidth), font);
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("avg bandwidth used\t{0:F3} mb/s", networkStats.avgBandwidthUsed), font);
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("max bandwidth used\t{0:F3} mb/s", networkStats.maxBandwidthUsed), font);
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("origin pos\t{0}", StringOf(origPosition)), font);
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("sent origin\t{0}", StringOf(last_sent_origin)), font);
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("received origin\t{0}", StringOf(last_received_origin)), font);
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("received head\t{0}", StringOf(last_received_headPos)), font);
-			GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("head position\t{0}", StringOf(headPosition)), font);
-			foreach (var c in controllers)
-			{
-				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Controller {0}, {1}",c.Key,StringOf(c.Value.transform.position)));
-				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("\tbtns:{0} stick:{1:F3},{2:F3}",c.Value.buttons
-							,c.Value.joystick.x,c.Value.joystick.y));
-			}
-			if (geometryStreamingService != null)
-			{
-				int num_nodes = geometryStreamingService.GetStreamedObjectCount();
-				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Nodes {0}", num_nodes));
-				List<GameObject> streamedGameObjects = geometryStreamingService.GetStreamedObjects();
-				for (int i = 0; i < num_nodes&&i<10; i++)
-				{
-					GameObject node = streamedGameObjects[i];
-					uid nodeID = geometrySource.FindResourceID(node);
-					GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}", nodeID, node.name));
-				}
-				if(num_nodes>10)
-					GUI.Label(new Rect(x, y += dy, 500, 20), "\t...");
-
-				int num_lights = geometryStreamingService.GetStreamedLightCount();
-				GUI.Label(new Rect(x, y += dy, 300, 20), string.Format("Lights {0}", num_lights));
-				int j = 0;
-				foreach (var l in geometryStreamingService.GetStreamedLights())
-				{
-					var light = l.Value;
-					if (light != null)
-					{
-						GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t{0} {1}:{2},{3},{4}", l.Key, light.name, light.transform.forward.x, light.transform.forward.y, light.transform.forward.z));
-						if (sceneCaptureComponent.VideoEncoder != null && j < sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lightCount)
+						originValidCounter++;
+						if(Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
 						{
-							var shadow_pos = sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lights[j].position;
-							GUI.Label(new Rect(x, y += dy, 500, 20), string.Format("\t\tshadow orig {0},{1},{2}", shadow_pos.x, shadow_pos.y, shadow_pos.z));
-
+							last_sent_origin = clientspaceRoot.transform.position;
+							clientspaceRoot.transform.hasChanged = false;
+							resetOrigin = false;
 						}
-						j++;
 					}
 				}
 			}
 		}
-		private void OnDestroy()
+
+		private string FormatVectorString(Vector3 v)
 		{
-			if(clientID != 0)
-			{
-				Client_StopSession(clientID);
-			}
+			return string.Format("({0:F3}, {1:F3}, {2:F3})", v.x, v.y, v.z);
 		}
 
-		public void SetStreamedLights(Light[] lights)
+		private T GetSingleComponentFromChildren<T>()
 		{
-			geometryStreamingService.SetStreamedLights(lights);
+			T[] childComponents = GetComponentsInChildren<T>();
+
+			if(childComponents.Length != 1)
+			{
+				Debug.LogError($"Exactly <b>one</b> {typeof(T).Name} child should exist, but <color=red><b>{childComponents.Length}</b></color> were found for \"{gameObject}\"!");
+			}
+
+			return childComponents.Length != 0 ? childComponents[0] : default;
 		}
 	}
 }

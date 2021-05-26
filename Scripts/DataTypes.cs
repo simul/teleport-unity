@@ -501,7 +501,8 @@ namespace avs
 			);
 		}
 	}
-	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
 	public struct Handshake
 	{
 		public UInt32 display_width;
@@ -512,8 +513,8 @@ namespace avs
 		public UInt32 maxBandwidthKpS;
 		public AxesStandard axesStandard;
 		public byte framerate;                  // In hertz
-		public byte usingHands;             //Whether to send the hand nodes to the client.
-		public byte isVR;
+		[MarshalAs(UnmanagedType.U1)] public bool usingHands;             //Whether to send the hand nodes to the client.
+		[MarshalAs(UnmanagedType.U1)] public bool isVR;
 		public UInt64 resourceCount;            //	Number of resources the client has, these are appended to the handshake.
 		public UInt32 maxLightsSupported;       // Maximum number of lights the client can render.
 	};

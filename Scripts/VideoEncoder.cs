@@ -190,11 +190,11 @@ namespace teleport
 			var session = Teleport_SessionComponent.sessions[clientID];
 		
 			var streamedLights=session.GeometryStreamingService.GetStreamedLights();
-			if(streamedLights.Count>session.handshake.maxLightsSupported)
+			if(streamedLights.Count>session.Handshake.maxLightsSupported)
 			{
 				if(lightWarnCount > 0)
 				{
-					Debug.LogWarning($"Can't support all lights! The scene has {streamedLights.Count} lights, but the client only supports {session.handshake.maxLightsSupported}!");
+					Debug.LogWarning($"Can't support all lights! The scene has {streamedLights.Count} lights, but the client only supports {session.Handshake.maxLightsSupported}!");
 					lightWarnCount--;
 				}
 			}
@@ -206,7 +206,7 @@ namespace teleport
 				{
 					continue;
 				}
-				if(lightDataList.Count>= session.handshake.maxLightsSupported)
+				if(lightDataList.Count>= session.Handshake.maxLightsSupported)
 					break;
 				PerFrameLightProperties perFrameLightProperties = null;
 				PerFramePerCameraLightProperties perFramePerCameraLightProperties=null;
@@ -254,7 +254,7 @@ namespace teleport
 					Matrix4x4 proj = textureScaleAndBias * perFramePerCameraLightProperties.cascades[0].projectionMatrix;
 					lightData.shadowProjectionMatrix = proj.transpose;
 				}
-				DataTypes.ConvertViewProjectionMatrix(session.axesStandard,ref lightData.worldToShadowMatrix);
+				DataTypes.ConvertViewProjectionMatrix(session.AxesStandard,ref lightData.worldToShadowMatrix);
 				if (perFrameLightProperties != null)
 				{
 					lightData.texturePosition = perFrameLightProperties.texturePosition;
@@ -264,8 +264,8 @@ namespace teleport
 				// doesn't matter, we don't use it.
 				//ConvertTransform(avs.AxesStandard.UnityStyle, session.axesStandard, ref lightData.worldTransform);
 				lightData.uid = uid;
-				ConvertPosition(avs.AxesStandard.UnityStyle, session.axesStandard, ref lightData.position);
-				ConvertRotation(avs.AxesStandard.UnityStyle, session.axesStandard, ref lightData.orientation);
+				ConvertPosition(avs.AxesStandard.UnityStyle, session.AxesStandard, ref lightData.position);
+				ConvertRotation(avs.AxesStandard.UnityStyle, session.AxesStandard, ref lightData.orientation);
 
 				lightDataList.Add(lightData);
 			}
