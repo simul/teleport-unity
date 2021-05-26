@@ -476,7 +476,7 @@ namespace teleport
 				clientSettings.diffuseCubemapSize = teleportSettings.casterSettings.defaultDiffuseCubemapSize;
 				clientSettings.lightCubemapSize = teleportSettings.casterSettings.defaultLightCubemapSize;
 				clientSettings.shadowmapSize = teleportSettings.casterSettings.defaultShadowmapSize;
-				int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
+				int faceSize = teleportSettings.casterSettings.captureCubeTextureSize;
 				int halfFaceSize = faceSize / 2;
 				var depthViewport = new Rect(0, (faceSize * 2), halfFaceSize, halfFaceSize);
 
@@ -505,8 +505,8 @@ namespace teleport
 					clientSettings.shadowmapPos = new Vector2Int(3 * faceSize / 2, 2 * faceSize + 2 * Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + clientSettings.diffusePos;
 					clientSettings.webcamPos = new Vector2Int(3 * halfFaceSize, 2 * faceSize);
 				}
-				clientSettings.webcamPos += new Vector2Int(teleportSettings.casterSettings.defaultSpecularCubemapSize * 6, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
-				clientSettings.webcamSize=new Vector2Int(64,48);
+				clientSettings.webcamPos += new Vector2Int(teleportSettings.casterSettings.defaultSpecularCubemapSize * 3, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
+				clientSettings.webcamSize = new Vector2Int(teleportSettings.casterSettings.webcamWidth, teleportSettings.casterSettings.webcamHeight);
 				Client_SetClientSettings(clientID,clientSettings);
 			}
 

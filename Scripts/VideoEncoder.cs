@@ -99,7 +99,7 @@ namespace teleport
 			}
 			else
 			{
-				paramsWrapper.videoEncodeParams.encodeWidth = paramsWrapper.videoEncodeParams.encodeHeight = (int)teleportSettings.casterSettings.captureCubeTextureSize * 3;
+				paramsWrapper.videoEncodeParams.encodeWidth = paramsWrapper.videoEncodeParams.encodeHeight = teleportSettings.casterSettings.captureCubeTextureSize * 3;
 			}
 
 			switch (SystemInfo.graphicsDeviceType)

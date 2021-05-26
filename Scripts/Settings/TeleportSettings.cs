@@ -28,7 +28,7 @@ namespace teleport
 		[Header("Geometry")]
 		public uint moveUpdatesPerSecond = 20;
 
-		public CasterSettings casterSettings =new CasterSettings();
+		public CasterSettings casterSettings = new CasterSettings();
 		public LayerMask LayersToStream;  //! Mask of the physics layers the user can choose to stream.
 
 		[Header("Utility")]

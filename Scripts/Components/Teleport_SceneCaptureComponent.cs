@@ -135,7 +135,7 @@ namespace teleport
 
 			CreateResources();
 
-			if (teleportSettings.casterSettings.isStreamingWebcam && !teleportSettings.casterSettings.usePerspectiveRendering)
+			if (teleportSettings.casterSettings.isStreamingWebcam)
 			{
 				Application.RequestUserAuthorization(UserAuthorization.WebCam);
 				if (Application.HasUserAuthorization(UserAuthorization.WebCam))
@@ -199,7 +199,7 @@ namespace teleport
 				}
 				else
 				{
-					float prevSize = settings.captureCubeTextureSize;
+					int prevSize = settings.captureCubeTextureSize;
 
 					if (bandwidth > 50)
 					{

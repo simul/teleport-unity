@@ -25,7 +25,9 @@ namespace SCServer
 		[Header("Video")]
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingVideo = true;
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingWebcam = false;
-		public float captureCubeTextureSize = 512; 
+		public Int32 captureCubeTextureSize = 512;
+		public Int32 webcamWidth = 128;
+		public Int32 webcamHeight = 96;
 		public Int32 videoEncodeFrequency = 2;
 		[MarshalAs(UnmanagedType.U1)] public bool isDeferringOutput = false;
 		[MarshalAs(UnmanagedType.U1)] public bool isCullingCubemaps = false;

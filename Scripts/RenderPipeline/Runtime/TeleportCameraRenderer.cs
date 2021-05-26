@@ -235,11 +235,11 @@ namespace teleport
 			buffer.Release();
 		}
 
-		public void EncodeWebcam(ScriptableRenderContext context, Camera camera, Vector2Int offset)
+		public void EncodeWebcam(ScriptableRenderContext context, Camera camera, Vector2Int offset, Vector2Int webcamSize)
 		{
 			if (!computeShader)
 				InitShaders();
-			
+
 			var inputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.webcamTexture;
 
 			// Will be null if not streaming webcam.
@@ -250,20 +250,14 @@ namespace teleport
 
 			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
 
-			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-
-			int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
-			int halfFaceSize = faceSize / 2;
-			int[] webcamCubemapSize = { halfFaceSize, halfFaceSize };
-
-			int numThreadGroupsX = webcamCubemapSize[0] / THREADGROUP_SIZE;
-			int numThreadGroupsY = webcamCubemapSize[1] / THREADGROUP_SIZE;
-
+			int numThreadGroupsX = webcamSize.x / THREADGROUP_SIZE;
+			int numThreadGroupsY = webcamSize.y / THREADGROUP_SIZE;
+			
 			computeShader.SetTexture(encodeWebcamKernel, "InputColorTexture", inputTexture);
 			computeShader.SetTexture(encodeWebcamKernel, "RWOutputColorTexture", outputTexture);
 			
-			computeShader.SetInts("Offset", offset.x,offset.y);
-			computeShader.SetInts("WebcamCubemapSize", webcamCubemapSize);
+			computeShader.SetInts("Offset", offset.x, offset.y);
+			computeShader.SetInts("WebcamSize", webcamSize.x, webcamSize.y);
 
 			var buffer = new CommandBuffer();
 			buffer.name = "Encode Webcam";
@@ -792,7 +786,7 @@ namespace teleport
 
 				videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent,lightingOrder, teleportLighting);
 
-				videoEncoding.EncodeWebcam(context, camera, SessionComponent.clientSettings.webcamPos);	
+				videoEncoding.EncodeWebcam(context, camera, SessionComponent.clientSettings.webcamPos, SessionComponent.clientSettings.webcamSize);	
 				videoEncoding.EncodeTagID(context, camera);
 				context.Submit();
 
@@ -876,7 +870,7 @@ namespace teleport
 				}
 				else
 				{
-					int faceSize = (int)teleportSettings.casterSettings.captureCubeTextureSize;
+					int faceSize = teleportSettings.casterSettings.captureCubeTextureSize;
 					int halfFaceSize = faceSize / 2;
 					int offsetX = VideoEncoding.faceOffsets[face, 0];
 					int offsetY = VideoEncoding.faceOffsets[face, 1];
