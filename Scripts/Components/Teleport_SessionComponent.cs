@@ -496,13 +496,13 @@ namespace teleport
 				{
 					int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
 					int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
-					clientSettings.shadowmapPos = new Vector2Int(perspectiveWidth / 2, perspectiveHeight + 2 * Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + clientSettings.diffusePos;
+					clientSettings.shadowmapPos = new Vector2Int(perspectiveWidth / 2, perspectiveHeight + 2 * clientSettings.diffuseCubemapSize) + clientSettings.diffusePos;
 					clientSettings.webcamPos = new Vector2Int(perspectiveWidth / 2, perspectiveHeight);
 				}
 				else
 				{
 					clientSettings.specularPos = new Vector2Int(3 * (int)depthViewport.width, 2 * faceSize);
-					clientSettings.shadowmapPos = new Vector2Int(3 * faceSize / 2, 2 * faceSize + 2 * Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width) + clientSettings.diffusePos;
+					clientSettings.shadowmapPos = new Vector2Int(3 * faceSize / 2, 2 * faceSize + 2 * clientSettings.diffuseCubemapSize) + clientSettings.diffusePos;
 					clientSettings.webcamPos = new Vector2Int(3 * halfFaceSize, 2 * faceSize);
 				}
 				clientSettings.webcamPos += new Vector2Int(teleportSettings.casterSettings.defaultSpecularCubemapSize * 6, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);

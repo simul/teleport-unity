@@ -89,7 +89,7 @@ namespace teleport
 			Tuple.Create(6,  "Debugging", false),
 			Tuple.Create(3,  "Compression", false),
 			Tuple.Create(2,  "Camera", false),
-			Tuple.Create(4,  "Lighting", false),
+			Tuple.Create(5,  "Lighting", false),
 			Tuple.Create(1,  "Input", false),
 		};
 
