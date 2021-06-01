@@ -69,7 +69,7 @@ namespace teleport
 		{
 			if (!sessions.ContainsKey(clientID))
 			{
-				TeleportLog.LogErrorOnce($"No session component found for Client_{clientID}");
+				TeleportLog.LogErrorOnce($"No session component found for Client_{clientID}!");
 				return false;
 			}
 
@@ -80,7 +80,7 @@ namespace teleport
 		{
 			if(!sessions.TryGetValue(clientID, out Teleport_SessionComponent sessionComponent))
 			{
-				TeleportLog.LogErrorOnce($"No session component found for Client_{clientID}");
+				TeleportLog.LogErrorOnce($"No session component found for Client_{clientID}!");
 			}
 
 			return sessionComponent;

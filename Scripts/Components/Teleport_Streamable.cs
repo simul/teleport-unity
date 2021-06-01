@@ -6,6 +6,102 @@ using uid = System.UInt64;
 
 namespace teleport
 {
+	[Serializable]
+	//Class for storing state and cached components of a node that is streamed in a Teleport_Streamable's hierarchy.
+	public class StreamedNode
+	{
+		public GameObject gameObject; //GameObject that is being streamed.
+		public uid nodeID; //ID of the node.
+		public bool enabled; //Whether the node is enabled on the server.
+
+		//Cached references to components.
+		public MeshRenderer meshRenderer;
+		public SkinnedMeshRenderer skinnedMeshRenderer;
+		public Light light;
+
+		public StreamedNode(GameObject node)
+		{
+			gameObject = node;
+			nodeID = GeometrySource.GetGeometrySource().FindResourceID(node);
+			enabled = true;
+
+			meshRenderer = default;
+			skinnedMeshRenderer = default;
+			light = default;
+
+			if(nodeID == 0)
+			{
+				Debug.LogWarning($"We have created an invalid {nameof(StreamedNode)}! Node ID is {nodeID}!");
+			}
+		}
+
+		//Updates enabled state by checking cached references, and returns whether the enabled state changed.
+		//WARNING: We currently do not support streaming multiple rendering components on the same GameObject; this will put precedence on MeshRenderers then SkinnedMeshRenderers then Lights.
+		public bool UpdatedEnabledState()
+		{
+			bool wasEnabled = enabled;
+
+			//StreamedNode is not enabled if it is not active in the hierarchy.
+			if(!gameObject.activeInHierarchy)
+			{
+				enabled = false;
+				return wasEnabled != enabled;
+			}
+			enabled = true;
+
+			if(meshRenderer)
+			{
+				enabled = meshRenderer.enabled;
+				return wasEnabled != enabled;
+			}
+
+			if(skinnedMeshRenderer)
+			{
+				enabled = skinnedMeshRenderer.enabled;
+				return wasEnabled != enabled;
+			}
+
+			if(light)
+			{
+				enabled = light.enabled;
+				return wasEnabled != enabled;
+			}
+
+			return wasEnabled != enabled;
+		}
+
+		//OVERLOADED ADD_COMPONENT(...)
+
+		//We are using dynamic conversion to assign the component to the correct cached reference.
+		public void AddComponent(Component component)
+		{
+			Debug.LogWarning($"Unable to add component of type {component.GetType().Name} to streamed node for {gameObject}!");
+		}
+
+		public void AddComponent(MeshRenderer component)
+		{
+			meshRenderer = component;
+		}
+
+		public void AddComponent(SkinnedMeshRenderer component)
+		{
+			skinnedMeshRenderer = component;
+		}
+
+		public void AddComponent(Light component)
+		{
+			light = component;
+		}
+
+		//COVERSION OPERATORS
+
+		//StreamedNode is basically a meta-wrapper for a GameObject, so we should be able to convert to the GameObject we are wrapping.
+		public static implicit operator GameObject(StreamedNode streamedNode)
+		{
+			return streamedNode.gameObject;
+		}
+	}
+
 	//This component is automatically added to streamable GameObjects and their children.
 	[DisallowMultipleComponent]
 	public class Teleport_StreamableTracker : MonoBehaviour
@@ -16,21 +112,22 @@ namespace teleport
 	[DisallowMultipleComponent]
 	public class Teleport_Streamable : MonoBehaviour
 	{
-		// SerializeField so that it will be visible on the inspector. 
-		[SerializeField]
-		private uid uid = 0;
 		// Track the reasons why we're streaming this. A set of bit flags, when it goes to zero you can stop streaming it.
-		public UInt32 streaming_reason=0;
-		//The child objects that have no collision, so are streamed automatically with the GameObject the component is attached to.
-		public List<GameObject> childHierarchy = new List<GameObject>();
+		public UInt32 streaming_reason = 0;
+
+		//All GameObjects objects in the streamed hierarchy this Teleport_Streamable represents.
+		public List<StreamedNode> streamedHierarchy = new List<StreamedNode>();
 
 		public bool sendMovementUpdates = true;
+		public bool sendEnabledStateUpdates = true;
 
-		
+		[SerializeField]
+		private uid uid = 0;
+
 		private HashSet<Teleport_SessionComponent> sessions = new HashSet<Teleport_SessionComponent>();
 
 		//Animator trackers in this TeleportStreamable's hierarchy.
-		private List<Teleport_AnimatorTracker> animatorTrackers = new List<Teleport_AnimatorTracker>(); 
+		private List<Teleport_AnimatorTracker> animatorTrackers = new List<Teleport_AnimatorTracker>();
 
 		private Dictionary<uid, avs.MovementUpdate> previousMovements = new Dictionary<uid, avs.MovementUpdate>();
 
@@ -55,7 +152,7 @@ namespace teleport
 		{
 			if(uid == 0)
 			{
-				uid = GeometrySource.GetGeometrySource().FindResourceID(this);
+				uid = GeometrySource.GetGeometrySource().FindResourceID(gameObject);
 			}
 
 			return uid;
@@ -79,18 +176,17 @@ namespace teleport
 
 		public List<avs.MovementUpdate> GetMovementUpdates(uid clientID)
 		{
-			///TODO: Cache result every <frame/movement update tick>, so we don't calculate it per client.
-			List<avs.MovementUpdate> updates = new List<avs.MovementUpdate>();
-			
 			//Return an empty update list, if we're not sending movement updates.
 			if(!sendMovementUpdates)
 			{
-				return updates;
+				return new List<avs.MovementUpdate>();
 			}
 
-			//Add movement updates for GameObject and GameObjects in child hierarchy to the list.
-			updates.Add(GetNodeMovementUpdate(gameObject, clientID));
-			foreach(GameObject node in childHierarchy)
+			//TODO: Cache result every tick, so we don't calculate it per client, or send it to every client on the C++/Unmanaged side.
+			List<avs.MovementUpdate> updates = new List<avs.MovementUpdate>();
+			
+			//Add movement updates for GameObjects in streamed hierarchy to the list.
+			foreach(GameObject node in streamedHierarchy)
 			{
 				if(!node)
 				{
@@ -99,6 +195,30 @@ namespace teleport
 				}
 
 				updates.Add(GetNodeMovementUpdate(node, clientID));
+			}
+
+			return updates;
+		}
+
+		//Tells the client what nodes have changed their enabled state and should be hidden from view.
+		public List<avs.NodeUpdateEnabledState> GetEnabledStateUpdates()
+		{
+			//Return an empty update list, if we're not sending enabled state updates.
+			if(!sendEnabledStateUpdates)
+			{
+				return new List<avs.NodeUpdateEnabledState>();
+			}
+
+			//TODO: Support multiple clients, or send it to every client on the C++/Unmanaged side.
+			List<avs.NodeUpdateEnabledState> updates = new List<avs.NodeUpdateEnabledState>();
+
+			foreach(StreamedNode streamedNode in streamedHierarchy)
+			{
+				//Send message if enabled state has changed.
+				if(streamedNode.UpdatedEnabledState())
+				{
+					updates.Add(new avs.NodeUpdateEnabledState{nodeID = streamedNode.nodeID, enabled = streamedNode.enabled});
+				}
 			}
 
 			return updates;
@@ -115,14 +235,10 @@ namespace teleport
 
 		private void OnEnable()
 		{
-			GeometrySource.GetGeometrySource().AddNode(gameObject, GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
-			CreateChildHierarchy();
+			uid = GeometrySource.GetGeometrySource().AddNode(gameObject, GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
+			CreateStreamedHierarchy();
 		}
 
-		private void OnDestroy()
-		{
-			OnDisable();
-		}
 		private void OnDisable()
 		{
 			//Remove GameObject from sessions.
@@ -137,17 +253,25 @@ namespace teleport
 			}
 		}
 
-		private void CreateChildHierarchy()
+		private void OnDestroy()
 		{
-			childHierarchy.Clear();
+			OnDisable();
+		}
+
+		private void CreateStreamedHierarchy()
+		{
+			streamedHierarchy.Clear();
 
 			List<GameObject> exploredGameObjects = new List<GameObject>();
+			//We need to stop once we reach this node, so we add it to the explored list, but that means we now have to explicitly add it to the streamed hierarchy.
 			exploredGameObjects.Add(gameObject);
+			streamedHierarchy.Add(new StreamedNode(gameObject));
 
 			//Mark all children that will be streamed separately as explored; i.e. is marked for streaming.
 			List<Collider> childColliders = new List<Collider>(GetComponentsInChildren<Collider>());
 			foreach(Collider childCollider in childColliders)
 			{
+				//GetComponentsInChildren(...) also grabs components from node we are on, but we don't want to exclude the children of the node we are on.
 				if(childCollider.gameObject != gameObject && GeometrySource.GetGeometrySource().IsGameObjectMarkedForStreaming(childCollider.gameObject))
 				{
 					//Mark child's children as explored, as they are part of a different streaming hierarchy.
@@ -159,23 +283,16 @@ namespace teleport
 				}
 			}
 
-			//Find all desired components in children.
-			List<Component> childComponents = new List<Component>();
-			childComponents.AddRange(GetComponentsInChildren<MeshFilter>());
-			childComponents.AddRange(GetComponentsInChildren<SkinnedMeshRenderer>());
-			childComponents.AddRange(GetComponentsInChildren<Light>());
-
-			foreach(Component component in childComponents)
-			{
-				AddToHierarchy(component.transform, exploredGameObjects);
-			}
+			//Add components to hierarchy.
+			AddComponentTypeToHierarchy<MeshRenderer>(exploredGameObjects);
+			AddComponentTypeToHierarchy<SkinnedMeshRenderer>(exploredGameObjects);
+			AddComponentTypeToHierarchy<Light>(exploredGameObjects);
 
 			//Add animator trackers to nodes in streamed hierarchy with animator components.
-			//We don't want to use GetComponentInChildren(...), as we need to restrict the search to the streamed hierarchy rather than the entire hierarchy.
-			AddAnimatorTracker(gameObject);
-			foreach(GameObject child in childHierarchy)
+			//We use streamedHierarchy, rather than GetComponentInChildren(...), as we need to restrict the search to the streamed hierarchy rather than the entire Transform hierarchy.
+			foreach(GameObject gameObject in streamedHierarchy)
 			{
-				AddAnimatorTracker(child);
+				AddAnimatorTracker(gameObject);
 			}
 		}
 
@@ -190,15 +307,38 @@ namespace teleport
 				if(!exploredGameObjects.Contains(gameObject))
 				{
 					exploredGameObjects.Add(gameObject);
-					childHierarchy.Add(gameObject);
+					streamedHierarchy.Add(new StreamedNode(gameObject));
 
 					AddToHierarchy(transform.parent, exploredGameObjects);
 				}
 			}
 		}
 
-		//Adds the Teleport_AnimatorTracker component to the passed node, if it has an Animator component.
-		//	node : Node in the hierarchy we will add the Teleport_AnimatorTracker to, if it has an Animator component.
+		//Adds the GameObjects with a component of the generic type belonging to the Teleport_Streamable's Transform hierarchy to the streamable hierarchy,
+		//if they do not appear in the explored list and are not already a part of the streamable hierarchy.
+		//	exploredGameObjects : GameObjects that have already been explored by the depth-first search, or we just don't want added to the hierarchy.
+		private void AddComponentTypeToHierarchy<T>(List<GameObject> exploredGameObjects) where T : Component
+		{
+			T[] components = GetComponentsInChildren<T>();
+
+			foreach(T component in components)
+			{
+				AddToHierarchy(component.transform, exploredGameObjects);
+
+				//Cache the reference on the node in the streamed hierarchy.
+				foreach(StreamedNode streamedNode in streamedHierarchy)
+				{
+					if(streamedNode == component.gameObject)
+					{
+						streamedNode.AddComponent((dynamic)component);
+						break;
+					}
+				}
+			}
+		}
+
+		//Adds the Teleport_AnimatorTracker component to the passed node, if it has an Animator component and its Transform hierarchy has a SkinnedMeshRenderer.
+		//	node : Node in the hierarchy we will attempt to add the Teleport_AnimatorTracker to.
 		private void AddAnimatorTracker(GameObject node)
 		{
 			if(node.TryGetComponent(out Animator _))
@@ -229,14 +369,14 @@ namespace teleport
 
 			if(GeometryStreamingService.IsClientRenderingParent(clientID, node))
 			{
-				update.isGlobal = (byte)0;
+				update.isGlobal = false;
 				update.position = node.transform.localPosition;
 				update.rotation = node.transform.localRotation;
 				update.scale = node.transform.localScale;
 			}
 			else
 			{
-				update.isGlobal = (byte)1;
+				update.isGlobal = true;
 				update.position = node.transform.position;
 				update.rotation = node.transform.rotation;
 				update.scale	= node.transform.lossyScale;
@@ -249,7 +389,7 @@ namespace teleport
 				Quaternion rotation;
 
 				//Velocity and angular velocity must be calculated in the same basis as the previous movement.
-				if(previousMovement.isGlobal!=0)
+				if(previousMovement.isGlobal)
 				{
 					position = node.transform.position;
 					rotation = node.transform.rotation;
@@ -276,37 +416,47 @@ namespace teleport
 
 		public void ShowHierarchy()
 		{
-			foreach (var child in childHierarchy)
+			foreach(StreamedNode streamedNode in streamedHierarchy)
 			{
-				AddClientMask(child);
-			}		
+				AddClientMask(streamedNode);
+			}
 		}
 
-		void AddClientMask(GameObject gameObject)
+		void AddClientMask(StreamedNode streamedNode)
 		{
-			Renderer nodeRenderer = gameObject.GetComponent<Renderer>();
-			if (nodeRenderer)
+			if(streamedNode.meshRenderer)
 			{
-				nodeRenderer.renderingLayerMask &= invStreamedMask;
-				nodeRenderer.renderingLayerMask |= clientMask;
+				streamedNode.meshRenderer.renderingLayerMask &= invStreamedMask;
+				streamedNode.meshRenderer.renderingLayerMask |= clientMask;
+			}
+
+			if(streamedNode.skinnedMeshRenderer)
+			{
+				streamedNode.skinnedMeshRenderer.renderingLayerMask &= invStreamedMask;
+				streamedNode.skinnedMeshRenderer.renderingLayerMask |= clientMask;
 			}
 		}
 
 		public void HideHierarchy()
 		{
-			foreach (var child in childHierarchy)
+			foreach(StreamedNode streamedNode in streamedHierarchy)
 			{
-				RemoveClientMask(child);
+				AddClientMask(streamedNode);
 			}
 		}
 
-		void RemoveClientMask(GameObject gameObject)
+		void RemoveClientMask(StreamedNode streamedNode)
 		{
-			Renderer nodeRenderer = gameObject.GetComponent<Renderer>();
-			if (nodeRenderer)
+			if(streamedNode.meshRenderer)
 			{
-				nodeRenderer.renderingLayerMask &= invClientMask;
-				nodeRenderer.renderingLayerMask |= streamedClientMask;	
+				streamedNode.meshRenderer.renderingLayerMask &= invClientMask;
+				streamedNode.meshRenderer.renderingLayerMask |= streamedClientMask;
+			}
+
+			if(streamedNode.skinnedMeshRenderer)
+			{
+				streamedNode.skinnedMeshRenderer.renderingLayerMask &= invClientMask;
+				streamedNode.skinnedMeshRenderer.renderingLayerMask |= streamedClientMask;
 			}
 		}
 	}

@@ -575,7 +575,7 @@ namespace avs
 	public struct MovementUpdate
 	{
 		public Int64 timestamp;
-		public byte isGlobal;	// really a bool, but C# treats bool as 4 bytes....!
+		[MarshalAs(UnmanagedType.U1)] public bool isGlobal;
 
 		public uid nodeID;
 		public avs.Vector3 position;
@@ -585,6 +585,13 @@ namespace avs
 		public avs.Vector3 velocity;
 		public avs.Vector3 angularVelocityAxis;
 		public float angularVelocityAngle;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct NodeUpdateEnabledState
+	{
+		public uid nodeID;
+		[MarshalAs(UnmanagedType.U1)] public bool enabled;
 	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]

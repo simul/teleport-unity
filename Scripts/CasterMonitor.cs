@@ -380,12 +380,12 @@ namespace teleport
 
 			if(!gameObject.TryGetComponent(out Teleport_Streamable streamable))
 			{
+				//We still succeeded in ensuring the GameObject was in the correct state; the hierarchy root will show the node.
 				/*
 				Debug.LogWarning($"Failed to show node! \"{gameObject}\" does not have a {nameof(Teleport_Streamable)} component!");
 				return false;
 				*/
 
-				//We still succeeded in ensuring the GameObject was in the correct state; the hierarchy root will show the node.
 				return true;
 			}
 
@@ -414,12 +414,12 @@ namespace teleport
 
 			if(!gameObject.TryGetComponent(out Teleport_Streamable streamable))
 			{
+				//We still succeeded in ensuring the GameObject was in the correct state; the hierarchy root will hide the node.
 				/*
 				Debug.LogWarning($"Failed to hide node! \"{gameObject}\" does not have a {nameof(Teleport_Streamable)} component!");
 				return false;
 				*/
 
-				//We still succeeded in ensuring the GameObject was in the correct state; the hierarchy root will hide the node.
 				return true;
 			}
 

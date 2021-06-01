@@ -37,6 +37,9 @@ namespace teleport
 
 		[DllImport("SimulCasterServer")]
 		private static extern void Client_UpdateNodeMovement(uid clientID, avs.MovementUpdate[] updates, int updateAmount);
+		[DllImport("SimulCasterServer")]
+		private static extern void Client_UpdateNodeEnabledState(uid clientID, avs.NodeUpdateEnabledState[] updates, int updateAmount);
+
 		#endregion
 
 		private readonly Teleport_SessionComponent session = null;
@@ -45,8 +48,6 @@ namespace teleport
 		private List<Collider> streamedColliders = new List<Collider>();
 		private List<GameObject> streamedGameObjects = new List<GameObject>();
 		private List<Teleport_Streamable> streamedHierarchies = new List<Teleport_Streamable>();
-		//Objects that have already failed to stream, and as such we won't attempt to stream again.
-		private List<GameObject> failedGameObjects = new List<GameObject>();
 		private Dictionary<uid,Light> streamedLights = new Dictionary<uid, Light>();
 
 		private float timeSincePositionUpdate = 0;
@@ -82,7 +83,6 @@ namespace teleport
 			streamedColliders.Clear();
 			streamedGameObjects.Clear();
 			streamedHierarchies.Clear();
-			failedGameObjects.Clear();
 			streamedLights.Clear();
         }
 
@@ -93,23 +93,6 @@ namespace teleport
 				streamableComponent.RemoveStreamingClient(session);
 				Client_RemoveNodeByID(session.GetClientID(), streamableComponent.GetUid());
 			}
-		}
-
-		private uid AddNode(GameObject node)
-		{
-			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-
-			uid nodeID = geometrySource.AddNode(node);
-			if(nodeID == 0)
-			{
-				Debug.LogError($"AddNode failed for {node.name}. Received 0 for node ID.");
-			}
-			else
-			{
-				Client_AddNode(session.GetClientID(), nodeID, avs.Transform.FromLocalUnityTransform(node.transform));
-			}
-
-			return nodeID;
 		}
 
 		public bool IsStreamingNode(GameObject gameObject)
@@ -268,152 +251,123 @@ namespace teleport
 			{
 				timeSincePositionUpdate = 0;
 
-				DetectInvalidStreamables();
+				StopStreamingUntaggedStreamables();
 				SendPositionUpdates();
+				SendEnabledStateUpdates();
 			}
 		}
+
 		// Start streaming the given streamable gameObject and its hierarchy.
 		private bool StartStreaming(Teleport_Streamable streamable, UInt32 streaming_reason)
 		{
-			GameObject gameObject= streamable.gameObject;
-			if (failedGameObjects.Contains(gameObject))
-			{
-				return false;
-			}
+			GameObject gameObject = streamable.gameObject;
 
-			if (streamedGameObjects.Contains(gameObject))
+			if(streamedGameObjects.Contains(gameObject))
 			{
 				if((streamable.streaming_reason & streaming_reason) != 0)
-				{ 
+				{
 					Debug.LogError($"StartStreaming called on {gameObject.name} for reason {streaming_reason}, but this was already known.");
-			}
+				}
 				else
-			{
+				{
 					streamable.streaming_reason |= streaming_reason;
 				}
 				return false;
 			}
+
 			streamable.streaming_reason |= streaming_reason;
+			streamable.AddStreamingClient(session);
 			streamedHierarchies.Add(streamable);
 
-			uid gameObjectID = AddNode(gameObject);
-			if(gameObjectID != 0)
+			//Stream Teleport_Streamable's hierarchy.
+			foreach(StreamedNode streamedNode in streamable.streamedHierarchy)
 			{
-				streamable.SetUid(gameObjectID);
-				streamable.AddStreamingClient(session);
-
-				streamedGameObjects.Add(gameObject);
-				Client_NodeEnteredBounds(session.GetClientID(), gameObjectID);
-			}
-			else
-			{
-				failedGameObjects.Add(gameObject);
-				Debug.LogWarning($"Failed to add GameObject <b>\"{gameObject.name}\"</b> for streaming! ");
-			}
-
-			//Stream child hierarchy this GameObject Streamable is responsible for.
-			foreach(GameObject node in streamable.childHierarchy)
-			{
-				if(failedGameObjects.Contains(node))
+				if(streamedGameObjects.Contains(streamedNode))
 				{
 					continue;
 				}
 
-				if(streamedGameObjects.Contains(node))
-				{
-					continue;
-				}
-
-				uid childID = AddNode(node);
-				if (childID == 0)
-				{
-					failedGameObjects.Add(node);
-					Debug.LogWarning($"Failed to add GameObject <b>\"{node.name}\"</b> for streaming! ");
-				}
-				else
-				{
-					streamedGameObjects.Add(node);
-					Client_NodeEnteredBounds(session.GetClientID(), childID);
-				}
+				Client_AddNode(session.GetClientID(), streamedNode.nodeID, avs.Transform.FromLocalUnityTransform(streamedNode.gameObject.transform));
+				Client_NodeEnteredBounds(session.GetClientID(), streamedNode.nodeID);
+				streamedGameObjects.Add(streamedNode);
 			}
+
 			Collider[] colliders = gameObject.GetComponents<Collider>();
 			foreach(Collider collider in colliders)
 			{
 				streamedColliders.Add(collider);
 			}
+
 			return true;
 		}
 
 		public bool StopStreaming(Teleport_Streamable streamable, UInt32 streaming_reason)
 		{
-			GameObject gameObject = streamable.gameObject;
-			streamable.streaming_reason &= (~streaming_reason);
-			if(streamable.streaming_reason!=0)
+			streamable.streaming_reason &= ~streaming_reason;
+			if(streamable.streaming_reason != 0)
+			{
 				return false;
-			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-			uid gameObjectID = geometrySource.FindResourceID(gameObject);
-
-			streamedGameObjects.Remove(gameObject);
-			Client_RemoveNodeByID(session.GetClientID(), gameObjectID);
-			Client_NodeLeftBounds(session.GetClientID(), gameObjectID);
+			}
 
 			streamable.RemoveStreamingClient(session);
 			streamedHierarchies.Remove(streamable);
 
-			//Stop streaming child hierarchy.
-			foreach(GameObject child in streamable.childHierarchy)
+			//Stop streaming hierarchy.
+			foreach(StreamedNode streamedNode in streamable.streamedHierarchy)
 			{
-				uid childID = geometrySource.FindResourceID(child);
-				if(childID != 0)
-				{
-					streamedGameObjects.Remove(child);
-					Client_RemoveNodeByID(session.GetClientID(), childID);
-					Client_NodeLeftBounds(session.GetClientID(), childID);
-				}
-				else
-				{
-					Debug.LogWarning($"Attempted to stop streaming GameObject <b>{child.name}</b> (child of {gameObject.name}({gameObjectID})), but received 0 for ID from GeometrySource!");
-				}
+				streamedGameObjects.Remove(streamedNode);
+				Client_RemoveNodeByID(session.GetClientID(), streamedNode.nodeID);
+				Client_NodeLeftBounds(session.GetClientID(), streamedNode.nodeID);
 			}
 
 			//Remove GameObject's colliders from list.
-			Collider[] colliders = gameObject.GetComponents<Collider>();
+			Collider[] colliders = streamable.GetComponents<Collider>();
 			foreach(Collider collider in colliders)
 			{
 				streamedColliders.Remove(collider);
 			}
+
 			return true;
 		}
 
-		private void DetectInvalidStreamables()
+		private void StopStreamingUntaggedStreamables()
 		{
-			for(int i = streamedColliders.Count - 1; i >= 0; i--)
+			for(int i = streamedHierarchies.Count - 1; i >= 0; i--)
 			{
-				Collider collider = streamedColliders[i];
-				if(!collider.CompareTag(teleportSettings.TagToStream))
+				Teleport_Streamable streamable = streamedHierarchies[i];
+				if(!GeometrySource.GetGeometrySource().IsGameObjectMarkedForStreaming(streamable.gameObject) && (streamable.streaming_reason & 1) != 0)
 				{
-					Teleport_Streamable streamable = collider.gameObject.GetComponent<Teleport_Streamable>();
-					StopStreaming(streamable,1);
+					StopStreaming(streamable, 1);
 				}
 			}
 		}
 
 		private void SendPositionUpdates()
 		{
-			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-			if(teleportSettings == null || geometrySource == null)
+			List<avs.MovementUpdate> updates = new List<avs.MovementUpdate>();
+			foreach(Teleport_Streamable streamable in streamedHierarchies)
+			{
+				updates.AddRange(streamable.GetMovementUpdates(session.GetClientID()));
+			}
+
+			Client_UpdateNodeMovement(session.GetClientID(), updates.ToArray(), updates.Count);
+		}
+
+		private void SendEnabledStateUpdates()
+		{
+			List<avs.NodeUpdateEnabledState> updates = new List<avs.NodeUpdateEnabledState>();
+			foreach(Teleport_Streamable streamable in streamedHierarchies)
+			{
+				updates.AddRange(streamable.GetEnabledStateUpdates());
+			}
+
+			//Don't send an update command, if there were no updates.
+			if(updates.Count == 0)
 			{
 				return;
 			}
 
-			List<avs.MovementUpdate> updates = new List<avs.MovementUpdate>();
-			foreach(Teleport_Streamable hierarchy in streamedHierarchies)
-			{
-				updates.AddRange(hierarchy.GetMovementUpdates(session.GetClientID()));
-			}
-
-			Client_UpdateNodeMovement(session.GetClientID(), updates.ToArray(), updates.Count);
+			Client_UpdateNodeEnabledState(session.GetClientID(), updates.ToArray(), updates.Count);
 		}
 	}
 }

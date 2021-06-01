@@ -22,27 +22,6 @@ public class Teleport_Controller : MonoBehaviour
 
 	private Dictionary<avs.InputList, bool> previousButtonPresses;
 
-	private void Awake()
-	{
-		controllers[Index] = this;
-	}
-
-	void Update()
-	{
-		joystick.x *= 0.5F;
-		joystick.y *= 0.5F;
-
-		if(Math.Abs(joystick.x) < 0.01F)
-		{
-			joystick.x = 0.0F;
-		}
-
-		if(Math.Abs(joystick.y) < 0.01F)
-		{
-			joystick.y = 0.0F;
-		}
-	}
-
 	public void SetButtons(UInt32 value)
 	{
 		buttons = value;
@@ -115,6 +94,20 @@ public class Teleport_Controller : MonoBehaviour
 		return false;
 	}
 
+	public Vector2 GetAxis(avs.InputList inputID)
+	{
+		if(motionPositions.TryGetValue(inputID, out avs.Vector2 motionAxis))
+		{
+			return motionAxis;
+		}
+		else if(triggerStrengths.TryGetValue(inputID, out float triggerStrength))
+		{
+			return new Vector2(triggerStrength, 0.0f);
+		}
+
+		return Vector2.zero;
+	}
+
 	public void ProcessInputEvents(avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
 	{
 		//Copy old button presses for just triggered comparisons.
@@ -134,6 +127,29 @@ public class Teleport_Controller : MonoBehaviour
 		foreach(avs.InputEventMotion motionEvent in motionEvents)
 		{
 			motionPositions[motionEvent.inputID] = motionEvent.motion;
+		}
+	}
+
+	///UNITY MESSAGES
+
+	private void OnEnable()
+	{
+		controllers[Index] = this;
+	}
+
+	private void Update()
+	{
+		joystick.x *= 0.5F;
+		joystick.y *= 0.5F;
+
+		if(Math.Abs(joystick.x) < 0.01F)
+		{
+			joystick.x = 0.0F;
+		}
+
+		if(Math.Abs(joystick.y) < 0.01F)
+		{
+			joystick.y = 0.0F;
 		}
 	}
 
