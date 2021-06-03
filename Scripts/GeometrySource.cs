@@ -753,7 +753,7 @@ namespace teleport
 
 			extractedMaterial.pbrMetallicRoughness.baseColorTexture.index = AddTexture(material.mainTexture, forceMask);
 			extractedMaterial.pbrMetallicRoughness.baseColorTexture.tiling = material.mainTextureScale;
-			extractedMaterial.pbrMetallicRoughness.baseColorFactor = material.HasProperty("_Color") ? material.color : new Color(1.0f, 1.0f, 1.0f, 1.0f);
+			extractedMaterial.pbrMetallicRoughness.baseColorFactor = material.HasProperty("_Color") ? material.color.linear: new Color(1.0f, 1.0f, 1.0f, 1.0f);
 
 			//Metallic-Roughness
 
@@ -805,7 +805,7 @@ namespace teleport
 						extractedMaterial.emissiveTexture.tiling = material.mainTextureScale;
 					}
 				}
-				extractedMaterial.emissiveFactor = material.HasProperty("_BumpScale") ? (avs.Vector3)material.GetColor("_EmissionColor") : new avs.Vector3(0.0f, 0.0f, 0.0f);
+				extractedMaterial.emissiveFactor = material.HasProperty("_BumpScale") ? (avs.Vector3)material.GetColor("_EmissionColor").linear : new avs.Vector3(0.0f, 0.0f, 0.0f);
 			}
 
 			//Extensions
