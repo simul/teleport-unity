@@ -525,12 +525,12 @@ namespace avs
 		Click
 	};
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct InputEventBinary
 	{
 		public UInt32 eventID;
 		public InputList inputID;
-		public bool activated;
+		[MarshalAs(UnmanagedType.U1)]public bool activated;
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
