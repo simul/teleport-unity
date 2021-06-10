@@ -40,7 +40,7 @@ namespace SCServer
 		public Int32 averageBitrate = 40000000;
 		public Int32 maxBitrate = 80000000;
 		[MarshalAs(UnmanagedType.U1)] public bool useAutoBitRate = false;
-		public Int32 vbvBufferSizeInFrames = 3;
+		public Int32 vbvBufferSizeInFrames = 1;
 		[MarshalAs(UnmanagedType.U1)] public bool useAsyncEncoding = true;
 		[MarshalAs(UnmanagedType.U1)] public bool use10BitEncoding = false;
 		[MarshalAs(UnmanagedType.U1)] public bool useYUV444Decoding = false;

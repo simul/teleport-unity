@@ -156,10 +156,14 @@ namespace teleport
 						{
 							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.Toggle(field.Name, (bool)field.GetValue(teleportSettings.casterSettings)));
 						}
-						//else if (field.FieldType == typeof(object))
-						//{
-						//	field.SetValue(teleportSettings.casterSettings, EditorGUILayout.ObjectField(field.Name, (bool)field.GetValue(teleportSettings.casterSettings)));
-						//}
+						else if (field.FieldType == typeof(avs.VideoCodec))
+						{
+							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.EnumPopup(field.Name, (avs.VideoCodec)field.GetValue(teleportSettings.casterSettings)));
+						}
+						else if (field.FieldType == typeof(avs.RateControlMode))
+						{
+							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.EnumPopup(field.Name, (avs.RateControlMode)field.GetValue(teleportSettings.casterSettings)));
+						}
 						else if (field.FieldType == typeof(SCServer.ControlModel))
 						{
 							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.EnumPopup(field.Name, (SCServer.ControlModel)field.GetValue(teleportSettings.casterSettings)));
