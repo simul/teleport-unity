@@ -12,7 +12,13 @@ public class Teleport_Controller : MonoBehaviour
 	//VRTK appears to be performing some sort of lookup set, as if you change the name of this, or change it to a property, it stops being assigned a value.
 	public uint Index = 0;
 
-	public Vector2 triggerAxis = new Vector2();
+	[Tooltip("GameObject with the controller's mesh component.")]
+	public GameObject controllerModel = default;
+	[Tooltip("Animation played when the trigger is pressed.")]
+	public AnimationClip triggerPressAnimation = default;
+	[Tooltip("Override for the animation's current time.")]
+	public avs.AnimationTimeControl pressAnimationTimeOverride = avs.AnimationTimeControl.ANIMATION_TIME;
+
 	public Vector2 joystick = new Vector2();
 	public UInt32 buttons = 0;
 

@@ -24,7 +24,7 @@ namespace teleport
 		public static extern void Client_StopSession(uid clientID);
 		[DllImport("SimulCasterServer")]
 		public static extern void Client_StopStreaming(uid clientID);
-		
+
 		[DllImport("SimulCasterServer")]
 		public static extern uint Client_GetClientIP(uid clientID, uint bufferLength, StringBuilder buffer);
 		[DllImport("SimulCasterServer")]
@@ -47,6 +47,9 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern uid GetUnlinkedClientID();
 
+		[DllImport("SimulCasterServer")]
+		private static extern void Client_UpdateNodeAnimationControl(uid clientID, avs.NodeUpdateAnimationControl update);
+
 		#endregion
 
 		#region StaticCallbacks
@@ -67,7 +70,7 @@ namespace teleport
 
 		public static bool HasSessionComponent(uid clientID)
 		{
-			if (!sessions.ContainsKey(clientID))
+			if(!sessions.ContainsKey(clientID))
 			{
 				TeleportLog.LogErrorOnce($"No session component found for Client_{clientID}!");
 				return false;
@@ -84,18 +87,18 @@ namespace teleport
 			}
 
 			return sessionComponent;
-			}
+		}
 
 		public static void StaticDisconnect(uid clientID)
 		{
-			if (sessions.ContainsKey(clientID))
+			if(sessions.ContainsKey(clientID))
 			{
 				sessions[clientID].Disconnect();
 				sessions.Remove(clientID);
 			}
 
 			// This MUST be called for connection / reconnection to work properly.
-		    Client_StopStreaming(clientID);
+			Client_StopStreaming(clientID);
 		}
 
 		public static void StaticSetOriginFromClient(uid clientID, UInt64 validCounter, in avs.Pose newPose)
@@ -117,7 +120,7 @@ namespace teleport
 			if(!sessionComponent)
 			{
 				return;
-		}
+			}
 
 			Quaternion rotation = new Quaternion(newHeadPose.orientation.x, newHeadPose.orientation.y, newHeadPose.orientation.z, newHeadPose.orientation.w);
 			Vector3 position = new Vector3(newHeadPose.position.x, newHeadPose.position.y, newHeadPose.position.z);
@@ -130,7 +133,7 @@ namespace teleport
 			if(!sessionComponent)
 			{
 				return;
-		}
+			}
 
 			Quaternion latestRotation = new Quaternion(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
 			Vector3 latestPosition = new Vector3(newPose.position.x, newPose.position.y, newPose.position.z);
@@ -165,7 +168,7 @@ namespace teleport
 			if(inputState.analogueEventAmount != 0)
 			{
 				int analogueEventSize = Marshal.SizeOf<avs.InputEventAnalogue>();
-				
+
 				//Convert the pointer array into a struct array.
 				IntPtr positionPtr = analogueEventsPtr;
 				for(int i = 0; i < inputState.analogueEventAmount; i++)
@@ -248,6 +251,8 @@ namespace teleport
 		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
 		public AudioSource inputAudioSource = null;
 
+		public List<Teleport_Controller> controllers;
+
 		public SCServer.ClientSettings clientSettings = new SCServer.ClientSettings();
 
 		//PUBLIC STATIC MEMBER VARIABLES
@@ -260,7 +265,7 @@ namespace teleport
 
 		private uid clientID = 0;
 
-		private Dictionary<int, Teleport_Controller> controllers = new Dictionary<int, Teleport_Controller>();
+		private Dictionary<int, Teleport_Controller> controllerLookup = new Dictionary<int, Teleport_Controller>();
 
 		private bool resetOrigin = true;
 		private UInt64 originValidCounter = 1;
@@ -299,9 +304,9 @@ namespace teleport
 		}
 
 		public bool HasClient()
-			{
+		{
 			return GetClientID() != 0;
-			}
+		}
 
 		public void ResetOrigin()
 		{
@@ -311,14 +316,37 @@ namespace teleport
 		public void SetStreamedLights(Light[] lights)
 		{
 			geometryStreamingService.SetStreamedLights(lights);
-			}
+		}
 
 		public void ReportHandshake(avs.Handshake receivedHandshake)
 		{
 			handshake = receivedHandshake;
 
-			//Send initial animation state on receiving the handshake, as the connection is now ready for commands.
-			geometryStreamingService.SendAnimationState();
+
+			if(teleportSettings.casterSettings.isStreamingGeometry)
+			{
+				//Send initial animation state on receiving the handshake, as the connection is now ready for commands.
+				geometryStreamingService.SendAnimationState();
+
+				//Send animation control updates for the grip animation of the controllers.
+				foreach(Teleport_Controller controller in controllerLookup.Values)
+				{
+					SkinnedMeshRenderer skinnedMeshRenderer = controller.controllerModel.GetComponentInChildren<SkinnedMeshRenderer>();
+					if(!skinnedMeshRenderer)
+					{
+						continue;
+					}
+
+					avs.NodeUpdateAnimationControl animationControlUpdate = new avs.NodeUpdateAnimationControl
+					{
+						nodeID = GeometrySource.GetGeometrySource().FindResourceID(skinnedMeshRenderer.gameObject),
+						animationID = GeometrySource.GetGeometrySource().FindResourceID(controller.triggerPressAnimation),
+						timeControl = controller.pressAnimationTimeOverride
+					};
+
+					Client_UpdateNodeAnimationControl(clientID, animationControlUpdate);
+				}
+			}
 		}
 
 		public void SetOriginFromClient(UInt64 validCounter, Quaternion newRotation, Vector3 newPosition)
@@ -332,55 +360,47 @@ namespace teleport
 
 		public void SetHeadPose(Quaternion newRotation, Vector3 newPosition)
 		{
-			if (!head)
+			if(!head)
 			{
 				return;
 			}
 
 			if(head.movementEnabled)
 			{
-				head.transform.SetPositionAndRotation(newPosition,newRotation);
+				head.transform.SetPositionAndRotation(newPosition, newRotation);
 			}
-			last_received_headPos=newPosition;
+			last_received_headPos = newPosition;
 		}
 
-		public void SetControllerInput(int controllerID, UInt32 buttons, float stickX, float stickY)
+		public void SetControllerInput(int controllerIndex, UInt32 buttons, float stickX, float stickY)
 		{
-			if(controllers.TryGetValue(controllerID, out Teleport_Controller controller))
+			if(!controllerLookup.TryGetValue(controllerIndex, out Teleport_Controller controller))
 			{
-				controller.SetButtons(buttons);
-				controller.SetJoystick(stickX, stickY);
+				return;
 			}
+
+			controller.SetButtons(buttons);
+			controller.SetJoystick(stickX, stickY);
 		}
 
-		public void ProcessControllerEvents(int controllerID, avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
+		public void ProcessControllerEvents(int controllerIndex, avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
 		{
-			if(controllers.TryGetValue(controllerID, out Teleport_Controller controller))
+			if(!controllerLookup.TryGetValue(controllerIndex, out Teleport_Controller controller))
 			{
-				controller.ProcessInputEvents(binaryEvents, analogueEvents, motionEvents);
+				return;
 			}
+
+			controller.ProcessInputEvents(binaryEvents, analogueEvents, motionEvents);
 		}
-		
-		public void SetControllerPose(int index, Quaternion newRotation, Vector3 newPosition)
+
+		public void SetControllerPose(int controllerIndex, Quaternion newRotation, Vector3 newPosition)
 		{
-			if (!controllers.ContainsKey(index))
+			if(!controllerLookup.TryGetValue(controllerIndex, out Teleport_Controller controller))
 			{
-				Teleport_Controller[] controllerComponents = GetComponentsInChildren<Teleport_Controller>();
-				foreach(Teleport_Controller childComponent in controllerComponents)
-				{
-					if(childComponent.Index == index)
-					{
-						controllers[index] = childComponent;
-				}
-				}
-
-				if (!controllers.ContainsKey(index))
-				{
-					return;
-			}
+				return;
 			}
 
-			controllers[index].transform.SetPositionAndRotation(newPosition, newRotation);
+			controller.transform.SetPositionAndRotation(newPosition, newRotation);
 		}
 
 		public void ProcessAudioInput(float[] data)
@@ -389,7 +409,7 @@ namespace teleport
 			inputAudioSource.clip = AudioClip.Create("Input", numFrames, 2, AudioSettings.outputSampleRate, false);
 			inputAudioSource.clip.SetData(data, 0);
 			inputAudioSource.Play();
-			}
+		}
 
 		public string GetClientIP()
 		{
@@ -401,7 +421,7 @@ namespace teleport
 				{
 					ipAddress = new StringBuilder("", (int)newlen + 2);
 					Client_GetClientIP(clientID, newlen + 1, ipAddress);
-			}
+				}
 			}
 			catch(Exception exc)
 			{
@@ -437,14 +457,20 @@ namespace teleport
 			//Add a break for readability.
 			y += lineHeight;
 
-			foreach(var controllerPair in controllers)
+			for(int i = 0; i < controllers.Count; i++)
 			{
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Controller {0}, {1}", controllerPair.Key, FormatVectorString(controllerPair.Value.transform.position)));
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tbtns:{0} stick:{1:F3},{2:F3}", controllerPair.Value.buttons, controllerPair.Value.joystick.x, controllerPair.Value.joystick.y));
-		}
+				Teleport_Controller controller = controllers[i];
+				if(!controller)
+				{
+					continue;
+				}
+
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Controller {0}, {1}", i, FormatVectorString(controller.transform.position)));
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tbtns:{0} stick:{1:F3},{2:F3}", controller.buttons, controller.joystick.x, controller.joystick.y));
+			}
 
 			if(geometryStreamingService != null)
-		{
+			{
 				GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 
 				//Add a break for readability.
@@ -461,13 +487,13 @@ namespace teleport
 					GameObject node = streamedGameObjects[i];
 					uid nodeID = geometrySource.FindResourceID(node);
 					GUI.Label(new Rect(x, y += lineHeight, 500, 20), string.Format("\t{0} {1}", nodeID, node.name));
-		}
+				}
 
 				//Display an ellipsis if there are more than the maximum nodes to display.
 				if(nodeAmount > maxNodesOnOverlay)
-		{
+				{
 					GUI.Label(new Rect(x, y += lineHeight, 500, 20), "\t...");
-		}
+				}
 
 				//Add a break for readability.
 				y += lineHeight;
@@ -478,13 +504,13 @@ namespace teleport
 
 				int validLightIndex = 0;
 				foreach(var lightPair in geometryStreamingService.GetStreamedLights())
-		{
+				{
 					Light light = lightPair.Value;
 					if(light != null)
-			{
+					{
 						GUI.Label(new Rect(x, y += lineHeight, 500, 20), string.Format("\t{0} {1}: ({2}, {3}, {4})", lightPair.Key, light.name, light.transform.forward.x, light.transform.forward.y, light.transform.forward.z));
 						if(sceneCaptureComponent.VideoEncoder != null && validLightIndex < sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lightCount)
-				{
+						{
 							avs.Vector3 shadowPosition = sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lights[validLightIndex].position;
 							GUI.Label(new Rect(x, y += lineHeight, 500, 20), string.Format("\t\tshadow orig ({0}, {1}, {2})", shadowPosition.x, shadowPosition.y, shadowPosition.z));
 						}
@@ -496,15 +522,15 @@ namespace teleport
 					{
 						GUI.Label(new Rect(x, y += lineHeight, 500, 20), "\t...");
 						break;
-						}
-						}
 					}
 				}
+			}
+		}
 
 		//UNITY MESSAGES
 
 		private void Start()
-				{
+		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
 			geometryStreamingService = new GeometryStreamingService(this);
 			networkStats = new avs.NetworkStats();
@@ -514,21 +540,35 @@ namespace teleport
 			if(inputAudioSource)
 			{
 				inputAudioSource.bypassEffects = true;
-				}
+			}
 
 			head = GetSingleComponentFromChildren<Teleport_Head>();
 			clientspaceRoot = GetSingleComponentFromChildren<Teleport_ClientspaceRoot>();
 			collisionRoot = GetSingleComponentFromChildren<Teleport_CollisionRoot>();
 			sceneCaptureComponent = GetSingleComponentFromChildren<Teleport_SceneCaptureComponent>();
+		}
+
+		private void OnEnable()
+		{
+			if(clientID != 0)
+			{
+				sessions[clientID] = this;
 			}
 
-		private void OnDisable()
+			//Place controllers at their assigned index in the lookup.
+			foreach(Teleport_Controller controller in controllers)
 			{
+				controllerLookup[(int)controller.Index] = controller;
+			}
+		}
+
+		private void OnDisable()
+		{
 			if(sessions.ContainsKey(clientID))
-				{
+			{
 				sessions.Remove(clientID);
-					}
-				}
+			}
+		}
 
 		private void OnDestroy()
 		{
@@ -548,18 +588,13 @@ namespace teleport
 					return;
 				}
 
-				if (sessions.ContainsKey(id))
+				if(sessions.ContainsKey(id))
 				{
 					Debug.LogError($"Error setting up SessionComponent for Client_{id}. There is already a registered session for that client!");
 					return;
 				}
 
-				clientID = id;
-				sessions[clientID] = this;
-
-				geometryStreamingService.StreamPlayerBody();
-
-				UpdateClientSettings();
+				StartSession(id);
 			}
 
 			if(Client_IsConnected(clientID))
@@ -579,54 +614,66 @@ namespace teleport
 
 		//PRIVATE FUNCTIONS
 
+		private void StartSession(uid connectedID)
+		{
+			clientID = connectedID;
+			sessions[clientID] = this;
+			UpdateClientSettings();
+
+			if(teleportSettings.casterSettings.isStreamingGeometry)
+			{
+				geometryStreamingService.StreamPlayerBody();
+			}
+		}
+
 		private void UpdateClientSettings()
 		{
-				teleportSettings = TeleportSettings.GetOrCreateSettings();
-				clientSettings.specularCubemapSize= teleportSettings.casterSettings.defaultSpecularCubemapSize;
-				clientSettings.specularMips = teleportSettings.casterSettings.defaultSpecularMips;
-				clientSettings.diffuseCubemapSize = teleportSettings.casterSettings.defaultDiffuseCubemapSize;
-				clientSettings.lightCubemapSize = teleportSettings.casterSettings.defaultLightCubemapSize;
-				clientSettings.shadowmapSize = teleportSettings.casterSettings.defaultShadowmapSize;
+			teleportSettings = TeleportSettings.GetOrCreateSettings();
+			clientSettings.specularCubemapSize = teleportSettings.casterSettings.defaultSpecularCubemapSize;
+			clientSettings.specularMips = teleportSettings.casterSettings.defaultSpecularMips;
+			clientSettings.diffuseCubemapSize = teleportSettings.casterSettings.defaultDiffuseCubemapSize;
+			clientSettings.lightCubemapSize = teleportSettings.casterSettings.defaultLightCubemapSize;
+			clientSettings.shadowmapSize = teleportSettings.casterSettings.defaultShadowmapSize;
 
 			int faceSize = teleportSettings.casterSettings.captureCubeTextureSize;
 			int doubleFaceSize = faceSize * 2;
 			int halfFaceSize = (int)(faceSize * 0.5);
 			Rect depthViewport = new Rect(0, doubleFaceSize, halfFaceSize, halfFaceSize);
 
-				if (teleportSettings.casterSettings.usePerspectiveRendering)
-				{
-					clientSettings.specularPos = new Vector2Int(teleportSettings.casterSettings.perspectiveWidth / 2, teleportSettings.casterSettings.perspectiveHeight);
-				}
-				else
-				{
+			if(teleportSettings.casterSettings.usePerspectiveRendering)
+			{
+				clientSettings.specularPos = new Vector2Int(teleportSettings.casterSettings.perspectiveWidth / 2, teleportSettings.casterSettings.perspectiveHeight);
+			}
+			else
+			{
 				clientSettings.specularPos = new Vector2Int(3 * (int)depthViewport.width, doubleFaceSize);
-				}
+			}
 
-				clientSettings.diffusePos= clientSettings.specularPos + new Vector2Int(0, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
-				clientSettings.lightPos = clientSettings.diffusePos + new Vector2Int(teleportSettings.casterSettings.defaultSpecularCubemapSize * 3 / 2, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
+			clientSettings.diffusePos = clientSettings.specularPos + new Vector2Int(0, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
+			clientSettings.lightPos = clientSettings.diffusePos + new Vector2Int(teleportSettings.casterSettings.defaultSpecularCubemapSize * 3 / 2, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
 
 			int diffuseCubeTextureWidth = Teleport_SceneCaptureComponent.RenderingSceneCapture != null ? Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture.width : teleportSettings.casterSettings.defaultDiffuseCubemapSize;
-				if (teleportSettings.casterSettings.usePerspectiveRendering)
-				{
-					int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
-					int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
-					clientSettings.shadowmapPos = new Vector2Int(perspectiveWidth / 2, perspectiveHeight + 2 * clientSettings.diffuseCubemapSize) + clientSettings.diffusePos;
-					clientSettings.webcamPos = new Vector2Int(perspectiveWidth / 2, perspectiveHeight);
-				}
-				else
-				{
+			if(teleportSettings.casterSettings.usePerspectiveRendering)
+			{
+				int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
+				int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
+				clientSettings.shadowmapPos = new Vector2Int(perspectiveWidth / 2, perspectiveHeight + 2 * clientSettings.diffuseCubemapSize) + clientSettings.diffusePos;
+				clientSettings.webcamPos = new Vector2Int(perspectiveWidth / 2, perspectiveHeight);
+			}
+			else
+			{
 				clientSettings.specularPos = new Vector2Int(3 * (int)depthViewport.width, doubleFaceSize);
-					clientSettings.shadowmapPos = new Vector2Int(3 * faceSize / 2, 2 * faceSize + 2 * clientSettings.diffuseCubemapSize) + clientSettings.diffusePos;
+				clientSettings.shadowmapPos = new Vector2Int(3 * faceSize / 2, 2 * faceSize + 2 * clientSettings.diffuseCubemapSize) + clientSettings.diffusePos;
 				clientSettings.webcamPos = new Vector2Int(3 * halfFaceSize, doubleFaceSize);
-				}
+			}
 
 			clientSettings.webcamPos += new Vector2Int(teleportSettings.casterSettings.defaultSpecularCubemapSize * 3, teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
 			clientSettings.webcamSize = new Vector2Int(teleportSettings.casterSettings.webcamWidth, teleportSettings.casterSettings.webcamHeight);
-				Client_SetClientSettings(clientID,clientSettings);
-			}
+			Client_SetClientSettings(clientID, clientSettings);
+		}
 
 		private void SendOriginUpdates()
-			{
+		{
 			if(teleportSettings.casterSettings.controlModel == SCServer.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
 			{
 				if(head != null && clientspaceRoot != null)
@@ -639,38 +686,38 @@ namespace teleport
 							last_sent_origin = clientspaceRoot.transform.position;
 							clientspaceRoot.transform.hasChanged = false;
 							resetOrigin = false;
-				}
-			}
+						}
+					}
 					else if(clientspaceRoot.transform.hasChanged)
-		{
+					{
 						Vector3 diff = clientspaceRoot.transform.position - last_received_origin;
 						if(diff.magnitude > 5.0F)
-		{
+						{
 							originValidCounter++;
-		}
+						}
 						// Otherwise just a "suggestion" update. ValidCounter is not altered. The client will use the vertical only.
 						if(Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
-		{
+						{
 							last_sent_origin = clientspaceRoot.transform.position;
 							clientspaceRoot.transform.hasChanged = false;
-		}
-		}
+						}
+					}
 				}
 
 				if(collisionRoot != null && collisionRoot.transform.hasChanged)
-			{
+				{
 					collisionRoot.transform.hasChanged = false;
-			}
+				}
 			}
 			else if(teleportSettings.casterSettings.controlModel == SCServer.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
 			{
 				if(head != null && clientspaceRoot != null)
 				{
 					if(!Client_HasOrigin(clientID) || resetOrigin || clientspaceRoot.transform.hasChanged)
-				{
+					{
 						originValidCounter++;
 						if(Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
-					{
+						{
 							last_sent_origin = clientspaceRoot.transform.position;
 							clientspaceRoot.transform.hasChanged = false;
 							resetOrigin = false;
@@ -683,7 +730,7 @@ namespace teleport
 		private string FormatVectorString(Vector3 v)
 		{
 			return string.Format("({0:F3}, {1:F3}, {2:F3})", v.x, v.y, v.z);
-			}
+		}
 
 		private T GetSingleComponentFromChildren<T>()
 		{
@@ -692,9 +739,9 @@ namespace teleport
 			if(childComponents.Length != 1)
 			{
 				Debug.LogError($"Exactly <b>one</b> {typeof(T).Name} child should exist, but <color=red><b>{childComponents.Length}</b></color> were found for \"{gameObject}\"!");
-		}
+			}
 
 			return childComponents.Length != 0 ? childComponents[0] : default;
-	}
+		}
 	}
 }

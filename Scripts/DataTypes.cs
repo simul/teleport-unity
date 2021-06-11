@@ -140,6 +140,13 @@ namespace avs
 		TRACKPAD = TRACKPAD_LEFT,
 	};
 
+	public enum AnimationTimeControl
+	{
+		[InspectorName("Animation Time")] ANIMATION_TIME,
+		[InspectorName("Right Controller Trigger")] CONTROLLER_0_TRIGGER,
+		[InspectorName("Left Controller Trigger")] CONTROLLER_1_TRIGGER
+	};
+
 	public static class DataTypes
 	{
 		public static LightType UnityToTeleport(UnityEngine.LightType unity)
@@ -601,6 +608,15 @@ namespace avs
 
 		public uid nodeID; //ID of the node the animation is playing on.
 		public uid animationID; //ID of the animation that is now playing.
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct NodeUpdateAnimationControl
+	{
+		public uid nodeID; //ID of the node the animation is playing on.
+		public uid animationID; //ID of the animation that we are updating.
+		
+		public AnimationTimeControl timeControl; //What controls the animation's time value.
 	}
 
 	[StructLayout(LayoutKind.Sequential)]

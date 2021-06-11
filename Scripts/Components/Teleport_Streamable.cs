@@ -120,6 +120,7 @@ namespace teleport
 
 		public bool sendMovementUpdates = true;
 		public bool sendEnabledStateUpdates = true;
+		public bool pollCurrentAnimation = false;
 
 		[SerializeField]
 		private uid uid = 0;

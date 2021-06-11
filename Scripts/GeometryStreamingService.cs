@@ -202,7 +202,7 @@ namespace teleport
 			foreach(GameObject part in bodyParts)
 			{
 				Teleport_Streamable streamable = part.GetComponent<Teleport_Streamable>();
-				StartStreaming(streamable,2);
+				StartStreaming(streamable, 2);
 			}
 		}
 
@@ -230,6 +230,12 @@ namespace teleport
 					if (teleportSettings.TagToStream.Length == 0 || collider.CompareTag(teleportSettings.TagToStream))
 					{
 						Teleport_Streamable streamable = collider.gameObject.GetComponent<Teleport_Streamable>();
+						//GameObject became streamable mid-session, and now needs a Teleport_Streamable component.
+						if(!streamable)
+						{
+							streamable = collider.gameObject.AddComponent<Teleport_Streamable>();
+						}
+
 						StartStreaming(streamable, 1);
 					}
 				}

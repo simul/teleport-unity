@@ -223,6 +223,8 @@ namespace teleport
 
 				//We want the client to control the client-side transform of the body parts for reduced latency.
 				streamableComponent.sendMovementUpdates = false;
+				streamableComponent.sendEnabledStateUpdates = true;
+				streamableComponent.pollCurrentAnimation = true;
 			}
 			
 			//We need to add the animation events on play, so we can detect when an animation starts.
