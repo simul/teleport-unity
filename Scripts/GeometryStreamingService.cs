@@ -40,6 +40,9 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void Client_UpdateNodeEnabledState(uid clientID, avs.NodeUpdateEnabledState[] updates, int updateAmount);
 
+		[DllImport("SimulCasterServer")]
+		private static extern void Client_SetNodeHighlighted(uid clientID, uid nodeID, bool isHighlighted);
+
 		#endregion
 
 		private readonly Teleport_SessionComponent session = null;
@@ -211,6 +214,15 @@ namespace teleport
 			foreach(Teleport_Streamable streamable in streamedHierarchies)
 			{
 				streamable.SendAnimationState(session.GetClientID());
+			}
+		}
+
+		public void SetNodeHighlighted(GameObject gameObject, bool isHighlighted)
+		{
+			uid nodeID = GeometrySource.GetGeometrySource().FindResourceID(gameObject);
+			if(nodeID != 0)
+			{
+				Client_SetNodeHighlighted(session.GetClientID(), nodeID, isHighlighted);
 			}
 		}
 

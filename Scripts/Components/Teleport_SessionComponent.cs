@@ -558,6 +558,7 @@ namespace teleport
 			//Place controllers at their assigned index in the lookup.
 			foreach(Teleport_Controller controller in controllers)
 			{
+				controller.session = this;
 				controllerLookup[(int)controller.Index] = controller;
 			}
 		}

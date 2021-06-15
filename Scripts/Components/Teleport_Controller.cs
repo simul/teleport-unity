@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.EventSystems;
 
 public class Teleport_Controller : MonoBehaviour
 {
@@ -19,7 +17,12 @@ public class Teleport_Controller : MonoBehaviour
 	[Tooltip("Override for the animation's current time.")]
 	public avs.AnimationTimeControl pressAnimationTimeOverride = avs.AnimationTimeControl.ANIMATION_TIME;
 
+	[HideInInspector]
+	public teleport.Teleport_SessionComponent session = default;
+
+	[HideInInspector]
 	public Vector2 joystick = new Vector2();
+	[HideInInspector]
 	public UInt32 buttons = 0;
 
 	private Dictionary<avs.InputList, bool> buttonPresses = new Dictionary<avs.InputList, bool>();
