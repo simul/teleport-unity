@@ -1,18 +1,7 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class Teleport_ClientspaceRoot : MonoBehaviour
+namespace teleport
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+	public class Teleport_ClientspaceRoot : MonoBehaviour
+	{ }
 }
