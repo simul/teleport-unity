@@ -49,6 +49,8 @@ namespace teleport
 
 		[DllImport("SimulCasterServer")]
 		private static extern void Client_UpdateNodeAnimationControl(uid clientID, avs.NodeUpdateAnimationControl update);
+		[DllImport("SimulCasterServer")]
+		private static extern void Client_SetNodeAnimationSpeed(uid clientID, uid nodeID, uid animationID, float speed);
 
 		#endregion
 
@@ -325,6 +327,8 @@ namespace teleport
 
 			if(teleportSettings.casterSettings.isStreamingGeometry)
 			{
+				GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+
 				//Send initial animation state on receiving the handshake, as the connection is now ready for commands.
 				geometryStreamingService.SendAnimationState();
 
@@ -337,14 +341,53 @@ namespace teleport
 						continue;
 					}
 
+					//We need the ID of the node the animations actually occur on.
+					uid animatedNodeID = geometrySource.FindResourceID(skinnedMeshRenderer.gameObject);
+
+					//Set time override for controller press animation.
 					avs.NodeUpdateAnimationControl animationControlUpdate = new avs.NodeUpdateAnimationControl
 					{
-						nodeID = GeometrySource.GetGeometrySource().FindResourceID(skinnedMeshRenderer.gameObject),
-						animationID = GeometrySource.GetGeometrySource().FindResourceID(controller.triggerPressAnimation),
+						nodeID = animatedNodeID,
+						animationID = geometrySource.FindResourceID(controller.triggerPressAnimation),
 						timeControl = controller.pressAnimationTimeOverride
 					};
 
 					Client_UpdateNodeAnimationControl(clientID, animationControlUpdate);
+
+					//Set speed of controller animations.
+					Animator animator = controller.controllerModel.GetComponentInChildren<Animator>();
+					if(animator)
+					{
+						UnityEditor.Animations.AnimatorController animatorController = animator.runtimeAnimatorController as UnityEditor.Animations.AnimatorController;
+						UnityEditor.Animations.AnimatorStateMachine stateMachine = animatorController.layers[0].stateMachine;
+
+						foreach(UnityEditor.Animations.ChildAnimatorState stateWrapper in stateMachine.states)
+						{
+							UnityEditor.Animations.AnimatorState state = stateWrapper.state;
+
+							switch(state.motion)
+							{
+								case AnimationClip clip:
+									uid animationID = geometrySource.FindResourceID(clip);
+									if(animationID != 0)
+									{
+										Client_SetNodeAnimationSpeed(clientID, animatedNodeID, animationID, state.speed);
+									}
+									else
+									{
+										Debug.LogWarning($"Animation \"{clip.name}\" not extracted! Can't set speed of animation for {controller.controllerModel.name}.");
+									}
+
+									break;
+								case UnityEditor.Animations.BlendTree blendTree:
+									Debug.LogWarning($"Teleport currently does not support BlendTrees in AnimatorControllers. BlendTree \"{blendTree.name}\" from AnimatorState \"{state.name}\" on GameObject \"{animator.name}\".");
+									break;
+								default:
+									Debug.LogWarning($"Unrecognised Motion \"{state.motion.name}\" from AnimatorState \"{state.name}\" on GameObject \"{animator.name}\".");
+									break;
+							}
+						}
+					}
 				}
 			}
 		}
