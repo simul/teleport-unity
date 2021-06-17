@@ -250,6 +250,7 @@ namespace avs
 			return new Vector3(x, y, z);
 		}
 	}
+
 	//We have to declare our own vector types, as .NET and Unity have different layouts.
 	public struct Vector2
 	{
@@ -350,7 +351,6 @@ namespace avs
 		}
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
 	public struct Vector4
 	{
 		public float x, y, z, w;
@@ -446,7 +446,6 @@ namespace avs
 		}
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
 	public struct NetworkStats
 	{
 		/*! Total bytes sent. */
@@ -526,12 +525,6 @@ namespace avs
 		public UInt32 maxLightsSupported;       // Maximum number of lights the client can render.
 	};
 
-	enum InputEventType : byte
-	{
-		None = 0,
-		Click
-	};
-
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct InputEventBinary
 	{
@@ -540,7 +533,7 @@ namespace avs
 		[MarshalAs(UnmanagedType.U1)]public bool activated;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct InputEventAnalogue
 	{
 		public UInt32 eventID;
@@ -548,7 +541,7 @@ namespace avs
 		public float strength;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct InputEventMotion
 	{
 		public UInt32 eventID;
@@ -662,7 +655,6 @@ namespace SCServer
 		Vulkan = 4
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
 	public struct VideoEncodeParams
 	{
 		public Int32 encodeWidth;
@@ -672,7 +664,6 @@ namespace SCServer
 		public IntPtr inputSurfaceResource;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
 	public struct AudioParams
 	{
 		public avs.AudioCodec codec;
@@ -680,10 +671,11 @@ namespace SCServer
 		public UInt32 bitsPerSample;
 		public UInt32 numChannels;
 	}
-	public enum ControlModel:UInt32
+
+	public enum ControlModel : UInt32
 	{
-		NONE=0,
-		CLIENT_ORIGIN_SERVER_GRAVITY=1,
-		SERVER_ORIGIN_CLIENT_LOCAL=2
-	};
+		NONE = 0,
+		CLIENT_ORIGIN_SERVER_GRAVITY = 1,
+		SERVER_ORIGIN_CLIENT_LOCAL = 2
+	}
 }
