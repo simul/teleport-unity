@@ -67,14 +67,14 @@ namespace teleport
 			monitor = CasterMonitor.GetCasterMonitor();
 		}
 
-		public void CreateEncodeCommands(ScriptableRenderContext context, Camera camera, UInt32 tagDataID = 0)
+		public void CreateEncodeCommands(ScriptableRenderContext context, Camera camera, UInt32 tagDataID ,float diffuseAmbientScale)
 		{
 			commandBuffer = new CommandBuffer();
 			commandBuffer.name = "Video Encoder " + clientID;
 
 			ConfigureEncoder(camera);
 
-			CreateEncodeCommand(camera, tagDataID);
+			CreateEncodeCommand(camera, tagDataID, diffuseAmbientScale);
 
 			context.ExecuteCommandBuffer(commandBuffer);
 			ReleaseCommandbuffer(camera);
@@ -139,7 +139,7 @@ namespace teleport
 			_reconfigure = false;
 		}
 
-		void CreateEncodeCommand(Camera camera, UInt32 tagDataID)
+		void CreateEncodeCommand(Camera camera, UInt32 tagDataID,float diffuseAmbientScale)
 		{
 			if (!initalized || _reconfigure)
 			{
@@ -147,12 +147,12 @@ namespace teleport
 			}
 
 			IntPtr ptr;
-			CreateTagDataWrapper(camera, tagDataID, out ptr);
+			CreateTagDataWrapper(camera, tagDataID, diffuseAmbientScale,out ptr);
 			commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 2, ptr);
 		}
 
 		public SceneCaptureCubeTagDataWrapper cubeTagDataWrapper = new SceneCaptureCubeTagDataWrapper();
-		void CreateTagDataWrapper(Camera camera, UInt32 tagDataID, out IntPtr dataPtr)
+		void CreateTagDataWrapper(Camera camera, UInt32 tagDataID, float diffuseAmbientScale, out IntPtr dataPtr)
 		{
 			var teleportSettings = TeleportSettings.GetOrCreateSettings();
 			
@@ -170,6 +170,7 @@ namespace teleport
 			cubeTagDataWrapper.data.cameraTransform.rotation = camera.transform.rotation;
 			cubeTagDataWrapper.data.cameraTransform.scale = new avs.Vector3(1, 1, 1);
 			cubeTagDataWrapper.data.lightCount = (uint)lightDataList.Count;
+			cubeTagDataWrapper.data.diffuseAmbientScale = diffuseAmbientScale;
 
 			// If this doesn't work, do Array.copy
 			cubeTagDataWrapper.data.lights = lightDataList.ToArray();

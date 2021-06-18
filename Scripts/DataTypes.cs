@@ -627,6 +627,7 @@ namespace avs
 		public uint id;
 		public Transform cameraTransform;
 		public uint lightCount;
+		public float diffuseAmbientScale;
 		[MarshalAs(UnmanagedType.ByValArray)]
 		public LightTagData[] lights;
 	};

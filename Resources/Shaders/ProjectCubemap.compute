@@ -80,7 +80,8 @@ void EncodeCubemapFaceCS(uint2 ThreadID : SV_DispatchThreadID)
 	float3 dir=float3(float2(ipos.xy)*2.0-float2(1.0,1.0),1.0);
 	// A MATRIX TRANSFORMATION, just to extract a pixel value that we should be able to look up directly...
 	// use FaceToWorldMatrix.
-
+	
+	dir = float3(-dir.z, dir.x, dir.y);
 	float4 SceneColor = InputCubemapTexture.SampleLevel(samplerInputCubemapTexture,normalize(dir),0);
 	SceneColor.x = sqrt(SceneColor.x);
 	SceneColor.y = sqrt(SceneColor.y);
