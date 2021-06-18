@@ -148,7 +148,7 @@ vec4 RoughnessMip(samplerCUBE sourceCubemap,vec3 view,int numMips,float alpha,fl
 	return vec4(outp.rgb, alpha);
 }
 
-vec4 Diffuse(samplerCUBE sourceCubemap,vec3 view) 
+vec4 AmbientDiffuse(samplerCUBE sourceCubemap,vec3 view) 
 {
 	vec4 outp;
 	const uint NumSamples = 256;
@@ -163,13 +163,10 @@ vec4 Diffuse(samplerCUBE sourceCubemap,vec3 view)
 		L		= CosineSampleHemisphere(E).xyz;
 		float NoL = L.z;
 		L		=mul( L, TangentToWorld );
-		vec4 lookup=100.0*saturate(0.01*CubeSampleLevel(sourceCubemap, L, 2));
+		vec4 lookup=100.0*saturate(0.01*CubeSampleLevel(sourceCubemap, L, 3));
 		result	+= NoL*lookup;
 		Weight	+= NoL;
 	}
-
-
-
 	outp = result / Weight;
 	return vec4(outp.rgb, 1.0);
 }

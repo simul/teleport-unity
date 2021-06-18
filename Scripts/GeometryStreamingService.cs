@@ -51,7 +51,14 @@ namespace teleport
 		private List<Collider> streamedColliders = new List<Collider>();
 		private List<GameObject> streamedGameObjects = new List<GameObject>();
 		private List<Teleport_Streamable> streamedHierarchies = new List<Teleport_Streamable>();
+		/// <summary>
+		///  Lights that are streamed to the client.
+		/// </summary>
 		private Dictionary<uid,Light> streamedLights = new Dictionary<uid, Light>();
+		/// <summary>
+		/// Lights that are baked in realtime into the 
+		/// </summary>
+		private HashSet< Light> bakedLights = new HashSet< Light>();
 
 		private float timeSincePositionUpdate = 0;
 
@@ -87,7 +94,9 @@ namespace teleport
 			streamedGameObjects.Clear();
 			streamedHierarchies.Clear();
 			streamedLights.Clear();
-        }
+			bakedLights.Clear();
+
+		}
 
 		public void RemoveAllNodes()
 		{
@@ -109,54 +118,83 @@ namespace teleport
 
 			return Client_IsStreamingNodeID(session.GetClientID(), nodeID);
 		}
-
+		bool ShouldBake(Light light)
+		{
+			return true;
+		}
 		/// <summary>
 		/// Set the lights to be streamed to this client.
 		///		If they are streamable, this will:
 		///			- ensure that their nodes are streamed.
 		///			- tell the client that these are the active lights.
 		///		If not streamable, the lights will not be sent.
+		///		The lights will either be streamed or baked.
 		/// </summary>
 		/// <param name="lights"></param>
 		public void SetStreamedLights(Light[] lights)
 		{
 			HashSet<uid> streamedNow = new HashSet<uid>();
-			foreach(Light light in lights)
+			HashSet<Light> bakedNow = new HashSet<Light>();
+			foreach (Light light in lights)
 			{
 				// if the light is not streamable, make it so.
-				var streamable = light.gameObject.GetComponentInParent<Teleport_Streamable>();
-				if (!streamable)
+				if(ShouldBake(light))
 				{
-					streamable=light.gameObject.AddComponent<Teleport_Streamable>();
+					bakedNow.Add(light);
+					if (!bakedLights.Contains(light))
+					{
+						bakedLights.Add(light);
+					}
 				}
-				if (!streamedGameObjects.Contains(streamable.gameObject))
+				else
 				{
-					StartStreaming(streamable,4);
-				}
-				var uid = streamable.GetUid();
-				if (uid == 0)
-					continue;
-				streamedNow.Add(uid);
-				if (!streamedLights.ContainsKey(uid))
-				{
-					streamedLights[uid] = light;
+					var streamable = light.gameObject.GetComponentInParent<Teleport_Streamable>();
+					if (!streamable)
+					{
+						streamable=light.gameObject.AddComponent<Teleport_Streamable>();
+					}
+					if (!streamedGameObjects.Contains(streamable.gameObject))
+					{
+						StartStreaming(streamable,4);
+					}
+					var uid = streamable.GetUid();
+					if (uid == 0)
+						continue;
+					streamedNow.Add(uid);
+					if (!streamedLights.ContainsKey(uid))
+					{
+						streamedLights[uid] = light;
+					}
 				}
 			}
-			while(streamedLights.Count> streamedNow.Count)
-			foreach(var u in streamedLights)
+			while (bakedLights.Count > bakedNow.Count)
 			{
-				if(!streamedNow.Contains(u.Key))
+				foreach (var u in bakedLights)
 				{
-					streamedLights.Remove(u.Key);
-					if (u.Value != null)
+					if (!bakedNow.Contains(u))
 					{
-						var streamable = u.Value.GetComponentInParent<Teleport_Streamable>();
-						if (streamable != null)
-						{
-							StopStreaming(streamable,4);
-						}
+						bakedLights.Remove(u);
+						break;
 					}
-					break;
+				}
+			}
+			while (streamedLights.Count>streamedNow.Count)
+			{
+				foreach (var u in streamedLights)
+				{
+					if (!streamedNow.Contains(u.Key))
+					{
+						streamedLights.Remove(u.Key);
+						if (u.Value != null)
+						{
+							var streamable = u.Value.GetComponentInParent<Teleport_Streamable>();
+							if (streamable != null)
+							{
+								StopStreaming(streamable, 4);
+							}
+						}
+						break;
+					}
 				}
 			}
 		}
@@ -197,6 +235,12 @@ namespace teleport
 		{
 			return streamedLights;
 		}
+
+		public HashSet< Light> GetBakedLights()
+		{
+			return bakedLights;
+		}
+
 
 		public void StreamPlayerBody()
 		{

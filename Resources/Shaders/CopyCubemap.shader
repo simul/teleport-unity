@@ -7,6 +7,9 @@ Shader "Teleport/CopyCubemap"
     int MipIndex;
     int NumMips;
     uint Face;
+	float Multiplier;
+	float3 Direction;
+	float3 Colour;
     sampler2D _SourceTexture;
     samplerCUBE _SourceCubemapTexture;
 
@@ -56,9 +59,10 @@ Shader "Teleport/CopyCubemap"
 	}
     
     
-    fixed4 copy_face_frag (v2f i) : SV_Target
+    fixed4 encode_face_frag (v2f i) : SV_Target
     {
         vec3 view   =CubeFaceAndTexCoordsToView(Face,i.uv);
+		view = float3(-view.z,view.x,view.y);
         vec4 res    =CubeSampleLevel (_SourceCubemapTexture, view, (float)MipIndex) ;
 	    return res;
     }
@@ -70,13 +74,22 @@ Shader "Teleport/CopyCubemap"
         vec4 res    =RoughnessMip(_SourceCubemapTexture, view, NumMips, 1.0, Roughness,false);
 	    return res;
     }
-    fixed4 diffuse_frag (v2f i) : SV_Target
+    fixed4 ambient_diffuse_frag (v2f i) : SV_Target
     {
         vec3 view   =CubeFaceAndTexCoordsToView(Face,i.uv);
-       // vec4 res    =RoughnessMip(_SourceCubemapTexture, view, NumMips, 1.0, 1.0,true);
-        vec4 res    =Diffuse(_SourceCubemapTexture, view);
+        vec4 res    =Multiplier*AmbientDiffuse(_SourceCubemapTexture, view);
 	    return res;
     }
+    fixed4 directional_diffuse_frag (v2f i) : SV_Target
+    {
+        float3 view   =CubeFaceAndTexCoordsToView(Face,i.uv);
+        float4 res    =Multiplier*float4(Colour*max(0.0,dot(Direction,view)),1.0);
+		//res.r+=max(0.0,view.x);
+		//res.g+=max(0.0,view.y);
+		//res.b+=max(0.0,view.z);
+	    return res;
+    }
+		
 
     ENDCG
     SubShader
@@ -106,7 +119,7 @@ Shader "Teleport/CopyCubemap"
 
             CGPROGRAM
             #pragma vertex vert_from_id
-            #pragma fragment copy_face_frag
+            #pragma fragment encode_face_frag
             ENDCG
         }
         Pass
@@ -115,11 +128,18 @@ Shader "Teleport/CopyCubemap"
 
             CGPROGRAM
             #pragma vertex vert_from_id
-            #pragma fragment diffuse_frag
+            #pragma fragment ambient_diffuse_frag
+            ENDCG
+        }
+        Pass
+        {
+            ZWrite Off ZTest Always Cull Off
+			Blend One One
+            CGPROGRAM
+            #pragma vertex vert_from_id
+            #pragma fragment directional_diffuse_frag
             ENDCG
         }
     }
-
-
     Fallback Off
 }

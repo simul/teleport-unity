@@ -146,7 +146,7 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
-		public void GenerateDiffuseCubemap(ScriptableRenderContext context, RenderTexture SourceCubeTexture, RenderTexture DiffuseCubeTexture, int face)
+		public void GenerateDiffuseCubemap(ScriptableRenderContext context, RenderTexture SourceCubeTexture, HashSet<Light> bakedLights, RenderTexture DiffuseCubeTexture, int face,float light_scale)
 		{
 			var buffer = new CommandBuffer();
 			buffer.name = "Diffuse";
@@ -157,9 +157,21 @@ namespace teleport
 			buffer.SetGlobalInt("Face", face);
 			buffer.SetGlobalFloat("Roughness", 1.0F);
 			buffer.SetGlobalTexture("_SourceCubemapTexture", SourceCubeTexture);
-			// 
+			// We downscale the whole diffuse so that it peaks at the maximum colour value.
+			buffer.SetGlobalFloat("Multiplier", light_scale);
+			// Here we encode the contribution of the diffuse cubemap.
 			buffer.DrawProcedural(Matrix4x4.identity, createLightingCubemapMaterial,3, MeshTopology.Triangles, 6);
-
+			// Now we encode the contribution of the baked lights.
+			foreach(Light light in bakedLights)
+			{
+				if (light.type != LightType.Directional)
+					continue;
+				var clr = light.intensity * light.color.linear;
+				var dir = light.transform.forward;
+				buffer.SetGlobalVector("Colour", new Vector4(clr.r, clr.g, clr.b, clr.a));
+				buffer.SetGlobalVector("Direction", new Vector4(-dir.x,dir.y, dir.z, 0.0F));
+				buffer.DrawProcedural(Matrix4x4.identity, createLightingCubemapMaterial, 4, MeshTopology.Triangles, 6);
+			}
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
@@ -763,24 +775,34 @@ namespace teleport
 
 				Vector2Int shadowmapOffset;
 
+				// We downscale the whole diffuse so that it peaks at the maximum colour value.
+				float max_light = 1.0f;
+				var bakedLights=SessionComponent.GeometryStreamingService.GetBakedLights();
+				foreach (Light light in bakedLights)
+				{
+					if(light.type!=LightType.Directional)
+						continue;
+					var clr = light.intensity * light.color.linear;
+					max_light = Math.Max(Math.Max(Math.Max(max_light, clr.r), clr.g), clr.b);
+				}
+				float diffuseAmbientScale=1.0F/max_light;
 				if (teleportSettings.casterSettings.usePerspectiveRendering)
 				{
 					// Draw scene
 					camera.fieldOfView = teleportSettings.casterSettings.perspectiveFOV;
 					DrawPerspective(context, camera, lightingOrder);
-
 					// Draw cubemaps
-					camera.fieldOfView = 90;
+					camera.fieldOfView = 90.0F;
 					for (int i = 0; i < VideoEncoding.NumFaces; ++i)
 					{
-						DrawCubemapFace(context, camera, lightingOrder, i);
+						DrawCubemapFace(context, camera, lightingOrder, i,diffuseAmbientScale);
 					}
 				}
 				else
 				{
 					for (int i = 0; i < VideoEncoding.NumFaces; ++i)
 					{
-						DrawCubemapFace(context, camera, lightingOrder, i);
+						DrawCubemapFace(context, camera, lightingOrder, i,diffuseAmbientScale);
 					}
 				}
 
@@ -798,7 +820,7 @@ namespace teleport
 				if (ClientID != 0 && teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
 				{
 					var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
-					videoEncoder.CreateEncodeCommands(context, camera, tagDataID);
+					videoEncoder.CreateEncodeCommands(context, camera, tagDataID, max_light);
 				}
 			}
 		}
@@ -826,7 +848,7 @@ namespace teleport
 			camera.farClipPlane = farClipPlane;
 			camera.aspect = 1.0F;
 		}
-		void DrawCubemapFace(ScriptableRenderContext context, Camera camera, TeleportRenderPipeline.LightingOrder lightingOrder, int face)
+		void DrawCubemapFace(ScriptableRenderContext context, Camera camera, TeleportRenderPipeline.LightingOrder lightingOrder, int face,float diffuseAmbientScale)
 		{
 			CullingResults cullingResultsAll;
 			if (!Cull(context, camera, out cullingResultsAll))
@@ -865,7 +887,7 @@ namespace teleport
 					DrawTransparentGeometry(context, camera, layerMask, renderingMask);
 		
 					videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face, 0);
-					videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face);
+					videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face,diffuseAmbientScale);
 					videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent,face);
 				}
 				else
@@ -886,7 +908,7 @@ namespace teleport
 					DrawTransparentGeometry(context, camera, layerMask, renderingMask);
 					videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, face);
 					videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face, 0);
-					videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face);
+					videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face, diffuseAmbientScale);
 					videoEncoding.EncodeColor(context, camera, face);
 					videoEncoding.EncodeDepth(context, camera, depthViewport);
 					videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent, face);
