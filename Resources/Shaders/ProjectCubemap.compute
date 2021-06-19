@@ -13,6 +13,7 @@ static const int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
 //static const int2 FaceOffsets[] = { {2,1},{1,1},{0,0},{1,0},{2,0},{0,1} };
 
 Texture2D<float4> InputColorTexture;
+Texture2D<float4> InputDepthTexture;
 TextureCube<float4> InputCubemapTexture;
 SamplerState samplerInputColorTexture;
 SamplerState samplerInputCubemapTexture;
@@ -44,6 +45,21 @@ void EncodeTagDataIdCS(uint2 ThreadID : SV_DispatchThreadID)
 	RWOutputColorTexture[Pos] = float4(masked_bits.x, masked_bits.x, masked_bits.x, masked_bits.x);
 }
 
+float PosToDistanceMultiplier(int2 pos, int w)
+{
+	float h = (w + 1) / 2.0;
+	vec2 diff = (vec2(pos) - vec2(h, h)) * 2.0 / vec2(w, w);
+	return sqrt(1.0 + dot(diff, diff));
+}
+
+float GetDepth(int2 pos, int w)
+{
+	float m = PosToDistanceMultiplier(pos, w);
+	float d = (LinearEyeDepth(InputDepthTexture[pos].r) - 5.0) / 25.0;
+	d *= m;
+	return d;
+}
+
 [numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
 void EncodeColorCS(uint2 ThreadID : SV_DispatchThreadID)
 {
@@ -59,8 +75,8 @@ void EncodeColorCS(uint2 ThreadID : SV_DispatchThreadID)
 	SceneColor.x = sqrt(SceneColor.x);
 	SceneColor.y = sqrt(SceneColor.y);
 	SceneColor.z = sqrt(SceneColor.z);
-
-	pos =pos.xy+ Offset+FaceOffsets[Face] * InputW;
+	SceneColor.w = GetDepth(ipos, int(InputW));
+	pos = pos.xy + Offset + FaceOffsets[Face] * InputW;
 
 	RWOutputColorTexture[pos] = SceneColor;
 }
