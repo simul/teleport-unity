@@ -65,8 +65,8 @@ namespace SCServer
 		[MarshalAs(UnmanagedType.U1)] public bool pipeDllOutputToUnity = false;
 		public byte estimatedDecodingFrequency = 10; //An estimate of how frequently the client will decode the packets sent to it; used by throttling.
 		
-
-		[Header("Compression")]
+		[Header("Streamed Textures")]
+		public Int32 maximumTextureSize= 1024;
 		[MarshalAs(UnmanagedType.U1)] public bool useCompressedTextures = true;
 		public byte qualityLevel = 1;
 		public byte compressionLevel = 1;

@@ -145,6 +145,7 @@ namespace avs
 		D16F,
 		D24F,
 		D32F,
+		RGBAFloat,
 		MAX
 	}
 
@@ -182,6 +183,9 @@ namespace avs
 		public float roughOffset = 1.0f;
 	}
 
+	/// <summary>
+	/// Node properties for sending from C# to C++ dll.
+	/// </summary>
 	[StructLayout(LayoutKind.Sequential)]
 	public struct Node
 	{
@@ -189,6 +193,8 @@ namespace avs
 		public IntPtr name;
 
 		public Transform transform;
+		[MarshalAs(UnmanagedType.I1)]
+		public bool stationary;
 		public NodeDataType dataType;
 		public NodeDataSubtype dataSubtype;
 		public uid parentID;
@@ -206,6 +212,8 @@ namespace avs
 
 		public UInt64 materialAmount;
 		public uid[] materialIDs;
+
+		public NodeRenderState renderState;
 
 		public UInt64 childAmount;
 		public uid[] childIDs;
@@ -359,7 +367,7 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreMaterial(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Material material);
 		[DllImport("SimulCasterServer")]
-		private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture texture, string basisFileLocation);
+		private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture texture, string basisFileLocation, [MarshalAs(UnmanagedType.I1)] bool genMips,  [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC);
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreShadowMap(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture shadowMap);
 
@@ -384,6 +392,8 @@ namespace teleport
 		private static extern string GetMessageForNextCompressedTexture(UInt64 textureIndex, UInt64 totalTextures);
 		[DllImport("SimulCasterServer")]
 		private static extern void CompressNextTexture();
+		[DllImport("SimulCasterServer")]
+		private static extern void SetCompressionLevels(byte compressionStrength, byte compressionQuality);
 		#endregion
 
 		#region CustomSerialisation
@@ -399,6 +409,7 @@ namespace teleport
 		private const string TELEPORT_VR_PATH = "TeleportVR/";
 
 		private readonly Dictionary<UnityEngine.Object, uid> processedResources = new Dictionary<UnityEngine.Object, uid>(); //<Resource, ResourceID>
+
 		private bool isAwake = false;
 
 		[SerializeField]
@@ -677,7 +688,7 @@ namespace teleport
 			avs.Node extractedNode = new avs.Node();
 			extractedNode.name = Marshal.StringToBSTR(node.name);
 			extractedNode.transform = avs.Transform.FromLocalUnityTransform(node.transform);
-
+			extractedNode.stationary = (node.isStatic);
 			ExtractNodeHierarchy(node, ref extractedNode, forceMask);
 			ExtractNodeSubType(node, ref extractedNode);
 
@@ -822,7 +833,23 @@ namespace teleport
 			return materialID;
 		}
 
-		public void AddTextureData(Texture texture, avs.Texture textureData)
+		public string GenerateBasisFilePath(string textureAssetPath)
+		{
+			string basisFileLocation = textureAssetPath; //Use editor file location as unique name; this won't work out of the Unity Editor.
+			basisFileLocation = basisFileLocation.Replace("/", "#"); //Replace forward slashes with hashes.
+			int idx = basisFileLocation.LastIndexOf('.');
+			if (idx >= 0)
+				basisFileLocation = basisFileLocation.Remove(idx); //Remove file extension.
+			string folderPath = compressedTexturesFolderPath;
+			//Create directiory if it doesn't exist.
+			if (!Directory.Exists(folderPath))
+			{
+				Directory.CreateDirectory(folderPath);
+			}
+			basisFileLocation = folderPath + basisFileLocation + ".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
+			return basisFileLocation;
+		}
+		public void AddTextureData(Texture texture, avs.Texture textureData, bool highQualityUASTC)
 		{
 			if(!processedResources.TryGetValue(texture, out uid textureID))
 			{
@@ -839,23 +866,13 @@ namespace teleport
 			string basisFileLocation = "";
 			//Basis Universal compression won't be used if the file location is left empty.
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-			if(teleportSettings.casterSettings.useCompressedTextures)
+			if (teleportSettings.casterSettings.useCompressedTextures)
 			{
-				string folderPath = compressedTexturesFolderPath;
-				//Create directiory if it doesn't exist.
-				if(!Directory.Exists(folderPath))
-				{
-					Directory.CreateDirectory(folderPath);
-				}
-
-				basisFileLocation = textureAssetPath; //Use editor file location as unique name; this won't work out of the Unity Editor.
-				basisFileLocation = basisFileLocation.Replace("/", "#"); //Replace forward slashes with hashes.
-				int idx = basisFileLocation.LastIndexOf('.');
-				if(idx >= 0) basisFileLocation = basisFileLocation.Remove(idx); //Remove file extension.
-				basisFileLocation = folderPath + basisFileLocation + ".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
+				basisFileLocation = GenerateBasisFilePath(textureAssetPath);
 			}
-
-			StoreTexture(textureID, guid, lastModified, textureData, basisFileLocation);
+			bool genMips=false;
+			textureData.mipCount=1;
+			StoreTexture(textureID, guid, lastModified, textureData, basisFileLocation,  genMips, highQualityUASTC);
 #endif
 		}
 
@@ -905,8 +922,10 @@ namespace teleport
 		{
 			UInt64 totalTexturesToCompress = GetAmountOfTexturesWaitingForCompression();
 
+			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+			SetCompressionLevels(teleportSettings.casterSettings.compressionLevel, teleportSettings.casterSettings.qualityLevel);
 #if UNITY_EDITOR
-			for(UInt64 i = 0; i < totalTexturesToCompress; i++)
+			for (UInt64 i = 0; i < totalTexturesToCompress; i++)
 			{
 				string compressionMessage = GetMessageForNextCompressedTexture(i, totalTexturesToCompress);
 
@@ -960,7 +979,7 @@ namespace teleport
 					if(!IsMaterialStored(materialID))
 					{
 						Debug.LogError($"Missing material {material.name}({materialID}), which was added to \"{extractTo.name}\".");
-		}
+					}
 				}
 				else
 				{
@@ -979,7 +998,7 @@ namespace teleport
 			{
 				return false;
 			}
-
+			extractTo.renderState.lightmapScaleOffset=meshRenderer.lightmapScaleOffset;
 			//Extract mesh used on node.
 			Mesh mesh = sceneReferenceManager.GetGameObjectMesh(source);
 			extractTo.dataID = AddMesh(mesh, forceMask);
@@ -1004,7 +1023,7 @@ namespace teleport
 			{
 				return false;
 			}
-
+			extractTo.renderState.lightmapScaleOffset = skinnedMeshRenderer.lightmapScaleOffset;
 			//Extract mesh used on node.
 			Mesh mesh = sceneReferenceManager.GetGameObjectMesh(source);
 			extractTo.dataID = AddMesh(mesh, forceMask);
@@ -1121,7 +1140,8 @@ namespace teleport
 			uid normalAccessorID = GenerateID();
 			uid tangentAccessorID = GenerateID();
 			uid uv0AccessorID = GenerateID();
-			uid uv2AccessorID = mesh.uv2.Length != 0 ? GenerateID() : 0;
+			// Let's always generate an accessor for uv2. But if there are no uv's there we'll just point it at uv0.
+			uid uv2AccessorID = GenerateID();//mesh.uv2.Length != 0 ? GenerateID() : 0;
 			uid jointAccessorID = 0;
 			uid weightAccessorID = 0;
 
@@ -1185,6 +1205,7 @@ namespace teleport
 					}
 				);
 			}
+			bool have_uv2 = false;
 
 			//UVs/Tex-Coords Buffer (All UVs are combined into a single buffer, with a view for each UV):
 			{
@@ -1258,8 +1279,7 @@ namespace teleport
 						byteOffset = 0
 					}
 				);
-
-				if(mesh.uv2.Length != 0)
+				if (mesh.uv2.Length != 0)
 				{
 					//Accessor for second UV channel.
 					accessors.Add
@@ -1274,6 +1294,24 @@ namespace teleport
 							byteOffset = 0
 						}
 					);
+					have_uv2 = true;
+				}
+				else
+				{
+					// If not present, use the regular uv's for channel 2:
+					accessors.Add
+					(
+						uv2AccessorID,
+						new avs.Accessor
+						{
+							type = avs.Accessor.DataType.VEC2,
+							componentType = avs.Accessor.ComponentType.FLOAT,
+							count = (ulong)mesh.uv.Length,
+							bufferView = uv0ViewID,
+							byteOffset = 0
+						}
+					);
+					have_uv2=true;
 				}
 			}
 
@@ -1336,7 +1374,7 @@ namespace teleport
 				bufferViews.Add(jointBufferViewID, jointBufferView);
 				bufferViews.Add(weightBufferViewID, weightBufferView);
 
-				///Accessors
+				// Accessors
 				avs.Accessor jointAccessor = new avs.Accessor
 				{
 					type = avs.Accessor.DataType.VEC4,
@@ -1368,7 +1406,7 @@ namespace teleport
 			//Create Attributes
 			for(int i = 0; i < primitives.Length; i++)
 			{
-				primitives[i].attributeCount = (ulong)(4 + (mesh.uv2.Length != 0 ? 1 : 0) + (mesh.boneWeights.Length != 0 ? 2 : 0));
+				primitives[i].attributeCount = (ulong)(4 + (have_uv2 ? 1 : 0) + (mesh.boneWeights.Length != 0 ? 2 : 0));
 				primitives[i].attributes = new avs.Attribute[primitives[i].attributeCount];
 				primitives[i].primitiveMode = avs.PrimitiveMode.TRIANGLES;
 
@@ -1378,7 +1416,7 @@ namespace teleport
 				primitives[i].attributes[3] = new avs.Attribute { accessor = uv0AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_0 };
 
 				int additionalAttributes = 0;
-				if(mesh.uv2.Length != 0)
+				if(have_uv2)//mesh.uv2.Length != 0) always add uv2s.
 				{
 					primitives[i].attributes[4 + additionalAttributes] = new avs.Attribute { accessor = uv2AccessorID, semantic = avs.AttributeSemantic.TEXCOORD_1 };
 					additionalAttributes += 1;
@@ -1667,7 +1705,7 @@ namespace teleport
 			}
 		}
 
-		private uid AddTexture(Texture texture, ForceExtractionMask forceMask)
+		public uid AddTexture(Texture texture, ForceExtractionMask forceMask)
 		{
 			if(!texture)
 			{
@@ -1681,52 +1719,52 @@ namespace teleport
 			}
 
 			//We can't extract textures in play-mode.
-				if(Application.isPlaying)
-				{
-					Debug.LogWarning("Texture <b>" + texture.name + "</b> has not been extracted, but is being used on streamed geometry!");
-					return 0;
-				}
+			if(Application.isPlaying)
+			{
+				Debug.LogWarning("Texture <b>" + texture.name + "</b> has not been extracted, but is being used on streamed geometry!");
+				return 0;
+			}
 
 			textureID = textureID == 0 ? GenerateID() : textureID;
 			processedResources[texture] = textureID;
 
-				avs.Texture extractedTexture = new avs.Texture()
-				{
-					name = Marshal.StringToBSTR(texture.name),
+			avs.Texture extractedTexture = new avs.Texture()
+			{
+				name = Marshal.StringToBSTR(texture.name),
 
-					width = (uint)texture.width,
-					height = (uint)texture.height,
-					mipCount = 1,
+				width = (uint)texture.width,
+				height = (uint)texture.height,
+				mipCount = 1,
 
-					format = avs.TextureFormat.INVALID, //Assumed
-					compression = avs.TextureCompression.UNCOMPRESSED, //Assumed
+				format = avs.TextureFormat.INVALID, //Assumed
+				compression = avs.TextureCompression.UNCOMPRESSED, //Assumed
 
-					samplerID = 0
-				};
+				samplerID = 0
+			};
 
-				switch(texture)
-				{
-					case Texture2D texture2D:
-						extractedTexture.depth = 1;
-						extractedTexture.arrayCount = 1;
-						extractedTexture.mipCount = (uint)texture2D.mipmapCount;
-						break;
-					case Texture2DArray texture2DArray:
-						extractedTexture.depth = 1;
-						extractedTexture.arrayCount = (uint)texture2DArray.depth;
-						extractedTexture.bytesPerPixel = GetBytesPerPixel(texture2DArray.format);
-						break;
-					case Texture3D texture3D:
-						extractedTexture.depth = (uint)texture3D.depth;
-						extractedTexture.arrayCount = 1;
-						extractedTexture.bytesPerPixel = GetBytesPerPixel(texture3D.format);
-						break;
-					default:
-						Debug.LogError("Passed texture was unsupported type: " + texture.GetType() + "!");
-						return 0;
-				}
+			switch(texture)
+			{
+				case Texture2D texture2D:
+					extractedTexture.depth = 1;
+					extractedTexture.arrayCount = 1;
+					extractedTexture.mipCount = (uint)texture2D.mipmapCount;
+					break;
+				case Texture2DArray texture2DArray:
+					extractedTexture.depth = 1;
+					extractedTexture.arrayCount = (uint)texture2DArray.depth;
+					extractedTexture.bytesPerPixel = GetBytesPerPixel(texture2DArray.format);
+					break;
+				case Texture3D texture3D:
+					extractedTexture.depth = (uint)texture3D.depth;
+					extractedTexture.arrayCount = 1;
+					extractedTexture.bytesPerPixel = GetBytesPerPixel(texture3D.format);
+					break;
+				default:
+					Debug.LogError("Passed texture was unsupported type: " + texture.GetType() + "!");
+					return 0;
+			}
 
-				texturesWaitingForExtraction.Add(new TextureExtractionData { id = textureID, unityTexture = texture, textureData = extractedTexture });
+			texturesWaitingForExtraction.Add(new TextureExtractionData { id = textureID, unityTexture = texture, textureData = extractedTexture });
 			return textureID;
 		}
 

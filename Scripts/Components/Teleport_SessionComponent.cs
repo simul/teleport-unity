@@ -664,9 +664,9 @@ namespace teleport
 			sessions[clientID] = this;
 			UpdateClientSettings();
 
-			if (teleportSettings.casterSettings.isStreamingGeometry)
+			if(geometryStreamingService!=null&&teleportSettings.casterSettings.isStreamingGeometry)
 			{
-				geometryStreamingService.StreamPlayerBody();
+				geometryStreamingService.StreamGlobals();
 			}
 		}
 

@@ -612,6 +612,13 @@ namespace avs
 		public AnimationTimeControl timeControl; //What controls the animation's time value.
 	}
 
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct NodeRenderState
+	{
+		public avs.Vector4 lightmapScaleOffset;
+	}
+
 	[StructLayout(LayoutKind.Sequential)]
 	public struct SceneCaptureCubeTagData
 	{

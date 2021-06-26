@@ -87,7 +87,7 @@ namespace teleport
 			Tuple.Create(28, "Video", false),
 			Tuple.Create(2,  "Audio", false),
 			Tuple.Create(6,  "Debugging", false),
-			Tuple.Create(3,  "Compression", false),
+			Tuple.Create(4,  "Streamed Textures", false),
 			Tuple.Create(2,  "Camera", false),
 			Tuple.Create(5,  "Lighting", false),
 			Tuple.Create(1,  "Input", false),

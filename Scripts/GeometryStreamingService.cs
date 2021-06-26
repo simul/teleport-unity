@@ -15,14 +15,16 @@ namespace teleport
 		private static extern void Client_AddNode(uid clientID, uid nodeID, avs.Transform currentTransform);
 		[DllImport("SimulCasterServer")]
 		private static extern void Client_RemoveNodeByID(uid clientID, uid nodeID);
-
+		[DllImport("SimulCasterServer")]
+		private static extern void Client_AddGenericTexture(uid clientID, uid textureID);
+		[DllImport("SimulCasterServer")]
+		public static extern void Client_SetGlobalIlluminationTexture(uid clientID, uid textureID);
 		[DllImport("SimulCasterServer")]
 		public static extern void Client_NodeEnteredBounds(uid clientID, uid nodeID);
 		[DllImport("SimulCasterServer")]
 		public static extern void Client_NodeLeftBounds(uid clientID, uid nodeID);
 		[DllImport("SimulCasterServer")]
 		private static extern bool Client_IsStreamingNodeID(uid clientID, uid nodeID);
-
 		[DllImport("SimulCasterServer")]
 		public static extern void Client_ShowNode(uid clientID, uid nodeID);
 		[DllImport("SimulCasterServer")]
@@ -31,15 +33,14 @@ namespace teleport
 		public static extern void Client_SetNodeVisible(uid clientID, uid nodeID, bool isVisible);
 		[DllImport("SimulCasterServer")]
 		public static extern bool Client_IsClientRenderingNodeID(uid clientID, uid nodeID);
-
 		[DllImport("SimulCasterServer")]
 		public static extern bool Client_HasResource(uid clientID, uid resourceID);
-
 		[DllImport("SimulCasterServer")]
 		private static extern void Client_UpdateNodeMovement(uid clientID, avs.MovementUpdate[] updates, int updateAmount);
+
+
 		[DllImport("SimulCasterServer")]
 		private static extern void Client_UpdateNodeEnabledState(uid clientID, avs.NodeUpdateEnabledState[] updates, int updateAmount);
-
 		[DllImport("SimulCasterServer")]
 		private static extern void Client_SetNodeHighlighted(uid clientID, uid nodeID, bool isHighlighted);
 
@@ -133,6 +134,7 @@ namespace teleport
 		/// <param name="lights"></param>
 		public void SetStreamedLights(Light[] lights)
 		{
+			// Let us assume that these lights are given in order of priority.
 			HashSet<uid> streamedNow = new HashSet<uid>();
 			HashSet<Light> bakedNow = new HashSet<Light>();
 			foreach (Light light in lights)
@@ -236,12 +238,22 @@ namespace teleport
 			return streamedLights;
 		}
 
-		public HashSet< Light> GetBakedLights()
+		public HashSet<Light> GetBakedLights()
 		{
 			return bakedLights;
 		}
 
-
+		public void StreamGlobals()
+		{
+			StreamGenericTextures();
+			StreamPlayerBody();
+		}
+		public void StreamGenericTextures()
+		{
+			uid textureID= GeometrySource.GetGeometrySource().FindResourceID(GlobalIlluminationExtractor.GetTexture());
+			Client_AddGenericTexture(session.GetClientID(), textureID);
+			Client_SetGlobalIlluminationTexture(session.GetClientID(),  textureID);
+		}
 		public void StreamPlayerBody()
 		{
 			CasterMonitor monitor = CasterMonitor.GetCasterMonitor();
@@ -291,7 +303,6 @@ namespace teleport
 						{
 							streamable = collider.gameObject.AddComponent<Teleport_Streamable>();
 						}
-
 						StartStreaming(streamable, 1);
 					}
 				}
@@ -350,6 +361,7 @@ namespace teleport
 				}
 
 				Client_AddNode(session.GetClientID(), streamedNode.nodeID, avs.Transform.FromLocalUnityTransform(streamedNode.gameObject.transform));
+				
 				Client_NodeEnteredBounds(session.GetClientID(), streamedNode.nodeID);
 				streamedGameObjects.Add(streamedNode);
 			}

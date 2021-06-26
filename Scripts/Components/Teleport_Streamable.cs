@@ -7,7 +7,7 @@ using uid = System.UInt64;
 namespace teleport
 {
 	[Serializable]
-	//Class for storing state and cached components of a node that is streamed in a Teleport_Streamable's hierarchy.
+	/// Class for storing state and cached components of a node that is streamed in a Teleport_Streamable's hierarchy.
 	public class StreamedNode
 	{
 		public GameObject gameObject; //GameObject that is being streamed.
@@ -331,7 +331,7 @@ namespace teleport
 				{
 					if(streamedNode == component.gameObject)
 					{
-						streamedNode.AddComponent((dynamic)component);
+						streamedNode.AddComponent(component);
 						break;
 					}
 				}

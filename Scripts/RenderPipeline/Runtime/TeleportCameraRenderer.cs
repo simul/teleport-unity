@@ -186,7 +186,7 @@ namespace teleport
 				var clr = light.intensity * light.color.linear;
 				var dir = light.transform.forward;
 				buffer.SetGlobalVector("Colour", new Vector4(clr.r, clr.g, clr.b, clr.a));
-				buffer.SetGlobalVector("Direction", new Vector4(-dir.x,dir.y, dir.z, 0.0F));
+				buffer.SetGlobalVector("Direction", new Vector4(dir.x,dir.y, dir.z, 0.0F));
 				buffer.DrawProcedural(Matrix4x4.identity, createLightingCubemapMaterial, 4, MeshTopology.Triangles, 6);
 			}
 			context.ExecuteCommandBuffer(buffer);
@@ -600,19 +600,6 @@ namespace teleport
 				}
 				drawingSettings.overrideMaterial = highlightMaterial;
 			}
-
-			/*	drawingSettings.perObjectData |= PerObjectData.LightProbe
-												| PerObjectData.ReflectionProbes
-												| PerObjectData.LightProbeProxyVolume
-												| PerObjectData.Lightmaps
-												| PerObjectData.LightData
-												| PerObjectData.MotionVectors
-												| PerObjectData.LightIndices
-												| PerObjectData.ReflectionProbeData
-												| PerObjectData.OcclusionProbe
-												| PerObjectData.OcclusionProbeProxyVolume              
-												| PerObjectData.ShadowMask
-												;*/
 			teleportLighting.SetupForwardBasePass(context, camera, cullingResults, lightingOrder, renderTarget, face);
 			for (int i = 1; i < legacyShaderTagIds.Length; i++)
 			{
@@ -915,7 +902,12 @@ namespace teleport
 
 					DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder);
 					DrawTransparentGeometry(context, camera, layerMask, renderingMask);
+					
+					// The unfiltered (reflection cube) should render close objects (though maybe only static ones).
+					float oldNearClip = camera.nearClipPlane;
+					camera.nearClipPlane = 0.4f;
 					videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, face);
+					camera.nearClipPlane = oldNearClip;
 					videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face, 0);
 					videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face, diffuseAmbientScale);
 					videoEncoding.EncodeColor(context, camera, face);
