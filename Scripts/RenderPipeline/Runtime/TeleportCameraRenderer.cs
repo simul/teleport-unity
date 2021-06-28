@@ -802,7 +802,7 @@ namespace teleport
 					}
 				}
 
-				videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent,lightingOrder, teleportLighting);
+				//videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent,lightingOrder, teleportLighting);
 
 				videoEncoding.EncodeWebcam(context, camera, SessionComponent.clientSettings.webcamPos, SessionComponent.clientSettings.webcamSize);	
 				videoEncoding.EncodeTagID(context, camera);
