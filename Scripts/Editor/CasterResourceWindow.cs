@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -142,6 +144,15 @@ namespace teleport
 			if(GUILayout.Button("Force Project Geometry Extraction"))
 			{
 				ExtractProjectGeometry(GeometrySource.ForceExtractionMask.FORCE_EVERYTHING);
+			}
+
+			EditorGUILayout.EndHorizontal();
+
+			EditorGUILayout.BeginHorizontal();
+
+			if (GUILayout.Button("Extract Global Illumination Textures"))
+			{
+				ExtractGlobalIlluminationTextures();
 			}
 
 			EditorGUILayout.EndHorizontal();
@@ -366,7 +377,12 @@ namespace teleport
 				EditorSceneManager.OpenScene(originalScenes[i], OpenSceneMode.Additive);
 			}
 		}
-
+		private void ExtractGlobalIlluminationTextures()
+		{
+			Texture giTexture=teleport.GlobalIlluminationExtractor.GetTexture();
+			geometrySource.AddTexture(giTexture,GeometrySource.ForceExtractionMask.FORCE_EVERYTHING);
+			ExtractTextures();
+		}
 		private void ExtractTextures()
 		{
 			//According to the Unity docs, we need to call Release() on any render textures we are done with.
@@ -383,47 +399,82 @@ namespace teleport
 			//Extract texture data with a compute shader, rip the data, and store in the native C++ plugin.
 			for(int i = 0; i < renderTextures.Length; i++)
 			{
+				bool highQualityUASTC=false;
 				Texture2D sourceTexture = (Texture2D)geometrySource.texturesWaitingForExtraction[i].unityTexture;
 
 				if(EditorUtility.DisplayCancelableProgressBar($"Extracting Textures ({i + 1} / {renderTextures.Length})", $"Processing \"{sourceTexture.name}\".", (float)(i + 1) / renderTextures.Length))
 				{
 					return;
 				}
-
-				//If we always created a new render texture, then reloading would lose the link to the render texture in the inspector.
-				if(renderTextures[i] == null)
+				int targetWidth =sourceTexture.width;
+				int targetHeight=sourceTexture.height;
+				int scale=1;
+				while (Math.Max(targetWidth, targetHeight)>teleportSettings.casterSettings.maximumTextureSize)
 				{
-					renderTextures[i] = new RenderTexture(sourceTexture.width, sourceTexture.height, 0);
+					targetWidth=(targetWidth+1)/2;
+					targetHeight=(targetHeight + 1)/2;
+					scale*=2;
+				}
+				//If we always created a new render texture, then reloading would lose the link to the render texture in the inspector.
+				if (renderTextures[i] == null)
+				{
+					renderTextures[i] = new RenderTexture(targetWidth, targetHeight, 0);
 				}
 				else
 				{
 					renderTextures[i].Release();
-					renderTextures[i].width = sourceTexture.width;
-					renderTextures[i].height = sourceTexture.height;
+					renderTextures[i].width = targetWidth;
+					renderTextures[i].height = targetHeight;
 					renderTextures[i].depth = 0;
 				}
-
-				renderTextures[i].enableRandomWrite = true;
-				renderTextures[i].name = $"{geometrySource.texturesWaitingForExtraction[i].unityTexture.name} ({geometrySource.texturesWaitingForExtraction[i].id})";
-				renderTextures[i].Create();
 
 				//Normal maps need to be extracted differently; i.e. convert from DXT5nm format.
 				string path = AssetDatabase.GetAssetPath(sourceTexture);
 				TextureImporter textureImporter = (TextureImporter)AssetImporter.GetAtPath(path);
 				TextureImporterType textureType = textureImporter ? textureImporter.textureType : TextureImporterType.Default;
+				bool isNormal= textureType == UnityEditor.TextureImporterType.NormalMap;
+				switch (sourceTexture.format)
+				{
+					case TextureFormat.RGBAFloat:
+						renderTextures[i].format = RenderTextureFormat.ARGB32;
+						highQualityUASTC = false;
+						break;
+					case TextureFormat.BC6H:
+						renderTextures[i].format = RenderTextureFormat.ARGB32;
+						highQualityUASTC= true;
+						break;
+					case TextureFormat.RGBAHalf:
+						renderTextures[i].format = RenderTextureFormat.ARGBHalf;
+						break;
+					case TextureFormat.RGBA32:
+						renderTextures[i].format = RenderTextureFormat.ARGBInt;
+						break;
+					case TextureFormat.ARGB32:
+						renderTextures[i].format = RenderTextureFormat.ARGB32;
+						break;
+					default:
+						break;
+				}
+				if(isNormal)
+					highQualityUASTC= false;
+				renderTextures[i].enableRandomWrite = true;
+				renderTextures[i].name = $"{geometrySource.texturesWaitingForExtraction[i].unityTexture.name} ({geometrySource.texturesWaitingForExtraction[i].id})";
+				renderTextures[i].Create();
 
-				string shaderName = textureType == UnityEditor.TextureImporterType.NormalMap ? "ExtractNormalMap" : "ExtractTexture";
+				string shaderName = isNormal ? "ExtractNormalMap" : "ExtractTexture";
 				shaderName += UnityEditor.PlayerSettings.colorSpace == ColorSpace.Gamma ? "Gamma" : "Linear";
 				
 				int kernelHandle = textureShader.FindKernel(shaderName);
 				textureShader.SetTexture(kernelHandle, "Source", sourceTexture);
 				textureShader.SetTexture(kernelHandle, "Result", renderTextures[i]);
-				textureShader.Dispatch(kernelHandle, sourceTexture.width / 8, sourceTexture.height / 8, 1);
+				textureShader.SetInt("Scale",scale);
+				textureShader.Dispatch(kernelHandle, targetWidth / 8, targetHeight / 8, 1);
 
 				//Rip data from render texture, and store in GeometryStore.
 				{
 					//Read pixel data into Texture2D, so that it can be read.
-					Texture2D readTexture = new Texture2D(renderTextures[i].width, renderTextures[i].height, renderTextures[i].graphicsFormat, UnityEngine.Experimental.Rendering.TextureCreationFlags.None);
+					Texture2D readTexture = new Texture2D(renderTextures[i].width, renderTextures[i].height, renderTextures[i].graphicsFormat
+						, UnityEngine.Experimental.Rendering.TextureCreationFlags.None);
 					{
 						RenderTexture oldActive = RenderTexture.active;
 
@@ -433,34 +484,74 @@ namespace teleport
 
 						RenderTexture.active = oldActive;
 					}
-					Color32[] pixelData = readTexture.GetPixels32();
-
 					avs.Texture textureData = geometrySource.texturesWaitingForExtraction[i].textureData;
-					textureData.format = avs.TextureFormat.RGBA8;
-					textureData.bytesPerPixel = 4;
-
-					int byteSize = Marshal.SizeOf<byte>();
-					textureData.dataSize = (uint)(pixelData.Length * 4 * byteSize);
-					textureData.data = Marshal.AllocCoTaskMem((int)textureData.dataSize);
-
-					int byteOffset = 0;
-					foreach(Color32 pixel in pixelData)
+					textureData.width=(uint)targetWidth;
+					textureData.height=(uint)targetHeight;
+					if (readTexture.format== TextureFormat.RGBAFloat)
 					{
-						Marshal.WriteByte(textureData.data, byteOffset, pixel.r);
-						byteOffset += byteSize;
+						Color[] pixelData = readTexture.GetPixels();
+						textureData.format = avs.TextureFormat.RGBAFloat;
+						textureData.bytesPerPixel = 16;
 
-						Marshal.WriteByte(textureData.data, byteOffset, pixel.g);
-						byteOffset += byteSize;
+						int floatSize = Marshal.SizeOf<float>();
+						textureData.dataSize = (uint)(pixelData.Length * 4 * floatSize);
+						textureData.data = Marshal.AllocCoTaskMem((int)textureData.dataSize);
 
-						Marshal.WriteByte(textureData.data, byteOffset, pixel.b);
-						byteOffset += byteSize;
-
-						Marshal.WriteByte(textureData.data, byteOffset, pixel.a);
-						byteOffset += byteSize;
+						int byteOffset = 0;
+						foreach (Color pixel in pixelData)
+						{
+							float[] f= { pixel.r, pixel .g, pixel .b, pixel .a };
+							Marshal.Copy(f, 0, textureData.data + byteOffset, 4);
+							byteOffset += 4*floatSize;
+						}
 					}
+					else
+					{ 
+						Color32[] pixelData = readTexture.GetPixels32();
 
-					geometrySource.AddTextureData(sourceTexture, textureData);
+						textureData.format = avs.TextureFormat.RGBA8;
+						textureData.bytesPerPixel = 4;
 
+						int byteSize = Marshal.SizeOf<byte>();
+						textureData.dataSize = (uint)(pixelData.Length * 4 * byteSize);
+						textureData.data = Marshal.AllocCoTaskMem((int)textureData.dataSize);
+
+						int byteOffset = 0;
+						foreach(Color32 pixel in pixelData)
+						{
+							Marshal.WriteByte(textureData.data, byteOffset, pixel.r);
+							byteOffset += byteSize;
+
+							Marshal.WriteByte(textureData.data, byteOffset, pixel.g);
+							byteOffset += byteSize;
+
+							Marshal.WriteByte(textureData.data, byteOffset, pixel.b);
+							byteOffset += byteSize;
+
+							Marshal.WriteByte(textureData.data, byteOffset, pixel.a);
+							byteOffset += byteSize;
+						}
+
+					}
+					// Test: write to png.
+					if(highQualityUASTC)
+					{
+						string textureAssetPath = AssetDatabase.GetAssetPath(sourceTexture);
+						byte[] bytes = readTexture.EncodeToPNG();
+						string basisFile=geometrySource.GenerateBasisFilePath(textureAssetPath);
+						string pngFile = basisFile.Replace(".basis", ".png");
+						string dirPath = System.IO.Path.GetDirectoryName(pngFile);
+						if (!Directory.Exists(dirPath))
+						{
+							Directory.CreateDirectory(dirPath);
+						}
+						File.WriteAllBytes(pngFile, bytes);
+						LaunchBasisUExe(pngFile);
+					}
+					else
+					{
+						geometrySource.AddTextureData(sourceTexture, textureData, highQualityUASTC);
+					}
 					Marshal.FreeCoTaskMem(textureData.data);
 				}
 			}
@@ -468,7 +559,54 @@ namespace teleport
 			geometrySource.CompressTextures();
 			geometrySource.texturesWaitingForExtraction.Clear();
 		}
+		/// <summary>
+		/// Launch the application with some options set.
+		/// </summary>
+		static void LaunchBasisUExe(string srcPng)
+		{
+			string basis = "";
+			string rootPath = Application.dataPath;
+			// Because Basis is broken for UASTC when run internally, we instead call it directly here.
+			string[] files = Directory.GetFiles(rootPath, "basisu.exe", SearchOption.AllDirectories);
+			if (files.Length > 0)
+			{
+				basis = files[0];
+			}
+			else
+            {
+				UnityEngine.Debug.LogError("Failed to find basisu.exe for UASTC texture.");
+				return;
+            }
 
+			// Use ProcessStartInfo class
+			ProcessStartInfo startInfo = new ProcessStartInfo();
+			startInfo.CreateNoWindow = true;
+			startInfo.UseShellExecute = false;
+			startInfo.RedirectStandardOutput = true;
+			startInfo.FileName = basis;
+			//startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+			string outputPath = System.IO.Path.GetDirectoryName(srcPng);
+			startInfo.Arguments = "-uastc -output_path \""+outputPath+"\" \"" + srcPng+"\"";
+
+			try
+			{
+				// Start the process with the info we specified.
+				// Call WaitForExit and then the using statement will close.
+				using (Process exeProcess = Process.Start(startInfo))
+				{
+					exeProcess.WaitForExit();
+					int exitCode=exeProcess.ExitCode;
+					if (exitCode != 0)
+                    {
+						UnityEngine.Debug.LogError("Basis exit code " + exitCode);
+                    }
+				}
+			}
+			catch
+			{
+				// Log error.
+			}
+		}
 		private void SetupGameObjectAndChildrenForStreaming(GameObject o)
 		{
 			foreach(var mf in o.GetComponentsInChildren<MeshFilter>())
