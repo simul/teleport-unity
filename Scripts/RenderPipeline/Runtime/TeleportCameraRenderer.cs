@@ -50,7 +50,24 @@ namespace teleport
 			encodeWebcamKernel = computeShader.FindKernel("EncodeWebcamCS");
 
 		//downCopyFaceKernel = computeShader.FindKernel("DownCopyFaceCS");
-	}
+		}
+
+		private void InitDepthShader()
+		{
+			if (depthMaterial == null)
+			{
+				depthShader = Resources.Load("Shaders/CubemapDepth", typeof(Shader)) as Shader;
+				if (depthShader != null)
+				{
+					depthMaterial = new Material(depthShader);
+				}
+				else
+				{
+					Debug.LogError("ComputeDepth.shader resource not found!");
+				}
+			}
+		}
+
 		public void EnsureMaterial(ref Material m,ref Shader s,string shaderName)
 		{
 			if (m == null)
@@ -169,7 +186,7 @@ namespace teleport
 				var clr = light.intensity * light.color.linear;
 				var dir = light.transform.forward;
 				buffer.SetGlobalVector("Colour", new Vector4(clr.r, clr.g, clr.b, clr.a));
-				buffer.SetGlobalVector("Direction", new Vector4(-dir.x,dir.y, dir.z, 0.0F));
+				buffer.SetGlobalVector("Direction", new Vector4(dir.x,dir.y, dir.z, 0.0F));
 				buffer.DrawProcedural(Matrix4x4.identity, createLightingCubemapMaterial, 4, MeshTopology.Triangles, 6);
 			}
 			context.ExecuteCommandBuffer(buffer);
@@ -186,6 +203,7 @@ namespace teleport
 			int numThreadGroupsY = captureTexture.height / THREADGROUP_SIZE;
 
 			computeShader.SetTexture(encodeColorKernel, "InputColorTexture", captureTexture);
+			computeShader.SetTexture(encodeColorKernel, "InputDepthTexture", captureTexture, 0, RenderTextureSubElement.Depth);
 			computeShader.SetTexture(encodeColorKernel, "RWOutputColorTexture", outputTexture);
 			computeShader.SetInt("Face", face);
 			int[] offset = { 0,0 };
@@ -202,19 +220,8 @@ namespace teleport
 		{
 			if (!computeShader)
 				InitShaders();
-			if (depthMaterial == null)
-			{
-				depthShader = Resources.Load("Shaders/CubemapDepth", typeof(Shader)) as Shader;
-				if (depthShader != null)
-				{
-					depthMaterial = new Material(depthShader);
-				}
-				else
-				{
-					Debug.LogError("ComputeDepth.shader resource not found!");
-					return;
-				}
-			}
+
+			InitDepthShader();
 
 			var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
 
@@ -224,6 +231,7 @@ namespace teleport
 			buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture);
 			buffer.SetViewport(viewport);
 			buffer.BeginSample(buffer.name);
+
 			buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 0, MeshTopology.Triangles, 6);
 			buffer.EndSample(buffer.name);
 			context.ExecuteCommandBuffer(buffer);
@@ -326,6 +334,7 @@ namespace teleport
 		}
 		public void EncodeShadowmaps(ScriptableRenderContext context, Camera camera,CullingResults cullingResults, Teleport_SceneCaptureComponent sceneCaptureComponent, Teleport_SessionComponent session, TeleportRenderPipeline.LightingOrder lightingOrder, TeleportLighting teleportLighting)
 		{
+			InitDepthShader();
 			// For each shadowcasting light, write the shadowmap to the video.
 			Vector2Int CurrentOffset= session.clientSettings.shadowmapPos;
 			if (lightingOrder.MainLightIndex > -1 && lightingOrder.MainLightIndex < lightingOrder.visibleLights.Length)
@@ -591,19 +600,6 @@ namespace teleport
 				}
 				drawingSettings.overrideMaterial = highlightMaterial;
 			}
-
-			/*	drawingSettings.perObjectData |= PerObjectData.LightProbe
-												| PerObjectData.ReflectionProbes
-												| PerObjectData.LightProbeProxyVolume
-												| PerObjectData.Lightmaps
-												| PerObjectData.LightData
-												| PerObjectData.MotionVectors
-												| PerObjectData.LightIndices
-												| PerObjectData.ReflectionProbeData
-												| PerObjectData.OcclusionProbe
-												| PerObjectData.OcclusionProbeProxyVolume              
-												| PerObjectData.ShadowMask
-												;*/
 			teleportLighting.SetupForwardBasePass(context, camera, cullingResults, lightingOrder, renderTarget, face);
 			for (int i = 1; i < legacyShaderTagIds.Length; i++)
 			{
@@ -806,7 +802,7 @@ namespace teleport
 					}
 				}
 
-				videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent,lightingOrder, teleportLighting);
+				//videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent,lightingOrder, teleportLighting);
 
 				videoEncoding.EncodeWebcam(context, camera, SessionComponent.clientSettings.webcamPos, SessionComponent.clientSettings.webcamSize);	
 				videoEncoding.EncodeTagID(context, camera);
@@ -906,11 +902,19 @@ namespace teleport
 
 					DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder);
 					DrawTransparentGeometry(context, camera, layerMask, renderingMask);
+					
+					// The unfiltered (reflection cube) should render close objects (though maybe only static ones).
+					float oldNearClip = camera.nearClipPlane;
+					camera.nearClipPlane = 0.4f;
 					videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, face);
+					camera.nearClipPlane = oldNearClip;
 					videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face, 0);
 					videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face, diffuseAmbientScale);
 					videoEncoding.EncodeColor(context, camera, face);
-					videoEncoding.EncodeDepth(context, camera, depthViewport);
+					if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
+					{
+						videoEncoding.EncodeDepth(context, camera, depthViewport);
+					}
 					videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent, face);
 #if UNITY_EDITOR
 					DrawUnsupportedShaders(context, camera);
@@ -950,7 +954,10 @@ namespace teleport
 				DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder);
 				DrawTransparentGeometry(context, camera, layerMask, renderingMask);
 				videoEncoding.EncodeColor(context, camera, 0);
-				videoEncoding.EncodeDepth(context, camera, depthViewport);
+				if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
+				{
+					videoEncoding.EncodeDepth(context, camera, depthViewport);
+				}
 #if UNITY_EDITOR
 				DrawUnsupportedShaders(context, camera);
 #endif

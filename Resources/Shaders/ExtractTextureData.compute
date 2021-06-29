@@ -2,47 +2,42 @@
 #pragma kernel ExtractTextureGamma
 #pragma kernel ExtractNormalMapLinear
 #pragma kernel ExtractNormalMapGamma
-#pragma kernel CombineTextures
 
 #include "UnityCG.cginc"
 
 Texture2D<float4> Source;
 RWTexture2D<float4> Result;
-#define TEXTURE_SCALE 1
+int Scale;
+
 //Extract textures from linear space.
 [numthreads(8, 8, 1)]
 void ExtractTextureLinear(uint3 id : SV_DispatchThreadID)
 {
-	Result[id.xy].rgba = Source[id.xy * TEXTURE_SCALE];
+	Result[id.xy].rgba = saturate(Source[id.xy * Scale]);
 }
 
 //Extract textures from gamma space.
 [numthreads(8, 8, 1)]
 void ExtractTextureGamma(uint3 id : SV_DispatchThreadID)
 {
-	float4 src = Source[id.xy * TEXTURE_SCALE];
-    Result[id.xy].rgba = float4(GammaToLinearSpaceExact(src.r), GammaToLinearSpaceExact(src.g), GammaToLinearSpaceExact(src.b), GammaToLinearSpaceExact(src.a));
+	float4 src = Source[id.xy * Scale];
+	Result[id.xy].rgba = float4(GammaToLinearSpaceExact(src.r), GammaToLinearSpaceExact(src.g), GammaToLinearSpaceExact(src.b), GammaToLinearSpaceExact(src.a));
 }
 
 [numthreads(8, 8, 1)]
 void ExtractNormalMapLinear(uint3 id : SV_DispatchThreadID)
 {
-	float3 unpackedNormal = UnpackNormalDXT5nm(Source[id.xy * TEXTURE_SCALE]);
-    Result[id.xy] = float4(unpackedNormal * 0.5 + 0.5, 1.0);
+	float4 src = Source[id.xy * Scale];
+	float3 unpackedNormal = UnpackNormalDXT5nm(src);
+	unpackedNormal=unpackedNormal * 0.5 + 0.5;
+	Result[id.xy] = float4(unpackedNormal, unpackedNormal.r);
 }
 
 [numthreads(8, 8, 1)]
 void ExtractNormalMapGamma(uint3 id : SV_DispatchThreadID)
 {
-    float3 unpackedNormal = UnpackNormalDXT5nm(Source[id.xy*TEXTURE_SCALE]);
-    Result[id.xy] = float4(unpackedNormal * 0.5 + 0.5, 1.0);
-}
-
-//Extract textures reversing smoothness alpha into roughness r.
-[numthreads(8, 8, 1)]
-void CombineTextures(uint3 id : SV_DispatchThreadID)
-{
-	float4 src = Source[id.xy * TEXTURE_SCALE];
-	Result[id.xy].rgba = src;
-
+	float4 src = Source[id.xy * Scale];
+	float3 unpackedNormal = UnpackNormalDXT5nm(src);
+	unpackedNormal = unpackedNormal * 0.5 + 0.5;
+	Result[id.xy] = float4(unpackedNormal, unpackedNormal.r);
 }

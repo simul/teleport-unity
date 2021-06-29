@@ -43,10 +43,7 @@ namespace avs
 	{
 		RC_CONSTQP = 0, /*< Constant QP mode */
 		RC_VBR = 1, /*< Variable bitrate mode */
-		RC_CBR = 2, /*< Constant bitrate mode */
-		RC_CBR_LOWDELAY_HQ = 3, /*< low-delay CBR, high quality */
-		RC_CBR_HQ = 4, /*< CBR, high quality (slower) */
-		RC_VBR_HQ = 5 /*< VBR, high quality (slower) */
+		RC_CBR = 2 /*< Constant bitrate mode */
 	};
 
 	public enum VideoCodec : byte
@@ -610,6 +607,13 @@ namespace avs
 		public uid animationID; //ID of the animation that we are updating.
 		
 		public AnimationTimeControl timeControl; //What controls the animation's time value.
+	}
+
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct NodeRenderState
+	{
+		public avs.Vector4 lightmapScaleOffset;
 	}
 
 	[StructLayout(LayoutKind.Sequential)]

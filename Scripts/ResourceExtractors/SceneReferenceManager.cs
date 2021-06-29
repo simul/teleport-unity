@@ -8,6 +8,9 @@ using UnityEngine.SceneManagement;
 
 namespace teleport
 {
+	/// <summary>
+	/// A class to store the connection between GameObjects and Meshes, which is lost when meshes are merged at the start of play.
+	/// </summary>
 	[Serializable]
 	public class SceneReferenceManager : ScriptableObject, ISerializationCallbackReceiver
 	{
@@ -38,8 +41,8 @@ namespace teleport
 
 		private const string RESOURCES_PATH = "Assets/Resources/";
 		private const string TELEPORT_VR_PATH = "TeleportVR/";
-
-		private Dictionary<string, ResourceReferences> gameObjectReferences = new Dictionary<string, ResourceReferences>(); //<GameObject Hierarchy Path, ResourceReferences of GameObject>.
+		//<GameObject Hierarchy Path, ResourceReferences of GameObject>.
+		private Dictionary<string, ResourceReferences> gameObjectReferences = new Dictionary<string, ResourceReferences>(); 
 
 		private static string directoryLocation; //Directory we save persistent references file to.
 		private static string fileLocation; //File path of persistent references file.
