@@ -619,7 +619,8 @@ namespace teleport
 		{
 			foreach(var mf in o.GetComponentsInChildren<MeshFilter>())
 			{
-				if(mf.gameObject.GetComponent<Renderer>() == null || !mf.gameObject.GetComponent<Renderer>().isVisible)
+				if(mf.gameObject.GetComponent<Renderer>() == null || !mf.gameObject.GetComponent<Renderer>().isVisible
+					|| !mf.gameObject.GetComponent<Renderer>().enabled)
 				{
 					continue;
 				}
