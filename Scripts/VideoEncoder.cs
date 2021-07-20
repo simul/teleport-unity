@@ -91,17 +91,12 @@ namespace teleport
 			var paramsWrapper = new EncodeVideoParamsWrapper();
 			paramsWrapper.clientID = clientID;
 			paramsWrapper.videoEncodeParams = new SCServer.VideoEncodeParams();
-			var teleportSettings = TeleportSettings.GetOrCreateSettings();
-			if (teleportSettings.casterSettings.usePerspectiveRendering)
-			{
-				paramsWrapper.videoEncodeParams.encodeWidth = teleportSettings.casterSettings.perspectiveWidth;
-				paramsWrapper.videoEncodeParams.encodeHeight = (int)(teleportSettings.casterSettings.perspectiveHeight * 1.5f);
-			}
-			else
-			{
-				paramsWrapper.videoEncodeParams.encodeWidth = paramsWrapper.videoEncodeParams.encodeHeight = teleportSettings.casterSettings.captureCubeTextureSize * 3;
-			}
-
+			
+			var encoderTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
+	
+			paramsWrapper.videoEncodeParams.encodeWidth = encoderTexture.width;
+			paramsWrapper.videoEncodeParams.encodeHeight = encoderTexture.height;
+			
 			switch (SystemInfo.graphicsDeviceType)
 			{
 				case (GraphicsDeviceType.Direct3D11):
@@ -121,7 +116,6 @@ namespace teleport
 					return;
 			}
 
-			var encoderTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
 			// deviceHandle set in dll
 			paramsWrapper.videoEncodeParams.inputSurfaceResource = encoderTexture.GetNativeTexturePtr();
 			IntPtr paramsWrapperPtr = Marshal.AllocHGlobal(Marshal.SizeOf(new EncodeVideoParamsWrapper()));

@@ -13,7 +13,6 @@ namespace teleport
 	// Create TeleportSettingsProvider by deriving from SettingsProvider:
 	class TeleportSettingsProvider : SettingsProvider
 	{
-		private static SerializedObject m_TeleportSettings=null;
 		public static TeleportSettings teleportSettings = null;
 		static LayerMask LayerMaskField(string label, LayerMask layerMask)
 		{

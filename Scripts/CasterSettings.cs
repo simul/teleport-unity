@@ -92,6 +92,7 @@ namespace SCServer
 	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
 	public class ClientSettings
 	{
+		public Vector2Int videoTextureSize;
 		public Vector2Int specularPos ;
 		public Int32 specularCubemapSize ;
 		public Int32 specularMips ;
