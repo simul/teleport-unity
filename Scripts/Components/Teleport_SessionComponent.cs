@@ -728,10 +728,10 @@ namespace teleport
 				const int MIPS_WIDTH = 378;
 				clientSettings.specularPos = new Vector2Int(cubeMapsOffset.x, cubeMapsOffset.y);
 				clientSettings.diffusePos = clientSettings.specularPos + new Vector2Int(MIPS_WIDTH, 0);
-				clientSettings.lightPos = clientSettings.diffusePos + new Vector2Int(MIPS_WIDTH, 0);
-				// We don't currently encode shadows.
+				// We don't currently encode shadows or use light cubemap
+				//clientSettings.lightPos = clientSettings.diffusePos + new Vector2Int(clientSettings.diffuseCubemapSize * 3, 0);
 				//clientSettings.shadowmapPos = clientSettings.lightPos + new Vector2Int(MIPS_WIDTH, 0);
-				clientSettings.webcamPos = clientSettings.diffusePos + new Vector2Int(MIPS_WIDTH, 0);
+				clientSettings.webcamPos = clientSettings.diffusePos + new Vector2Int(clientSettings.diffuseCubemapSize * 3, 0);
 				clientSettings.webcamSize = new Vector2Int(settings.webcamWidth, settings.webcamHeight);
 			}
 			else
