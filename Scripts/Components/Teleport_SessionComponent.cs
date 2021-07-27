@@ -251,6 +251,7 @@ namespace teleport
 		public Teleport_ClientspaceRoot clientspaceRoot = null;
 		public Teleport_CollisionRoot collisionRoot = null;
 		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
+		public Teleport_AudioCaptureComponent audioCaptureComponent = null;
 		public AudioSource inputAudioSource = null;
 
 		public List<Teleport_Controller> controllers;
@@ -589,6 +590,7 @@ namespace teleport
 			clientspaceRoot = GetSingleComponentFromChildren<Teleport_ClientspaceRoot>();
 			collisionRoot = GetSingleComponentFromChildren<Teleport_CollisionRoot>();
 			sceneCaptureComponent = GetSingleComponentFromChildren<Teleport_SceneCaptureComponent>();
+			audioCaptureComponent = GetSingleComponentFromChildren<Teleport_AudioCaptureComponent>();
 		}
 
 		private void OnEnable()
@@ -673,6 +675,7 @@ namespace teleport
 		private void UpdateClientSettings()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
+			var settings = teleportSettings.casterSettings;
 			clientSettings.specularCubemapSize = teleportSettings.casterSettings.defaultSpecularCubemapSize;
 			clientSettings.specularMips = teleportSettings.casterSettings.defaultSpecularMips;
 			clientSettings.diffuseCubemapSize = teleportSettings.casterSettings.defaultDiffuseCubemapSize;
@@ -691,29 +694,56 @@ namespace teleport
 
 			if (teleportSettings.casterSettings.usePerspectiveRendering)
 			{
+				clientSettings.videoTextureSize.x = teleportSettings.casterSettings.perspectiveWidth;
+				if (teleportSettings.casterSettings.useAlphaLayerEncoding)
+				{
+					clientSettings.videoTextureSize.y = settings.perspectiveHeight + (teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
+				}
+				else
+				{
+					clientSettings.videoTextureSize.y = (int)(settings.perspectiveHeight * 1.5f);
+				}
 				cubeMapsOffset.x = perspectiveWidth / 2;
 				cubeMapsOffset.y = perspectiveHeight;
 			}
 			else
-			{
+			{ 
+				clientSettings.videoTextureSize.x = faceSize * 3;
+				if (teleportSettings.casterSettings.useAlphaLayerEncoding)
+				{
+					clientSettings.videoTextureSize.y = faceSize * 2 + (teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
+				}
+				else
+				{
+					clientSettings.videoTextureSize.y = faceSize * 3;
+				}
 				cubeMapsOffset.x = halfFaceSize * 3;
 				cubeMapsOffset.y = doubleFaceSize;
 			}
 
-			// Depth is stored in color if alpha layer encoding is enabled.
+			// Depth is stored in color's alpha channel if alpha layer encoding is enabled.
 			if (teleportSettings.casterSettings.useAlphaLayerEncoding)
 			{
 				cubeMapsOffset.x = 0;
+				const int MIPS_WIDTH = 378;
+				clientSettings.specularPos = new Vector2Int(cubeMapsOffset.x, cubeMapsOffset.y);
+				clientSettings.diffusePos = clientSettings.specularPos + new Vector2Int(MIPS_WIDTH, 0);
+				// We don't currently encode shadows or use light cubemap
+				//clientSettings.lightPos = clientSettings.diffusePos + new Vector2Int(clientSettings.diffuseCubemapSize * 3, 0);
+				//clientSettings.shadowmapPos = clientSettings.lightPos + new Vector2Int(MIPS_WIDTH, 0);
+				clientSettings.webcamPos = clientSettings.diffusePos + new Vector2Int(clientSettings.diffuseCubemapSize * 3, 0);
+				clientSettings.webcamSize = new Vector2Int(settings.webcamWidth, settings.webcamHeight);
 			}
+			else
+			{
+				clientSettings.specularPos = new Vector2Int(cubeMapsOffset.x, cubeMapsOffset.y);
+				clientSettings.diffusePos = clientSettings.specularPos + new Vector2Int(0, clientSettings.specularCubemapSize * 2);
+				clientSettings.lightPos = clientSettings.diffusePos + new Vector2Int(clientSettings.specularCubemapSize * 3 / 2, clientSettings.specularCubemapSize * 2);
+				clientSettings.shadowmapPos = clientSettings.diffusePos + new Vector2Int(0, 2 * clientSettings.diffuseCubemapSize);
 
-			clientSettings.specularPos = new Vector2Int(cubeMapsOffset.x, cubeMapsOffset.y);
-			clientSettings.diffusePos = clientSettings.specularPos + new Vector2Int(0, clientSettings.specularCubemapSize * 2);
-			clientSettings.lightPos = clientSettings.diffusePos + new Vector2Int(clientSettings.specularCubemapSize * 3 / 2, clientSettings.specularCubemapSize * 2);
-			clientSettings.shadowmapPos = clientSettings.diffusePos + new Vector2Int(0, 2 * clientSettings.diffuseCubemapSize);
-
-			clientSettings.webcamPos = cubeMapsOffset + new Vector2Int(clientSettings.specularCubemapSize * 3, clientSettings.specularCubemapSize * 2);
-			clientSettings.webcamSize = new Vector2Int(teleportSettings.casterSettings.webcamWidth, teleportSettings.casterSettings.webcamHeight);
-
+				clientSettings.webcamPos = cubeMapsOffset + new Vector2Int(clientSettings.specularCubemapSize * 3, clientSettings.specularCubemapSize * 2);
+				clientSettings.webcamSize = new Vector2Int(settings.webcamWidth, settings.webcamHeight);
+			}
 			Client_SetClientSettings(clientID, clientSettings);
 		}
 

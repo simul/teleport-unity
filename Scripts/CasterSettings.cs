@@ -44,7 +44,7 @@ namespace SCServer
 		[MarshalAs(UnmanagedType.U1)] public bool useAsyncEncoding = true;
 		[MarshalAs(UnmanagedType.U1)] public bool use10BitEncoding = false;
 		[MarshalAs(UnmanagedType.U1)] public bool useYUV444Decoding = false;
-		[MarshalAs(UnmanagedType.U1)] public bool useAlphaLayerEncoding = false; // Only works on RTX GPUs and later
+		[MarshalAs(UnmanagedType.U1)] public bool useAlphaLayerEncoding = true; // Only works on RTX GPUs and later
 		[MarshalAs(UnmanagedType.U1)] public bool usePerspectiveRendering = false;
 		public Int32 perspectiveWidth = 836;
 		public Int32 perspectiveHeight = 836; 
@@ -92,6 +92,7 @@ namespace SCServer
 	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
 	public class ClientSettings
 	{
+		public Vector2Int videoTextureSize;
 		public Vector2Int specularPos ;
 		public Int32 specularCubemapSize ;
 		public Int32 specularMips ;

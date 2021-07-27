@@ -83,6 +83,7 @@ namespace teleport
 				CurrentTagID = 0;
 				if (clientID != 0)
 				{
+					CreateResources();
 					VideoEncoder = new VideoEncoder(clientID);
 				}
 				else
@@ -132,8 +133,6 @@ namespace teleport
 			cam.depthTextureMode |= DepthTextureMode.Depth;
 
 			cam.enabled = false;
-
-			CreateResources();
 
 			if (teleportSettings.casterSettings.isStreamingWebcam)
 			{
@@ -272,17 +271,21 @@ namespace teleport
 
 		void CreateResources()
 		{
-			var settings = teleportSettings.casterSettings;
-			if (settings.usePerspectiveRendering)
+			var session = Teleport_SessionComponent.GetSessionComponent(clientID);
+			if (session)
 			{
-				int captureHeight = (int)(settings.perspectiveHeight * 1.5f);
-				CreateTextures(settings.perspectiveWidth, captureHeight, settings.perspectiveWidth, settings.perspectiveHeight, 24);
-			}
-			else
-			{
-				int size = (int)teleportSettings.casterSettings.captureCubeTextureSize;
-				CreateTextures(size * 3, size * 3, size, size, 24);
-			}
+				var vidSize = session.clientSettings.videoTextureSize;
+				var settings = teleportSettings.casterSettings;
+
+				if (settings.usePerspectiveRendering)
+				{
+					CreateTextures(vidSize.x, vidSize.y, settings.perspectiveWidth, settings.perspectiveHeight, 24);
+				}
+				else
+				{
+					CreateTextures(vidSize.x, vidSize.y, settings.captureCubeTextureSize, settings.captureCubeTextureSize, 24);
+				}		
+			}	
 		}
 
 		void CreateTextures(int captureTexWidth, int captureTexHeight, int rendererTexWidth, int rendererTexHeight, int rendererTexDepth)

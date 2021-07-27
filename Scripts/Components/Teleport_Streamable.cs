@@ -194,7 +194,6 @@ namespace teleport
 					Debug.LogWarning($"Failed to update movement of node! Null node in {nameof(Teleport_Streamable)}.childHierarchy of \"{name}\"!");
 					continue;
 				}
-
 				updates.Add(GetNodeMovementUpdate(node, clientID));
 			}
 
@@ -368,7 +367,7 @@ namespace teleport
 			update.timestamp = CasterMonitor.GetUnixTimestamp();
 			update.nodeID = nodeID;
 
-			if(GeometryStreamingService.IsClientRenderingParent(clientID, node))
+			if (GeometryStreamingService.IsClientRenderingParent(clientID, node))
 			{
 				update.isGlobal = false;
 				update.position = node.transform.localPosition;
@@ -382,7 +381,7 @@ namespace teleport
 				update.rotation = node.transform.rotation;
 				update.scale	= node.transform.lossyScale;
 			}
-
+			
 			if(previousMovements.TryGetValue(nodeID, out avs.MovementUpdate previousMovement))
 			{
 				TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();

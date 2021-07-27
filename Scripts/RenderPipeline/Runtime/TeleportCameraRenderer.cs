@@ -888,12 +888,6 @@ namespace teleport
 				}
 				else
 				{
-					int faceSize = teleportSettings.casterSettings.captureCubeTextureSize;
-					int halfFaceSize = faceSize / 2;
-					int offsetX = VideoEncoding.faceOffsets[face, 0];
-					int offsetY = VideoEncoding.faceOffsets[face, 1];
-					var depthViewport = new Rect(offsetX * halfFaceSize, (faceSize * 2) + (offsetY * halfFaceSize), halfFaceSize, halfFaceSize);
-
 					DrawDepthPass(context, camera, layerMask, renderingMask, cullingResultsAll);
 					teleportLighting.RenderScreenspaceShadows(context, camera, lightingOrder, cullingResultsAll, depthTexture);
 					context.SetupCameraProperties(camera);
@@ -913,6 +907,11 @@ namespace teleport
 					videoEncoding.EncodeColor(context, camera, face);
 					if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
 					{
+						int faceSize = teleportSettings.casterSettings.captureCubeTextureSize;
+						int halfFaceSize = faceSize / 2;
+						int offsetX = VideoEncoding.faceOffsets[face, 0];
+						int offsetY = VideoEncoding.faceOffsets[face, 1];
+						var depthViewport = new Rect(offsetX * halfFaceSize, (faceSize * 2) + (offsetY * halfFaceSize), halfFaceSize, halfFaceSize);
 						videoEncoding.EncodeDepth(context, camera, depthViewport);
 					}
 					videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent, face);
@@ -934,10 +933,6 @@ namespace teleport
 				return;
 			}
 			CasterMonitor monitor = CasterMonitor.GetCasterMonitor();
-			int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
-			int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
-
-			var depthViewport = new Rect(0, perspectiveHeight, perspectiveWidth / 2, perspectiveHeight / 2);
 
 			int layerMask = 0x7FFFFFFF;
 			uint renderingMask = 0x7FFFFFFF;
@@ -956,6 +951,9 @@ namespace teleport
 				videoEncoding.EncodeColor(context, camera, 0);
 				if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
 				{
+					int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
+					int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
+					var depthViewport = new Rect(0, perspectiveHeight, perspectiveWidth / 2, perspectiveHeight / 2);
 					videoEncoding.EncodeDepth(context, camera, depthViewport);
 				}
 #if UNITY_EDITOR

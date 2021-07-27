@@ -431,6 +431,7 @@ namespace teleport
 				//Normal maps need to be extracted differently; i.e. convert from DXT5nm format.
 				string path = AssetDatabase.GetAssetPath(sourceTexture);
 				TextureImporter textureImporter = (TextureImporter)AssetImporter.GetAtPath(path);
+				textureImporter.isReadable = true;
 				TextureImporterType textureType = textureImporter ? textureImporter.textureType : TextureImporterType.Default;
 				bool isNormal= textureType == UnityEditor.TextureImporterType.NormalMap;
 				switch (sourceTexture.format)
@@ -470,11 +471,18 @@ namespace teleport
 				textureShader.SetInt("Scale",scale);
 				textureShader.Dispatch(kernelHandle, targetWidth / 8, targetHeight / 8, 1);
 
+				if (!SystemInfo.IsFormatSupported(renderTextures[i].graphicsFormat, UnityEngine.Experimental.Rendering.FormatUsage.Sample)) 
+				{
+					UnityEngine.Debug.LogError("Format of texture " + i + " is not supported for Texture2D.");
+					continue;
+				}
+
 				//Rip data from render texture, and store in GeometryStore.
 				{
 					//Read pixel data into Texture2D, so that it can be read.
 					Texture2D readTexture = new Texture2D(renderTextures[i].width, renderTextures[i].height, renderTextures[i].graphicsFormat
 						, UnityEngine.Experimental.Rendering.TextureCreationFlags.None);
+
 					{
 						RenderTexture oldActive = RenderTexture.active;
 
@@ -617,7 +625,8 @@ namespace teleport
 		{
 			foreach(var mf in o.GetComponentsInChildren<MeshFilter>())
 			{
-				if(mf.gameObject.GetComponent<Renderer>() == null || !mf.gameObject.GetComponent<Renderer>().isVisible)
+				if(mf.gameObject.GetComponent<Renderer>() == null || !mf.gameObject.GetComponent<Renderer>().isVisible
+					|| !mf.gameObject.GetComponent<Renderer>().enabled)
 				{
 					continue;
 				}
