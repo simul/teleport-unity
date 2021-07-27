@@ -538,7 +538,7 @@ namespace teleport
 					{
 						string textureAssetPath = AssetDatabase.GetAssetPath(sourceTexture);
 						byte[] bytes = readTexture.EncodeToPNG();
-						string basisFile=geometrySource.GenerateBasisFilePath(textureAssetPath);
+						string basisFile=geometrySource.GenerateCompressedFilePath(textureAssetPath,avs.TextureCompression.BASIS_COMPRESSED);
 						string pngFile = basisFile.Replace(".basis", ".png");
 						string dirPath = System.IO.Path.GetDirectoryName(pngFile);
 						if (!Directory.Exists(dirPath))
@@ -546,7 +546,13 @@ namespace teleport
 							Directory.CreateDirectory(dirPath);
 						}
 						File.WriteAllBytes(pngFile, bytes);
-						LaunchBasisUExe(pngFile);
+						// We will send the .png instead of a .basis file.
+						//LaunchBasisUExe(pngFile);
+						textureData.compression=avs.TextureCompression.PNG;
+						textureData.dataSize = (uint)(bytes.Length );
+						textureData.data = Marshal.AllocCoTaskMem((int)textureData.dataSize);
+						Marshal.Copy(bytes,0,textureData.data,(int)textureData.dataSize);
+						geometrySource.AddTextureData(sourceTexture, textureData, highQualityUASTC);
 					}
 					else
 					{

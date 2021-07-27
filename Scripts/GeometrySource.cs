@@ -152,7 +152,8 @@ namespace avs
 	public enum TextureCompression
 	{
 		UNCOMPRESSED = 0,
-		BASIS_COMPRESSED
+		BASIS_COMPRESSED,
+		PNG
 	}
 	public enum RoughnessMode : byte
 	{
@@ -367,7 +368,7 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreMaterial(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Material material);
 		[DllImport("SimulCasterServer")]
-		private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture texture, string basisFileLocation, [MarshalAs(UnmanagedType.I1)] bool genMips,  [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC);
+		private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture texture, string compressedFilePath, [MarshalAs(UnmanagedType.I1)] bool genMips,  [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC);
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreShadowMap(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture shadowMap);
 
@@ -833,21 +834,26 @@ namespace teleport
 			return materialID;
 		}
 
-		public string GenerateBasisFilePath(string textureAssetPath)
+		public string GenerateCompressedFilePath(string textureAssetPath,avs.TextureCompression textureCompression)
 		{
-			string basisFileLocation = textureAssetPath; //Use editor file location as unique name; this won't work out of the Unity Editor.
-			basisFileLocation = basisFileLocation.Replace("/", "#"); //Replace forward slashes with hashes.
-			int idx = basisFileLocation.LastIndexOf('.');
+			string compressedFilePath = textureAssetPath; //Use editor file location as unique name; this won't work out of the Unity Editor.
+			compressedFilePath = compressedFilePath.Replace("/", "#"); //Replace forward slashes with hashes.
+			int idx = compressedFilePath.LastIndexOf('.');
 			if (idx >= 0)
-				basisFileLocation = basisFileLocation.Remove(idx); //Remove file extension.
+				compressedFilePath = compressedFilePath.Remove(idx); //Remove file extension.
 			string folderPath = compressedTexturesFolderPath;
 			//Create directiory if it doesn't exist.
 			if (!Directory.Exists(folderPath))
 			{
 				Directory.CreateDirectory(folderPath);
 			}
-			basisFileLocation = folderPath + basisFileLocation + ".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
-			return basisFileLocation;
+			compressedFilePath = folderPath + compressedFilePath;
+			if(textureCompression ==avs.TextureCompression.BASIS_COMPRESSED)
+				compressedFilePath+=".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
+			else if (textureCompression == avs.TextureCompression.PNG)
+				compressedFilePath += ".png";
+			else return "";
+			return compressedFilePath;
 		}
 		public void AddTextureData(Texture texture, avs.Texture textureData, bool highQualityUASTC)
 		{
@@ -863,16 +869,13 @@ namespace teleport
 			string textureAssetPath = AssetDatabase.GetAssetPath(texture);
 			long lastModified = GetAssetWriteTimeUTC(textureAssetPath);
 
-			string basisFileLocation = "";
+			string compressedFilePath = "";
 			//Basis Universal compression won't be used if the file location is left empty.
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-			if (teleportSettings.casterSettings.useCompressedTextures)
-			{
-				basisFileLocation = GenerateBasisFilePath(textureAssetPath);
-			}
+			compressedFilePath = GenerateCompressedFilePath(textureAssetPath, textureData.compression);
 			bool genMips=false;
 			textureData.mipCount=1;
-			StoreTexture(textureID, guid, lastModified, textureData, basisFileLocation,  genMips, highQualityUASTC);
+			StoreTexture(textureID, guid, lastModified, textureData, compressedFilePath,  genMips, highQualityUASTC);
 #endif
 		}
 
