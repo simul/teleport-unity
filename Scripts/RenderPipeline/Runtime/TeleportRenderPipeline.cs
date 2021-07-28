@@ -167,13 +167,14 @@ namespace teleport
 		//int m = 0;
 		void Render(ScriptableRenderContext context, Camera camera)
 		{
+			var teleportSettings = TeleportSettings.GetOrCreateSettings();
 			TeleportCameraRenderer renderer = GetTeleportCameraRenderer(camera);
 			var sc = camera.gameObject.GetComponent<Teleport_SceneCaptureComponent>();
 			if (sc != null)
 			{
 				renderer.RenderToSceneCapture(context, camera);
 			}
-			else
+			else if (teleportSettings.renderMainCamera)  
 			{
 			/*	m = m + 1;
 				if (m > 3)

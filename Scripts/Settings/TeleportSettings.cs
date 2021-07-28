@@ -38,6 +38,9 @@ namespace teleport
 		[Header("Webcam")]
 		public string webcam;
 
+		[Header("Render Main Camera")]
+		public bool renderMainCamera = true;
+
 		public static void EnsureAssetPath(string requiredPath)
 		{
 			var settings_folders = requiredPath.Split('/');

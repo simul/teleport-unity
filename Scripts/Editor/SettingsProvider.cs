@@ -107,6 +107,7 @@ namespace teleport
 			teleportSettings.connectionTimeout = EditorGUILayout.IntField("Timeout", teleportSettings.connectionTimeout);
 			teleportSettings.clientIP = EditorGUILayout.TextField("Client IP", teleportSettings.clientIP);
 			teleportSettings.webcam = WebcamField("Webcam", teleportSettings.webcam);
+			teleportSettings.renderMainCamera = EditorGUILayout.Toggle("Render Main Camera", teleportSettings.renderMainCamera);
 
 			foreach (var prop in typeof(SCServer.CasterSettings).GetProperties())
 			{
