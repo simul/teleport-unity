@@ -791,14 +791,14 @@ namespace teleport
 					camera.fieldOfView = 90.0F;
 					for (int i = 0; i < VideoEncoding.NumFaces; ++i)
 					{
-						DrawCubemapFace(context, camera, lightingOrder, i,diffuseAmbientScale);
+						DrawCubemapFace(context, camera, cullingResultsAll, lightingOrder, i,diffuseAmbientScale);
 					}
 				}
 				else
 				{
 					for (int i = 0; i < VideoEncoding.NumFaces; ++i)
 					{
-						DrawCubemapFace(context, camera, lightingOrder, i,diffuseAmbientScale);
+						DrawCubemapFace(context, camera, cullingResultsAll, lightingOrder, i,diffuseAmbientScale);
 					}
 				}
 
@@ -844,13 +844,8 @@ namespace teleport
 			camera.farClipPlane = farClipPlane;
 			camera.aspect = 1.0F;
 		}
-		void DrawCubemapFace(ScriptableRenderContext context, Camera camera, TeleportRenderPipeline.LightingOrder lightingOrder, int face,float diffuseAmbientScale)
+		void DrawCubemapFace(ScriptableRenderContext context, Camera camera, CullingResults cullingResultsAll, TeleportRenderPipeline.LightingOrder lightingOrder, int face,float diffuseAmbientScale)
 		{
-			CullingResults cullingResultsAll;
-			if (!Cull(context, camera, out cullingResultsAll))
-			{
-				return;
-			}
 
 			CamView camView = faceCamViews[face];
 			Vector3 to = camView.forward;
