@@ -670,8 +670,15 @@ namespace teleport
 			{
 				geometryStreamingService.StreamGlobals();
 			}
+			foreach (Teleport_Controller controller in controllers)
+			{
+				Teleport_Streamable[] streamables =controller.gameObject.GetComponentsInChildren<Teleport_Streamable>();
+				foreach (Teleport_Streamable streamable in streamables)
+				{
+					streamable.sendMovementUpdates = false;
+				}
+			}
 		}
-
 		private void UpdateClientSettings()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
