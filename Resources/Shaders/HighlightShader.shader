@@ -4,6 +4,9 @@
 
 Shader "Teleport/HighlightShader"
 {
+	CGINCLUDE
+		float4 highlightColour;
+	ENDCG
     SubShader
     {
         Tags { "RenderType" = "Transparent" "Queue" = "Transparent" }
@@ -38,7 +41,7 @@ Shader "Teleport/HighlightShader"
             }
             fixed4 frag (v2f i) : SV_Target
             {
-                return fixed4(.5,.2,1,.1);
+                return highlightColour;
             }
             ENDCG
         }

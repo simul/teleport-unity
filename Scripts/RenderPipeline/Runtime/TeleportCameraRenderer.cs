@@ -563,6 +563,8 @@ namespace teleport
 			//buffer.SetGlobalTexture(_GrabTexture_HDR, Texture2D.whiteTexture);
 			//buffer.SetGlobalTexture(_GrabTexture_ST, Texture2D.whiteTexture);
 			//_GrabTexture_TexelSize = Shader.PropertyToID("_GrabTexture_TexelSize"),
+
+			buffer.SetGlobalVector("highlightColour", teleportSettings.highlightColour);
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 
@@ -596,7 +598,6 @@ namespace teleport
 				if (highlightMaterial == null)
 				{
 					highlightMaterial = new Material(Shader.Find("Teleport/HighlightShader"));
-					//highlightMaterial.renderQueue
 				}
 				drawingSettings.overrideMaterial = highlightMaterial;
 			}
@@ -689,17 +690,19 @@ namespace teleport
 			DrawOpaqueGeometry(context, camera, layerMask, renderingMask,lightingOrder);
 			DrawTransparentGeometry(context, camera, layerMask, renderingMask);
 			// Now we highlight the streamed objects:
-			if (Application.isPlaying)
+			if (teleportSettings.highlightStreamables)
 			{
-				renderingMask = (uint)(1 << 26);   // Render ONLY the items that are streamed to this client.
+				if (Application.isPlaying)
+				{
+					renderingMask = (uint)(1 << 26);   // Render ONLY the items that are streamed to this client.
+				}
+				else
+				{
+					SetStreamableHighlightMaskOnObjects();
+					renderingMask = (uint)1 << 31;   // When not playing, only streamables have this bit set.
+				}
+				DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder, true);
 			}
-			else
-			{
-				SetStreamableHighlightMaskOnObjects();
-				renderingMask = (uint)1 << 31;   // When not playing, only streamables have this bit set.
-			}
-			DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder, true);
-			
 #if UNITY_EDITOR
 			DrawUnsupportedShaders(context, camera);
 #endif
@@ -847,6 +850,10 @@ namespace teleport
 		void DrawCubemapFace(ScriptableRenderContext context, Camera camera, CullingResults cullingResultsAll, TeleportRenderPipeline.LightingOrder lightingOrder, int face,float diffuseAmbientScale)
 		{
 
+			/*if (!Cull(context, camera, out cullingResultsAll))
+			{
+				return;
+			}*/
 			CamView camView = faceCamViews[face];
 			Vector3 to = camView.forward;
 			Vector3 pos = camera.transform.position;
