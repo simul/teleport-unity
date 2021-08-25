@@ -12,7 +12,7 @@ namespace teleport
 		#region DllImport
 
 		[DllImport("SimulCasterServer")]
-		private static extern void Client_UpdateNodeAnimation(uid clientID, avs.NodeUpdateAnimation update);
+		private static extern void Client_UpdateNodeAnimation(uid clientID, avs.ApplyAnimation update);
 
 		#endregion //DllImport
 
@@ -23,7 +23,7 @@ namespace teleport
 		private SkinnedMeshRenderer skinnedMeshRenderer;
 
 		//Animation update that last occurred.
-		private avs.NodeUpdateAnimation lastAnimationUpdate;
+		private avs.ApplyAnimation lastAnimationUpdate;
 
 		private AnimationClip lastPlayingAnimation;
 
@@ -63,15 +63,13 @@ namespace teleport
 
 		private void Update()
 		{
-			if(hierarchyRoot.pollCurrentAnimation)
+			if (hierarchyRoot.pollCurrentAnimation)
 			{
 				AnimatorClipInfo[] animatorClips = animator.GetCurrentAnimatorClipInfo(0);
 				AnimationClip playingClip = animatorClips.Length != 0 ? animatorClips[0].clip : null;
-
-				if(lastPlayingAnimation != playingClip)
+				if (playingClip != null && lastPlayingAnimation != playingClip)
 				{
 					AnimatorStateInfo animatorState = animator.GetCurrentAnimatorStateInfo(0);
-
 					//The animation system uses seconds, but we need milliseconds.
 					double timestampOffset = (animatorState.normalizedTime % 1.0) * playingClip.length * 1000;
 					SendAnimationUpdate(playingClip, -(long)timestampOffset);
@@ -92,7 +90,7 @@ namespace teleport
 				return;
 			}
 
-			lastAnimationUpdate = new avs.NodeUpdateAnimation()
+			lastAnimationUpdate = new avs.ApplyAnimation()
 			{
 				timestamp = CasterMonitor.GetUnixTimestamp() + timestampOffset,
 				nodeID = GeometrySource.GetGeometrySource().FindResourceID(skinnedMeshRenderer.gameObject),

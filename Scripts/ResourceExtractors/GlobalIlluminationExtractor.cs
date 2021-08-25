@@ -11,6 +11,8 @@ namespace teleport
 		{
 			if(giTexture==null)
 			{
+				if (LightmapSettings.lightmaps.Length == 0)
+					return null;
 				giTexture=LightmapSettings.lightmaps[0].lightmapColor;
 				//Resources.Load("TeleportLightmapRenderTexture") as Texture;
 			}

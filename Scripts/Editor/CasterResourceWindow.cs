@@ -23,6 +23,7 @@ namespace teleport
 		private List<GameObject> lastExtractedGameObjects = new List<GameObject>(); //List of streamable GameObjects that were found during the last operation.
 		private RenderTexture[] renderTextures = new RenderTexture[0];
 		private bool includePlayerParts = true;
+		private bool compressGeometry = true;
 
 		//Text styles.
 		private GUIStyle richText = new GUIStyle();
@@ -100,6 +101,7 @@ namespace teleport
 		private void DrawExtractionLayout()
 		{
 			includePlayerParts = GUILayout.Toggle(includePlayerParts, "Include Player Parts");
+			compressGeometry = GUILayout.Toggle(compressGeometry, "Compress Geometry"); 
 
 			if (GUILayout.Button("Find Scene Streamables"))
 			{
@@ -115,7 +117,7 @@ namespace teleport
 
 			if(GUILayout.Button("Force Selected Geometry Extraction"))
 			{
-				ExtractSelectedGeometry(GeometrySource.ForceExtractionMask.FORCE_EVERYTHING);
+				ExtractSelectedGeometry(GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
 			}
 
 			EditorGUILayout.EndHorizontal();
@@ -129,7 +131,7 @@ namespace teleport
 
 			if(GUILayout.Button("Force Scene Geometry Extraction"))
 			{
-				ExtractSceneGeometry(GeometrySource.ForceExtractionMask.FORCE_EVERYTHING);
+				ExtractSceneGeometry(GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
 			}
 
 			EditorGUILayout.EndHorizontal();
@@ -143,7 +145,7 @@ namespace teleport
 
 			if(GUILayout.Button("Force Project Geometry Extraction"))
 			{
-				ExtractProjectGeometry(GeometrySource.ForceExtractionMask.FORCE_EVERYTHING);
+				ExtractProjectGeometry(GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
 			}
 
 			EditorGUILayout.EndHorizontal();
@@ -316,6 +318,10 @@ namespace teleport
 			{
 				geometrySource.LoadFromDisk();
 			}
+			if (GUILayout.Button($"Reset all masks."))
+			{
+				EditorMask.ResetAll();
+			}
 		}
 
 		private void FindSceneStreamables()
@@ -325,7 +331,9 @@ namespace teleport
 
 		private void ExtractGeometry(List<GameObject> extractionList, GeometrySource.ForceExtractionMask forceMask)
 		{
-			for(int i = 0; i < extractionList.Count; i++)
+			if (!compressGeometry)
+				forceMask = forceMask | GeometrySource.ForceExtractionMask.FORCE_UNCOMPRESSED;
+			for (int i = 0; i < extractionList.Count; i++)
 			{
 				GameObject gameObject = extractionList[i];
 
@@ -334,7 +342,7 @@ namespace teleport
 					return;
 				}
 
-				geometrySource.AddNode(gameObject, forceMask);
+				geometrySource.AddNode(gameObject, forceMask,false);
 			}
 			ExtractTextures();
 
@@ -380,7 +388,7 @@ namespace teleport
 		private void ExtractGlobalIlluminationTextures()
 		{
 			Texture giTexture=teleport.GlobalIlluminationExtractor.GetTexture();
-			geometrySource.AddTexture(giTexture,GeometrySource.ForceExtractionMask.FORCE_EVERYTHING);
+			geometrySource.AddTexture(giTexture,GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
 			ExtractTextures();
 		}
 		private void ExtractTextures()
@@ -397,23 +405,23 @@ namespace teleport
 			Array.Resize(ref renderTextures, geometrySource.texturesWaitingForExtraction.Count);
 
 			//Extract texture data with a compute shader, rip the data, and store in the native C++ plugin.
-			for(int i = 0; i < renderTextures.Length; i++)
+			for (int i = 0; i < renderTextures.Length; i++)
 			{
-				bool highQualityUASTC=false;
+				bool highQualityUASTC = false;
 				Texture2D sourceTexture = (Texture2D)geometrySource.texturesWaitingForExtraction[i].unityTexture;
 
-				if(EditorUtility.DisplayCancelableProgressBar($"Extracting Textures ({i + 1} / {renderTextures.Length})", $"Processing \"{sourceTexture.name}\".", (float)(i + 1) / renderTextures.Length))
+				if (EditorUtility.DisplayCancelableProgressBar($"Extracting Textures ({i + 1} / {renderTextures.Length})", $"Processing \"{sourceTexture.name}\".", (float)(i + 1) / renderTextures.Length))
 				{
 					return;
 				}
-				int targetWidth =sourceTexture.width;
-				int targetHeight=sourceTexture.height;
-				int scale=1;
-				while (Math.Max(targetWidth, targetHeight)>teleportSettings.casterSettings.maximumTextureSize)
+				int targetWidth = sourceTexture.width;
+				int targetHeight = sourceTexture.height;
+				int scale = 1;
+				while (Math.Max(targetWidth, targetHeight) > teleportSettings.casterSettings.maximumTextureSize)
 				{
-					targetWidth=(targetWidth+1)/2;
-					targetHeight=(targetHeight + 1)/2;
-					scale*=2;
+					targetWidth = (targetWidth + 1) / 2;
+					targetHeight = (targetHeight + 1) / 2;
+					scale *= 2;
 				}
 				//If we always created a new render texture, then reloading would lose the link to the render texture in the inspector.
 				if (renderTextures[i] == null)
@@ -427,13 +435,16 @@ namespace teleport
 					renderTextures[i].height = targetHeight;
 					renderTextures[i].depth = 0;
 				}
-
+				bool isNormal = false;
 				//Normal maps need to be extracted differently; i.e. convert from DXT5nm format.
 				string path = AssetDatabase.GetAssetPath(sourceTexture);
 				TextureImporter textureImporter = (TextureImporter)AssetImporter.GetAtPath(path);
-				textureImporter.isReadable = true;
-				TextureImporterType textureType = textureImporter ? textureImporter.textureType : TextureImporterType.Default;
-				bool isNormal= textureType == UnityEditor.TextureImporterType.NormalMap;
+				if (textureImporter != null)
+				{
+					textureImporter.isReadable = true;
+					TextureImporterType textureType = textureImporter ? textureImporter.textureType : TextureImporterType.Default;
+					isNormal = textureType == UnityEditor.TextureImporterType.NormalMap;
+				}
 				switch (sourceTexture.format)
 				{
 					case TextureFormat.RGBAFloat:
@@ -564,6 +575,7 @@ namespace teleport
 					}
 					else
 					{
+						textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
 						geometrySource.AddTextureData(sourceTexture, textureData, highQualityUASTC);
 					}
 					Marshal.FreeCoTaskMem(textureData.data);

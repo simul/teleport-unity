@@ -90,7 +90,7 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		public static extern UInt64 SizeOf(string name);
 		[DllImport("SimulCasterServer")]
-		private static extern bool Initialise(InitialiseState initialiseState);
+		private static extern bool Teleport_Initialize(InitialiseState initialiseState);
 		[DllImport("SimulCasterServer")]
 		private static extern void SetConnectionTimeout(Int32 timeout);
 		[DllImport("SimulCasterServer")]
@@ -241,7 +241,13 @@ namespace teleport
 				Debug.LogError($"CasterMonitor failed to initialise! {nameof(SCServer.CasterSettings)} struct size mismatch between unmanaged code({unmanagedSize}) and managed code({managedSize})!");
 				return;
 			}
-
+			if (instance == null)
+				instance = this;
+			if (instance != this)
+			{
+				Debug.LogError($"More than one instance of singleton CasterMonitor.");
+				return;
+			}
 			SceneManager.sceneLoaded += OnSceneLoaded;
 
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
@@ -264,7 +270,7 @@ namespace teleport
 				clientIP = teleportSettings.clientIP
 			};
 
-			initialised = Initialise(initialiseState);
+			initialised = Teleport_Initialize(initialiseState);
 
 			// Sets connection timeouts for peers (milliseconds)
 			SetConnectionTimeout(teleportSettings.connectionTimeout);
@@ -276,13 +282,22 @@ namespace teleport
 			SceneManager.sceneLoaded -= OnSceneLoaded;
 			Shutdown();
 		}
+		
+		static public void OverrideMaskRecursive(GameObject gameObject, uint mask)
+		{
+			Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
+			foreach (Renderer renderer in renderers)
+			{
+				renderer.renderingLayerMask= mask;
+			}
+		}
 
 		static public void SetMaskRecursive(GameObject gameObject,uint mask)
 		{
 			Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
 			foreach (Renderer renderer in renderers)
 			{
-				renderer.renderingLayerMask = mask;
+				renderer.renderingLayerMask |= mask;
 			}
 		}
 
@@ -292,7 +307,8 @@ namespace teleport
 			Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
 			foreach (Renderer renderer in renderers)
 			{
-				renderer.renderingLayerMask = renderer.renderingLayerMask & inverse_mask;
+				// Previously we &'d with the existing mask, but that causes bad behaviour if the mask is left in the wrong state and the object is saved.
+				renderer.renderingLayerMask &=  inverse_mask;
 			}
 		}
 

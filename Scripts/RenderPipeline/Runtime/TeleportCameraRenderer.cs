@@ -548,7 +548,7 @@ namespace teleport
 		}
 
 		static Material highlightMaterial=null;
-		void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask, TeleportRenderPipeline.LightingOrder lightingOrder
+		void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera, CullingResults cullingResults, int layerMask, uint renderingMask, TeleportRenderPipeline.LightingOrder lightingOrder
 			,bool highlight=false, RenderTexture renderTarget = null, int face = -1)
 		{
 			// The generic textures accessible from all default shaders...
@@ -572,11 +572,6 @@ namespace teleport
 			{
 				criteria = SortingCriteria.CommonOpaque
 			};
-			CullingResults cullingResults;
-			if (!Cull(context, camera, out cullingResults))
-			{
-				return;
-			}
 			teleportLighting.renderSettings = renderSettings;
 
 			var drawingSettings = new DrawingSettings(legacyShaderTagIds[0], sortingSettings)
@@ -626,7 +621,7 @@ namespace teleport
 			}
 			teleportLighting.Cleanup(context,buffer);
 		}
-		void DrawTransparentGeometry(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask)
+		void DrawTransparentGeometry(ScriptableRenderContext context, Camera camera, CullingResults cullingResults, int layerMask, uint renderingMask)
 		{
 			var sortingSettings = new SortingSettings(camera)
 			{
@@ -638,11 +633,6 @@ namespace teleport
 			drawingSettings.enableDynamicBatching = true;
 			drawingSettings.enableInstancing = true;
 			var filteringSettings = new FilteringSettings(RenderQueueRange.transparent, layerMask, renderingMask, 0);
-			CullingResults cullingResults;
-			if (!Cull(context, camera, out cullingResults))
-			{
-				return;
-			}
 			for (int i = 1; i < legacyShaderTagIds.Length; i++)
 			{
 				drawingSettings.SetShaderPassName(i, legacyShaderTagIds[i]);
@@ -687,8 +677,8 @@ namespace teleport
 			Clear(context, camera);
 			PrepareForSceneWindow(context, camera);
 			// We draw everything first:
-			DrawOpaqueGeometry(context, camera, layerMask, renderingMask,lightingOrder);
-			DrawTransparentGeometry(context, camera, layerMask, renderingMask);
+			DrawOpaqueGeometry(context, camera, cullingResultsAll,layerMask, renderingMask,lightingOrder);
+			DrawTransparentGeometry(context, camera, cullingResultsAll,layerMask, renderingMask);
 			// Now we highlight the streamed objects:
 			if (teleportSettings.highlightStreamables)
 			{
@@ -701,7 +691,7 @@ namespace teleport
 					SetStreamableHighlightMaskOnObjects();
 					renderingMask = (uint)1 << 31;   // When not playing, only streamables have this bit set.
 				}
-				DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder, true);
+				DrawOpaqueGeometry(context, camera, cullingResultsAll,layerMask, renderingMask, lightingOrder, true);
 			}
 #if UNITY_EDITOR
 			DrawUnsupportedShaders(context, camera);
@@ -767,6 +757,7 @@ namespace teleport
 			
 			if (Cull(context, camera, out cullingResultsAll, true))
 			{
+				
 				TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
 
 				teleportLighting.renderSettings = renderSettings;
@@ -849,8 +840,7 @@ namespace teleport
 		}
 		void DrawCubemapFace(ScriptableRenderContext context, Camera camera, CullingResults cullingResultsAll, TeleportRenderPipeline.LightingOrder lightingOrder, int face,float diffuseAmbientScale)
 		{
-
-			/*if (!Cull(context, camera, out cullingResultsAll))
+		/*	if (!Cull(context, camera, out cullingResultsAll))
 			{
 				return;
 			}*/
@@ -868,8 +858,7 @@ namespace teleport
 			view.m23 *= -1f;
 			faceViewMatrices[face] = view;
 			int layerMask = 0x7FFFFFFF;
-			uint renderingMask = 0x7FFFFFFF;
-			//(uint)((1 << 25)|0x7);	// canvasrenderers hard coded to have mask 0x7..!
+			uint renderingMask = (uint)((1 << 25)|0x7);	// canvasrenderers hard coded to have mask 0x7..!
 			camera.worldToCameraMatrix = view;
 			string sampleName = camera.gameObject.name + " Face " + face;
 
@@ -881,8 +870,8 @@ namespace teleport
 					Clear(context, camera);
 					PrepareForSceneWindow(context, camera);
 
-					DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder, false, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, face);
-					DrawTransparentGeometry(context, camera, layerMask, renderingMask);
+					DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder, false, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, face);
+					DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
 		
 					videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face, 0);
 					videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face,diffuseAmbientScale);
@@ -896,8 +885,8 @@ namespace teleport
 					Clear(context, camera);
 					PrepareForSceneWindow(context, camera);
 
-					DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder);
-					DrawTransparentGeometry(context, camera, layerMask, renderingMask);
+					DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder);
+					DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
 					
 					// The unfiltered (reflection cube) should render close objects (though maybe only static ones).
 					float oldNearClip = camera.nearClipPlane;
@@ -948,8 +937,8 @@ namespace teleport
 				Clear(context, camera);
 				PrepareForSceneWindow(context, camera);
 
-				DrawOpaqueGeometry(context, camera, layerMask, renderingMask, lightingOrder);
-				DrawTransparentGeometry(context, camera, layerMask, renderingMask);
+				DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder);
+				DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
 				videoEncoding.EncodeColor(context, camera, 0);
 				if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
 				{

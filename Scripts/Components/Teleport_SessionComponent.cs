@@ -150,7 +150,7 @@ namespace teleport
 				return;
 			}
 
-			sessionComponent.SetControllerInput(inputState.controllerID, inputState.buttonsDown, inputState.joystickAxisX, inputState.joystickAxisY);
+			sessionComponent.SetControllerInput(inputState.controllerID, inputState.buttonsDown, inputState.joystickAxisX, inputState.joystickAxisY, inputState.triggerBack, inputState.triggerGrip);
 
 			avs.InputEventBinary[] binaryEvents = new avs.InputEventBinary[inputState.binaryEventAmount];
 			if (inputState.binaryEventAmount != 0)
@@ -416,15 +416,15 @@ namespace teleport
 			last_received_headPos = newPosition;
 		}
 
-		public void SetControllerInput(int controllerIndex, UInt32 buttons, float stickX, float stickY)
+		public void SetControllerInput(int controllerIndex, UInt32 buttons, float stickX, float stickY,float triggerBack,float triggerGrip)
 		{
 			if (!controllerLookup.TryGetValue(controllerIndex, out Teleport_Controller controller))
 			{
 				return;
 			}
-
 			controller.SetButtons(buttons);
 			controller.SetJoystick(stickX, stickY);
+			controller.SetTriggers(triggerBack,triggerGrip);
 		}
 
 		public void ProcessControllerEvents(int controllerIndex, avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
@@ -510,7 +510,7 @@ namespace teleport
 				}
 
 				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Controller {0}, {1}", i, FormatVectorString(controller.transform.position)));
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tbtns:{0} stick:{1:F3},{2:F3}", controller.buttons, controller.joystick.x, controller.joystick.y));
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tbtns:{0} trigger:{3:F3}/{4:F3} stick:{1:F3},{2:F3}", controller.buttons, controller.joystick.x, controller.joystick.y,controller.triggerBack,controller.GetAxis(avs.InputList.TRIGGER01)));
 			}
 
 			if (geometryStreamingService != null)

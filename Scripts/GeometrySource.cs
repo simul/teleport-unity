@@ -331,11 +331,13 @@ namespace teleport
 			FORCE_NODES = 1,
 			FORCE_HIERARCHIES = 2,
 			FORCE_SUBRESOURCES = 4,
+			FORCE_UNCOMPRESSED = 8,
 
 			FORCE_EVERYTHING = -1,
 
 			//Combinations
-			FORCE_NODES_AND_HIERARCHIES = FORCE_NODES | FORCE_HIERARCHIES
+			FORCE_NODES_AND_HIERARCHIES = FORCE_NODES | FORCE_HIERARCHIES,
+			FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES = FORCE_NODES | FORCE_HIERARCHIES | FORCE_SUBRESOURCES
 		}
 
 		#region DLLImports
@@ -364,7 +366,7 @@ namespace teleport
 												[MarshalAs(UnmanagedType.BStr)] string guid,
 												Int64 lastModified,
 												[MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(MeshMarshaler))] avs.Mesh mesh,
-												avs.AxesStandard extractToStandard);
+												avs.AxesStandard extractToStandard, [MarshalAs(UnmanagedType.I1)] bool compress, [MarshalAs(UnmanagedType.I1)] bool verify);
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreMaterial(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Material material);
 		[DllImport("SimulCasterServer")]
@@ -735,10 +737,15 @@ namespace teleport
 
 			meshID = meshID == 0 ? GenerateID() : meshID;
 			processedResources[mesh] = meshID;
-
-			ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID);
-			ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID);
-
+			bool enable_compression = (forceMask & ForceExtractionMask.FORCE_UNCOMPRESSED)!= ForceExtractionMask.FORCE_UNCOMPRESSED;
+			bool running = Application.isPlaying;
+			// only compress if not running - too slow...
+			// Actually, let's ONLY extract offline. 
+			if (!running)
+			{
+				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID, enable_compression && !running);
+				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID, enable_compression && !running);
+			}
 			return meshID;
 		}
 
@@ -1132,7 +1139,7 @@ namespace teleport
 			return bindMatrices;
 		}
 
-		private void ExtractMeshData(avs.AxesStandard extractToBasis, Mesh mesh, uid meshID)
+		private void ExtractMeshData(avs.AxesStandard extractToBasis, Mesh mesh, uid meshID,bool compress)
 		{
 			avs.PrimitiveArray[] primitives = new avs.PrimitiveArray[mesh.subMeshCount];
 			Dictionary<uid, avs.Accessor> accessors = new Dictionary<uid, avs.Accessor>(6);
@@ -1475,6 +1482,8 @@ namespace teleport
 					buffers = buffers.Values.ToArray()
 				},
 				extractToBasis
+				,compress
+				,false
 			);
 #endif
 		}

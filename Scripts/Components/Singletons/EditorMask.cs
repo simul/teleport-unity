@@ -40,6 +40,18 @@ namespace teleport
 			}
 			return instance;
 		}
+		static public void ResetAll()
+        {
+			if (Application.isPlaying)
+				return;
+			for (int i = 0; i < SceneManager.sceneCount; i++)
+			{
+				var objs = SceneManager.GetSceneAt(i).GetRootGameObjects();
+				foreach (var o in objs)
+					CasterMonitor.OverrideMaskRecursive(o, 0xFFFFFFFF);
+			}
+			Initialize();
+		}
 		static public void Initialize()
 		{
 			if (Application.isPlaying)

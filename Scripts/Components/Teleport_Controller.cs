@@ -25,6 +25,10 @@ namespace teleport
 		[HideInInspector]
 		public Vector2 joystick = new Vector2();
 		[HideInInspector]
+		public float triggerBack = 0.0F;
+		[HideInInspector]
+		public float triggerGrip = 0.0F;
+		[HideInInspector]
 		public UInt32 buttons = 0;
 
 		private Dictionary<avs.InputList, bool> buttonPresses = new Dictionary<avs.InputList, bool>();
@@ -43,7 +47,11 @@ namespace teleport
 			joystick.x = x;
 			joystick.y = y;
 		}
-
+		public void SetTriggers(float tb, float tg)
+		{
+			triggerBack = tb;
+			triggerGrip = tg;
+		}
 		public void SetJoystick(Vector2 value)
 		{
 			joystick.x = value.x;

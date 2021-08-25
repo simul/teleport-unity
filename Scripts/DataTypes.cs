@@ -555,6 +555,8 @@ namespace avs
 		public float trackpadAxisY;
 		public float joystickAxisX;
 		public float joystickAxisY;
+		public float triggerBack;
+		public float triggerGrip;
 
 		public UInt32 binaryEventAmount;
 		public UInt32 analogueEventAmount;
@@ -592,11 +594,10 @@ namespace avs
 	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
-	public struct NodeUpdateAnimation
+	public struct ApplyAnimation
 	{
 		public Int64 timestamp; //When the animation change was detected.
-
-		public uid nodeID; //ID of the node the animation is playing on.
+		public uid nodeID;		//ID of the node the animation is playing on.
 		public uid animationID; //ID of the animation that is now playing.
 	}
 
