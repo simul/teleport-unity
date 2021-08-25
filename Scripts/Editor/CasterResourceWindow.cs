@@ -637,8 +637,8 @@ namespace teleport
 		{
 			foreach(var mf in o.GetComponentsInChildren<MeshFilter>())
 			{
-				if(mf.gameObject.GetComponent<Renderer>() == null || !mf.gameObject.GetComponent<Renderer>().isVisible
-					|| !mf.gameObject.GetComponent<Renderer>().enabled)
+				var renderer = mf.gameObject.GetComponent<Renderer>();
+				if (renderer == null || !renderer.enabled)
 				{
 					continue;
 				}
@@ -652,7 +652,7 @@ namespace teleport
 
 				// Will use a parent's collider if it has a parent with a mesh filter.
 				// Otherwise a box collision will be added.
-				if(go.GetComponentsInParent<MeshFilter>().Length ==
+				if(go.GetComponentsInParent<MeshFilter>(true).Length ==
 					go.GetComponents<MeshFilter>().Length)
 				{
 					go.tag = teleportSettings.TagToStream;
