@@ -88,7 +88,7 @@ namespace avs
 	{
 		public enum DataType
 		{
-			SCALAR,
+			SCALAR=1,
 			VEC2,
 			VEC3,
 			VEC4
@@ -662,7 +662,7 @@ namespace teleport
 
 		///GEOMETRY EXTRACTION
 
-		public uid AddNode(GameObject node, ForceExtractionMask forceMask = ForceExtractionMask.FORCE_NOTHING, bool isChildExtraction = false)
+		public uid AddNode(GameObject node, ForceExtractionMask forceMask = ForceExtractionMask.FORCE_NOTHING, bool isChildExtraction = false,bool verify=false)
 		{
 			if(!node)
 			{
@@ -692,17 +692,17 @@ namespace teleport
 			extractedNode.name = Marshal.StringToBSTR(node.name);
 			extractedNode.transform = avs.Transform.FromLocalUnityTransform(node.transform);
 			extractedNode.stationary = (node.isStatic);
-			ExtractNodeHierarchy(node, ref extractedNode, forceMask);
+			ExtractNodeHierarchy(node, ref extractedNode, forceMask, verify);
 			ExtractNodeSubType(node, ref extractedNode);
 
 			extractedNode.dataType = avs.NodeDataType.None;
 			if(extractedNode.dataType == avs.NodeDataType.None)
 			{
-				ExtractNodeMeshData(node, ref extractedNode, forceMask);
+				ExtractNodeMeshData(node, ref extractedNode, forceMask, verify);
 			}
 			if (extractedNode.dataType == avs.NodeDataType.None)
 			{
-				ExtractNodeSkinnedMeshData(node, ref extractedNode, forceMask);
+				ExtractNodeSkinnedMeshData(node, ref extractedNode, forceMask,verify);
 			}
 			if(extractedNode.dataType == avs.NodeDataType.None)
 			{
@@ -714,7 +714,7 @@ namespace teleport
 			return nodeID;
 		}
 
-		public uid AddMesh(Mesh mesh, ForceExtractionMask forceMask)
+		public uid AddMesh(Mesh mesh, ForceExtractionMask forceMask,bool verify)
 		{
 			if(!mesh)
 			{
@@ -743,8 +743,8 @@ namespace teleport
 			// Actually, let's ONLY extract offline. 
 			if (!running)
 			{
-				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID, enable_compression && !running);
-				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID, enable_compression && !running);
+				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID, enable_compression && !running,verify);
+				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID, enable_compression && !running, verify);
 			}
 			return meshID;
 		}
@@ -949,7 +949,7 @@ namespace teleport
 #endif
 		}
 
-		private void ExtractNodeHierarchy(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask)
+		private void ExtractNodeHierarchy(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask,bool verify)
 		{
 			if(source.transform.parent)
 			{
@@ -961,7 +961,7 @@ namespace teleport
 			for(int i = 0; i < source.transform.childCount; i++)
 			{
 				GameObject child = source.transform.GetChild(i).gameObject;
-				uid childID = AddNode(child, forceMask, true);
+				uid childID = AddNode(child, forceMask, true,verify);
 
 				childIDs[i] = childID;
 			}
@@ -1000,7 +1000,7 @@ namespace teleport
 			extractTo.materialIDs = materialIDs.ToArray();
 		}
 
-		private bool ExtractNodeMeshData(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask)
+		private bool ExtractNodeMeshData(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask, bool verify)
 		{
 			MeshFilter meshFilter = source.GetComponent<MeshFilter>();
 			MeshRenderer meshRenderer = source.GetComponent<MeshRenderer>();
@@ -1011,7 +1011,7 @@ namespace teleport
 			extractTo.renderState.lightmapScaleOffset=meshRenderer.lightmapScaleOffset;
 			//Extract mesh used on node.
 			Mesh mesh = sceneReferenceManager.GetGameObjectMesh(source);
-			extractTo.dataID = AddMesh(mesh, forceMask);
+			extractTo.dataID = AddMesh(mesh, forceMask, verify);
 
 			//Can't create a node with no data.
 			if(extractTo.dataID == 0)
@@ -1026,7 +1026,7 @@ namespace teleport
 			return true;
 		}
 
-		private bool ExtractNodeSkinnedMeshData(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask)
+		private bool ExtractNodeSkinnedMeshData(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask, bool verify)
 		{
 			SkinnedMeshRenderer skinnedMeshRenderer = source.GetComponent<SkinnedMeshRenderer>();
 			if(!skinnedMeshRenderer || !skinnedMeshRenderer.enabled || !skinnedMeshRenderer.rootBone)
@@ -1036,7 +1036,7 @@ namespace teleport
 			extractTo.renderState.lightmapScaleOffset = skinnedMeshRenderer.lightmapScaleOffset;
 			//Extract mesh used on node.
 			Mesh mesh = sceneReferenceManager.GetGameObjectMesh(source);
-			extractTo.dataID = AddMesh(mesh, forceMask);
+			extractTo.dataID = AddMesh(mesh, forceMask,verify);
 
 			//Can't create a node with no data.
 			if(extractTo.dataID == 0)
@@ -1139,7 +1139,7 @@ namespace teleport
 			return bindMatrices;
 		}
 
-		private void ExtractMeshData(avs.AxesStandard extractToBasis, Mesh mesh, uid meshID,bool compress)
+		private void ExtractMeshData(avs.AxesStandard extractToBasis, Mesh mesh, uid meshID,bool compress,bool verify)
 		{
 			avs.PrimitiveArray[] primitives = new avs.PrimitiveArray[mesh.subMeshCount];
 			Dictionary<uid, avs.Accessor> accessors = new Dictionary<uid, avs.Accessor>(6);
@@ -1346,10 +1346,10 @@ namespace teleport
 				{
 					BoneWeight boneWeight = mesh.boneWeights[i];
 
-					BitConverter.GetBytes((float)boneWeight.boneIndex0).CopyTo(jointBuffer.data, i * jointStride + 00 * 4);
-					BitConverter.GetBytes((float)boneWeight.boneIndex1).CopyTo(jointBuffer.data, i * jointStride + 01 * 4);
-					BitConverter.GetBytes((float)boneWeight.boneIndex2).CopyTo(jointBuffer.data, i * jointStride + 02 * 4);
-					BitConverter.GetBytes((float)boneWeight.boneIndex3).CopyTo(jointBuffer.data, i * jointStride + 03 * 4);
+					BitConverter.GetBytes((int)boneWeight.boneIndex0).CopyTo(jointBuffer.data, i * jointStride + 00 * 4);
+					BitConverter.GetBytes((int)boneWeight.boneIndex1).CopyTo(jointBuffer.data, i * jointStride + 01 * 4);
+					BitConverter.GetBytes((int)boneWeight.boneIndex2).CopyTo(jointBuffer.data, i * jointStride + 02 * 4);
+					BitConverter.GetBytes((int)boneWeight.boneIndex3).CopyTo(jointBuffer.data, i * jointStride + 03 * 4);
 
 					BitConverter.GetBytes(boneWeight.weight0).CopyTo(weightBuffer.data, i * weightStride + 00 * 4);
 					BitConverter.GetBytes(boneWeight.weight1).CopyTo(weightBuffer.data, i * weightStride + 01 * 4);
@@ -1483,7 +1483,7 @@ namespace teleport
 				},
 				extractToBasis
 				,compress
-				,false
+				,verify
 			);
 #endif
 		}

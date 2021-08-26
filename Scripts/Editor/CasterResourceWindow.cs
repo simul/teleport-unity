@@ -24,6 +24,7 @@ namespace teleport
 		private RenderTexture[] renderTextures = new RenderTexture[0];
 		private bool includePlayerParts = true;
 		private bool compressGeometry = true;
+		private bool verifyGeometry = false;
 
 		//Text styles.
 		private GUIStyle richText = new GUIStyle();
@@ -101,8 +102,9 @@ namespace teleport
 		private void DrawExtractionLayout()
 		{
 			includePlayerParts = GUILayout.Toggle(includePlayerParts, "Include Player Parts");
-			compressGeometry = GUILayout.Toggle(compressGeometry, "Compress Geometry"); 
-
+			compressGeometry = GUILayout.Toggle(compressGeometry, "Compress Geometry");
+			verifyGeometry = GUILayout.Toggle(verifyGeometry, "Verify Compressed Geometry");
+			
 			if (GUILayout.Button("Find Scene Streamables"))
 			{
 				FindSceneStreamables();
@@ -342,7 +344,7 @@ namespace teleport
 					return;
 				}
 
-				geometrySource.AddNode(gameObject, forceMask,false);
+				geometrySource.AddNode(gameObject, forceMask,false,verifyGeometry);
 			}
 			ExtractTextures();
 
