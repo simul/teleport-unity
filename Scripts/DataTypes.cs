@@ -615,6 +615,7 @@ namespace avs
 	public struct NodeRenderState
 	{
 		public avs.Vector4 lightmapScaleOffset;
+		public uid globalIlluminationTextureUid;
 	}
 
 	[StructLayout(LayoutKind.Sequential)]

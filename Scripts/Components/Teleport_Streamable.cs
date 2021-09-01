@@ -75,7 +75,8 @@ namespace teleport
 		//We are using dynamic conversion to assign the component to the correct cached reference.
 		public void AddComponent(Component component)
 		{
-			Debug.LogWarning($"Unable to add component of type {component.GetType().Name} to streamed node for {gameObject}!");
+			// Don't need to warn about this.
+			//Debug.LogWarning($"Unable to add component of type {component.GetType().Name} to streamed node for {gameObject}!");
 		}
 
 		public void AddComponent(MeshRenderer component)

@@ -18,7 +18,7 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void Client_AddGenericTexture(uid clientID, uid textureID);
 		[DllImport("SimulCasterServer")]
-		public static extern void Client_SetGlobalIlluminationTexture(uid clientID, uid textureID);
+		public static extern void Client_SetGlobalIlluminationTextures(uid clientID, UInt64 num, uid[] textureIDs);
 		[DllImport("SimulCasterServer")]
 		public static extern void Client_NodeEnteredBounds(uid clientID, uid nodeID);
 		[DllImport("SimulCasterServer")]
@@ -250,9 +250,8 @@ namespace teleport
 		}
 		public void StreamGenericTextures()
 		{
-			uid textureID= GeometrySource.GetGeometrySource().FindResourceID(GlobalIlluminationExtractor.GetTexture());
-			Client_AddGenericTexture(session.GetClientID(), textureID);
-			Client_SetGlobalIlluminationTexture(session.GetClientID(),  textureID);
+			uid [] textureIDs= GeometrySource.GetGeometrySource().FindResourceIDs(GlobalIlluminationExtractor.GetTextures());
+			Client_SetGlobalIlluminationTextures(session.GetClientID(), (UInt64)textureIDs.Length, textureIDs);
 		}
 		public void StreamPlayerBody()
 		{

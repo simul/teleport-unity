@@ -840,7 +840,7 @@ namespace teleport
 		}
 		void DrawCubemapFace(ScriptableRenderContext context, Camera camera, CullingResults cullingResultsAll, TeleportRenderPipeline.LightingOrder lightingOrder, int face,float diffuseAmbientScale)
 		{
-		/*	if (!Cull(context, camera, out cullingResultsAll))
+			/*if (!Cull(context, camera, out cullingResultsAll))
 			{
 				return;
 			}*/

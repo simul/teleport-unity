@@ -262,7 +262,7 @@ namespace teleport
 			MeshFilter meshFilter = gameObject.GetComponentInChildren<MeshFilter>();
 			if(meshFilter)
 			{
-				if(meshFilter.sharedMesh.isReadable)
+				if(meshFilter.sharedMesh!=null&&meshFilter.sharedMesh.isReadable)
 				{
 					return meshFilter.sharedMesh;
 				}

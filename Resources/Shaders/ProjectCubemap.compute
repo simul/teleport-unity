@@ -66,7 +66,7 @@ void EncodeColorCS(uint2 ThreadID : SV_DispatchThreadID)
 	uint InputW, InputH;
 	InputColorTexture.GetDimensions(InputW, InputH);
 
-	if (ThreadID.x >= InputW || ThreadID.y >= InputH)
+	if (ThreadID.x>=InputW || ThreadID.y>=InputH)
 		return;
 
 	int2 pos = int2(ThreadID);

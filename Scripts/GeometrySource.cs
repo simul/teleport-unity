@@ -332,12 +332,13 @@ namespace teleport
 			FORCE_HIERARCHIES = 2,
 			FORCE_SUBRESOURCES = 4,
 			FORCE_UNCOMPRESSED = 8,
+			FORCE_TEXTURES = 16,
 
 			FORCE_EVERYTHING = -1,
 
 			//Combinations
 			FORCE_NODES_AND_HIERARCHIES = FORCE_NODES | FORCE_HIERARCHIES,
-			FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES = FORCE_NODES | FORCE_HIERARCHIES | FORCE_SUBRESOURCES
+			FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES = FORCE_NODES | FORCE_HIERARCHIES | FORCE_SUBRESOURCES | FORCE_TEXTURES
 		}
 
 		#region DLLImports
@@ -370,7 +371,10 @@ namespace teleport
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreMaterial(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Material material);
 		[DllImport("SimulCasterServer")]
-		private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture texture, string compressedFilePath, [MarshalAs(UnmanagedType.I1)] bool genMips,  [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC);
+		private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture texture, string compressedFilePath
+			, [MarshalAs(UnmanagedType.I1)] bool genMips
+			, [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC
+			, [MarshalAs(UnmanagedType.I1)] bool forceOverwrite);
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreShadowMap(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture shadowMap);
 
@@ -488,7 +492,7 @@ namespace teleport
 			//Initialise static instance in GeometrySource when it is enabled after a hot-reload.
 			GetGeometrySource();
 
-			compressedTexturesFolderPath = Application.persistentDataPath + "/Basis Universal/";
+			compressedTexturesFolderPath = System.IO.Directory.GetParent(Application.dataPath).ToString()+ "/teleport_cache/basis_textures/";
 
 			//Remove nodes that have been lost due to level change.
 			var pairsToDelete = processedResources.Where(pair => pair.Key == null).ToArray();
@@ -588,6 +592,21 @@ namespace teleport
 
 			processedResources.TryGetValue(resource, out uid nodeID);
 			return nodeID;
+		}
+
+		//Returns the ID of the resource if it has been processed, or zero if the resource has not been processed or was passed in null.
+		public uid[] FindResourceIDs(UnityEngine.Object[] resources)
+		{
+			if (resources==null||resources.Length==0)
+			{
+				return null;;
+			}
+			uid [] uids=new uid[resources.Length];
+			for(int i=0;i<resources.Length;i++) 
+			{
+				processedResources.TryGetValue(resources[i], out uids[i]);
+			}
+			return uids;
 		}
 
 		public UnityEngine.Object FindResource(uid resourceID)
@@ -862,7 +881,7 @@ namespace teleport
 			else return "";
 			return compressedFilePath;
 		}
-		public void AddTextureData(Texture texture, avs.Texture textureData, bool highQualityUASTC)
+		public void AddTextureData(Texture texture, avs.Texture textureData, bool highQualityUASTC, bool forceOverwrite)
 		{
 			if(!processedResources.TryGetValue(texture, out uid textureID))
 			{
@@ -882,7 +901,7 @@ namespace teleport
 			compressedFilePath = GenerateCompressedFilePath(textureAssetPath, textureData.compression);
 			bool genMips=false;
 			textureData.mipCount=1;
-			StoreTexture(textureID, guid, lastModified, textureData, compressedFilePath,  genMips, highQualityUASTC);
+			StoreTexture(textureID, guid, lastModified, textureData, compressedFilePath,  genMips, highQualityUASTC, forceOverwrite);
 #endif
 		}
 
@@ -1009,7 +1028,10 @@ namespace teleport
 				return false;
 			}
 			extractTo.renderState.lightmapScaleOffset=meshRenderer.lightmapScaleOffset;
-			//Extract mesh used on node.
+			var giTextures= GlobalIlluminationExtractor.GetTextures();
+			if(meshRenderer.lightmapIndex>=0&&meshRenderer.lightmapIndex< giTextures.Length)
+				extractTo.renderState.globalIlluminationTextureUid = FindResourceID(giTextures[meshRenderer.lightmapIndex]);
+			   //Extract mesh used on node.
 			Mesh mesh = sceneReferenceManager.GetGameObjectMesh(source);
 			extractTo.dataID = AddMesh(mesh, forceMask, verify);
 
@@ -1034,6 +1056,9 @@ namespace teleport
 				return false;
 			}
 			extractTo.renderState.lightmapScaleOffset = skinnedMeshRenderer.lightmapScaleOffset;
+			var giTextures = GlobalIlluminationExtractor.GetTextures();
+			if (skinnedMeshRenderer.lightmapIndex >= 0 && skinnedMeshRenderer.lightmapIndex < giTextures.Length)
+				extractTo.renderState.globalIlluminationTextureUid = FindResourceID(giTextures[skinnedMeshRenderer.lightmapIndex]);
 			//Extract mesh used on node.
 			Mesh mesh = sceneReferenceManager.GetGameObjectMesh(source);
 			extractTo.dataID = AddMesh(mesh, forceMask,verify);
