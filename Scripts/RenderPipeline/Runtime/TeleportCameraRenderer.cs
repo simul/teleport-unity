@@ -825,7 +825,7 @@ namespace teleport
 			ScriptableCullingParameters p;
 			if (camera.TryGetCullingParameters(out p))
 			{
-				CasterMonitor monitor = CasterMonitor.GetCasterMonitor();
+				teleport.Monitor monitor = teleport.Monitor.GetCasterMonitor();
 				CullingResults cullingResults = context.Cull(ref p);
 				Light[] lights = new Light[cullingResults.visibleLights.Length];
 				for (int i = 0; i < lights.Length; i++)
@@ -923,7 +923,7 @@ namespace teleport
 			{
 				return;
 			}
-			CasterMonitor monitor = CasterMonitor.GetCasterMonitor();
+			teleport.Monitor monitor = teleport.Monitor.GetCasterMonitor();
 
 			int layerMask = 0x7FFFFFFF;
 			uint renderingMask = 0x7FFFFFFF;

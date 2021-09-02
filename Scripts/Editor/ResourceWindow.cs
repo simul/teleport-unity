@@ -2,17 +2,19 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Management;
 using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using uid = System.UInt64;
 
 namespace teleport
 {
-	public class CasterResourceWindow : EditorWindow
+	public class ResourceWindow : EditorWindow
 	{
-		enum ResourceWindowCategories {EXTRACTION, SETUP, DEBUG};
+		enum ResourceWindowCategories {EXTRACTION, SETUP, RESOURCES, DEBUG};
 
 		//References to assets.
 		private GeometrySource geometrySource;
@@ -36,6 +38,7 @@ namespace teleport
 		private Vector2 scrollPosition_textures;
 		private bool foldout_gameObjects = false;
 		private bool foldout_textures = false;
+		private Vector2 scrollPosition_meshTable;
 
 		private string[] categories;
 		private int selectedCategory = 0;
@@ -43,7 +46,7 @@ namespace teleport
 		[MenuItem("Teleport VR/Resource Manager")]
 		public static void OpenResourceWindow()
 		{
-			CasterResourceWindow window = GetWindow<CasterResourceWindow>(false, "TeleportVR Resource Manager");
+			ResourceWindow window = GetWindow<ResourceWindow>(false, "Teleport Resources");
 			window.minSize = new Vector2(600, 200);
 			window.Show();
 		}
@@ -78,6 +81,7 @@ namespace teleport
 
 		private void OnGUI()
 		{
+			GUI.enabled = !Application.isPlaying;
 			EditorGUILayout.BeginHorizontal();
 			selectedCategory = GUILayout.SelectionGrid(selectedCategory, categories, 1, GUILayout.ExpandWidth(false));
 
@@ -89,6 +93,9 @@ namespace teleport
 					break;
 				case ResourceWindowCategories.SETUP:
 					DrawSetupLayout();
+					break;
+				case ResourceWindowCategories.RESOURCES:
+					DrawResourcesLayout();
 					break;
 				case ResourceWindowCategories.DEBUG:
 					DrawDebugLayout();
@@ -189,7 +196,8 @@ namespace teleport
 
 				foreach(RenderTexture renderTexture in renderTextures)
 				{
-					if(!renderTexture) break;
+					if(!renderTexture)
+						break;
 
 					EditorGUILayout.BeginHorizontal();
 
@@ -205,7 +213,55 @@ namespace teleport
 			}
 			EditorGUILayout.EndFoldoutHeaderGroup();
 		}
+		void DrawResourcesLayout()
+		{
+			// searchable table of extracted meshes.
 
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField("Name");
+			EditorGUILayout.LabelField("guid");
+			EditorGUILayout.LabelField("uid");
+			EditorGUILayout.EndHorizontal();
+			scrollPosition_meshTable = EditorGUILayout.BeginScrollView(scrollPosition_meshTable);
+			try
+			{
+				var myDir = Application.dataPath + "/../teleport_cache/meshes/engineering";
+				var dirInfo = new DirectoryInfo(myDir);
+				var meshFiles = dirInfo.EnumerateFiles("*.mesh", SearchOption.AllDirectories);
+
+				EditorGUILayout.BeginVertical();
+				foreach (var name in meshFiles)
+				{
+					EditorGUILayout.BeginHorizontal();
+					int last_underscore=name.Name.LastIndexOf("_");
+					int last_dot = name.Name.LastIndexOf(".");
+					var guid=name.Name.Substring(last_underscore+1,last_dot-last_underscore-1);
+					var object_name = name.Name.Substring(0,  last_underscore);
+					string asset_path=AssetDatabase.GUIDToAssetPath(guid);
+					var obj=AssetDatabase.LoadAssetAtPath<Mesh>(asset_path);
+					uid u =0;
+					if (obj != null)
+					{
+						u = geometrySource.FindResourceID(obj);
+					}
+
+					EditorGUILayout.LabelField(object_name);
+					using (new EditorGUI.DisabledScope(true))
+					{
+						EditorGUILayout.LabelField(guid);
+						EditorGUILayout.LabelField(u.ToString());
+					}
+
+					EditorGUILayout.EndHorizontal();
+				}
+				EditorGUILayout.EndVertical();
+			}
+			catch
+			{
+
+			}
+			EditorGUILayout.EndScrollView();
+		}
 		private void DrawSetupLayout()
 		{
 			//Names of the loaded scenes from the SceneManager.
@@ -390,7 +446,9 @@ namespace teleport
 		private void ExtractGlobalIlluminationTextures()
 		{
 			Texture[] giTextures =teleport.GlobalIlluminationExtractor.GetTextures();
-			foreach(Texture texture in giTextures)
+			if(giTextures==null)
+				return;
+			foreach (Texture texture in giTextures)
 			{
 				geometrySource.AddTexture(texture, GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
 			}
@@ -465,7 +523,7 @@ namespace teleport
 					case TextureFormat.BC6H:
 						renderTextures[i].format = RenderTextureFormat.ARGB32;
 						highQualityUASTC= true;
-						//writePng=true;
+						writePng=true;
 						break;
 					case TextureFormat.RGBAHalf:
 						renderTextures[i].format = RenderTextureFormat.ARGBHalf;
@@ -578,7 +636,7 @@ namespace teleport
 						}
 						File.WriteAllBytes(pngFile, bytes);
 						// We will send the .png instead of a .basis file.
-						if (highQualityUASTC)
+						if (!writePng)
 						{
 							LaunchBasisUExe(pngFile);
 							textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;

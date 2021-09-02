@@ -251,11 +251,12 @@ namespace teleport
 		public void StreamGenericTextures()
 		{
 			uid [] textureIDs= GeometrySource.GetGeometrySource().FindResourceIDs(GlobalIlluminationExtractor.GetTextures());
-			Client_SetGlobalIlluminationTextures(session.GetClientID(), (UInt64)textureIDs.Length, textureIDs);
+			if(textureIDs!=null)
+				Client_SetGlobalIlluminationTextures(session.GetClientID(), (UInt64)textureIDs.Length, textureIDs);
 		}
 		public void StreamPlayerBody()
 		{
-			CasterMonitor monitor = CasterMonitor.GetCasterMonitor();
+			teleport.Monitor monitor = teleport.Monitor.GetCasterMonitor();
 			List<GameObject> bodyParts = monitor.GetPlayerBodyParts();
 			foreach(GameObject part in bodyParts)
 			{

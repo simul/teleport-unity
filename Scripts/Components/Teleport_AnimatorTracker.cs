@@ -92,7 +92,7 @@ namespace teleport
 
 			lastAnimationUpdate = new avs.ApplyAnimation()
 			{
-				timestamp = CasterMonitor.GetUnixTimestamp() + timestampOffset,
+				timestamp = teleport.Monitor.GetUnixTimestamp() + timestampOffset,
 				nodeID = GeometrySource.GetGeometrySource().FindResourceID(skinnedMeshRenderer.gameObject),
 				animationID = animationID,
 			};

@@ -656,7 +656,7 @@ namespace teleport
 			//Add player body parts to list of streamed objects.
 			if(includePlayerParts)
 			{
-				CasterMonitor casterMonitor = CasterMonitor.GetCasterMonitor();
+				teleport.Monitor casterMonitor = teleport.Monitor.GetCasterMonitor();
 				List<GameObject> playerParts = casterMonitor.GetPlayerBodyParts();
 				foreach(GameObject playerPart in playerParts)
 				{
@@ -764,8 +764,13 @@ namespace teleport
 			{
 				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID, enable_compression && !running,verify);
 				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID, enable_compression && !running, verify);
+				return meshID;
 			}
-			return meshID;
+			else
+			{
+				Debug.LogError("Mesh missing! Mesh "+mesh.name+" was not extracted prior to running.");
+			}
+			return 0;
 		}
 
 		public uid AddMaterial(Material material, ForceExtractionMask forceMask)
@@ -990,7 +995,7 @@ namespace teleport
 
 		private void ExtractNodeSubType(GameObject source, ref avs.Node extractTo)
 		{
-			extractTo.dataSubtype = CasterMonitor.GetCasterMonitor().GetGameObjectBodyPart(source);
+			extractTo.dataSubtype = teleport.Monitor.GetCasterMonitor().GetGameObjectBodyPart(source);
 		}
 
 		private void ExtractNodeMaterials(Material[] sourceMaterials, ref avs.Node extractTo, ForceExtractionMask forceMask)
@@ -1044,7 +1049,7 @@ namespace teleport
 			extractTo.dataType = avs.NodeDataType.Mesh;
 
 			ExtractNodeMaterials(meshRenderer.sharedMaterials, ref extractTo, forceMask);
-
+			
 			return true;
 		}
 

@@ -11,7 +11,7 @@ namespace teleport
 #if UNITY_EDITOR
 	[UnityEditor.InitializeOnLoad]
 #endif
-	public class CasterMonitor : MonoBehaviour
+	public class Monitor : MonoBehaviour
 	{
 		public Vector3 bodyOffsetFromHead = default;
 
@@ -19,7 +19,7 @@ namespace teleport
 		private GameObject body = default, leftHand = default, rightHand = default;
 
 		private static bool initialised = false;
-		private static CasterMonitor instance; //There should only be one CasterMonitor instance at a time.
+		private static teleport.Monitor instance; //There should only be one teleport.Monitor instance at a time.
 
 		//StringBuilders used for constructing log messages from libavstream.
 		private static StringBuilder logInfo = new StringBuilder();
@@ -112,13 +112,13 @@ namespace teleport
 		private string title = "Teleport";
 
 #if UNITY_EDITOR
-		static CasterMonitor()
+		static Monitor()
 		{
 			UnityEditor.EditorApplication.update += EditorTick;
 		}
 #endif
 
-		public static CasterMonitor GetCasterMonitor()
+		public static Monitor GetCasterMonitor()
 		{
 			// We only want one instance, so delete duplicates.
 			if (instance == null)
@@ -128,7 +128,7 @@ namespace teleport
 					var objs=SceneManager.GetSceneAt(i).GetRootGameObjects();
 					foreach(var o in objs)
 					{
-						var m=o.GetComponentInChildren<CasterMonitor>();
+						var m=o.GetComponentInChildren<teleport.Monitor>();
 						if(m)
 						{
 							instance=m;
@@ -136,13 +136,13 @@ namespace teleport
 						}
 					}
 				}
-				instance = FindObjectOfType<CasterMonitor>();
+				instance = FindObjectOfType<teleport.Monitor>();
 				if(instance==null)
 				{
 					var tempObject= new GameObject("Monitor");
 					//Add Components
-					tempObject.AddComponent<CasterMonitor>();
-					instance = tempObject.GetComponent<CasterMonitor>();
+					tempObject.AddComponent<teleport.Monitor>();
+					instance = tempObject.GetComponent<teleport.Monitor>();
 				}
 			}
 			return instance;
@@ -238,14 +238,14 @@ namespace teleport
 		
 			if (managedSize != unmanagedSize)
 			{
-				Debug.LogError($"CasterMonitor failed to initialise! {nameof(SCServer.CasterSettings)} struct size mismatch between unmanaged code({unmanagedSize}) and managed code({managedSize})!");
+				Debug.LogError($"teleport.Monitor failed to initialise! {nameof(SCServer.CasterSettings)} struct size mismatch between unmanaged code({unmanagedSize}) and managed code({managedSize})!");
 				return;
 			}
 			if (instance == null)
 				instance = this;
 			if (instance != this)
 			{
-				Debug.LogError($"More than one instance of singleton CasterMonitor.");
+				Debug.LogError($"More than one instance of singleton teleport.Monitor.");
 				return;
 			}
 			SceneManager.sceneLoaded += OnSceneLoaded;

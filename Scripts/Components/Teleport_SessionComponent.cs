@@ -215,7 +215,7 @@ namespace teleport
 		//PROPERTIES
 
 		//One per session, as we stream geometry on a per-client basis.
-		private GeometryStreamingService geometryStreamingService = default;
+		private GeometryStreamingService geometryStreamingService = null;
 		public GeometryStreamingService GeometryStreamingService
 		{
 			get

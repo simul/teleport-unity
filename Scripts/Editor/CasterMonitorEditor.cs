@@ -1,15 +1,18 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-[CustomEditor(typeof(teleport.CasterMonitor))]
-public class CasterMonitorEditor : Editor
+namespace teleport
 {
-    public override void OnInspectorGUI()
+    [CustomEditor(typeof(teleport.Monitor))]
+    public class CasterMonitorEditor : Editor
     {
-        base.OnInspectorGUI();
+        public override void OnInspectorGUI()
+        {
+            base.OnInspectorGUI();
 
-        GUILayout.Space(10);
-        if(GUILayout.Button("Open Resource Window"))
-            teleport.CasterResourceWindow.OpenResourceWindow();
+            GUILayout.Space(10);
+            if(GUILayout.Button("Open Resource Window"))
+                teleport.ResourceWindow.OpenResourceWindow();
+        }
     }
 }

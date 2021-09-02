@@ -45,7 +45,7 @@ namespace teleport
 
 		uid clientID;
 
-		CasterMonitor monitor;
+		teleport.Monitor monitor;
 
 
 		CommandBuffer commandBuffer = null;
@@ -64,7 +64,7 @@ namespace teleport
 		{
 			this.clientID = clientID;
 
-			monitor = CasterMonitor.GetCasterMonitor();
+			monitor = teleport.Monitor.GetCasterMonitor();
 		}
 
 		public void CreateEncodeCommands(ScriptableRenderContext context, Camera camera, UInt32 tagDataID ,float diffuseAmbientScale)
@@ -157,7 +157,7 @@ namespace teleport
 			cubeTagDataWrapper.clientID = clientID;
 			cubeTagDataWrapper.dataSize = (UInt64)(Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData)) + lightSizeInBytes);
 			cubeTagDataWrapper.data = new avs.SceneCaptureCubeTagData();
-			cubeTagDataWrapper.data.timestamp = CasterMonitor.GetUnixTimestamp();
+			cubeTagDataWrapper.data.timestamp = teleport.Monitor.GetUnixTimestamp();
 			cubeTagDataWrapper.data.id = tagDataID;
 			cubeTagDataWrapper.data.cameraTransform = new avs.Transform();
 			cubeTagDataWrapper.data.cameraTransform.position = camera.transform.position;

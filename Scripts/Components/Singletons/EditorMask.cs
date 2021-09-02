@@ -48,7 +48,7 @@ namespace teleport
 			{
 				var objs = SceneManager.GetSceneAt(i).GetRootGameObjects();
 				foreach (var o in objs)
-					CasterMonitor.OverrideMaskRecursive(o, 0xFFFFFFFF);
+					teleport.Monitor.OverrideMaskRecursive(o, 0xFFFFFFFF);
 			}
 			Initialize();
 		}
@@ -62,13 +62,13 @@ namespace teleport
 			{
 				var objs = SceneManager.GetSceneAt(i).GetRootGameObjects();
 				foreach (var o in objs)
-					CasterMonitor.UnsetMaskRecursive(o, streamable_mask);
+					teleport.Monitor.UnsetMaskRecursive(o, streamable_mask);
 			}
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 			List<GameObject> streamable = geometrySource.GetStreamableObjects(true);
 			foreach (var o in streamable)
 			{
-				CasterMonitor.SetMaskRecursive(o, streamable_mask);
+				teleport.Monitor.SetMaskRecursive(o, streamable_mask);
 			}
 		}
 		private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -79,14 +79,14 @@ namespace teleport
 			GameObject[] rootGameObjects = scene.GetRootGameObjects();
 			foreach (GameObject o in rootGameObjects)
 			{
-				CasterMonitor.UnsetMaskRecursive(o, streamable_mask);
+				teleport.Monitor.UnsetMaskRecursive(o, streamable_mask);
 			}
 
 			//Set the mask on all streamable objects.
 			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects(true);
 			foreach (GameObject o in teleportStreamableObjects)
 			{
-				CasterMonitor.SetMaskRecursive(o, streamable_mask);
+				teleport.Monitor.SetMaskRecursive(o, streamable_mask);
 			}
 		}
 
