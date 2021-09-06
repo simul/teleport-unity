@@ -237,6 +237,7 @@ namespace teleport
 		private void OnEnable()
 		{
 			uid = GeometrySource.GetGeometrySource().AddNode(gameObject, GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
+			sendMovementUpdates&=!gameObject.isStatic;
 			CreateStreamedHierarchy();
 		}
 

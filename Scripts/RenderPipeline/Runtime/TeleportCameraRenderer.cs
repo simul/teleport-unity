@@ -890,7 +890,7 @@ namespace teleport
 					
 					// The unfiltered (reflection cube) should render close objects (though maybe only static ones).
 					float oldNearClip = camera.nearClipPlane;
-					camera.nearClipPlane = 0.4f;
+					camera.nearClipPlane = 5.0f;
 					videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, face);
 					camera.nearClipPlane = oldNearClip;
 					videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face, 0);

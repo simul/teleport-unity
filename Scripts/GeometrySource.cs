@@ -342,6 +342,9 @@ namespace teleport
 		}
 
 		#region DLLImports
+
+		[DllImport("SimulCasterServer")]
+		private static extern void SetCachePath(string name);
 		[DllImport("SimulCasterServer")]
 		private static extern void DeleteUnmanagedArray(in IntPtr unmanagedArray);
 
@@ -491,8 +494,8 @@ namespace teleport
 		{
 			//Initialise static instance in GeometrySource when it is enabled after a hot-reload.
 			GetGeometrySource();
-
-			compressedTexturesFolderPath = System.IO.Directory.GetParent(Application.dataPath).ToString()+ "/teleport_cache/basis_textures/";
+			var teleportSettings= TeleportSettings.GetOrCreateSettings();
+			compressedTexturesFolderPath = teleportSettings.cachePath + "/basis_textures/";
 
 			//Remove nodes that have been lost due to level change.
 			var pairsToDelete = processedResources.Where(pair => pair.Key == null).ToArray();
@@ -507,12 +510,16 @@ namespace teleport
 
 		public void SaveToDisk()
 		{
+			var teleportSettings = TeleportSettings.GetOrCreateSettings();
+			SetCachePath(teleportSettings.cachePath);
 			sceneReferenceManager.SaveToDisk();
 			SaveGeometryStore();
 		}
 
 		public void LoadFromDisk()
 		{
+			var teleportSettings = TeleportSettings.GetOrCreateSettings();
+			SetCachePath(teleportSettings.cachePath);
 			processedResources.Clear();
 
 			//Load data from files.
@@ -1081,6 +1088,7 @@ namespace teleport
 			//Animator component usually appears on the parent GameObject, so we need to use that instead for searching the children.
 			GameObject animatorSource = (source.transform.parent) ? source.transform.parent.gameObject : source.transform.gameObject;
 			Animator animator = animatorSource.GetComponentInChildren<Animator>();
+			#if UNITY_EDITOR
 			if(animator)
 			{
 				extractTo.animationIDs = AnimationExtractor.AddAnimations(animator, forceMask);
@@ -1091,7 +1099,7 @@ namespace teleport
 				extractTo.animationIDs = null;
 				extractTo.animationAmount = 0;
 			}
-
+			#endif
 			ExtractNodeMaterials(skinnedMeshRenderer.sharedMaterials, ref extractTo, forceMask);
 
 			return true;
@@ -1113,7 +1121,8 @@ namespace teleport
 			extractTo.dataType = avs.NodeDataType.Light;
 
 			Color lightColour = light.color;
-			extractTo.lightColour = (PlayerSettings.colorSpace == ColorSpace.Linear) ? lightColour.linear * light.intensity : lightColour.gamma * light.intensity;
+			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+			extractTo.lightColour = (teleportSettings.colorSpace == ColorSpace.Linear) ? lightColour.linear * light.intensity : lightColour.gamma * light.intensity;
 			extractTo.lightType = (byte)light.type;
 			extractTo.lightRange = light.range ;
 			extractTo.lightRadius = light.range / 5.0F;

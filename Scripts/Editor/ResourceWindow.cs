@@ -225,7 +225,7 @@ namespace teleport
 			scrollPosition_meshTable = EditorGUILayout.BeginScrollView(scrollPosition_meshTable);
 			try
 			{
-				var myDir = Application.dataPath + "/../teleport_cache/meshes/engineering";
+				var myDir = teleportSettings.cachePath+"/meshes/engineering";
 				var dirInfo = new DirectoryInfo(myDir);
 				var meshFiles = dirInfo.EnumerateFiles("*.mesh", SearchOption.AllDirectories);
 

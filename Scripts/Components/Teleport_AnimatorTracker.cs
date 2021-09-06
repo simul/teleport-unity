@@ -63,7 +63,7 @@ namespace teleport
 
 		private void Update()
 		{
-			if (hierarchyRoot.pollCurrentAnimation)
+			if (hierarchyRoot.pollCurrentAnimation&& animator.runtimeAnimatorController!=null)
 			{
 				AnimatorClipInfo[] animatorClips = animator.GetCurrentAnimatorClipInfo(0);
 				AnimationClip playingClip = animatorClips.Length != 0 ? animatorClips[0].clip : null;

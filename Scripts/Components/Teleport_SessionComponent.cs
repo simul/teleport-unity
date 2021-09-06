@@ -254,8 +254,6 @@ namespace teleport
 		public Teleport_AudioCaptureComponent audioCaptureComponent = null;
 		public AudioSource inputAudioSource = null;
 
-		public List<Teleport_Controller> controllers;
-
 		public SCServer.ClientSettings clientSettings = new SCServer.ClientSettings();
 
 		//PUBLIC STATIC MEMBER VARIABLES
@@ -359,6 +357,8 @@ namespace teleport
 					Animator animator = controller.controllerModel.GetComponentInChildren<Animator>();
 					if(animator)
 					{
+					// TODO: Convert the following to work outside of editor.
+					#if UNITY_EDITOR
 						UnityEditor.Animations.AnimatorController animatorController = animator.runtimeAnimatorController as UnityEditor.Animations.AnimatorController;
 						UnityEditor.Animations.AnimatorStateMachine stateMachine = animatorController.layers[0].stateMachine;
 
@@ -388,6 +388,7 @@ namespace teleport
 									break;
 							}
 						}
+						#endif
 					}
 				}
 			}
@@ -501,16 +502,12 @@ namespace teleport
 			//Add a break for readability.
 			y += lineHeight;
 
-			for (int i = 0; i < controllers.Count; i++)
+			foreach (Teleport_Controller controller in controllerLookup.Values)
 			{
-				Teleport_Controller controller = controllers[i];
-				if (!controller)
-				{
-					continue;
-				}
 
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Controller {0}, {1}", i, FormatVectorString(controller.transform.position)));
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tbtns:{0} trigger:{3:F3}/{4:F3} stick:{1:F3},{2:F3}", controller.buttons, controller.joystick.x, controller.joystick.y,controller.triggerBack,controller.GetAxis(avs.InputList.TRIGGER01)));
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Controller {0}, {1}", controller.Index, FormatVectorString(controller.transform.position)));
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tbtns:{0} trigger:{1:F3}/{2:F3}", controller.buttons, controller.triggerBack,controller.GetAxis(avs.InputList.TRIGGER01)));
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tstick:{0:F3},{1:F3}",  controller.joystick.x, controller.joystick.y));
 			}
 
 			if (geometryStreamingService != null)
@@ -601,9 +598,16 @@ namespace teleport
 			}
 
 			//Place controllers at their assigned index in the lookup.
+
+			Teleport_Controller[] controllers = GetComponentsInChildren<Teleport_Controller>();
+		
 			foreach (Teleport_Controller controller in controllers)
 			{
 				controller.session = this;
+				if (controllerLookup.TryGetValue((int)controller.Index,out var value) )
+				{
+					Debug.LogError("Controllers have the same index");
+				}
 				controllerLookup[(int)controller.Index] = controller;
 			}
 		}
@@ -670,7 +674,7 @@ namespace teleport
 			{
 				geometryStreamingService.StreamGlobals();
 			}
-			foreach (Teleport_Controller controller in controllers)
+			foreach (Teleport_Controller controller in controllerLookup.Values)
 			{
 				Teleport_Streamable[] streamables =controller.gameObject.GetComponentsInChildren<Teleport_Streamable>();
 				foreach (Teleport_Streamable streamable in streamables)

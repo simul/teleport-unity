@@ -24,7 +24,7 @@ namespace avs
 		public int positionAmount;
 		public Vector3Keyframe[] positionKeyframes;
 
-		public int rotationAmount;
+		public int numRotationKeyframes;
 		public Vector4Keyframe[] rotationKeyframes;
 	}
 
@@ -47,6 +47,7 @@ namespace avs
 	}
 }
 
+#if UNITY_EDITOR
 namespace teleport
 {
 	public static class AnimationExtractor
@@ -230,7 +231,7 @@ namespace teleport
 					int num_k= curves.positionX.keys.Length;
 					float end_t =  curves.positionX.keys.Last().time;
 					newAnimation.boneKeyframes[j].positionAmount=num_k;
-					newAnimation.boneKeyframes[j].rotationAmount=num_k;
+					newAnimation.boneKeyframes[j].numRotationKeyframes = num_k;
 					newAnimation.boneKeyframes[j].positionKeyframes=new avs.Vector3Keyframe[num_k];
 					newAnimation.boneKeyframes[j].rotationKeyframes = new avs.Vector4Keyframe[num_k];
 					for (int k=0;k< num_k; k++)
@@ -344,7 +345,8 @@ namespace teleport
 				animation.name = Marshal.StringToBSTR(clip.name);
 
 				Dictionary<Transform, InterimAnimation> nodeCurves = new Dictionary<Transform, InterimAnimation>();
-				foreach(EditorCurveBinding curveBinding in AnimationUtility.GetCurveBindings(clip))
+				var curveBindings= AnimationUtility.GetCurveBindings(clip);
+				foreach (EditorCurveBinding curveBinding in curveBindings)
 				{
 					AnimationCurve curve = AnimationUtility.GetEditorCurve(clip, curveBinding);
 
@@ -440,21 +442,49 @@ namespace teleport
 					if(interim.rotationX != null)
 					{
 						transformKeyframe.rotationKeyframes = new avs.Vector4Keyframe[interim.rotationX.length];
-						transformKeyframe.rotationAmount = interim.rotationX.length;
+						transformKeyframe.numRotationKeyframes = interim.rotationX.length;
 						for(int k = 0; k < interim.rotationX.length; k++)
 						{
 							transformKeyframe.rotationKeyframes[k].time = interim.rotationX[k].time * 1000; //Convert to milliseconds from seconds.
 							transformKeyframe.rotationKeyframes[k].value = new avs.Vector4(interim.rotationX[k].value, interim.rotationY[k].value, interim.rotationZ[k].value, interim.rotationW[k].value);
 						}
 					}
-					else if(interim.eulerRotationX != null)
+					else if(interim.eulerRotationX != null|| interim.eulerRotationY!=null|| interim.eulerRotationZ!=null)
 					{
-						transformKeyframe.rotationKeyframes = new avs.Vector4Keyframe[interim.eulerRotationX.length];
-						transformKeyframe.rotationAmount = interim.eulerRotationX.length;
-						for(int k = 0; k < interim.eulerRotationX.length; k++)
+						// create a set of all the times used:
+						HashSet<float> kf_times=new HashSet<float>();
+						if (interim.eulerRotationX != null)
 						{
-							transformKeyframe.rotationKeyframes[k].time = interim.eulerRotationX[k].time * 1000; //Convert to milliseconds from seconds.
-							transformKeyframe.rotationKeyframes[k].value = Quaternion.Euler(interim.eulerRotationX[k].value, interim.eulerRotationY[k].value, interim.eulerRotationZ[k].value); //Convert from euler to quaternion to avs.Vector4.
+							foreach (var kf in interim.eulerRotationX.keys)
+							{
+								kf_times.Add(kf.time);
+							}
+						}
+						if (interim.eulerRotationY != null)
+						{
+							foreach (var kf in interim.eulerRotationY.keys)
+							{
+								kf_times.Add(kf.time);
+							}
+						}
+						if (interim.eulerRotationZ != null)
+						{
+							foreach (var kf in interim.eulerRotationZ.keys)
+							{
+								kf_times.Add(kf.time);
+							}
+						}
+						transformKeyframe.numRotationKeyframes = kf_times.Count;
+						transformKeyframe.rotationKeyframes = new avs.Vector4Keyframe[transformKeyframe.numRotationKeyframes];
+						int k = 0;
+						foreach (float t in kf_times)
+						{
+							transformKeyframe.rotationKeyframes[k].time = t;
+							float x= interim.eulerRotationX != null ? interim.eulerRotationX.Evaluate(t):0.0F;
+							float y = interim.eulerRotationY != null ? interim.eulerRotationY.Evaluate(t) : 0.0F;
+							float z = interim.eulerRotationZ != null ? interim.eulerRotationZ.Evaluate(t) : 0.0F;
+							transformKeyframe.rotationKeyframes[k].value = Quaternion.Euler(x,y,z); //Convert from euler to quaternion to avs.Vector4.
+							k++;
 						}
 					}
 					else if(interim.rotationY != null || interim.rotationZ != null)
@@ -529,3 +559,4 @@ namespace teleport
 		}
 	}
 }
+#endif

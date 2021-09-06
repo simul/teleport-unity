@@ -13,6 +13,8 @@ namespace teleport
 	public class TeleportSettings : ScriptableObject
 	{
 		static private TeleportSettings teleportSettings=null;
+		// the cache path is global, shared with player instances.
+		public string cachePath="";
 		// We always store the settings in this path:
 		public const string k_TeleportSettingsPath = "TeleportVR";
 		public const string k_TeleportSettingsFilename = "TeleportSettings";
@@ -43,6 +45,8 @@ namespace teleport
 		[Header("Render Main Camera")]
 		public bool renderMainCamera = true;
 
+		public ColorSpace colorSpace =new ColorSpace();
+#if UNITY_EDITOR
 		public static void EnsureAssetPath(string requiredPath)
 		{
 			var settings_folders = requiredPath.Split('/');
@@ -58,6 +62,7 @@ namespace teleport
 				path = fullpath;
 			}
 		}
+#endif
 		public static TeleportSettings GetOrCreateSettings()
 		{
 			if(teleportSettings == null)
@@ -73,6 +78,10 @@ namespace teleport
 				AssetDatabase.CreateAsset(teleportSettings, "Assets/Resources/" + k_TeleportSettingsPath + "/" + k_TeleportSettingsFilename + ".asset");
 				AssetDatabase.SaveAssets();
 			}
+			teleportSettings.colorSpace = PlayerSettings.colorSpace;
+			if(teleportSettings.cachePath=="")
+				teleportSettings.cachePath = System.IO.Directory.GetParent(Application.dataPath).ToString().Replace("\\","/") + "/teleport_cache";
+
 #endif
 			return teleportSettings;
 		}
