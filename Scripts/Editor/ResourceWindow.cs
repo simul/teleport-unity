@@ -81,7 +81,6 @@ namespace teleport
 
 		private void OnGUI()
 		{
-			GUI.enabled = !Application.isPlaying;
 			EditorGUILayout.BeginHorizontal();
 			selectedCategory = GUILayout.SelectionGrid(selectedCategory, categories, 1, GUILayout.ExpandWidth(false));
 
@@ -108,6 +107,7 @@ namespace teleport
 
 		private void DrawExtractionLayout()
 		{
+			GUI.enabled = !Application.isPlaying;
 			includePlayerParts = GUILayout.Toggle(includePlayerParts, "Include Player Parts");
 			compressGeometry = GUILayout.Toggle(compressGeometry, "Compress Geometry");
 			verifyGeometry = GUILayout.Toggle(verifyGeometry, "Verify Compressed Geometry");
@@ -212,6 +212,7 @@ namespace teleport
 				EditorGUILayout.EndScrollView();
 			}
 			EditorGUILayout.EndFoldoutHeaderGroup();
+			GUI.enabled=true;
 		}
 		void DrawResourcesLayout()
 		{
@@ -264,6 +265,7 @@ namespace teleport
 		}
 		private void DrawSetupLayout()
 		{
+			GUI.enabled = !Application.isPlaying;
 			//Names of the loaded scenes from the SceneManager.
 			string loadedScenes = "";
 			for(int i = 0; i < SceneManager.sceneCount; i++)
@@ -342,11 +344,13 @@ namespace teleport
 					SetupGameObjectAndChildrenForStreaming(gameObject);
 				}
 			}
+			GUI.enabled = true;
 		}
 
 		private void DrawDebugLayout()
 		{
-			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.BeginVertical();
+			GUI.enabled = !Application.isPlaying;
 
 			if(GUILayout.Button("Clear Cached Data"))
 			{
@@ -362,17 +366,17 @@ namespace teleport
 				}
 				renderTextures = new RenderTexture[0];
 			}
+			GUI.enabled = true;
 
 			//Create a new file explorer window, displaying the folder where compressed textures are saved.
-			if(GUILayout.Button("Open Compressed Texture Folder"))
+			if (GUILayout.Button("Open Compressed Texture Folder"))
 			{
 				//File explorer will treat paths with forward slashes as invalid.
 				System.Diagnostics.Process.Start("explorer.exe", geometrySource.compressedTexturesFolderPath.Replace('/', '\\'));
 			}
 
-			EditorGUILayout.EndHorizontal();
-
-			if(GUILayout.Button("Reload Geometry From Disk"))
+			GUI.enabled = !Application.isPlaying;
+			if (GUILayout.Button("Reload Geometry From Disk"))
 			{
 				geometrySource.LoadFromDisk();
 			}
@@ -380,6 +384,8 @@ namespace teleport
 			{
 				EditorMask.ResetAll();
 			}
+			GUI.enabled = true;
+			EditorGUILayout.EndVertical();
 		}
 
 		private void FindSceneStreamables()
