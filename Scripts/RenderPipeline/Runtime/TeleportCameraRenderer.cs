@@ -532,7 +532,6 @@ namespace teleport
 			drawingSettings.enableDynamicBatching = true;
 			drawingSettings.enableInstancing = true;
 			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResults);
-		
 			CoreUtils.SetKeyword(buffer, "SHADOWS_DEPTH", true);
 			Vector4 lightShadowBias = new Vector4(0F, 0F, 0F, 0F);
 			//Vector4 lightShadowBias = new Vector4(-0.001553151F, 1.0F, 0.032755F, 0F);
