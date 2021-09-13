@@ -500,6 +500,7 @@ namespace teleport
 
 			y += lineHeight;
 
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("video frames submitted per sec\t{0:F3}", videoEncoderStats.framesSubmittedPerSec), font);
 			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("video frames encoded per sec\t{0:F3}", videoEncoderStats.framesEncodedPerSec), font);
 
 			//Add a break for readability.
