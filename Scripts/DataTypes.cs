@@ -459,6 +459,18 @@ namespace avs
 		public double maxBandwidthUsed;
 	};
 
+	public struct VideoEncoderStats
+	{
+		/*! Total video frames submitted to the encoder. */
+		public UInt64 framesSubmitted;
+		/*! Number of video frames submitted to the encoder per second. */
+		public float framesSubmittedPerSec;
+		/*! Total video frames encoded. */
+		public UInt64 framesEncoded;
+		/*! Number of video frames encoded per second. */
+		public float framesEncodedPerSec;
+	};
+
 	public struct Mat4x4
 	{
 		//[Row, Column]

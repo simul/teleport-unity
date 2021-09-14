@@ -34,6 +34,8 @@ namespace teleport
 
 		[DllImport("SimulCasterServer")]
 		public static extern bool Client_GetClientNetworkStats(uid clientID, ref avs.NetworkStats stats);
+		[DllImport("SimulCasterServer")]
+		public static extern bool Client_GetClientVideoEncoderStats(uid clientID, ref avs.VideoEncoderStats stats);
 
 		// Set the client-specific settings, e.g. video layout.
 		[DllImport("SimulCasterServer")]
@@ -276,12 +278,18 @@ namespace teleport
 		private Vector3 last_received_headPos = new Vector3(0, 0, 0);
 
 		private avs.NetworkStats networkStats;
+		private avs.VideoEncoderStats videoEncoderStats;
 
 		//PUBLIC FUNCTIONS
 
 		public avs.NetworkStats GetNetworkStats()
 		{
 			return networkStats;
+		}
+
+		public avs.VideoEncoderStats GetVideoEncoderStats()
+		{
+			return videoEncoderStats;
 		}
 
 		public void Disconnect()
@@ -490,6 +498,11 @@ namespace teleport
 			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("avg bandwidth used\t{0:F3} mb/s", networkStats.avgBandwidthUsed), font);
 			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("max bandwidth used\t{0:F3} mb/s", networkStats.maxBandwidthUsed), font);
 
+			y += lineHeight;
+
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("video frames submitted per sec\t{0:F3}", videoEncoderStats.framesSubmittedPerSec), font);
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("video frames encoded per sec\t{0:F3}", videoEncoderStats.framesEncodedPerSec), font);
+
 			//Add a break for readability.
 			y += lineHeight;
 
@@ -575,6 +588,7 @@ namespace teleport
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
 			geometryStreamingService = new GeometryStreamingService(this);
 			networkStats = new avs.NetworkStats();
+			videoEncoderStats = new avs.VideoEncoderStats();
 			inputAudioSource = new AudioSource();
 
 			// Bypass effects added by the scene's AudioListener
@@ -651,6 +665,7 @@ namespace teleport
 			{
 				SendOriginUpdates();
 				Client_GetClientNetworkStats(clientID, ref networkStats);
+				Client_GetClientVideoEncoderStats(clientID, ref videoEncoderStats);
 			}
 
 			if (teleportSettings.casterSettings.isStreamingGeometry)
