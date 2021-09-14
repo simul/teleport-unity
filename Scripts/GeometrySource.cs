@@ -274,6 +274,8 @@ namespace avs
 		public IntPtr data;
 
 		public uid samplerID;
+
+		public float valueScale;
 	}
 
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
@@ -377,7 +379,8 @@ namespace teleport
 		private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture texture, string compressedFilePath
 			, [MarshalAs(UnmanagedType.I1)] bool genMips
 			, [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC
-			, [MarshalAs(UnmanagedType.I1)] bool forceOverwrite);
+			, [MarshalAs(UnmanagedType.I1)] bool forceOverwrite
+			);
 		[DllImport("SimulCasterServer")]
 		private static extern void StoreShadowMap(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture shadowMap);
 
@@ -893,7 +896,7 @@ namespace teleport
 			else return "";
 			return compressedFilePath;
 		}
-		public void AddTextureData(Texture texture, avs.Texture textureData, bool highQualityUASTC, bool forceOverwrite)
+		public void AddTextureData(Texture texture, avs.Texture textureData, bool highQualityUASTC, bool forceOverwrite )
 		{
 			if(!processedResources.TryGetValue(texture, out uid textureID))
 			{

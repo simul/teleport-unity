@@ -514,12 +514,8 @@ namespace teleport
 					TextureImporterType textureType = textureImporter ? textureImporter.textureType : TextureImporterType.Default;
 					isNormal = textureType == UnityEditor.TextureImporterType.NormalMap;
 				}
-				else
-				{
-					UnityEngine.Debug.LogError("No importer for texture "+ sourceTexture);
-					return false;
-                }
 				bool writePng = false;
+				bool hdr=false;
 				switch (sourceTexture.format)
 				{
 					case TextureFormat.RGBAFloat:
@@ -530,6 +526,7 @@ namespace teleport
 						renderTextures[i].format = RenderTextureFormat.ARGB32;
 						highQualityUASTC= true;
 						writePng=true;
+						hdr=true;
 						break;
 					case TextureFormat.RGBAHalf:
 						renderTextures[i].format = RenderTextureFormat.ARGBHalf;
@@ -543,7 +540,7 @@ namespace teleport
 					default:
 						break;
 				}
-				if(isNormal|| textureImporter.GetDefaultPlatformTextureSettings().textureCompression==TextureImporterCompression.CompressedHQ)
+				if(isNormal|| textureImporter!=null&& textureImporter.GetDefaultPlatformTextureSettings().textureCompression==TextureImporterCompression.CompressedHQ)
 					highQualityUASTC= true;
 				renderTextures[i].enableRandomWrite = true;
 				renderTextures[i].name = $"{geometrySource.texturesWaitingForExtraction[i].unityTexture.name} ({geometrySource.texturesWaitingForExtraction[i].id})";
@@ -632,15 +629,41 @@ namespace teleport
 					if(writePng|| highQualityUASTC)
 					{
 						string textureAssetPath = AssetDatabase.GetAssetPath(sourceTexture);
-						byte[] bytes = readTexture.EncodeToPNG();
-						string basisFile=geometrySource.GenerateCompressedFilePath(textureAssetPath,avs.TextureCompression.BASIS_COMPRESSED);
+						string basisFile = geometrySource.GenerateCompressedFilePath(textureAssetPath, avs.TextureCompression.BASIS_COMPRESSED);
 						string dirPath = System.IO.Path.GetDirectoryName(basisFile);
-						string pngFile = basisFile.Replace(".basis", ".png"); //dirPath +"/basis_test.png";// 
 						if (!Directory.Exists(dirPath))
 						{
 							Directory.CreateDirectory(dirPath);
 						}
-						File.WriteAllBytes(pngFile, bytes);
+						float valueScale=1.0f;
+						if (hdr)
+						{
+							Unity.Collections.NativeArray<Vector4> pixels =	readTexture.GetPixelData<Vector4>(0);
+							float max_value = 0.0F;
+							foreach (var pix in pixels)
+							{
+								float mx=Math.Max(Math.Max(Math.Max(pix.x,pix.y),pix.z),pix.w);
+								max_value=Math.Max(mx,max_value);
+							}
+							if(max_value>1.0f)
+							{
+								for (int j=0;j< pixels.Length;j++)
+								{
+									pixels[j]/= max_value;
+								}
+								readTexture.SetPixelData<Vector4>(pixels,0);
+								valueScale=1.0f;
+							}
+						}
+						string pngFile = basisFile.Replace(".basis", ".png");
+						byte[] png_bytes = readTexture.EncodeToPNG();
+						File.WriteAllBytes(pngFile, png_bytes);
+						/*
+						 * exr is way too big.
+						string exrFile = basisFile.Replace(".basis", ".exr");
+						byte[] exr_bytes = readTexture.EncodeToEXR();
+						File.WriteAllBytes(exrFile, exr_bytes);*/
+
 						// We will send the .png instead of a .basis file.
 						if (!writePng)
 						{
@@ -649,9 +672,10 @@ namespace teleport
 						}
 						else
 							textureData.compression = avs.TextureCompression.PNG;
-						textureData.dataSize = (uint)(bytes.Length );
+						textureData.dataSize = (uint)(png_bytes.Length );
 						textureData.data = Marshal.AllocCoTaskMem((int)textureData.dataSize);
-						Marshal.Copy(bytes,0,textureData.data,(int)textureData.dataSize);
+						textureData.valueScale=valueScale;
+						Marshal.Copy(png_bytes, 0,textureData.data,(int)textureData.dataSize);
 						geometrySource.AddTextureData(sourceTexture, textureData, highQualityUASTC, forceOverwrite);
 					}
 					else
