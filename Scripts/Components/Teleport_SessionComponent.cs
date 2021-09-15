@@ -517,10 +517,13 @@ namespace teleport
 
 			foreach (Teleport_Controller controller in controllerLookup.Values)
 			{
-
 				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Controller {0}, {1}", controller.Index, FormatVectorString(controller.transform.position)));
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tbtns:{0} trigger:{1:F3}/{2:F3}", controller.buttons, controller.triggerBack,controller.GetAxis(avs.InputList.TRIGGER01)));
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tbtns:{0} trigger:{1:F3}/{2:F3}", controller.buttons, controller.triggerBack,controller.GetAxis(avs.InputID.TRIGGER01)));
 				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tstick:{0:F3},{1:F3}",  controller.joystick.x, controller.joystick.y));
+				if (controller.buttonPressesAndReleases.TryGetValue(avs.InputID.TRIGGER01,out var queue))
+				{
+					GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tevents:{0}", queue.Count));
+				}
 			}
 
 			if (geometryStreamingService != null)

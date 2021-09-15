@@ -636,7 +636,7 @@ namespace teleport
 							Directory.CreateDirectory(dirPath);
 						}
 						float valueScale=1.0f;
-						if (hdr)
+					/*	if (hdr)
 						{
 							Unity.Collections.NativeArray<Vector4> pixels =	readTexture.GetPixelData<Vector4>(0);
 							float max_value = 0.0F;
@@ -654,7 +654,7 @@ namespace teleport
 								readTexture.SetPixelData<Vector4>(pixels,0);
 								valueScale=1.0f;
 							}
-						}
+						}*/
 						string pngFile = basisFile.Replace(".basis", ".png");
 						byte[] png_bytes = readTexture.EncodeToPNG();
 						File.WriteAllBytes(pngFile, png_bytes);

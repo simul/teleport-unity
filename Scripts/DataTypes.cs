@@ -61,7 +61,7 @@ namespace avs
 		PCM
 	};
 
-	public enum InputList
+	public enum InputID
 	{
 		INVALID,
 
@@ -120,11 +120,15 @@ namespace avs
 		TRIGGER_LEFT_GRIP = TRIGGER05,
 		TRIGGER_RIGHT_GRIP = TRIGGER06,
 
+		TRIGGER_LEFT_HAIRLINE_BACK=TRIGGER07,
+		TRIGGER_RIGHT_HAIRLINE_BACK = TRIGGER08,
+
 		//Single trigger aliases.
 		TRIGGER_BACK = TRIGGER_LEFT_BACK,
 		TRIGGER_FRONT = TRIGGER_LEFT_FRONT,
 		TRIGGER_GRIP = TRIGGER_LEFT_GRIP,
 
+		TRIGGER_HAIRLINE_BACK = TRIGGER_LEFT_HAIRLINE_BACK,
 		//Motion aliases.
 		STICK_LEFT = MOTION01,
 		STICK_RIGHT = MOTION02,
@@ -538,15 +542,15 @@ namespace avs
 	public struct InputEventBinary
 	{
 		public UInt32 eventID;
-		public InputList inputID;
-		[MarshalAs(UnmanagedType.U1)]public bool activated;
+		public InputID inputID;
+		[MarshalAs(UnmanagedType.U1)] public bool activated;
 	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct InputEventAnalogue
 	{
 		public UInt32 eventID;
-		public InputList inputID;
+		public InputID inputID;
 		public float strength;
 	}
 
@@ -554,7 +558,7 @@ namespace avs
 	public struct InputEventMotion
 	{
 		public UInt32 eventID;
-		public InputList inputID;
+		public InputID inputID;
 		public avs.Vector2 motion;
 	}
 

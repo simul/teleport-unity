@@ -1,13 +1,18 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace teleport
 {
+	public struct ButtonEvent
+	{
+		public bool pressed;
+	}
 	public class Teleport_Controller : MonoBehaviour
 	{
 		public const int MAX_CONTROLLERS = 2;
-		public const float TRIGGER_ACTIVATE_STRENGTH = 0.8f;
+		public const float TRIGGER_ACTIVATE_STRENGTH = 0.2f;
 
 		//VRTK appears to be performing some sort of lookup set, as if you change the name of this, or change it to a property, it stops being assigned a value.
 		public uint Index = 0;
@@ -31,11 +36,13 @@ namespace teleport
 		[HideInInspector]
 		public UInt32 buttons = 0;
 
-		private Dictionary<avs.InputList, bool> buttonPresses = new Dictionary<avs.InputList, bool>();
-		private Dictionary<avs.InputList, float> triggerStrengths = new Dictionary<avs.InputList, float>();
-		private Dictionary<avs.InputList, avs.Vector2> motionPositions = new Dictionary<avs.InputList, avs.Vector2>();
+		// For each input, we create a queue of  events, so that presses and releases are processed in order.
+		public Dictionary<avs.InputID, List<ButtonEvent>> buttonPressesAndReleases = new Dictionary<avs.InputID, List<ButtonEvent>>();
+		private Dictionary<avs.InputID, bool> buttonStates = new Dictionary<avs.InputID, bool>();
+		private Dictionary<avs.InputID, float> triggerStrengths = new Dictionary<avs.InputID, float>();
+		private Dictionary<avs.InputID, avs.Vector2> motionPositions = new Dictionary<avs.InputID, avs.Vector2>();
 
-		private Dictionary<avs.InputList, bool> previousButtonPresses;
+		private Dictionary<avs.InputID, bool> previousButtonPresses;
 
 		public void SetButtons(UInt32 value)
 		{
@@ -58,9 +65,11 @@ namespace teleport
 			joystick.y = value.y;
 		}
 
-		public bool IsPressing(avs.InputList inputID)
+		// really we need to make this work better.
+		// we should for each control receive a stream of events
+		public bool IsPressing(avs.InputID inputID)
 		{
-			if(buttonPresses.TryGetValue(inputID, out bool pressed))
+			if(buttonStates.TryGetValue(inputID, out bool pressed))
 			{
 				return pressed;
 			}
@@ -70,50 +79,56 @@ namespace teleport
 			}
 		}
 
-		public bool StartedPressing(avs.InputList inputID)
+		public bool StartedPressing(avs.InputID inputID)
 		{
-			if(buttonPresses.TryGetValue(inputID, out bool pressed))
+			if (buttonPressesAndReleases.TryGetValue(inputID, out List<ButtonEvent> buttonEventList))
 			{
-				previousButtonPresses.TryGetValue(inputID, out bool prevPressed);
-
-				return pressed && !prevPressed;
+				if (buttonEventList.Count == 0)
+					return false;
+				// Get the first event. Was it a press?
+				ButtonEvent buttonEvent = buttonEventList[0];
+				if (buttonEvent.pressed)
+				{
+				// this event has now been processed and can be removed.
+					buttonEventList.RemoveAt(0);
+					return true;
+				}
 			}
-			else
-			{
-				return false;
-			}
+			return false;
 		}
 
-		public bool StoppedPressing(avs.InputList inputID)
+		public bool StoppedPressing(avs.InputID inputID)
 		{
-			if(buttonPresses.TryGetValue(inputID, out bool pressed))
+			if (buttonPressesAndReleases.TryGetValue(inputID, out List<ButtonEvent> buttonEventList))
 			{
-				previousButtonPresses.TryGetValue(inputID, out bool prevPressed);
-
-				return !pressed && prevPressed;
+				if (buttonEventList.Count == 0)
+					return true;
+				ButtonEvent buttonEvent = buttonEventList[0];
+				if (!buttonEvent.pressed)
+				{
+					buttonEventList.RemoveAt(0);
+					return true;
+				}
 			}
-			else
-			{
-				return false;
-			}
+			return false;
 		}
 
-		public bool IsTouching(avs.InputList inputID)
+		public bool IsTouching(avs.InputID inputID)
 		{
 			return false;
 		}
 
-		public bool StartedTouching(avs.InputList inputID)
+		public bool StartedTouching(avs.InputID inputID)
 		{
 			return false;
 		}
 
-		public bool StoppedTouching(avs.InputList inputID)
+		public bool StoppedTouching(avs.InputID inputID)
 		{
 			return false;
 		}
 
-		public Vector2 GetAxis(avs.InputList inputID)
+		public Vector2 GetAxis(avs.InputID inputID)
 		{
 			if(motionPositions.TryGetValue(inputID, out avs.Vector2 motionAxis))
 			{
@@ -130,17 +145,31 @@ namespace teleport
 		public void ProcessInputEvents(avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
 		{
 			//Copy old button presses for just triggered comparisons.
-			previousButtonPresses = new Dictionary<avs.InputList, bool>(buttonPresses);
-
 			foreach(avs.InputEventBinary binaryEvent in binaryEvents)
 			{
-				buttonPresses[binaryEvent.inputID] = binaryEvent.activated;
+				if(!buttonPressesAndReleases.ContainsKey(binaryEvent.inputID))
+					buttonPressesAndReleases.Add(binaryEvent.inputID, new List<ButtonEvent>());
+				var evt= new ButtonEvent();
+				evt.pressed=binaryEvent.activated;
+				buttonPressesAndReleases[binaryEvent.inputID].Add(evt);
+				if (!buttonStates.ContainsKey(binaryEvent.inputID))
+					buttonStates.Add(binaryEvent.inputID, evt.pressed);
 			}
 
 			foreach(avs.InputEventAnalogue analogueEvent in analogueEvents)
 			{
+				if (!buttonPressesAndReleases.ContainsKey(analogueEvent.inputID))
+					buttonPressesAndReleases.Add(analogueEvent.inputID, new List<ButtonEvent>());
+				var evt = new ButtonEvent();
+				evt.pressed = analogueEvent.strength >= TRIGGER_ACTIVATE_STRENGTH;
+				if (!buttonStates.ContainsKey(analogueEvent.inputID))
+					buttonStates.Add(analogueEvent.inputID, !evt.pressed);
+				if (evt.pressed != buttonStates[analogueEvent.inputID])
+				{
+					buttonPressesAndReleases[analogueEvent.inputID].Add(evt);
+					buttonStates[analogueEvent.inputID] = evt.pressed;
+				}
 				triggerStrengths[analogueEvent.inputID] = analogueEvent.strength;
-				buttonPresses[analogueEvent.inputID] = analogueEvent.strength >= TRIGGER_ACTIVATE_STRENGTH;
 			}
 
 			foreach(avs.InputEventMotion motionEvent in motionEvents)
