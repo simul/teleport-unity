@@ -12,7 +12,7 @@ namespace teleport
 	{
 		#region DLLImports
 		[DllImport("SimulCasterServer")]
-		private static extern void Client_AddNode(uid clientID, uid nodeID, avs.Transform currentTransform);
+		private static extern void Client_AddNode(uid clientID, uid nodeID);
 		[DllImport("SimulCasterServer")]
 		private static extern void Client_RemoveNodeByID(uid clientID, uid nodeID);
 		[DllImport("SimulCasterServer")]
@@ -360,8 +360,10 @@ namespace teleport
 					continue;
 				}
 
-				Client_AddNode(session.GetClientID(), streamedNode.nodeID, avs.Transform.FromLocalUnityTransform(streamedNode.gameObject.transform));
-				
+				Client_AddNode(session.GetClientID(), streamedNode.nodeID);
+				// Check for updated transform???
+				//, avs.Transform.FromLocalUnityTransform(streamedNode.gameObject.transform)
+
 				Client_NodeEnteredBounds(session.GetClientID(), streamedNode.nodeID);
 				streamedGameObjects.Add(streamedNode);
 			}

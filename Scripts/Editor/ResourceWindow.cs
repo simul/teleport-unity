@@ -214,10 +214,12 @@ namespace teleport
 			EditorGUILayout.EndFoldoutHeaderGroup();
 			GUI.enabled=true;
 		}
+		string resourceSearchText="";
 		void DrawResourcesLayout()
 		{
 			// searchable table of extracted meshes.
 
+			resourceSearchText = EditorGUILayout.TextField("Search ",resourceSearchText);
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.LabelField("Name");
 			EditorGUILayout.LabelField("guid");
@@ -246,6 +248,11 @@ namespace teleport
 						u = geometrySource.FindResourceID(obj);
 					}
 
+					if (resourceSearchText.Length > 0)
+					{
+						if (!(u.ToString().Contains(resourceSearchText)) && !object_name.Contains(resourceSearchText))
+							continue;
+					}
 					EditorGUILayout.LabelField(object_name);
 					using (new EditorGUI.DisabledScope(true))
 					{
@@ -623,7 +630,6 @@ namespace teleport
 							Marshal.WriteByte(textureData.data, byteOffset, pixel.a);
 							byteOffset += byteSize;
 						}
-
 					}
 					// Test: write to png.
 					if(writePng|| highQualityUASTC)

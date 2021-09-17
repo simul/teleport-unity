@@ -691,9 +691,9 @@ namespace teleport
 
 		///GEOMETRY EXTRACTION
 
-		public uid AddNode(GameObject node, ForceExtractionMask forceMask = ForceExtractionMask.FORCE_NOTHING, bool isChildExtraction = false,bool verify=false)
+		public uid AddNode(GameObject gameObject, ForceExtractionMask forceMask = ForceExtractionMask.FORCE_NOTHING, bool isChildExtraction = false,bool verify=false)
 		{
-			if(!node)
+			if(!gameObject)
 			{
 				Debug.LogError("Failed to extract node from GameObject! Passed GameObject was null!");
 				return 0;
@@ -703,7 +703,7 @@ namespace teleport
 			//we are not forcing an extraction of nodes, and we are not forcing an extraction on the hierarchy of a node.
 			if
 			(
-				processedResources.TryGetValue(node, out uid nodeID) &&
+				processedResources.TryGetValue(gameObject, out uid nodeID) &&
 				IsNodeStored(nodeID) &&
 				(
 					!isChildExtraction && (forceMask & ForceExtractionMask.FORCE_NODES) == ForceExtractionMask.FORCE_NOTHING ||
@@ -715,29 +715,31 @@ namespace teleport
 			}
 
 			nodeID = nodeID == 0 ? GenerateID() : nodeID;
-			processedResources[node] = nodeID;
+			processedResources[gameObject] = nodeID;
 
 			avs.Node extractedNode = new avs.Node();
-			extractedNode.name = Marshal.StringToBSTR(node.name);
-			extractedNode.transform = avs.Transform.FromLocalUnityTransform(node.transform);
-			extractedNode.stationary = (node.isStatic);
-			ExtractNodeHierarchy(node, ref extractedNode, forceMask, verify);
-			ExtractNodeSubType(node, ref extractedNode);
+			extractedNode.name = Marshal.StringToBSTR(gameObject.name);
+			extractedNode.stationary = (gameObject.isStatic);
+			ExtractNodeHierarchy(gameObject, ref extractedNode, forceMask, verify);
+			if(extractedNode.parentID!=0)
+				extractedNode.transform = avs.Transform.FromLocalUnityTransform(gameObject.transform);
+			else
+				extractedNode.transform=avs.Transform.FromGlobalUnityTransform(gameObject.transform);
+			ExtractNodeSubType(gameObject, ref extractedNode);
 
 			extractedNode.dataType = avs.NodeDataType.None;
 			if(extractedNode.dataType == avs.NodeDataType.None)
 			{
-				ExtractNodeMeshData(node, ref extractedNode, forceMask, verify);
+				ExtractNodeMeshData(gameObject, ref extractedNode, forceMask, verify);
 			}
 			if (extractedNode.dataType == avs.NodeDataType.None)
 			{
-				ExtractNodeSkinnedMeshData(node, ref extractedNode, forceMask,verify);
+				ExtractNodeSkinnedMeshData(gameObject, ref extractedNode, forceMask,verify);
 			}
 			if(extractedNode.dataType == avs.NodeDataType.None)
 			{
-				ExtractNodeLightData(node, ref extractedNode, forceMask);
+				ExtractNodeLightData(gameObject, ref extractedNode, forceMask);
 			}
-
 			//Store extracted node.
 			StoreNode(nodeID, extractedNode);
 			return nodeID;
@@ -995,7 +997,7 @@ namespace teleport
 			for(int i = 0; i < source.transform.childCount; i++)
 			{
 				GameObject child = source.transform.GetChild(i).gameObject;
-				uid childID = AddNode(child, forceMask, true,verify);
+				uid childID = AddNode(child, forceMask, true, verify);
 
 				childIDs[i] = childID;
 			}

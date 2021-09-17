@@ -102,7 +102,7 @@ namespace teleport
 			if (buttonPressesAndReleases.TryGetValue(inputID, out List<ButtonEvent> buttonEventList))
 			{
 				if (buttonEventList.Count == 0)
-					return true;
+					return false;
 				ButtonEvent buttonEvent = buttonEventList[0];
 				if (!buttonEvent.pressed)
 				{
@@ -154,6 +154,8 @@ namespace teleport
 				buttonPressesAndReleases[binaryEvent.inputID].Add(evt);
 				if (!buttonStates.ContainsKey(binaryEvent.inputID))
 					buttonStates.Add(binaryEvent.inputID, evt.pressed);
+				else
+					buttonStates[binaryEvent.inputID] =evt.pressed;
 			}
 
 			foreach(avs.InputEventAnalogue analogueEvent in analogueEvents)
