@@ -461,9 +461,9 @@ namespace teleport
 			}
 		}
 
-		bool Cull(ScriptableRenderContext context, Camera camera, out CullingResults cullingResults,bool for_streaming=false)
+		bool Cull(ScriptableRenderContext context, Camera camera, out CullingResults cullingResults,bool for_streaming_cubemap=false)
 		{
-			if (for_streaming)
+			if (for_streaming_cubemap)
 			{
 				camera.fieldOfView = 180.0F;
 				camera.aspect = 1.0F;
@@ -481,7 +481,7 @@ namespace teleport
 				cullingResults = new CullingResults();
 				result = false;
 			}
-			if (for_streaming)
+			if (for_streaming_cubemap)
 			{
 				camera.fieldOfView = 90.0F;
 				camera.aspect = 1.0F;
@@ -743,6 +743,9 @@ namespace teleport
 			var oldPos = camera.transform.position;
 			var oldRot = camera.transform.rotation;
 
+			var camDir = camera.transform.forward;
+			camDir.Normalize();
+
 			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
 			if (ClientID != 0)
 				UpdateStreamables(context, ClientID, camera);
@@ -754,15 +757,13 @@ namespace teleport
 				camera.nearClipPlane = teleportSettings.casterSettings.detectionSphereRadius * 0.5f;
 			}
 			
-			if (Cull(context, camera, out cullingResultsAll, true))
+			if (Cull(context, camera, out cullingResultsAll, !teleportSettings.casterSettings.usePerspectiveRendering))
 			{
 				
 				TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
 
 				teleportLighting.renderSettings = renderSettings;
 				teleportLighting.RenderShadows(context, camera, cullingResultsAll, lightingOrder);
-
-				Vector2Int shadowmapOffset;
 
 				// We downscale the whole diffuse so that it peaks at the maximum colour value.
 				float max_light = 1.0f;
@@ -779,19 +780,19 @@ namespace teleport
 				{
 					// Draw scene
 					camera.fieldOfView = teleportSettings.casterSettings.perspectiveFOV;
-					DrawPerspective(context, camera, lightingOrder);
+					DrawPerspective(context, camera, cullingResultsAll, lightingOrder);
 					// Draw cubemaps
 					camera.fieldOfView = 90.0F;
 					for (int i = 0; i < VideoEncoding.NumFaces; ++i)
 					{
-						DrawCubemapFace(context, camera, cullingResultsAll, lightingOrder, i,diffuseAmbientScale);
+						DrawCubemapFace(context, camera, camDir, cullingResultsAll, lightingOrder, i, diffuseAmbientScale);
 					}
 				}
 				else
 				{
 					for (int i = 0; i < VideoEncoding.NumFaces; ++i)
 					{
-						DrawCubemapFace(context, camera, cullingResultsAll, lightingOrder, i,diffuseAmbientScale);
+						DrawCubemapFace(context, camera, camDir, cullingResultsAll, lightingOrder, i, diffuseAmbientScale);
 					}
 				}
 
@@ -817,10 +818,14 @@ namespace teleport
 		// This function leverages the Unity rendering pipeline functionality to get information about what lights etc should be visible to the client.
 		void UpdateStreamables(ScriptableRenderContext context, uid clientID, Camera camera)
 		{
+			float fov = camera.fieldOfView;
+			float aspect = camera.aspect;
+			float farClipPlane = camera.farClipPlane;
+
 			camera.fieldOfView = 180.0F;
 			camera.aspect = 2.0F;
-			float farClipPlane = camera.farClipPlane;
 			camera.farClipPlane = 10.0F;
+
 			ScriptableCullingParameters p;
 			if (camera.TryGetCullingParameters(out p))
 			{
@@ -833,11 +838,11 @@ namespace teleport
 				}
 				Teleport_SessionComponent.sessions[clientID].SetStreamedLights(lights);
 			}
-			camera.fieldOfView = 90.0F;
+			camera.fieldOfView = fov;
+			camera.aspect = aspect;
 			camera.farClipPlane = farClipPlane;
-			camera.aspect = 1.0F;
 		}
-		void DrawCubemapFace(ScriptableRenderContext context, Camera camera, CullingResults cullingResultsAll, TeleportRenderPipeline.LightingOrder lightingOrder, int face,float diffuseAmbientScale)
+		void DrawCubemapFace(ScriptableRenderContext context, Camera camera, Vector3 camDir, CullingResults cullingResultsAll, TeleportRenderPipeline.LightingOrder lightingOrder, int face,float diffuseAmbientScale)
 		{
 			/*if (!Cull(context, camera, out cullingResultsAll))
 			{
@@ -845,6 +850,13 @@ namespace teleport
 			}*/
 			CamView camView = faceCamViews[face];
 			Vector3 to = camView.forward;
+
+			// Don't render faces that are completely invisible to the camera.
+			if (Vector3.Dot(camDir, camView.forward) < 0.0f)
+			{
+				//return;
+			}
+
 			Vector3 pos = camera.transform.position;
 
 			camera.transform.LookAt(pos + to, camView.up);
@@ -915,13 +927,13 @@ namespace teleport
 			camera.ResetWorldToCameraMatrix();
 		}
 
-		void DrawPerspective(ScriptableRenderContext context, Camera camera, TeleportRenderPipeline.LightingOrder lightingOrder)
+		void DrawPerspective(ScriptableRenderContext context, Camera camera, CullingResults cullingResultsAll, TeleportRenderPipeline.LightingOrder lightingOrder)
 		{
-			CullingResults cullingResultsAll;
-			if (!Cull(context, camera, out cullingResultsAll))
-			{
-				return;
-			}
+			//CullingResults cullingResultsAll;
+			//if (!Cull(context, camera, out cullingResultsAll))
+			//{
+			//	return;
+			//}
 			teleport.Monitor monitor = teleport.Monitor.GetCasterMonitor();
 
 			int layerMask = 0x7FFFFFFF;
