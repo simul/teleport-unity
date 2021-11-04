@@ -218,6 +218,8 @@ namespace avs
 
 		public UInt64 childAmount;
 		public uid[] childIDs;
+
+		public int priority;
 	}
 
 	public class Mesh
@@ -718,6 +720,15 @@ namespace teleport
 			processedResources[gameObject] = nodeID;
 
 			avs.Node extractedNode = new avs.Node();
+			StreamableProperties streamableProperties=gameObject.GetComponent<StreamableProperties>();
+			if (streamableProperties != null)
+			{
+				extractedNode.priority = streamableProperties.priority;
+			}
+			else
+			{
+				extractedNode.priority = 0;
+			}
 			extractedNode.name = Marshal.StringToBSTR(gameObject.name);
 			extractedNode.stationary = (gameObject.isStatic);
 			ExtractNodeHierarchy(gameObject, ref extractedNode, forceMask, verify);
@@ -947,6 +958,7 @@ namespace teleport
 			parentID = parentID == 0 ? AddBone(bone.parent, boneList, forceMask) : parentID;
 
 			avs.Node boneNode = new avs.Node();
+			boneNode.priority=0;
 			boneNode.name = Marshal.StringToBSTR(bone.name);
 			boneNode.parentID = parentID;
 			boneNode.transform = avs.Transform.FromLocalUnityTransform(bone);

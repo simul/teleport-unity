@@ -251,7 +251,10 @@ namespace teleport
 					if (resourceSearchText.Length > 0)
 					{
 						if (!(u.ToString().Contains(resourceSearchText)) && !object_name.Contains(resourceSearchText))
+						{
+							EditorGUILayout.EndHorizontal();
 							continue;
+						}
 					}
 					EditorGUILayout.LabelField(object_name);
 					using (new EditorGUI.DisabledScope(true))

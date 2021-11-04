@@ -534,8 +534,9 @@ namespace avs
 		public byte framerate;                  // In hertz
 		[MarshalAs(UnmanagedType.U1)] public bool usingHands;             //Whether to send the hand nodes to the client.
 		[MarshalAs(UnmanagedType.U1)] public bool isVR;
-		public UInt64 resourceCount;            //	Number of resources the client has, these are appended to the handshake.
-		public UInt32 maxLightsSupported;       // Maximum number of lights the client can render.
+		public UInt64	resourceCount;            //	Number of resources the client has, these are appended to the handshake.
+		public UInt32	maxLightsSupported;       // Maximum number of lights the client can render.
+		public Int32	minimumPriority;		// Minimum priority of node the client will render.
 	};
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]

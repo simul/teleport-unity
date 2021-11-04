@@ -18,7 +18,6 @@ namespace teleport
 		public MeshRenderer meshRenderer;
 		public SkinnedMeshRenderer skinnedMeshRenderer;
 		public Light light;
-
 		public StreamedNode(GameObject node)
 		{
 			gameObject = node;
@@ -113,6 +112,8 @@ namespace teleport
 	[DisallowMultipleComponent]
 	public class Teleport_Streamable : MonoBehaviour
 	{
+		//! The highest priority of StreamableProperties found in the streamable's hierarchy.
+		public int priority = 0;
 		// Track the reasons why we're streaming this. A set of bit flags, when it goes to zero you can stop streaming it.
 		public UInt32 streaming_reason = 0;
 
@@ -263,12 +264,16 @@ namespace teleport
 		private void CreateStreamedHierarchy()
 		{
 			streamedHierarchy.Clear();
-
+			priority=0;
 			List<GameObject> exploredGameObjects = new List<GameObject>();
 			//We need to stop once we reach this node, so we add it to the explored list, but that means we now have to explicitly add it to the streamed hierarchy.
 			exploredGameObjects.Add(gameObject);
 			streamedHierarchy.Add(new StreamedNode(gameObject));
-
+			List<StreamableProperties> streamablePropertiesList = new List<StreamableProperties>(GetComponentsInChildren<StreamableProperties>());
+			foreach (StreamableProperties streamableProperties in streamablePropertiesList)
+			{
+				priority=Math.Max(priority, streamableProperties.priority);
+			}
 			//Mark all children that will be streamed separately as explored; i.e. is marked for streaming.
 			List<Collider> childColliders = new List<Collider>(GetComponentsInChildren<Collider>());
 			foreach(Collider childCollider in childColliders)
