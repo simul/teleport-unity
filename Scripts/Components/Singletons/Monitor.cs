@@ -69,6 +69,7 @@ namespace teleport
 		struct InitialiseState
 		{
 			public string clientIP;
+			public string httpMountDirectory;
 			public uint DISCOVERY_PORT;
 			public uint SERVICE_PORT;
 
@@ -267,6 +268,7 @@ namespace teleport
 				audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput,
 				getUnixTimestamp = GetUnixTimestamp,
 				bodyOffsetFromHead = bodyOffsetFromHead,
+				httpMountDirectory = teleportSettings.cachePath,
 				clientIP = teleportSettings.clientIP
 			};
 
