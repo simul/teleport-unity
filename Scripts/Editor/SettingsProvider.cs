@@ -111,6 +111,8 @@ namespace teleport
 			teleportSettings.clientIP = EditorGUILayout.TextField("Client IP", teleportSettings.clientIP);
 			teleportSettings.webcam = WebcamField("Webcam", teleportSettings.webcam);
 			teleportSettings.renderMainCamera = EditorGUILayout.Toggle("Render Main Camera", teleportSettings.renderMainCamera);
+			teleportSettings.certPath = EditorGUILayout.TextField("SSL Cert Path", teleportSettings.certPath);
+			teleportSettings.privateKeyPath = EditorGUILayout.TextField("Private Key Path", teleportSettings.privateKeyPath);
 
 			foreach (var prop in typeof(SCServer.CasterSettings).GetProperties())
 			{
