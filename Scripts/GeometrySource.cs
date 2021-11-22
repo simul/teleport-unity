@@ -196,6 +196,9 @@ namespace avs
 		public Transform transform;
 		[MarshalAs(UnmanagedType.I1)]
 		public bool stationary;
+		[MarshalAs(UnmanagedType.I1)]
+		public bool grabbable;
+		public uid holderClientId;
 		public NodeDataType dataType;
 		public NodeDataSubtype dataSubtype;
 		public uid parentID;
@@ -731,6 +734,9 @@ namespace teleport
 			}
 			extractedNode.name = Marshal.StringToBSTR(gameObject.name);
 			extractedNode.stationary = (gameObject.isStatic);
+			var grabbable= gameObject.GetComponent<Grabbable>();
+			extractedNode.grabbable = grabbable!=null;
+			extractedNode.holderClientId = grabbable != null ? grabbable.holderClient : 0;
 			ExtractNodeHierarchy(gameObject, ref extractedNode, forceMask, verify);
 			if(extractedNode.parentID!=0)
 				extractedNode.transform = avs.Transform.FromLocalUnityTransform(gameObject.transform);
@@ -1062,6 +1068,11 @@ namespace teleport
 				extractTo.renderState.globalIlluminationTextureUid = FindResourceID(giTextures[meshRenderer.lightmapIndex]);
 			   //Extract mesh used on node.
 			Mesh mesh = sceneReferenceManager.GetGameObjectMesh(source);
+			if (mesh == null)
+			{
+				Debug.LogError($"Failed sceneReferenceManager.GetGameObjectMesh for GameObject \"{source.name}\"!");
+				return false;
+			}
 			extractTo.dataID = AddMesh(mesh, forceMask, verify);
 
 			//Can't create a node with no data.
