@@ -70,6 +70,8 @@ namespace teleport
 		{
 			public string clientIP;
 			public string httpMountDirectory;
+			public string certPath;
+			public string privateKeyPath;
 			public uint DISCOVERY_PORT;
 			public uint SERVICE_PORT;
 
@@ -269,7 +271,9 @@ namespace teleport
 				getUnixTimestamp = GetUnixTimestamp,
 				bodyOffsetFromHead = bodyOffsetFromHead,
 				httpMountDirectory = teleportSettings.cachePath,
-				clientIP = teleportSettings.clientIP
+				clientIP = teleportSettings.clientIP,
+				certPath = teleportSettings.certPath,
+				privateKeyPath = teleportSettings.privateKeyPath
 			};
 
 			initialised = Teleport_Initialize(initialiseState);

@@ -27,7 +27,11 @@ namespace teleport
 		public uint listenPort = 10500u;
 		public uint discoveryPort = 10600u;
 		public int connectionTimeout = 13000; //How many millseconds to wait before automatically disconnecting from the client.
-		public string clientIP = "127.0.0.1";                                
+		public string clientIP = "127.0.0.1";
+
+		[Header("Security")]
+		public string certPath = "";
+		public string privateKeyPath = "";
 
 		[Header("Geometry")]
 		public uint moveUpdatesPerSecond = 20;
