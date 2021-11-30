@@ -78,6 +78,8 @@ namespace teleport
 				return false;
 			}
 		}
+		public delegate void ControllerEventDelegate(Teleport_Controller controller);
+		public ControllerEventDelegate triggerReleaseDelegates;
 
 		public bool StartedPressing(avs.InputID inputID)
 		{
@@ -156,6 +158,13 @@ namespace teleport
 					buttonStates.Add(binaryEvent.inputID, evt.pressed);
 				else
 					buttonStates[binaryEvent.inputID] =evt.pressed;
+				if (!evt.pressed &&
+					(binaryEvent.inputID == avs.InputID.TRIGGER01
+					|| binaryEvent.inputID == avs.InputID.TRIGGER02))
+				{
+					if (triggerReleaseDelegates != null)
+						triggerReleaseDelegates(this);
+			}
 			}
 
 			foreach(avs.InputEventAnalogue analogueEvent in analogueEvents)
@@ -172,6 +181,13 @@ namespace teleport
 					buttonStates[analogueEvent.inputID] = evt.pressed;
 				}
 				triggerStrengths[analogueEvent.inputID] = analogueEvent.strength;
+				if (!evt.pressed &&
+					(analogueEvent.inputID == avs.InputID.TRIGGER01
+					|| analogueEvent.inputID == avs.InputID.TRIGGER02))
+				{
+					if(triggerReleaseDelegates!=null)
+						triggerReleaseDelegates(this);
+			}
 			}
 
 			foreach(avs.InputEventMotion motionEvent in motionEvents)

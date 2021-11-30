@@ -490,7 +490,8 @@ namespace teleport
 			{
 				return;
 			}
-
+			// Do this ASAP to prevent infinite loop.
+			geometrySource=this;
 			LoadFromDisk();
 
 			CreateAnimationHook();
@@ -783,21 +784,31 @@ namespace teleport
 				return meshID;
 			}
 
-			meshID = meshID == 0 ? GenerateID() : meshID;
-			processedResources[mesh] = meshID;
-			bool enable_compression = (forceMask & ForceExtractionMask.FORCE_UNCOMPRESSED)!= ForceExtractionMask.FORCE_UNCOMPRESSED;
 			bool running = Application.isPlaying;
 			// only compress if not running - too slow...
 			// Actually, let's ONLY extract offline. 
 			if (!running)
 			{
+				meshID = meshID == 0 ? GenerateID() : meshID;
+				processedResources[mesh] = meshID;
+				bool enable_compression = (forceMask & ForceExtractionMask.FORCE_UNCOMPRESSED) != ForceExtractionMask.FORCE_UNCOMPRESSED;
 				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID, enable_compression && !running,verify);
 				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID, enable_compression && !running, verify);
 				return meshID;
 			}
 			else
 			{
-				Debug.LogError("Mesh missing! Mesh "+mesh.name+" was not extracted prior to running.");
+				if (!processedResources.TryGetValue(mesh, out meshID))
+				{
+					Debug.LogError("Mesh missing! Mesh " + mesh.name + " was not in processedResources.");
+					return 0;
+			}
+				if(!IsMeshStored(meshID))
+				{
+					Debug.LogError("Mesh missing! Mesh "+mesh.name+" was not stored dll-side.");
+					IsMeshStored(meshID);
+			return 0;
+		}
 			}
 			return 0;
 		}
@@ -1861,16 +1872,16 @@ namespace teleport
 		}
 
 		//Confirms resources loaded from disk of a certain Unity asset type still exist, and creates a pairing of their old IDs and their newly assigned IDs.
-		//  resourceAmount : Amount of resources in loadedResources.
+		//  numResources : Amount of resources in loadedResources.
 		//  loadedResources : LoadedResource array that was created in unmanaged memory.
 		//Returns list of resources that have been confirmed to exist, with their new ID assigned.
-		private List<ReaffirmedResource> ReaffirmLoadedResources<UnityAsset>(int resourceAmount, in IntPtr loadedResources) where UnityAsset : UnityEngine.Object
+		private List<ReaffirmedResource> ReaffirmLoadedResources<UnityAsset>(int numResources, in IntPtr loadedResources) where UnityAsset : UnityEngine.Object
 		{
 			List<ReaffirmedResource> reaffirmedResources = new List<ReaffirmedResource>();
 
 			int resourceSize = Marshal.SizeOf<LoadedResource>();
 			//Go through each resource, confirm it still exists, and create a new reaffirmed resource with their new ID if it does.
-			for(int i = 0; i < resourceAmount; i++)
+			for(int i = 0; i < numResources; i++)
 			{
 				//Create new pointer to the memory location of the LoadedResource for this index.
 				IntPtr resourcePtr = new IntPtr(loadedResources.ToInt64() + i * resourceSize);

@@ -9,6 +9,10 @@ using uid = System.UInt64;
 
 namespace teleport
 {
+	/// <summary>
+	/// This component manages a client session, so there is one Teleport_SessionComponent per session,
+	/// and this typically is attached to the root GameObject of each client.
+	/// </summary>
 	public class Teleport_SessionComponent : MonoBehaviour
 	{
 		#region DLLImports
@@ -337,6 +341,7 @@ namespace teleport
 				GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 
 				//Send initial animation state on receiving the handshake, as the connection is now ready for commands.
+				if(geometryStreamingService!=null)
 				geometryStreamingService.SendAnimationState();
 
 				//Send animation control updates for the grip animation of the controllers.

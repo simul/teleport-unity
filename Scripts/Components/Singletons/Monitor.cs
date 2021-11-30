@@ -277,7 +277,10 @@ namespace teleport
 			};
 
 			initialised = Teleport_Initialize(initialiseState);
-
+			if(!initialised)
+			{
+				Debug.LogError($"Teleport_Initialize failed, so server cannot start.");
+			}
 			// Sets connection timeouts for peers (milliseconds)
 			SetConnectionTimeout(teleportSettings.connectionTimeout);
 			

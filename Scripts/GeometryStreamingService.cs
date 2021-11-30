@@ -43,6 +43,8 @@ namespace teleport
 		private static extern void Client_UpdateNodeEnabledState(uid clientID, avs.NodeUpdateEnabledState[] updates, int updateAmount);
 		[DllImport("SimulCasterServer")]
 		private static extern void Client_SetNodeHighlighted(uid clientID, uid nodeID, bool isHighlighted);
+		[DllImport("SimulCasterServer")]
+		private static extern void Client_ReparentNode(uid clientID, uid nodeID, uid newParentNodeID);
 
 		#endregion
 
@@ -272,7 +274,11 @@ namespace teleport
 				streamable.SendAnimationState(session.GetClientID());
 			}
 		}
-
+		/// <summary>
+		/// Tell this client to highlight the specified node.
+		/// </summary>
+		/// <param name="gameObject">The object to highlight</param>
+		/// <param name="isHighlighted">Whether to activate or deactivate highlighting.</param>
 		public void SetNodeHighlighted(GameObject gameObject, bool isHighlighted)
 		{
 			uid nodeID = GeometrySource.GetGeometrySource().FindResourceID(gameObject);
@@ -282,6 +288,15 @@ namespace teleport
 			}
 		}
 
+		public void ReparentNode(GameObject gameObject, GameObject newParent)
+		{
+			uid nodeID = GeometrySource.GetGeometrySource().FindResourceID(gameObject);
+			if (nodeID != 0)
+			{
+				uid newParentNodeID = GeometrySource.GetGeometrySource().FindResourceID(newParent);
+				Client_ReparentNode(session.GetClientID(),nodeID,  newParentNodeID);
+			}
+		}
 		public void UpdateGeometryStreaming()
 		{
 			//Detect changes in geometry that needs to be streamed to the client.
