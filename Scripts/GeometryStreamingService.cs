@@ -258,11 +258,12 @@ namespace teleport
 		}
 		public void StreamPlayerBody()
 		{
-			teleport.Monitor monitor = teleport.Monitor.GetCasterMonitor();
+			teleport.Monitor monitor = teleport.Monitor.Instance;
 			List<GameObject> bodyParts = monitor.GetPlayerBodyParts();
 			foreach(GameObject part in bodyParts)
 			{
 				Teleport_Streamable streamable = part.GetComponent<Teleport_Streamable>();
+				streamable.OwnerClient=session.GetClientID();
 				StartStreaming(streamable, 2);
 			}
 		}
@@ -288,13 +289,17 @@ namespace teleport
 			}
 		}
 
-		public void ReparentNode(GameObject gameObject, GameObject newParent)
+		public void ReparentNode(GameObject child, GameObject newParent)
 		{
-			uid nodeID = GeometrySource.GetGeometrySource().FindResourceID(gameObject);
-			if (nodeID != 0)
+			uid childNodeID = GeometrySource.GetGeometrySource().FindResourceID(child);
+			if (childNodeID != 0)
 			{
 				uid newParentNodeID = GeometrySource.GetGeometrySource().FindResourceID(newParent);
-				Client_ReparentNode(session.GetClientID(),nodeID,  newParentNodeID);
+				if (newParentNodeID != 0)
+				{
+					session.ownedNodes.Add(childNodeID);
+					Client_ReparentNode(session.GetClientID(), childNodeID,  newParentNodeID);
+				}
 			}
 		}
 		public void UpdateGeometryStreaming()
@@ -362,7 +367,6 @@ namespace teleport
 				}
 				return false;
 			}
-
 			streamable.streaming_reason |= streaming_reason;
 			streamable.AddStreamingClient(session);
 			streamedHierarchies.Add(streamable);

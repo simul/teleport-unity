@@ -64,7 +64,7 @@ namespace teleport
 		{
 			this.clientID = clientID;
 
-			monitor = teleport.Monitor.GetCasterMonitor();
+			monitor = teleport.Monitor.Instance;
 		}
 
 		public void CreateEncodeCommands(ScriptableRenderContext context, Camera camera, UInt32 tagDataID ,float diffuseAmbientScale)

@@ -699,7 +699,7 @@ namespace teleport
 			EndSample(context, samplename);
 			EndCamera(context, camera);
 		}
-		int m = 0;
+		//int m = 0;
 	
 		public uid ClientID
 		{
@@ -829,7 +829,7 @@ namespace teleport
 			ScriptableCullingParameters p;
 			if (camera.TryGetCullingParameters(out p))
 			{
-				teleport.Monitor monitor = teleport.Monitor.GetCasterMonitor();
+				teleport.Monitor monitor = teleport.Monitor.Instance;
 				CullingResults cullingResults = context.Cull(ref p);
 				Light[] lights = new Light[cullingResults.visibleLights.Length];
 				for (int i = 0; i < lights.Length; i++)
@@ -934,7 +934,7 @@ namespace teleport
 			//{
 			//	return;
 			//}
-			teleport.Monitor monitor = teleport.Monitor.GetCasterMonitor();
+			teleport.Monitor monitor = teleport.Monitor.Instance;
 
 			int layerMask = 0x7FFFFFFF;
 			uint renderingMask = 0x7FFFFFFF;

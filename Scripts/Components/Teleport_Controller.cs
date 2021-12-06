@@ -164,7 +164,7 @@ namespace teleport
 				{
 					if (triggerReleaseDelegates != null)
 						triggerReleaseDelegates(this);
-			}
+				}
 			}
 
 			foreach(avs.InputEventAnalogue analogueEvent in analogueEvents)
@@ -185,7 +185,8 @@ namespace teleport
 					(analogueEvent.inputID == avs.InputID.TRIGGER01
 					|| analogueEvent.inputID == avs.InputID.TRIGGER02))
 				{
-					if(triggerReleaseDelegates!=null)
+					Debug.Log("ProcessInputEvents analogueEvent " + analogueEvent.inputID + " " + analogueEvent.strength+" "+ (triggerReleaseDelegates != null));
+					if (triggerReleaseDelegates!=null)
 						triggerReleaseDelegates(this);
 			}
 			}

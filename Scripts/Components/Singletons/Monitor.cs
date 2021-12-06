@@ -121,34 +121,37 @@ namespace teleport
 		}
 #endif
 
-		public static Monitor GetCasterMonitor()
+		public static Monitor Instance
 		{
-			// We only want one instance, so delete duplicates.
-			if (instance == null)
+			get
 			{
-				for (int i = 0; i < SceneManager.sceneCount; i++)
+				// We only want one instance, so delete duplicates.
+				if (instance == null)
 				{
-					var objs=SceneManager.GetSceneAt(i).GetRootGameObjects();
-					foreach(var o in objs)
+					for (int i = 0; i < SceneManager.sceneCount; i++)
 					{
-						var m=o.GetComponentInChildren<teleport.Monitor>();
-						if(m)
+						var objs=SceneManager.GetSceneAt(i).GetRootGameObjects();
+						foreach(var o in objs)
 						{
-							instance=m;
-							return instance;
+							var m=o.GetComponentInChildren<teleport.Monitor>();
+							if(m)
+							{
+								instance=m;
+								return instance;
+							}
 						}
 					}
+					instance = FindObjectOfType<teleport.Monitor>();
+					if(instance==null)
+					{
+						var tempObject= new GameObject("Monitor");
+						//Add Components
+						tempObject.AddComponent<teleport.Monitor>();
+						instance = tempObject.GetComponent<teleport.Monitor>();
+					}
 				}
-				instance = FindObjectOfType<teleport.Monitor>();
-				if(instance==null)
-				{
-					var tempObject= new GameObject("Monitor");
-					//Add Components
-					tempObject.AddComponent<teleport.Monitor>();
-					instance = tempObject.GetComponent<teleport.Monitor>();
-				}
+				return instance;
 			}
-			return instance;
 		}
 
 		//Returns list of body part hierarchy root GameObjects. 
@@ -511,6 +514,26 @@ namespace teleport
 					}
 
 					break;
+			}
+		}
+		public void ReparentNode(GameObject child, GameObject newParent, Vector3 relativePos, Quaternion relativeRot)
+		{
+			child.transform.SetParent(newParent.transform, false);
+			child.transform.localPosition = relativePos;
+			child.transform.localRotation= relativeRot;
+			// Is the new parent owned by a client? If so inform clients of this change:
+			Teleport_Streamable teleport_Streamable = newParent.GetComponent<Teleport_Streamable>();
+			if (teleport_Streamable != null)
+			{
+				if (teleport_Streamable.OwnerClient != 0)
+				{
+					Teleport_SessionComponent session = Teleport_SessionComponent.GetSessionComponent(teleport_Streamable.OwnerClient);
+					if (session)
+					{
+						teleport_Streamable.OwnerClient = session.GetClientID();
+						session.GeometryStreamingService.ReparentNode(child, newParent);
+					}
+				}
 			}
 		}
 	}

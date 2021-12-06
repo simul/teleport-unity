@@ -172,17 +172,18 @@ namespace teleport
 				}
 			}
 
-			avs.InputEventAnalogue[] analogueEvents = new avs.InputEventAnalogue[inputState.analogueEventAmount];
-			if (inputState.analogueEventAmount != 0)
+			avs.InputEventAnalogue[] analogueEvents = new avs.InputEventAnalogue[inputState.numAnalogueEvents];
+			if (inputState.numAnalogueEvents != 0)
 			{
 				int analogueEventSize = Marshal.SizeOf<avs.InputEventAnalogue>();
 
 				//Convert the pointer array into a struct array.
 				IntPtr positionPtr = analogueEventsPtr;
-				for (int i = 0; i < inputState.analogueEventAmount; i++)
+				for (int i = 0; i < inputState.numAnalogueEvents; i++)
 				{
 					analogueEvents[i] = Marshal.PtrToStructure<avs.InputEventAnalogue>(positionPtr);
 					positionPtr += analogueEventSize;
+					Debug.Log("inputState analogueEvent "+ analogueEvents[i].inputID+" "+ analogueEvents[i].strength);
 				}
 			}
 
@@ -219,7 +220,7 @@ namespace teleport
 		#endregion
 
 		//PROPERTIES
-
+		public List<uid> ownedNodes;
 		//One per session, as we stream geometry on a per-client basis.
 		private GeometryStreamingService geometryStreamingService = null;
 		public GeometryStreamingService GeometryStreamingService
@@ -302,7 +303,15 @@ namespace teleport
 			{
 				geometryStreamingService.Clear();
 			}
-
+			foreach(var uid in ownedNodes)
+			{
+				GameObject gameObject= (GameObject)GeometrySource.GetGeometrySource().FindResource(uid);
+				if (gameObject != null)
+				{
+					Teleport_Streamable teleport_Streamable = gameObject.GetComponent<Teleport_Streamable>();
+					teleport_Streamable.OwnerClient=0;
+				}
+			}
 			clientID = 0;
 		}
 
@@ -334,7 +343,6 @@ namespace teleport
 		public void ReportHandshake(avs.Handshake receivedHandshake)
 		{
 			handshake = receivedHandshake;
-
 
 			if (teleportSettings.casterSettings.isStreamingGeometry)
 			{
@@ -494,7 +502,7 @@ namespace teleport
 			Vector3 originPosition = clientspaceRoot ? clientspaceRoot.transform.position : default;
 
 			int lineHeight = 14;
-			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Client_{0} {1}", clientID, GetClientIP()), font);
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Client uid {0} {1}", clientID, GetClientIP()), font);
 
 			//Add a break for readability.
 			y += lineHeight;

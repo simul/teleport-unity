@@ -127,6 +127,23 @@ namespace teleport
 		[SerializeField]
 		private uid uid = 0;
 
+		private uid owner_client_uid = 0;
+
+		public uid OwnerClient
+		{
+			get
+			{
+				return owner_client_uid;
+			}
+			set
+			{
+				if (value != this.owner_client_uid)
+				{
+					owner_client_uid = value;
+				}
+			}
+		}
+
 		private HashSet<Teleport_SessionComponent> sessions = new HashSet<Teleport_SessionComponent>();
 
 		//Animator trackers in this TeleportStreamable's hierarchy.
@@ -180,7 +197,8 @@ namespace teleport
 		public List<avs.MovementUpdate> GetMovementUpdates(uid clientID)
 		{
 			//Return an empty update list, if we're not sending movement updates.
-			if(!sendMovementUpdates)
+			// Don't send updates to a client that owns the node.
+			if(!sendMovementUpdates||owner_client_uid==clientID)
 			{
 				return new List<avs.MovementUpdate>();
 			}

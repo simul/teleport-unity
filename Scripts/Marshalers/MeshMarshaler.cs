@@ -86,13 +86,13 @@ namespace teleport
             }
 
             //Write accessors.
-            Marshal.WriteInt64(ptr, byteOffset, mesh.accessorAmount);
-            byteOffset += Marshal.SizeOf(mesh.accessorAmount);
+            Marshal.WriteInt64(ptr, byteOffset, mesh.numAccessors);
+            byteOffset += Marshal.SizeOf(mesh.numAccessors);
 
             {
-                IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.PrimitiveArray>() * mesh.accessorAmount));
+                IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.PrimitiveArray>() * mesh.numAccessors));
                 int arrayByteOffset = 0;
-                for(int i = 0; i < mesh.accessorAmount; i++)
+                for(int i = 0; i < mesh.numAccessors; i++)
                 {
                     Marshal.StructureToPtr(mesh.accessorIDs[i], arrayPtr + arrayByteOffset, false);
                     arrayByteOffset += Marshal.SizeOf(mesh.accessorIDs[i]);
@@ -102,9 +102,9 @@ namespace teleport
             }
 
             {
-                IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.PrimitiveArray>() * mesh.accessorAmount));
+                IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.PrimitiveArray>() * mesh.numAccessors));
                 int arrayByteOffset = 0;
-                for(int i = 0; i < mesh.accessorAmount; i++)
+                for(int i = 0; i < mesh.numAccessors; i++)
                 {
                     Marshal.StructureToPtr(mesh.accessors[i], arrayPtr + arrayByteOffset, false);
                     arrayByteOffset += Marshal.SizeOf(mesh.accessors[i]);

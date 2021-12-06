@@ -576,7 +576,7 @@ namespace avs
 		public float triggerGrip;
 
 		public UInt32 binaryEventAmount;
-		public UInt32 analogueEventAmount;
+		public UInt32 numAnalogueEvents;
 		public UInt32 motionEventAmount;
 	}
 
