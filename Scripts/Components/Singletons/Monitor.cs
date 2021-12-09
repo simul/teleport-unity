@@ -90,22 +90,22 @@ namespace teleport
 			public avs.Vector3 bodyOffsetFromHead;
 		};
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern UInt64 SizeOf(string name);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern bool Teleport_Initialize(InitialiseState initialiseState);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void SetConnectionTimeout(Int32 timeout);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void UpdateCasterSettings(SCServer.CasterSettings newSettings);
 		
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void SetClientPosition(uid clientID, Vector3 pos);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void Tick(float deltaTime);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void EditorTick();
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void Shutdown();
 		#endregion
 

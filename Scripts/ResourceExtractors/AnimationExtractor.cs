@@ -69,10 +69,10 @@ namespace teleport
 		}
 
 		#region DLLImports
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern uid GenerateID();
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void StoreTransformAnimation(uid id, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(TransformAnimationMarshaler))] avs.TransformAnimation animation);
 		#endregion
 

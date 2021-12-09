@@ -17,45 +17,45 @@ namespace teleport
 	{
 		#region DLLImports
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern bool Client_IsConnected(uid clientID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern bool Client_HasHost(uid clientID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern bool Client_HasPeer(uid clientID);
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern void Client_StopSession(uid clientID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern void Client_StopStreaming(uid clientID);
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern uint Client_GetClientIP(uid clientID, uint bufferLength, StringBuilder buffer);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern UInt16 Client_GetClientPort(uid clientID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern UInt16 Client_GetServerPort(uid clientID);
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern bool Client_GetClientNetworkStats(uid clientID, ref avs.NetworkStats stats);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern bool Client_GetClientVideoEncoderStats(uid clientID, ref avs.VideoEncoderStats stats);
 
 		// Set the client-specific settings, e.g. video layout.
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void Client_SetClientSettings(uid clientID, SCServer.ClientSettings clientSettings);
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern bool Client_SetOrigin(uid clientID, UInt64 validCounter, Vector3 pos, [MarshalAs(UnmanagedType.U1)] bool set_rel, Vector3 rel_pos, Quaternion orientation);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern bool Client_HasOrigin(uid clientID);
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern uid GetUnlinkedClientID();
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void Client_UpdateNodeAnimationControl(uid clientID, avs.NodeUpdateAnimationControl update);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void Client_SetNodeAnimationSpeed(uid clientID, uid nodeID, uid animationID, float speed);
 
 		#endregion

@@ -11,39 +11,39 @@ namespace teleport
 	public class GeometryStreamingService
 	{
 		#region DLLImports
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void Client_AddNode(uid clientID, uid nodeID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void Client_RemoveNodeByID(uid clientID, uid nodeID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void Client_AddGenericTexture(uid clientID, uid textureID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern void Client_SetGlobalIlluminationTextures(uid clientID, UInt64 num, uid[] textureIDs);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern void Client_NodeEnteredBounds(uid clientID, uid nodeID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern void Client_NodeLeftBounds(uid clientID, uid nodeID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern bool Client_IsStreamingNodeID(uid clientID, uid nodeID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern void Client_ShowNode(uid clientID, uid nodeID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern void Client_HideNode(uid clientID, uid nodeID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern void Client_SetNodeVisible(uid clientID, uid nodeID, bool isVisible);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern bool Client_IsClientRenderingNodeID(uid clientID, uid nodeID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern bool Client_HasResource(uid clientID, uid resourceID);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void Client_UpdateNodeMovement(uid clientID, avs.MovementUpdate[] updates, int updateAmount);
 
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void Client_UpdateNodeEnabledState(uid clientID, avs.NodeUpdateEnabledState[] updates, int updateAmount);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void Client_SetNodeHighlighted(uid clientID, uid nodeID, bool isHighlighted);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void Client_ReparentNode(uid clientID, uid nodeID, uid newParentNodeID);
 
 		#endregion

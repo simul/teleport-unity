@@ -12,9 +12,9 @@ namespace teleport
     public class Teleport_AudioCaptureComponent : MonoBehaviour
     {
         #region DLLImports
-        [DllImport("SimulCasterServer")]
+        [DllImport("TeleportServer")]
         static extern void InitializeAudioEncoder(uid clientID, ref SCServer.AudioParams audioEncodeParams);
-        [DllImport("SimulCasterServer")]
+        [DllImport("TeleportServer")]
         static extern void SendAudio(uid clientID, IntPtr data, UInt64 dataSize);
         #endregion
 

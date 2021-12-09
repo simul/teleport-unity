@@ -11,18 +11,18 @@ namespace teleport
 	public class VideoEncoder
 	{
 		#region DLLImports
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		static extern System.IntPtr GetRenderEventWithDataCallback();
 		#endregion
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern void ConvertTransform(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Transform transform);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern void ConvertRotation(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector4 rotation);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern void ConvertPosition(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector3 position);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern void ConvertScale(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector3 scale);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		public static extern byte ConvertAxis(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref byte axis);
 
 		[StructLayout(LayoutKind.Sequential)]

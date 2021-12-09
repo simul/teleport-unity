@@ -343,65 +343,65 @@ namespace teleport
 
 		#region DLLImports
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void SetCachePath(string name);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void DeleteUnmanagedArray(in IntPtr unmanagedArray);
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern uid GenerateID();
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void SaveGeometryStore();
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 materialAmount, out IntPtr loadedMaterials);
 	
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void ClearGeometryStore();
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void StoreNode(uid id, avs.Node node);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void StoreSkin(uid id, avs.Skin skin);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void StoreMesh(uid id,
 												[MarshalAs(UnmanagedType.BStr)] string guid,
 												Int64 lastModified,
 												[MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(MeshMarshaler))] avs.Mesh mesh,
 												avs.AxesStandard extractToStandard, [MarshalAs(UnmanagedType.I1)] bool compress, [MarshalAs(UnmanagedType.I1)] bool verify);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void StoreMaterial(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Material material);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture texture, string compressedFilePath
 			, [MarshalAs(UnmanagedType.I1)] bool genMips
 			, [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC
 			, [MarshalAs(UnmanagedType.I1)] bool forceOverwrite
 			);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void StoreShadowMap(uid id, [MarshalAs(UnmanagedType.BStr)] string guid, Int64 lastModified, avs.Texture shadowMap);
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern bool IsNodeStored(uid id);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern bool IsSkinStored(uid id);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern bool IsMeshStored(uid id);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern bool IsMaterialStored(uid id);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern bool IsTextureStored(uid id);
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void RemoveNode(uid id);
 
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern UInt64 GetAmountOfTexturesWaitingForCompression();
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		[return: MarshalAs(UnmanagedType.BStr)]
 		private static extern string GetMessageForNextCompressedTexture(UInt64 textureIndex, UInt64 totalTextures);
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void CompressNextTexture();
-		[DllImport("SimulCasterServer")]
+		[DllImport("TeleportServer")]
 		private static extern void SetCompressionLevels(byte compressionStrength, byte compressionQuality);
 		#endregion
 
