@@ -61,6 +61,7 @@ namespace teleport
 				return;
 			Debug.Log("Dropped " + topParent);
 			teleport.Monitor.Instance.ReparentNode(topParent, formerParent, oldRelativePosition, oldRelativeRotation);
+			holderClient=0;
 		}
 
 

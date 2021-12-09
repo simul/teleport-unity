@@ -44,7 +44,7 @@ namespace teleport
 		[DllImport("TeleportServer")]
 		private static extern void Client_SetNodeHighlighted(uid clientID, uid nodeID, bool isHighlighted);
 		[DllImport("TeleportServer")]
-		private static extern void Client_ReparentNode(uid clientID, uid nodeID, uid newParentNodeID);
+		private static extern void Client_ReparentNode(uid clientID, uid nodeID, uid newParentNodeID,avs.Pose localPose);
 
 		#endregion
 
@@ -289,16 +289,26 @@ namespace teleport
 			}
 		}
 
-		public void ReparentNode(GameObject child, GameObject newParent)
+		public void ReparentNode(GameObject child, GameObject newParent, Vector3 relativePos, Quaternion relativeRot)
 		{
 			uid childNodeID = GeometrySource.GetGeometrySource().FindResourceID(child);
 			if (childNodeID != 0)
 			{
+				avs.Pose relativePose;
+				relativePose.position=relativePos;
+				relativePose.orientation=relativeRot;
 				uid newParentNodeID = GeometrySource.GetGeometrySource().FindResourceID(newParent);
 				if (newParentNodeID != 0)
 				{
-					session.ownedNodes.Add(childNodeID);
-					Client_ReparentNode(session.GetClientID(), childNodeID,  newParentNodeID);
+					if(session.ownedNodes.Contains(newParentNodeID))
+						session.ownedNodes.Add(childNodeID);
+					Client_ReparentNode(session.GetClientID(), childNodeID,  newParentNodeID,  relativePose);
+				}
+				else
+				{
+					if (session.ownedNodes.Contains(childNodeID))
+						session.ownedNodes.Remove(childNodeID);
+					Client_ReparentNode(session.GetClientID(), childNodeID, newParentNodeID,  relativePose);
 				}
 			}
 		}

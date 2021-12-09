@@ -518,11 +518,11 @@ namespace teleport
 		}
 		public void ReparentNode(GameObject child, GameObject newParent, Vector3 relativePos, Quaternion relativeRot)
 		{
-			if(newParent != null)
+			GameObject oldParent = child.transform.parent != null ? child.transform.parent.gameObject : null;
+			if (newParent != null)
 				child.transform.SetParent(newParent.transform, false);
 			else
 				child.transform.SetParent(null, false);
-			GameObject oldParent=child.transform.parent!=null?child.transform.parent.gameObject:null;
 			child.transform.localPosition = relativePos;
 			child.transform.localRotation= relativeRot;
 			Teleport_Streamable teleport_Streamable = child.GetComponent<Teleport_Streamable>();
@@ -554,11 +554,11 @@ namespace teleport
 			}
 			if (oldSession)
 			{
-				oldSession.GeometryStreamingService.ReparentNode(child, newParent);
+				oldSession.GeometryStreamingService.ReparentNode(child, newParent, relativePos, relativeRot);
 			}
 			if (newSession)
 			{
-				newSession.GeometryStreamingService.ReparentNode(child, newParent);
+				newSession.GeometryStreamingService.ReparentNode(child, newParent, relativePos, relativeRot);
 			}
 		}
 	}
