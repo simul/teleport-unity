@@ -518,22 +518,47 @@ namespace teleport
 		}
 		public void ReparentNode(GameObject child, GameObject newParent, Vector3 relativePos, Quaternion relativeRot)
 		{
-			child.transform.SetParent(newParent.transform, false);
+			if(newParent != null)
+				child.transform.SetParent(newParent.transform, false);
+			else
+				child.transform.SetParent(null, false);
+			GameObject oldParent=child.transform.parent!=null?child.transform.parent.gameObject:null;
 			child.transform.localPosition = relativePos;
 			child.transform.localRotation= relativeRot;
+			Teleport_Streamable teleport_Streamable = child.GetComponent<Teleport_Streamable>();
 			// Is the new parent owned by a client? If so inform clients of this change:
-			Teleport_Streamable teleport_Streamable = newParent.GetComponent<Teleport_Streamable>();
-			if (teleport_Streamable != null)
+			Teleport_SessionComponent oldSession=null;
+			Teleport_SessionComponent newSession = null;
+			Teleport_Streamable newParentStreamable=null;
+			Teleport_Streamable oldParentStreamable=null;
+			if (newParent != null)
 			{
-				if (teleport_Streamable.OwnerClient != 0)
+				// Is the new parent owned by a client? If so inform clients of this change:
+				newParentStreamable = newParent.GetComponent<Teleport_Streamable>();
+				if (newParentStreamable != null && newParentStreamable.OwnerClient != 0)
 				{
-					Teleport_SessionComponent session = Teleport_SessionComponent.GetSessionComponent(teleport_Streamable.OwnerClient);
-					if (session)
-					{
-						teleport_Streamable.OwnerClient = session.GetClientID();
-						session.GeometryStreamingService.ReparentNode(child, newParent);
-					}
+					newSession = Teleport_SessionComponent.GetSessionComponent(newParentStreamable.OwnerClient);
 				}
+			}
+			if (newSession)
+			{
+				teleport_Streamable.OwnerClient = newSession.GetClientID();
+			}
+			if (oldParent != null)
+			{
+				oldParentStreamable = oldParent.GetComponent<Teleport_Streamable>();
+				if (oldParentStreamable != null&&oldParentStreamable.OwnerClient != 0)
+				{
+					oldSession = Teleport_SessionComponent.GetSessionComponent(oldParentStreamable.OwnerClient);
+				}
+			}
+			if (oldSession)
+			{
+				oldSession.GeometryStreamingService.ReparentNode(child, newParent);
+			}
+			if (newSession)
+			{
+				newSession.GeometryStreamingService.ReparentNode(child, newParent);
 			}
 		}
 	}

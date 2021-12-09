@@ -26,31 +26,41 @@ namespace teleport
         
 		}
 		public uid holderClient=0;
+		GameObject formerParent=null;
+		Vector3 oldRelativePosition=new Vector3();
+		Quaternion oldRelativeRotation=new Quaternion();
 
 		public void Grab(Teleport_Controller controller)
 		{
 			if(holderClient != 0)
 				return;
+			Teleport_SessionComponent session = controller.session;
+			holderClient = session.GetClientID();
+			if(holderClient==0)
+				return;
 			Debug.Log("Grabbed " + topParent + " with " + controller.gameObject);
 			// For now, we do the reparenting only client-side on that one client.
 			// I expect this to change so that all clients + server recognize the new structure.
+			formerParent= topParent.transform.parent?topParent.transform.parent.gameObject:null;
 			teleport.Monitor casterMonitor = teleport.Monitor.Instance;
-			Transform grabbableT = gameObject.transform;
-			Transform childT	= topParent.transform;
+			oldRelativePosition= topParent.transform.localPosition;
+			oldRelativeRotation= topParent.transform.localRotation;
+			Transform grabbableT	= gameObject.transform;
+			Transform childT		= topParent.transform;
 			Quaternion relativeRotation = Quaternion.Inverse(grabbableT.rotation) * childT.rotation;
 			Vector3 relativePosition= Quaternion.Inverse(grabbableT.rotation) *(childT.position- grabbableT.position);
 			teleport.Monitor.Instance.ReparentNode(topParent, controller.gameObject, relativePosition, relativeRotation);
-			Teleport_SessionComponent session = controller.session;
+			
 			session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
+			controller.triggerReleaseDelegates -= Grab;
+			controller.triggerReleaseDelegates += Drop;
 		}
-		public void Drop()
+		public void Drop(Teleport_Controller controller)
 		{
 			if (holderClient == 0)
 				return;
 			Debug.Log("Dropped " + topParent);
-			// For now, we do the reparenting only client-side on that one client.
-			// I expect this to change so that all clients + server recognize the new structure.
-		//	controller.session.GeometryStreamingService.ReparentNode(topParent, controller.gameObject);
+			teleport.Monitor.Instance.ReparentNode(topParent, formerParent, oldRelativePosition, oldRelativeRotation);
 		}
 
 
