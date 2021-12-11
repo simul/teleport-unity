@@ -888,8 +888,10 @@ namespace teleport
 			extractedMaterial.extensions = null;
 
 #if UNITY_EDITOR
-			AssetDatabase.TryGetGUIDAndLocalFileIdentifier(material, out string guid, out long _);
-			StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid)), extractedMaterial);
+			long fileId=0;
+			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(material, out string guid);
+			Debug.Log("GUID for "+material.name+" is "+guid+", fileID is "+ fileId);
+			StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32))), extractedMaterial);
 #endif
 
 			return materialID;
@@ -925,7 +927,7 @@ namespace teleport
 			}
 
 #if UNITY_EDITOR
-			AssetDatabase.TryGetGUIDAndLocalFileIdentifier(texture, out string guid, out long _);
+			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(texture, out string guid);
 
 			string textureAssetPath = AssetDatabase.GetAssetPath(texture);
 			long lastModified = GetAssetWriteTimeUTC(textureAssetPath);
@@ -1004,27 +1006,27 @@ namespace teleport
 #endif
 		}
 
-		private void ExtractNodeHierarchy(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask,bool verify)
+		private void ExtractNodeHierarchy(GameObject gameObject, ref avs.Node extractTo, ForceExtractionMask forceMask,bool verify)
 		{
-			if(source.transform.parent)
+			if(gameObject.transform.parent)
 			{
-				extractTo.parentID = FindResourceID(source.transform.parent.gameObject);
+				extractTo.parentID = FindResourceID(gameObject.transform.parent.gameObject);
 			}
 
 			//Extract children of node, through transform hierarchy.
-			uid[] childIDs = new uid[source.transform.childCount];
-			for(int i = 0; i < source.transform.childCount; i++)
+			uid[] childIDs = new uid[gameObject.transform.childCount];
+			for(int i = 0; i < gameObject.transform.childCount; i++)
 			{
-				GameObject child = source.transform.GetChild(i).gameObject;
+				GameObject child = gameObject.transform.GetChild(i).gameObject;
 				uid childID = AddNode(child, forceMask, true, verify);
 
 				childIDs[i] = childID;
 			}
-			extractTo.childAmount = (UInt64)source.transform.childCount;
+			extractTo.childAmount = (UInt64)gameObject.transform.childCount;
 			extractTo.childIDs = childIDs.ToArray();
 		}
 
-		private void ExtractNodeSubType(GameObject source, ref avs.Node extractTo)
+		private void ExtractNodeSubType(GameObject gameObject, ref avs.Node extractTo)
 		{
 		}
 
@@ -1054,10 +1056,10 @@ namespace teleport
 			extractTo.materialIDs = materialIDs.ToArray();
 		}
 
-		private bool ExtractNodeMeshData(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask, bool verify)
+		private bool ExtractNodeMeshData(GameObject gameObject, ref avs.Node extractTo, ForceExtractionMask forceMask, bool verify)
 		{
-			MeshFilter meshFilter = source.GetComponent<MeshFilter>();
-			MeshRenderer meshRenderer = source.GetComponent<MeshRenderer>();
+			MeshFilter meshFilter = gameObject.GetComponent<MeshFilter>();
+			MeshRenderer meshRenderer = gameObject.GetComponent<MeshRenderer>();
 			if(!meshFilter || !meshRenderer || !meshRenderer.enabled)
 			{
 				return false;
@@ -1067,10 +1069,10 @@ namespace teleport
 			if(meshRenderer.lightmapIndex>=0&&meshRenderer.lightmapIndex< giTextures.Length)
 				extractTo.renderState.globalIlluminationTextureUid = FindResourceID(giTextures[meshRenderer.lightmapIndex]);
 			   //Extract mesh used on node.
-			Mesh mesh = sceneReferenceManager.GetGameObjectMesh(source);
+			Mesh mesh = sceneReferenceManager.GetMeshFromGameObject(gameObject);
 			if (mesh == null)
 			{
-				Debug.LogError($"Failed sceneReferenceManager.GetGameObjectMesh for GameObject \"{source.name}\"!");
+				Debug.LogError($"Failed sceneReferenceManager.GetGameObjectMesh for GameObject \"{gameObject.name}\"!");
 				return false;
 			}
 			extractTo.dataID = AddMesh(mesh, forceMask, verify);
@@ -1078,7 +1080,7 @@ namespace teleport
 			//Can't create a node with no data.
 			if(extractTo.dataID == 0)
 			{
-				Debug.LogError($"Failed to extract node mesh data! Failed extraction of mesh \"{(mesh ? mesh.name : "NULL")}\" from GameObject \"{source.name}\"!");
+				Debug.LogError($"Failed to extract node mesh data! Failed extraction of mesh \"{(mesh ? mesh.name : "NULL")}\" from GameObject \"{gameObject.name}\"!");
 				return false;
 			}
 			extractTo.dataType = avs.NodeDataType.Mesh;
@@ -1088,9 +1090,9 @@ namespace teleport
 			return true;
 		}
 
-		private bool ExtractNodeSkinnedMeshData(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask, bool verify)
+		private bool ExtractNodeSkinnedMeshData(GameObject gameObject, ref avs.Node extractTo, ForceExtractionMask forceMask, bool verify)
 		{
-			SkinnedMeshRenderer skinnedMeshRenderer = source.GetComponent<SkinnedMeshRenderer>();
+			SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
 			if(!skinnedMeshRenderer || !skinnedMeshRenderer.enabled || !skinnedMeshRenderer.rootBone)
 			{
 				return false;
@@ -1100,13 +1102,13 @@ namespace teleport
 			if (skinnedMeshRenderer.lightmapIndex >= 0 && skinnedMeshRenderer.lightmapIndex < giTextures.Length)
 				extractTo.renderState.globalIlluminationTextureUid = FindResourceID(giTextures[skinnedMeshRenderer.lightmapIndex]);
 			//Extract mesh used on node.
-			Mesh mesh = sceneReferenceManager.GetGameObjectMesh(source);
+			Mesh mesh = sceneReferenceManager.GetMeshFromGameObject(gameObject);
 			extractTo.dataID = AddMesh(mesh, forceMask,verify);
 
 			//Can't create a node with no data.
 			if(extractTo.dataID == 0)
 			{
-				Debug.LogError($"Failed to extract skinned mesh data from GameObject: {source.name}");
+				Debug.LogError($"Failed to extract skinned mesh data from GameObject: {gameObject.name}");
 				return false;
 			}
 			extractTo.dataType = avs.NodeDataType.Mesh;
@@ -1114,7 +1116,7 @@ namespace teleport
 			extractTo.skinID = AddSkin(skinnedMeshRenderer, forceMask);
 
 			//Animator component usually appears on the parent GameObject, so we need to use that instead for searching the children.
-			GameObject animatorSource = (source.transform.parent) ? source.transform.parent.gameObject : source.transform.gameObject;
+			GameObject animatorSource = (gameObject.transform.parent) ? gameObject.transform.parent.gameObject : gameObject.transform.gameObject;
 			Animator animator = animatorSource.GetComponentInChildren<Animator>();
 			#if UNITY_EDITOR
 			if(animator)
@@ -1133,9 +1135,9 @@ namespace teleport
 			return true;
 		}
 
-		private bool ExtractNodeLightData(GameObject source, ref avs.Node extractTo, ForceExtractionMask forceMask)
+		private bool ExtractNodeLightData(GameObject gameObject, ref avs.Node extractTo, ForceExtractionMask forceMask)
 		{
-			Light light = source.GetComponent<Light>();
+			Light light = gameObject.GetComponent<Light>();
 			if(!light || !light.isActiveAndEnabled)
 			{
 				return false;
@@ -1522,15 +1524,11 @@ namespace teleport
 			}
 
 #if UNITY_EDITOR
-			AssetDatabase.TryGetGUIDAndLocalFileIdentifier(mesh, out string guid, out long _);
+			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(mesh, out string guid);
 			long last_modified=0;
-			if (guid.Equals ("0000000000000000e000000000000000"))
+			if (!guid.Contains("0000000000000000e000000000000000"))
 			{
-				guid=mesh.name.Substring(0,Math.Min(32,mesh.name.Length));		
-			}
-			else
-			{
-				last_modified = GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid));
+				last_modified = GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32)));
 			}
 			StoreMesh
 			(
@@ -1893,7 +1891,7 @@ namespace teleport
 				UnityAsset asset = null;
 
 				//Attempt to find asset.
-				string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+				string assetPath = AssetDatabase.GUIDToAssetPath(guid.Substring(0,32));
 				UnityEngine.Object[] assetsAtPath = AssetDatabase.LoadAllAssetsAtPath(assetPath);
 				foreach(UnityEngine.Object unityObject in assetsAtPath)
 				{ 

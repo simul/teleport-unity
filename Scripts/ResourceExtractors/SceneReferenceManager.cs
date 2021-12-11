@@ -106,11 +106,10 @@ namespace teleport
 
 		//Get references to mesh used by GameObject. Will add the GameObject to the SceneReferenceManager, if it has not already been added.
 		//Returns null if the GameObject does not use a mesh.
-		public Mesh GetGameObjectMesh(GameObject gameObject)
+		public Mesh GetMeshFromGameObject(GameObject gameObject)
 		{
 			string gameObjectPath = GetGameObjectPath(gameObject);
-
-			//We want to re-extract the references if we are not in play-mode; i.e. we want to update to changes made in the editor.
+			// We want to re-extract the references if we are not in play-mode; i.e. we want to update to changes made in the editor.
 			if(!Application.isPlaying || !gameObjectReferences.TryGetValue(gameObjectPath, out ResourceReferences references))
 			{
 				references = AddGameObject(gameObject, gameObjectPath);
@@ -256,6 +255,16 @@ namespace teleport
 			return gameObjectPath;
 		}
 
+		public static bool GetGUIDAndLocalFileIdentifier(UnityEngine.Object obj, out string guid)
+		{
+			long localId=0;
+			bool result= UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out localId);
+			if(!result)
+				return false;
+			string localIdString= String.Format("{0:X8}", localId);
+			guid=guid+localIdString;
+			return true;
+		}
 		//Returns first-found mesh or skinned mesh on the GameObject; on the object itself, or its child-hierarchy.
 		private Mesh GetMesh(GameObject gameObject)
 		{
@@ -299,7 +308,7 @@ namespace teleport
 
 			if(resourceReferences.mesh)
 			{
-				UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(resourceReferences.mesh, out saveFormat.meshGUID, out long _);
+				GetGUIDAndLocalFileIdentifier(resourceReferences.mesh, out saveFormat.meshGUID);
 				saveFormat.meshAssetPath = UnityEditor.AssetDatabase.GetAssetPath(resourceReferences.mesh);
 				saveFormat.meshName = resourceReferences.mesh.name;
 			}
@@ -315,9 +324,8 @@ namespace teleport
 		{
 #if UNITY_EDITOR
 			ResourceReferences resourceReferences = new ResourceReferences();
-
 			//Load all assets at path; there may be multiple meshes sharing a GUID, but differentiated by name.
-			string meshAssetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(saveFormat.meshGUID);
+			string meshAssetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(saveFormat.meshGUID.Substring(0,32));
 			UnityEngine.Object[] assetsAtPath = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(meshAssetPath);
 
 			//Match meshes at the path with the same mesh name; this should only give one result.

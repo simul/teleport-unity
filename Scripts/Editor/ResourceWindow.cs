@@ -238,7 +238,7 @@ namespace teleport
 					EditorGUILayout.BeginHorizontal();
 					int last_underscore=name.Name.LastIndexOf("_");
 					int last_dot = name.Name.LastIndexOf(".");
-					var guid=name.Name.Substring(last_underscore+1,last_dot-last_underscore-1);
+					var guid=name.Name.Substring(last_underscore+1,last_dot-last_underscore-1).Substring(0,32);
 					var object_name = name.Name.Substring(0,  last_underscore);
 					string asset_path=AssetDatabase.GUIDToAssetPath(guid);
 					var obj=AssetDatabase.LoadAssetAtPath<Mesh>(asset_path);
