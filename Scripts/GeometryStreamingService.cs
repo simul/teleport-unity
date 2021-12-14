@@ -46,6 +46,10 @@ namespace teleport
 		[DllImport("TeleportServer")]
 		private static extern void Client_ReparentNode(uid clientID, uid nodeID, uid newParentNodeID,avs.Pose localPose);
 
+		[DllImport("TeleportServer")]
+		private static extern void Client_SetNodeSubtype(uid clientID, uid nodeID, avs.NodeDataSubtype subType);
+
+		
 		#endregion
 
 		private readonly Teleport_SessionComponent session = null;
@@ -258,8 +262,7 @@ namespace teleport
 		}
 		public void StreamPlayerBody()
 		{
-			teleport.Monitor monitor = teleport.Monitor.Instance;
-			List<GameObject> bodyParts = monitor.GetPlayerBodyParts();
+			List<GameObject> bodyParts = session.GetPlayerBodyParts();
 			foreach(GameObject part in bodyParts)
 			{
 				Teleport_Streamable streamable = part.GetComponent<Teleport_Streamable>();
@@ -289,6 +292,19 @@ namespace teleport
 			}
 		}
 
+		public void SetNodeSubtype(GameObject gameObject, avs.NodeDataSubtype t)
+		{
+			uid nodeID = GeometrySource.GetGeometrySource().FindResourceID(gameObject);
+			if (nodeID == 0)
+			{
+				Debug.LogError("Node id not found for "+gameObject.name);
+			}
+			else
+			{
+				// for now we assume that these types have no parent.
+				Client_SetNodeSubtype(session.GetClientID(), nodeID, t);
+			}
+		}
 		public void ReparentNode(GameObject child, GameObject newParent, Vector3 relativePos, Quaternion relativeRot)
 		{
 			uid childNodeID = GeometrySource.GetGeometrySource().FindResourceID(child);

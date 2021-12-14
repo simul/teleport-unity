@@ -24,7 +24,6 @@ namespace avs
 
 	public enum NodeDataSubtype : byte
 	{
-		Invalid,
 		None,
 		Body,
 		LeftHand,
@@ -200,7 +199,6 @@ namespace avs
 		public bool grabbable;
 		public uid ownerClientId;
 		public NodeDataType dataType;
-		public NodeDataSubtype dataSubtype;
 		public uid parentID;
 		public uid dataID;
 		public uid skinID;
@@ -631,7 +629,7 @@ namespace teleport
 			return (streamingTag.Length == 0 || gameObject.CompareTag(streamingTag)) && IsCollisionLayerStreamed(gameObject.layer);
 		}
 
-		public List<GameObject> GetStreamableObjects(bool includePlayerParts = true)
+		public List<GameObject> GetStreamableObjects()
 		{
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 
@@ -654,19 +652,6 @@ namespace teleport
 				if(!IsCollisionLayerStreamed(gameObject.layer))
 				{
 					streamedObjects.RemoveAt(i);
-				}
-			}
-
-			//Add player body parts to list of streamed objects.
-			if(includePlayerParts)
-			{
-				teleport.Monitor casterMonitor = teleport.Monitor.Instance;
-				List<GameObject> playerParts = casterMonitor.GetPlayerBodyParts();
-				foreach(GameObject playerPart in playerParts)
-				{
-					//We don't want to duplicate it, so we remove it first; which only affects performance in a minor way.
-					streamedObjects.Remove(playerPart);
-					streamedObjects.Add(playerPart);
 				}
 			}
 
@@ -732,8 +717,6 @@ namespace teleport
 				extractedNode.transform = avs.Transform.FromLocalUnityTransform(gameObject.transform);
 			else
 				extractedNode.transform=avs.Transform.FromGlobalUnityTransform(gameObject.transform);
-
-			extractedNode.dataSubtype = teleport.Monitor.Instance.GetGameObjectBodyPart(gameObject);
 
 			extractedNode.dataType = avs.NodeDataType.None;
 			if(extractedNode.dataType == avs.NodeDataType.None)
@@ -1026,10 +1009,6 @@ namespace teleport
 			extractTo.childIDs = childIDs.ToArray();
 		}
 
-		private void ExtractNodeSubType(GameObject gameObject, ref avs.Node extractTo)
-		{
-		}
-
 		private void ExtractNodeMaterials(Material[] sourceMaterials, ref avs.Node extractTo, ForceExtractionMask forceMask)
 		{
 			List<uid> materialIDs = new List<uid>();
@@ -1065,10 +1044,24 @@ namespace teleport
 				return false;
 			}
 			extractTo.renderState.lightmapScaleOffset=meshRenderer.lightmapScaleOffset;
-			var giTextures= GlobalIlluminationExtractor.GetTextures();
-			if(meshRenderer.lightmapIndex>=0&&meshRenderer.lightmapIndex< giTextures.Length)
-				extractTo.renderState.globalIlluminationTextureUid = FindResourceID(giTextures[meshRenderer.lightmapIndex]);
-			   //Extract mesh used on node.
+			Texture[] giTextures = GlobalIlluminationExtractor.GetTextures();
+			if(meshRenderer.lightmapIndex>=0)
+			{
+				// If this index not found? These errors are not fatal, but should not occur.
+				if(meshRenderer.lightmapIndex>=giTextures.Length)
+				{
+					Debug.LogError($"In sceneReferenceManager.GetGameObjectMesh for GameObject \"{gameObject.name}\", lightmap "+ meshRenderer.lightmapIndex + " was not listed in GlobalIlluminationExtractor!");
+				}
+				else
+				{
+					extractTo.renderState.globalIlluminationTextureUid = FindResourceID(giTextures[meshRenderer.lightmapIndex]);
+					if (extractTo.renderState.globalIlluminationTextureUid == 0)
+					{
+						Debug.LogError($"In sceneReferenceManager.GetGameObjectMesh for GameObject \"{gameObject.name}\", lightmap " + meshRenderer.lightmapIndex + " was not found in GeometrySource!");
+					}
+				}
+			}
+			//Extract mesh used on node.
 			Mesh mesh = sceneReferenceManager.GetMeshFromGameObject(gameObject);
 			if (mesh == null)
 			{

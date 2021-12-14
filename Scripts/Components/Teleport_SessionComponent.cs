@@ -260,6 +260,9 @@ namespace teleport
 		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
 		public Teleport_AudioCaptureComponent audioCaptureComponent = null;
 		public AudioSource inputAudioSource = null;
+		[SerializeField]
+		private GameObject body = default, leftHand = default, rightHand = default;
+		public Vector3 bodyOffsetFromHead = default;
 
 		public SCServer.ClientSettings clientSettings = new SCServer.ClientSettings();
 
@@ -284,6 +287,25 @@ namespace teleport
 
 		private avs.NetworkStats networkStats;
 		private avs.VideoEncoderStats videoEncoderStats;
+
+		private void Awake()
+		{
+			//Add Teleport_Streamable component to all player body parts.
+			List<GameObject> playerBodyParts = GetPlayerBodyParts();
+			foreach (GameObject bodyPart in playerBodyParts)
+			{
+				Teleport_Streamable streamableComponent = bodyPart.GetComponent<Teleport_Streamable>();
+				if (!streamableComponent)
+				{
+					streamableComponent = bodyPart.AddComponent<Teleport_Streamable>();
+				}
+
+				//We want the client to control the client-side transform of the body parts for reduced latency.
+				streamableComponent.sendMovementUpdates = false;
+				streamableComponent.sendEnabledStateUpdates = true;
+				streamableComponent.pollCurrentAnimation = true;
+			}
+		}
 
 		//PUBLIC FUNCTIONS
 
@@ -350,7 +372,7 @@ namespace teleport
 
 				//Send initial animation state on receiving the handshake, as the connection is now ready for commands.
 				if(geometryStreamingService!=null)
-				geometryStreamingService.SendAnimationState();
+					geometryStreamingService.SendAnimationState();
 
 				//Send animation control updates for the grip animation of the controllers.
 				foreach (Teleport_Controller controller in controllerLookup.Values)
@@ -703,6 +725,12 @@ namespace teleport
 
 			if(geometryStreamingService!=null&&teleportSettings.casterSettings.isStreamingGeometry)
 			{
+				if (body != null)
+					geometryStreamingService.SetNodeSubtype(body, avs.NodeDataSubtype.Body);
+				if (leftHand != null)
+					geometryStreamingService.SetNodeSubtype(leftHand, avs.NodeDataSubtype.LeftHand);
+				if (rightHand != null)
+					geometryStreamingService.SetNodeSubtype(rightHand, avs.NodeDataSubtype.RightHand);
 				geometryStreamingService.StreamGlobals();
 			}
 			foreach (Teleport_Controller controller in controllerLookup.Values)
@@ -786,6 +814,7 @@ namespace teleport
 				clientSettings.webcamPos = cubeMapsOffset + new Vector2Int(clientSettings.specularCubemapSize * 3, clientSettings.specularCubemapSize * 2);
 				clientSettings.webcamSize = new Vector2Int(settings.webcamWidth, settings.webcamHeight);
 			}
+			clientSettings.bodyOffsetFromHead= bodyOffsetFromHead;
 			Client_SetClientSettings(clientID, clientSettings);
 		}
 
@@ -859,6 +888,48 @@ namespace teleport
 			}
 
 			return childComponents.Length != 0 ? childComponents[0] : default;
+		}
+
+		//Returns list of body part hierarchy root GameObjects. 
+		public List<GameObject> GetPlayerBodyParts()
+		{
+			List<GameObject> bodyParts = new List<GameObject>();
+
+			if (body)
+			{
+				bodyParts.Add(body);
+			}
+
+			if (leftHand)
+			{
+				bodyParts.Add(leftHand);
+			}
+
+			if (rightHand)
+			{
+				bodyParts.Add(rightHand);
+			}
+
+			return bodyParts;
+		}
+
+		//Returns which body part the GameObject is.
+		public avs.NodeDataSubtype GetGameObjectBodyPart(GameObject gameObject)
+		{
+			if (gameObject == body)
+			{
+				return avs.NodeDataSubtype.Body;
+			}
+			else if (gameObject == leftHand)
+			{
+				return avs.NodeDataSubtype.LeftHand;
+			}
+			else if (gameObject == rightHand)
+			{
+				return avs.NodeDataSubtype.RightHand;
+			}
+
+			return avs.NodeDataSubtype.None;
 		}
 	}
 }

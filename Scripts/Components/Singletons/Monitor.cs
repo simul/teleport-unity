@@ -13,11 +13,6 @@ namespace teleport
 #endif
 	public class Monitor : MonoBehaviour
 	{
-		public Vector3 bodyOffsetFromHead = default;
-
-		[SerializeField]
-		private GameObject body = default, leftHand = default, rightHand = default;
-
 		private static bool initialised = false;
 		private static teleport.Monitor instance; //There should only be one teleport.Monitor instance at a time.
 
@@ -86,8 +81,6 @@ namespace teleport
 			public ReportHandshakeFn reportHandshake;
 			public OnAudioInputReceived audioInputReceived;
 			public GetUnixTimestampFn getUnixTimestamp;
-
-			public avs.Vector3 bodyOffsetFromHead;
 		};
 
 		[DllImport("TeleportServer")]
@@ -154,48 +147,6 @@ namespace teleport
 			}
 		}
 
-		//Returns list of body part hierarchy root GameObjects. 
-		public List<GameObject> GetPlayerBodyParts()
-		{
-			List<GameObject> bodyParts = new List<GameObject>();
-
-			if(body)
-			{
-				bodyParts.Add(body);
-			}
-
-			if(leftHand)
-			{
-				bodyParts.Add(leftHand);
-			}
-
-			if(rightHand)
-			{
-				bodyParts.Add(rightHand);
-			}
-
-			return bodyParts;
-		}
-
-		//Returns which body part the GameObject is.
-		public avs.NodeDataSubtype GetGameObjectBodyPart(GameObject gameObject)
-		{
-			if(gameObject == body)
-			{
-				return avs.NodeDataSubtype.Body;
-			}
-			else if(gameObject == leftHand)
-			{
-				return avs.NodeDataSubtype.LeftHand;
-			}
-			else if(gameObject == rightHand)
-			{
-				return avs.NodeDataSubtype.RightHand;
-			}
-
-			return avs.NodeDataSubtype.None;
-		}
-
 		public static Int64 GetUnixTimestamp()
 		{
 			return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -215,22 +166,6 @@ namespace teleport
 			{
 				title += ": Current rendering pipeline is not TeleportRenderPipeline!";
 				Debug.LogError(title);
-			}
-
-			//Add Teleport_Streamable component to all player body parts.
-			List<GameObject> playerBodyParts = GetPlayerBodyParts();
-			foreach(GameObject bodyPart in playerBodyParts)
-			{
-				Teleport_Streamable streamableComponent = bodyPart.GetComponent<Teleport_Streamable>();
-				if(!streamableComponent)
-				{
-					streamableComponent = bodyPart.AddComponent<Teleport_Streamable>();
-				}
-
-				//We want the client to control the client-side transform of the body parts for reduced latency.
-				streamableComponent.sendMovementUpdates = false;
-				streamableComponent.sendEnabledStateUpdates = true;
-				streamableComponent.pollCurrentAnimation = true;
 			}
 			
 			//We need to add the animation events on play, so we can detect when an animation starts.
@@ -272,7 +207,6 @@ namespace teleport
 				reportHandshake = ReportHandshake,
 				audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput,
 				getUnixTimestamp = GetUnixTimestamp,
-				bodyOffsetFromHead = bodyOffsetFromHead,
 				httpMountDirectory = teleportSettings.cachePath,
 				clientIP = teleportSettings.clientIP,
 				certPath = teleportSettings.certPath,
@@ -286,7 +220,6 @@ namespace teleport
 			}
 			// Sets connection timeouts for peers (milliseconds)
 			SetConnectionTimeout(teleportSettings.connectionTimeout);
-			
 		}
 
 		private void OnDisable()
@@ -338,7 +271,7 @@ namespace teleport
 			}
 
 			//Add the Teleport_Streamable component to all streamable objects.
-			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects(true);
+			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects();
 			foreach(GameObject gameObject in teleportStreamableObjects)
 			{
 				//Objects with collision will have a Teleport_Streamable component added, as they can be streamed as root objects.

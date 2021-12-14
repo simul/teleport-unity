@@ -104,5 +104,6 @@ namespace SCServer
 		public Int32 shadowmapSize;
 		public Vector2Int webcamPos;
 		public Vector2Int webcamSize; 
+		public Vector3 bodyOffsetFromHead;
 	}
 }

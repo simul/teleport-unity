@@ -400,7 +400,7 @@ namespace teleport
 
 		private void FindSceneStreamables()
 		{
-			lastExtractedGameObjects = geometrySource.GetStreamableObjects(includePlayerParts);
+			lastExtractedGameObjects = geometrySource.GetStreamableObjects();
 		}
 
 		private bool ExtractGeometry(List<GameObject> extractionList, GeometrySource.ForceExtractionMask forceMask)
@@ -430,7 +430,7 @@ namespace teleport
 
 		private bool ExtractSceneGeometry(GeometrySource.ForceExtractionMask forceMask)
 		{
-			lastExtractedGameObjects = geometrySource.GetStreamableObjects(includePlayerParts);
+			lastExtractedGameObjects = geometrySource.GetStreamableObjects();
 			return ExtractGeometry(lastExtractedGameObjects, forceMask);
 		}
 

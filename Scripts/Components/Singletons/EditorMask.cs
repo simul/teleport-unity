@@ -65,7 +65,7 @@ namespace teleport
 					teleport.Monitor.UnsetMaskRecursive(o, streamable_mask);
 			}
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-			List<GameObject> streamable = geometrySource.GetStreamableObjects(true);
+			List<GameObject> streamable = geometrySource.GetStreamableObjects();
 			foreach (var o in streamable)
 			{
 				teleport.Monitor.SetMaskRecursive(o, streamable_mask);
@@ -83,7 +83,7 @@ namespace teleport
 			}
 
 			//Set the mask on all streamable objects.
-			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects(true);
+			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects();
 			foreach (GameObject o in teleportStreamableObjects)
 			{
 				teleport.Monitor.SetMaskRecursive(o, streamable_mask);
