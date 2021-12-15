@@ -165,7 +165,7 @@ namespace avs
 	public class TextureAccessor
 	{
 		public uid index = 0;
-		public uid texCoord = 0;
+		public byte texCoord = 0;
 
 		public Vector2 tiling = new Vector2(1.0f, 1.0f);
 		public float strength = 1.0f;
@@ -752,12 +752,19 @@ namespace teleport
 			}
 
 			//Just return the ID; if we have already processed the mesh, the mesh can be found on the unmanaged side, and we are not forcing extraction.
-			if(processedResources.TryGetValue(mesh, out uid meshID) && IsMeshStored(meshID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
+			if(processedResources.TryGetValue(mesh, out uid meshID))
 			{
-				return meshID;
+				if (IsMeshStored(meshID))
+				{
+					if ((forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
+					{
+						return meshID;
+					}
+				}
 			}
 
-			bool running = Application.isPlaying;
+
+				bool running = Application.isPlaying;
 			// only compress if not running - too slow...
 			// Actually, let's ONLY extract offline. 
 			if (!running)
@@ -1875,9 +1882,6 @@ namespace teleport
 				LoadedResource metaResource = Marshal.PtrToStructure<LoadedResource>(resourcePtr);
 				string name = Marshal.PtrToStringBSTR(metaResource.name);
 				string guid = Marshal.PtrToStringBSTR(metaResource.guid);
-				// If it's not a proper guid, use Unity's dummy null guid.
-				if(guid.Length!=32)
-					guid ="0000000000000000e000000000000000";
 
 #if UNITY_EDITOR
 				//Asset we found in the database.
