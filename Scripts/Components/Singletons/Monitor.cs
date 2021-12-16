@@ -359,6 +359,18 @@ namespace teleport
 		public static Teleport_SessionComponent DefaultCreateSession()
 		{
 			Teleport_SessionComponent session = null;
+
+			// We want to use an existing session in the scene if it doesn't have a client.
+			// This is useful if the session is placed in the scene instead of spawned.
+			var currentSessions = FindObjectsOfType<Teleport_SessionComponent>();
+			foreach(var s in currentSessions)
+			{
+				if (s.GetClientID() == 0)
+				{
+					return s;
+				}
+			}
+
 			if (defaultPlayerPrefab == null)
 			{
 				defaultPlayerPrefab = Resources.Load("Prefabs/TeleportVR") as GameObject;
