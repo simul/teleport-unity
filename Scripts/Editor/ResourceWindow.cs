@@ -525,7 +525,6 @@ namespace teleport
 					isNormal = textureType == UnityEditor.TextureImporterType.NormalMap;
 				}
 				bool writePng = false;
-				bool hdr=false;
 				switch (sourceTexture.format)
 				{
 					case TextureFormat.RGBAFloat:
@@ -536,7 +535,6 @@ namespace teleport
 						renderTextures[i].format = RenderTextureFormat.ARGB32;
 						highQualityUASTC= true;
 						writePng=true;
-						hdr=true;
 						break;
 					case TextureFormat.RGBAHalf:
 						renderTextures[i].format = RenderTextureFormat.ARGBHalf;

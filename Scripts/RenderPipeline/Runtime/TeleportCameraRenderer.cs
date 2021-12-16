@@ -192,12 +192,12 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
-		public void EncodeColor(ScriptableRenderContext context, Camera camera, int face)
+		public void EncodeColor(ScriptableRenderContext context, Camera camera, int face, Teleport_SceneCaptureComponent sceneCapture)
 		{
 			if (!computeShader)
 				InitShaders();
-			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
-			var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
+			var outputTexture = sceneCapture.videoTexture;
+			var captureTexture = sceneCapture.rendererTexture;
 
 			int numThreadGroupsX = captureTexture.width / THREADGROUP_SIZE; 
 			int numThreadGroupsY = captureTexture.height / THREADGROUP_SIZE;
@@ -216,19 +216,19 @@ namespace teleport
 			buffer.Release();
 		}
 
-		public void EncodeDepth(ScriptableRenderContext context, Camera camera, Rect viewport)
+		public void EncodeDepth(ScriptableRenderContext context, Camera camera, Rect viewport, Teleport_SceneCaptureComponent sceneCapture)
 		{
 			if (!computeShader)
 				InitShaders();
 
 			InitDepthShader();
 
-			var captureTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
+			var captureTexture = sceneCapture.rendererTexture;
 
 			var buffer = new CommandBuffer();
 			depthMaterial.SetTexture("DepthTexture", captureTexture, RenderTextureSubElement.Depth);
 			buffer.name = "Custom Depth CB";
-			buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture);
+			buffer.SetRenderTarget(sceneCapture.videoTexture);
 			buffer.SetViewport(viewport);
 			buffer.BeginSample(buffer.name);
 
@@ -238,13 +238,13 @@ namespace teleport
 			buffer.Release();
 		}
 		// Encodes the id of the video tag data in 4x4 blocks of monochrome colour.
-		public void EncodeTagID(ScriptableRenderContext context, Camera camera)
+		public void EncodeTagID(ScriptableRenderContext context, Camera camera, Teleport_SceneCaptureComponent sceneCapture)
 		{
 			if (!computeShader)
 				InitShaders();
-			var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
+			var tagDataID = sceneCapture.CurrentTagID;
 
-			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
+			var outputTexture = sceneCapture.videoTexture;
 			computeShader.SetTexture(encodeTagIdKernel, "RWOutputColorTexture", outputTexture);
 			computeShader.SetInts("TagDataIdOffset", new Int32[2] { outputTexture.width - (32 * 4), outputTexture.height - 4 });
 			computeShader.SetInt("TagDataId", (int)tagDataID);
@@ -255,12 +255,12 @@ namespace teleport
 			buffer.Release();
 		}
 
-		public void EncodeWebcam(ScriptableRenderContext context, Camera camera, Vector2Int offset, Vector2Int webcamSize)
+		public void EncodeWebcam(ScriptableRenderContext context, Camera camera, Vector2Int offset, Vector2Int webcamSize, Teleport_SceneCaptureComponent sceneCapture)
 		{
 			if (!computeShader)
 				InitShaders();
 
-			var inputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.webcamTexture;
+			var inputTexture = sceneCapture.webcamTexture;
 
 			// Will be null if not streaming webcam.
 			if (!inputTexture)
@@ -268,7 +268,7 @@ namespace teleport
 				return;
 			}
 
-			var outputTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
+			var outputTexture = sceneCapture.videoTexture;
 
 			int numThreadGroupsX = webcamSize.x / THREADGROUP_SIZE;
 			int numThreadGroupsY = webcamSize.y / THREADGROUP_SIZE;
@@ -365,7 +365,7 @@ namespace teleport
 
 					// To video
 					buffer.SetGlobalVector("CascadeOffsetScale", CascadeOffsetScale);
-					buffer.SetRenderTarget(Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture);
+					buffer.SetRenderTarget(sceneCaptureComponent.videoTexture);
 					buffer.SetViewport(viewport);
 					buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 1, MeshTopology.Triangles, 6);
 
@@ -700,19 +700,9 @@ namespace teleport
 			EndCamera(context, camera);
 		}
 		//int m = 0;
-	
-		public uid ClientID
-		{
-			get
-			{
-				if (!Teleport_SceneCaptureComponent.RenderingSceneCapture)
-					return 0;
-				return Teleport_SceneCaptureComponent.RenderingSceneCapture.clientID;
-			}
-			set
-			{
-			}
-		}
+
+		public uid ClientID = 0;
+		
 		public Teleport_SessionComponent SessionComponent
 		{
 			get
@@ -724,19 +714,21 @@ namespace teleport
 		}
 		public void RenderToSceneCapture(ScriptableRenderContext context, Camera camera)
 		{
-			if (!Teleport_SceneCaptureComponent.RenderingSceneCapture)
+			if (!Teleport_SessionComponent.sessions.ContainsKey(ClientID))
 				return;
-			RenderTexture videoTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
+
+			var session = Teleport_SessionComponent.sessions[ClientID];
+
+			var sceneCapture = session.sceneCaptureComponent;
+
+			RenderTexture videoTexture = sceneCapture.videoTexture;
 
 			if (!videoTexture)
 			{
 				Debug.LogError("The video encoder texture must not be null");
 				return;
 			}
-			if (!Teleport_SessionComponent.sessions.ContainsKey(ClientID))
-				return;
 			
-			var session = Teleport_SessionComponent.sessions[ClientID];
 			camera.transform.position = session.head.transform.position;
 			camera.transform.rotation = session.head.transform.rotation;
 
@@ -746,7 +738,7 @@ namespace teleport
 			var camDir = camera.transform.forward;
 			camDir.Normalize();
 
-			camera.targetTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture;
+			camera.targetTexture = sceneCapture.rendererTexture;
 			if (ClientID != 0)
 				UpdateStreamables(context, ClientID, camera);
 
@@ -796,20 +788,20 @@ namespace teleport
 					}
 				}
 
-				//videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent,lightingOrder, teleportLighting);
+				//videoEncoding.EncodeShadowmaps(context, camera, cullingResultsAll, sceneCapture, SessionComponent,lightingOrder, teleportLighting);
 
-				videoEncoding.EncodeWebcam(context, camera, SessionComponent.clientSettings.webcamPos, SessionComponent.clientSettings.webcamSize);	
-				videoEncoding.EncodeTagID(context, camera);
+				videoEncoding.EncodeWebcam(context, camera, SessionComponent.clientSettings.webcamPos, SessionComponent.clientSettings.webcamSize, sceneCapture);	
+				videoEncoding.EncodeTagID(context, camera, sceneCapture);
 				context.Submit();
 
 				camera.nearClipPlane = oldNearClip;
 				camera.transform.position = oldPos;
 				camera.transform.rotation = oldRot;
 
-				var videoEncoder = Teleport_SceneCaptureComponent.RenderingSceneCapture.VideoEncoder;
+				var videoEncoder = sceneCapture.VideoEncoder;
 				if (ClientID != 0 && teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
 				{
-					var tagDataID = Teleport_SceneCaptureComponent.RenderingSceneCapture.CurrentTagID;
+					var tagDataID = sceneCapture.CurrentTagID;
 					videoEncoder.CreateEncodeCommands(context, camera, tagDataID, max_light);
 				}
 			}
@@ -873,6 +865,7 @@ namespace teleport
 			camera.worldToCameraMatrix = view;
 			string sampleName = camera.gameObject.name + " Face " + face;
 
+			var sceneCapture = SessionComponent.sceneCaptureComponent;
 			StartSample(context, sampleName);
 			{
 				if (teleportSettings.casterSettings.usePerspectiveRendering)
@@ -881,12 +874,12 @@ namespace teleport
 					Clear(context, camera);
 					PrepareForSceneWindow(context, camera);
 
-					DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder, false, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, face);
+					DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder, false, sceneCapture.UnfilteredCubeTexture, face);
 					DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
 		
-					videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face, 0);
-					videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face,diffuseAmbientScale);
-					videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent,face);
+					videoEncoding.GenerateSpecularMips(context, sceneCapture.UnfilteredCubeTexture, sceneCapture.SpecularCubeTexture, face, 0);
+					videoEncoding.GenerateDiffuseCubemap(context, sceneCapture.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), sceneCapture.DiffuseCubeTexture, face,diffuseAmbientScale);
+					videoEncoding.EncodeLightingCubemaps(context, sceneCapture, SessionComponent,face);
 				}
 				else
 				{
@@ -902,11 +895,11 @@ namespace teleport
 					// The unfiltered (reflection cube) should render close objects (though maybe only static ones).
 					float oldNearClip = camera.nearClipPlane;
 					camera.nearClipPlane = 5.0f;
-					videoEncoding.DrawCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.rendererTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, face);
+					videoEncoding.DrawCubemaps(context, SessionComponent.sceneCaptureComponent.rendererTexture, sceneCapture.UnfilteredCubeTexture, face);
 					camera.nearClipPlane = oldNearClip;
-					videoEncoding.GenerateSpecularMips(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.UnfilteredCubeTexture, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, face, 0);
-					videoEncoding.GenerateDiffuseCubemap(context, Teleport_SceneCaptureComponent.RenderingSceneCapture.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), Teleport_SceneCaptureComponent.RenderingSceneCapture.DiffuseCubeTexture, face, diffuseAmbientScale);
-					videoEncoding.EncodeColor(context, camera, face);
+					videoEncoding.GenerateSpecularMips(context, SessionComponent.sceneCaptureComponent.UnfilteredCubeTexture, sceneCapture.SpecularCubeTexture, face, 0);
+					videoEncoding.GenerateDiffuseCubemap(context, SessionComponent.sceneCaptureComponent.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), sceneCapture.DiffuseCubeTexture, face, diffuseAmbientScale);
+					videoEncoding.EncodeColor(context, camera, face, sceneCapture);
 					if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
 					{
 						int faceSize = teleportSettings.casterSettings.captureCubeTextureSize;
@@ -914,9 +907,9 @@ namespace teleport
 						int offsetX = VideoEncoding.faceOffsets[face, 0];
 						int offsetY = VideoEncoding.faceOffsets[face, 1];
 						var depthViewport = new Rect(offsetX * halfFaceSize, (faceSize * 2) + (offsetY * halfFaceSize), halfFaceSize, halfFaceSize);
-						videoEncoding.EncodeDepth(context, camera, depthViewport);
+						videoEncoding.EncodeDepth(context, camera, depthViewport, sceneCapture);
 					}
-					videoEncoding.EncodeLightingCubemaps(context, Teleport_SceneCaptureComponent.RenderingSceneCapture, SessionComponent, face);
+					videoEncoding.EncodeLightingCubemaps(context, sceneCapture, SessionComponent, face);
 #if UNITY_EDITOR
 					DrawUnsupportedShaders(context, camera);
 #endif
@@ -938,7 +931,9 @@ namespace teleport
 
 			int layerMask = 0x7FFFFFFF;
 			uint renderingMask = 0x7FFFFFFF;
-			string sampleName = camera.gameObject.name + " Perspective";	
+			string sampleName = camera.gameObject.name + " Perspective";
+
+			var sceneCapture = SessionComponent.sceneCaptureComponent;
 
 			StartSample(context, sampleName);
 			{
@@ -950,13 +945,13 @@ namespace teleport
 
 				DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder);
 				DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
-				videoEncoding.EncodeColor(context, camera, 0);
+				videoEncoding.EncodeColor(context, camera, 0, sceneCapture);
 				if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
 				{
 					int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
 					int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
 					var depthViewport = new Rect(0, perspectiveHeight, perspectiveWidth / 2, perspectiveHeight / 2);
-					videoEncoding.EncodeDepth(context, camera, depthViewport);
+					videoEncoding.EncodeDepth(context, camera, depthViewport, sceneCapture);
 				}
 #if UNITY_EDITOR
 				DrawUnsupportedShaders(context, camera);

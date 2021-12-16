@@ -172,6 +172,7 @@ namespace teleport
 			var sc = camera.gameObject.GetComponent<Teleport_SceneCaptureComponent>();
 			if (sc != null)
 			{
+				renderer.ClientID = sc.GetClientID();
 				renderer.RenderToSceneCapture(context, camera);
 			}
 			else if (teleportSettings.renderMainCamera)  

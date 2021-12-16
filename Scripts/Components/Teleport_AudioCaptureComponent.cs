@@ -58,25 +58,22 @@ namespace teleport
             InitializeAudioEncoder(clientID, ref audioParams);
         }
 
+        public void SetClientID(uid id)
+        { 
+            clientID = id;
+
+            if (clientID != 0)
+            {
+                Initialize();
+            } 
+        }
+
         // This function is called on the audio thread
         void OnAudioFilterRead(float[] data, int channels)
         {
             if (!running || !teleportSettings.casterSettings.isStreamingAudio || data.Length <= 0)
             {
                 return;
-            }
-
-            // for now just get latest client
-            uid id = Teleport_SessionComponent.GetLastClientID();
-
-            if (id != clientID)
-            {
-                clientID = id;
-
-                if (clientID != 0)
-                {
-                    Initialize();
-                }
             }
 
             if (clientID != 0)
