@@ -43,6 +43,7 @@ namespace teleport
 		//Stores handles to game objects, so the garbage collector doesn't move/delete the objects while they're being referenced by the native plug-in.
 		Dictionary<GameObject, GCHandle> gameObjectHandles = new Dictionary<GameObject, GCHandle>();
 
+		Teleport_SceneCaptureComponent sceneCapture = null;
 		uid clientID;
 
 		teleport.Monitor monitor;
@@ -60,9 +61,10 @@ namespace teleport
 			set; get;
 		}
 
-		public VideoEncoder(uid clientID)
+		public VideoEncoder(Teleport_SceneCaptureComponent sceneCapture)
 		{
-			this.clientID = clientID;
+			this.sceneCapture = sceneCapture;
+			clientID = sceneCapture.GetClientID();
 
 			monitor = teleport.Monitor.Instance;
 		}
@@ -92,7 +94,7 @@ namespace teleport
 			paramsWrapper.clientID = clientID;
 			paramsWrapper.videoEncodeParams = new SCServer.VideoEncodeParams();
 			
-			var encoderTexture = Teleport_SceneCaptureComponent.RenderingSceneCapture.videoTexture;
+			var encoderTexture = sceneCapture.videoTexture;
 	
 			paramsWrapper.videoEncodeParams.encodeWidth = encoderTexture.width;
 			paramsWrapper.videoEncodeParams.encodeHeight = encoderTexture.height;

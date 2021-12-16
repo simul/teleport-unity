@@ -107,7 +107,15 @@ namespace teleport
 		private static extern void EditorTick();
 		[DllImport("TeleportServer")]
 		private static extern void Shutdown();
+		[DllImport("TeleportServer")]
+		private static extern uid GetUnlinkedClientID();
 		#endregion
+
+		public delegate Teleport_SessionComponent CreateSession();
+
+		public CreateSession createSessionCallback = DefaultCreateSession;
+
+		private static GameObject defaultPlayerPrefab = null;
 
 		private GUIStyle overlayFont = new GUIStyle();
 		private GUIStyle clientFont = new GUIStyle();
@@ -120,6 +128,11 @@ namespace teleport
 			UnityEditor.EditorApplication.update += EditorTick;
 		}
 #endif
+
+		public void SetCreateSessionCallback(CreateSession callback)
+		{
+			createSessionCallback = callback;
+		}
 
 		public static Monitor Instance
 		{
@@ -360,6 +373,7 @@ namespace teleport
 			if(initialised)
 			{
 				Tick(Time.deltaTime);
+				CheckForClients();
 			}
 		}
 
@@ -386,6 +400,62 @@ namespace teleport
 				TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 				UpdateCasterSettings(teleportSettings.casterSettings);
 			}
+		}
+
+		private void CheckForClients()
+		{
+			uid id = GetUnlinkedClientID();
+			if (id == 0)
+			{
+				return;
+			}
+
+			if (Teleport_SessionComponent.sessions.ContainsKey(id))
+			{
+				Debug.LogError($"Error setting up SessionComponent for Client_{id}. There is already a registered session for that client!");
+				return;
+			}
+
+			var session = createSessionCallback();
+			if (session != null)
+			{
+				session.StartSession(id);
+			}
+		}
+
+		public static Teleport_SessionComponent DefaultCreateSession()
+		{
+			Teleport_SessionComponent session = null;
+			if (defaultPlayerPrefab == null)
+			{
+				defaultPlayerPrefab = Resources.Load("Prefabs/TeleportVR") as GameObject;
+			}
+			if (defaultPlayerPrefab != null)
+			{
+				var childComponents = defaultPlayerPrefab.GetComponentsInChildren<Teleport_SessionComponent>();
+
+				if (childComponents.Length != 1)
+				{
+					Debug.LogError($"Exactly <b>one</b> {typeof(Teleport_SessionComponent).Name} child should exist, but <color=red><b>{childComponents.Length}</b></color> were found for \"{defaultPlayerPrefab}\"!");
+					return null;
+				}
+
+				if (childComponents.Length == 0)
+				{
+					return null;
+				}
+
+				GameObject player = Instantiate(defaultPlayerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
+				player.name = "TeleportVR_" + Teleport_SessionComponent.sessions.Count;
+
+				session = player.GetComponentsInChildren<Teleport_SessionComponent>()[0];
+
+				if (session.head != null && Camera.main != null && Teleport_SessionComponent.sessions.Count == 0)
+				{
+					Camera.main.transform.parent = session.head.transform;
+				}
+			}
+			return session;
 		}
 
 		///DLL CALLBACK FUNCTIONS

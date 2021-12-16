@@ -51,9 +51,6 @@ namespace teleport
 		private static extern bool Client_HasOrigin(uid clientID);
 
 		[DllImport("TeleportServer")]
-		private static extern uid GetUnlinkedClientID();
-
-		[DllImport("TeleportServer")]
 		private static extern void Client_UpdateNodeAnimationControl(uid clientID, avs.NodeUpdateAnimationControl update);
 		[DllImport("TeleportServer")]
 		private static extern void Client_SetNodeAnimationSpeed(uid clientID, uid nodeID, uid animationID, float speed);
@@ -61,20 +58,6 @@ namespace teleport
 		#endregion
 
 		#region StaticCallbacks
-
-		// Aidan: This is temporary for the capture component
-		//TODO: Replace this with something that is not temporary.
-		public static uid GetLastClientID()
-		{
-			if (sessions.Count > 0)
-			{
-				return sessions.Last().Key;
-			}
-			else
-			{
-				return 0;
-			}
-		}
 
 		public static bool HasSessionComponent(uid clientID)
 		{
@@ -101,8 +84,37 @@ namespace teleport
 		{
 			if (sessions.ContainsKey(clientID))
 			{
-				sessions[clientID].Disconnect();
+				var session = sessions[clientID];
+
+				bool nestedMainCam = false;
+				// Change main camera to be child of another session.
+				if (Camera.main != null)
+				{
+					var cams = session.GetComponentsInChildren<Camera>();
+					foreach (var cam in cams)
+					{
+						if (Camera.main == cam)
+						{
+							Camera.main.transform.parent = null;
+							nestedMainCam = true;
+							break;
+						}
+					}
+				}
+
+				session.Disconnect();
 				sessions.Remove(clientID);
+				Destroy(session.gameObject);
+
+				if (nestedMainCam && sessions.Count > 0)
+				{
+					// Nest main camera in any other session.
+					session = sessions.First().Value;
+					if (session.head != null)
+					{
+						Camera.main.transform.parent = session.head.transform;
+					}
+				}
 			}
 
 			// This MUST be called for connection / reconnection to work properly.
@@ -313,6 +325,8 @@ namespace teleport
 				}
 			}
 			clientID = 0;
+			sceneCaptureComponent.SetClientID(clientID);
+			audioCaptureComponent.SetClientID(clientID);
 		}
 
 		public bool IsConnected()
@@ -660,23 +674,6 @@ namespace teleport
 
 		private void LateUpdate()
 		{
-			if (clientID == 0)
-			{
-				uid id = GetUnlinkedClientID();
-				if (id == 0)
-				{
-					return;
-				}
-
-				if (sessions.ContainsKey(id))
-				{
-					Debug.LogError($"Error setting up SessionComponent for Client_{id}. There is already a registered session for that client!");
-					return;
-				}
-
-				StartSession(id);
-			}
-
 			if (Client_IsConnected(clientID))
 			{
 				SendOriginUpdates();
@@ -695,10 +692,11 @@ namespace teleport
 
 		//PRIVATE FUNCTIONS
 
-		private void StartSession(uid connectedID)
+		public void StartSession(uid connectedID)
 		{
 			clientID = connectedID;
 			sessions[clientID] = this;
+
 			UpdateClientSettings();
 
 			if(geometryStreamingService!=null&&teleportSettings.casterSettings.isStreamingGeometry)
@@ -713,6 +711,8 @@ namespace teleport
 					streamable.sendMovementUpdates = false;
 				}
 			}
+			audioCaptureComponent.SetClientID(clientID);
+			sceneCaptureComponent.SetClientID(clientID);
 		}
 		private void UpdateClientSettings()
 		{

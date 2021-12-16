@@ -11,7 +11,7 @@ namespace teleport
 {
 	public class Teleport_SceneCaptureComponent : MonoBehaviour
 	{
-		public uid clientID = 0; // This needs to be set by a session component instance after start
+		private uid clientID = 0; 
 		public RenderTexture videoTexture = null;
 		public RenderTexture rendererTexture = null;
 		public RenderTexture DiffuseCubeTexture = null;
@@ -24,6 +24,7 @@ namespace teleport
 
 		List<double> bandwidths = new List<double>();
 		float settingsDuration = 0.0f;
+		bool initialized = false;
 
 		public VideoEncoder VideoEncoder
 		{
@@ -34,13 +35,7 @@ namespace teleport
 		{
 			get; set;
 		}
-		/// <summary>
-		/// NOTE: Remove this. Can't have this as a singleton because it precludes multi-client.
-		/// </summary>
-		public static Teleport_SceneCaptureComponent RenderingSceneCapture
-		{
-			get; private set;
-		}
+		
 		Teleport_SceneCaptureComponent()
 		{
 
@@ -72,28 +67,31 @@ namespace teleport
 			VideoEncoder = null;
 		}
 
+		public void SetClientID(uid id)
+		{
+			clientID = id;
+			CurrentTagID = 0;
+			if (clientID != 0)
+			{
+				Initialize();
+				CreateResources();
+				VideoEncoder = new VideoEncoder(this);
+			}
+			else
+			{
+				VideoEncoder = null;
+			}
+			bandwidths.Clear();
+			settingsDuration = 0.0f;
+		}
+
+		public uid GetClientID()
+		{
+			return clientID;
+		}
+
 		void LateUpdate()
 		{
-			// for now just get latest client
-			uid id = Teleport_SessionComponent.GetLastClientID();
-	 
-			if (id != clientID)
-			{
-				clientID = id;
-				CurrentTagID = 0;
-				if (clientID != 0)
-				{
-					CreateResources();
-					VideoEncoder = new VideoEncoder(clientID);
-				}
-				else
-				{
-					VideoEncoder = null;
-				}
-				bandwidths.Clear();
-				settingsDuration = 0.0f;
-			}
-
 			if (cam && videoTexture)
 			{
 				if(clientID != 0)
@@ -106,6 +104,11 @@ namespace teleport
 
 		void Initialize()
 		{
+			if (initialized)
+			{
+				return;
+			}
+
 			CurrentTagID = 0;
 
 			GameObject obj = gameObject;
@@ -114,7 +117,7 @@ namespace teleport
 			cam = gameObject.GetComponent<Camera>();
 			if (!cam)
 			{
-				cam=gameObject.AddComponent<Camera>();
+				cam = gameObject.AddComponent<Camera>();
 			}
 		
 			cam.nearClipPlane = 0.05f;
@@ -142,6 +145,8 @@ namespace teleport
 					CreateWebTexture();				
 				}
 			}
+
+			initialized = true;
 		}
 
 		void ManagePerformance()
@@ -263,7 +268,6 @@ namespace teleport
 		{
 			// Update name in case client ID changed
 			cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
-			RenderingSceneCapture = this;
 			cam.Render();
 
 			CurrentTagID = (CurrentTagID + 1) % 32;
