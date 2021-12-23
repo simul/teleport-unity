@@ -185,10 +185,10 @@ namespace teleport
 					(analogueEvent.inputID == avs.InputID.TRIGGER01
 					|| analogueEvent.inputID == avs.InputID.TRIGGER02))
 				{
-					Debug.Log("ProcessInputEvents analogueEvent " + analogueEvent.inputID + " " + analogueEvent.strength+" "+ (triggerReleaseDelegates != null));
+					//Debug.Log("ProcessInputEvents analogueEvent " + analogueEvent.inputID + " " + analogueEvent.strength+" "+ (triggerReleaseDelegates != null));
 					if (triggerReleaseDelegates!=null)
 						triggerReleaseDelegates(this);
-			}
+				}
 			}
 
 			foreach(avs.InputEventMotion motionEvent in motionEvents)

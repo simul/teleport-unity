@@ -192,11 +192,11 @@ namespace avs
 		[MarshalAs(UnmanagedType.BStr)]
 		public IntPtr name;
 
-		public Transform transform;
+		public Transform localTransform;
+		public Transform globalTransform;
+
 		[MarshalAs(UnmanagedType.I1)]
 		public bool stationary;
-		[MarshalAs(UnmanagedType.I1)]
-		public bool grabbable;
 		public uid ownerClientId;
 		public NodeDataType dataType;
 		public uid parentID;
@@ -709,14 +709,11 @@ namespace teleport
 			Teleport_Streamable teleport_Streamable = gameObject.GetComponent<Teleport_Streamable>();
 			extractedNode.name = Marshal.StringToBSTR(gameObject.name);
 			extractedNode.stationary = (gameObject.isStatic);
-			// not needed:
-			extractedNode.grabbable = false;
+			
 			extractedNode.ownerClientId = teleport_Streamable!=null? teleport_Streamable.OwnerClient:0;
 			ExtractNodeHierarchy(gameObject, ref extractedNode, forceMask, verify);
-			if(extractedNode.parentID!=0)
-				extractedNode.transform = avs.Transform.FromLocalUnityTransform(gameObject.transform);
-			else
-				extractedNode.transform=avs.Transform.FromGlobalUnityTransform(gameObject.transform);
+			extractedNode.localTransform = avs.Transform.FromLocalUnityTransform(gameObject.transform);
+			extractedNode.globalTransform=avs.Transform.FromGlobalUnityTransform(gameObject.transform);
 
 			extractedNode.dataType = avs.NodeDataType.None;
 			if(extractedNode.dataType == avs.NodeDataType.None)
@@ -960,7 +957,8 @@ namespace teleport
 			boneNode.priority=0;
 			boneNode.name = Marshal.StringToBSTR(bone.name);
 			boneNode.parentID = parentID;
-			boneNode.transform = avs.Transform.FromLocalUnityTransform(bone);
+			boneNode.localTransform = avs.Transform.FromLocalUnityTransform(bone);
+		
 			boneNode.dataType = avs.NodeDataType.Bone;
 
 			boneNode.childAmount = (ulong)bone.childCount;

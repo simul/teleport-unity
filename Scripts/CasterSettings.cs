@@ -87,6 +87,15 @@ namespace SCServer
 		public ControlModel controlModel = ControlModel.SERVER_ORIGIN_CLIENT_LOCAL;
 	}
 	/// <summary>
+	/// A control definition to send to the client.
+	/// </summary>
+	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
+	public class ClientControl
+	{
+		//! path with wildcards to match the client's OpenXR component path.
+		public string path;
+	}
+	/// <summary>
 	/// Settings specific to a given client, as decided engine-side.
 	/// </summary>
 	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
