@@ -241,28 +241,40 @@ namespace teleport
 			Shutdown();
 		}
 		
-		static public void OverrideMaskRecursive(GameObject gameObject, uint mask)
+		static public void OverrideRenderingLayerMask(GameObject gameObject, uint mask,bool recursive=false)
 		{
-			Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
+			Renderer[] renderers;
+			if(recursive)
+				renderers= gameObject.GetComponentsInChildren<Renderer>(true);
+			else
+				renderers = gameObject.GetComponents<Renderer>();
 			foreach (Renderer renderer in renderers)
 			{
 				renderer.renderingLayerMask= mask;
 			}
 		}
 
-		static public void SetMaskRecursive(GameObject gameObject,uint mask)
+		static public void SetRenderingLayerMask(GameObject gameObject, uint mask, bool recursive = false)
 		{
-			Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
+			Renderer[] renderers;
+			if (recursive)
+				renderers = gameObject.GetComponentsInChildren<Renderer>(true);
+			else
+				renderers = gameObject.GetComponents<Renderer>();
 			foreach (Renderer renderer in renderers)
 			{
 				renderer.renderingLayerMask |= mask;
 			}
 		}
 
-		static public void UnsetMaskRecursive(GameObject gameObject, uint mask)
+		static public void UnsetRenderingLayerMask(GameObject gameObject, uint mask, bool recursive = false)
 		{
 			uint inverse_mask=~mask;
-			Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
+			Renderer[] renderers;
+			if (recursive)
+				renderers = gameObject.GetComponentsInChildren<Renderer>(true);
+			else
+				renderers = gameObject.GetComponents<Renderer>();
 			foreach (Renderer renderer in renderers)
 			{
 				// Previously we &'d with the existing mask, but that causes bad behaviour if the mask is left in the wrong state and the object is saved.
@@ -280,7 +292,7 @@ namespace teleport
 			GameObject[] rootGameObjects = scene.GetRootGameObjects();
 			foreach(GameObject gameObject in rootGameObjects)
 			{
-				SetMaskRecursive(gameObject, invStreamedMask);
+				SetRenderingLayerMask(gameObject, invStreamedMask);
 			}
 
 			//Add the Teleport_Streamable component to all streamable objects.

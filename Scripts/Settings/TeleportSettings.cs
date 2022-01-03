@@ -21,7 +21,9 @@ namespace teleport
 		//! Objects with this tag will be streamed; leaving it blank will cause it to just use the layer mask.
 		public string TagToStream = "TeleportStreamable";
 		public bool highlightStreamables=true;
-		public Color highlightColour=new Color(.5F, .2F, 1.0F, .1F);
+		public Color highlightStreamableColour=new Color(.5F, .2F, 1.0F, .1F);
+		public bool highlightNonStreamables = false;
+		public Color highlightNonStreamableColour = new Color(0.5F, 1.0F, 1.0F, .1F);
 
 		[Header("Connections")]
 		public uint listenPort = 10500u;

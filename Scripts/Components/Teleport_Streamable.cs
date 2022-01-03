@@ -115,6 +115,7 @@ namespace teleport
 		//! The highest priority of StreamableProperties found in the streamable's hierarchy.
 		public int priority = 0;
 		// Track the reasons why we're streaming this. A set of bit flags, when it goes to zero you can stop streaming it.
+		// TODO: this should obviously be per-client.
 		public UInt32 streaming_reason = 0;
 
 		//All GameObjects objects in the streamed hierarchy this Teleport_Streamable represents.
@@ -287,12 +288,13 @@ namespace teleport
 			//We need to stop once we reach this node, so we add it to the explored list, but that means we now have to explicitly add it to the streamed hierarchy.
 			exploredGameObjects.Add(gameObject);
 			streamedHierarchy.Add(new StreamedNode(gameObject));
+			// Get all the StreamableProperties instances in the hierarchy, and use them to find the maximum "priority" value.
 			List<StreamableProperties> streamablePropertiesList = new List<StreamableProperties>(GetComponentsInChildren<StreamableProperties>());
 			foreach (StreamableProperties streamableProperties in streamablePropertiesList)
 			{
 				priority=Math.Max(priority, streamableProperties.priority);
 			}
-			//Mark all children that will be streamed separately as explored; i.e. is marked for streaming.
+			//Mark all children that will be streamed separately as explored; i.e. marked for streaming.
 			List<Collider> childColliders = new List<Collider>(GetComponentsInChildren<Collider>());
 			foreach(Collider childCollider in childColliders)
 			{

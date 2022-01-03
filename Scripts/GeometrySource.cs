@@ -628,34 +628,45 @@ namespace teleport
 			string streamingTag = TeleportSettings.GetOrCreateSettings().TagToStream;
 			return (streamingTag.Length == 0 || gameObject.CompareTag(streamingTag)) && IsCollisionLayerStreamed(gameObject.layer);
 		}
-
+		public bool IsObjectStreamable(GameObject gameObject)
+		{
+			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+			if (teleportSettings.TagToStream.Length > 0)
+				if (!gameObject.CompareTag(teleportSettings.TagToStream))
+					return false;
+			if (!IsCollisionLayerStreamed(gameObject.layer))
+			{
+				return false;
+			}
+			return true;
+		}
 		public List<GameObject> GetStreamableObjects()
 		{
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 
 			//Find all GameObjects in open scenes that have the streamed tag.
-			List<GameObject> streamedObjects;
+			List<GameObject> streamableObjects;
 			if (teleportSettings.TagToStream.Length > 0)
 			{
 				GameObject[] taggedGameObjects = Resources.FindObjectsOfTypeAll<GameObject>().Where(g => g.CompareTag(teleportSettings.TagToStream)).ToArray();
-				streamedObjects = new List<GameObject>(taggedGameObjects);
+				streamableObjects = new List<GameObject>(taggedGameObjects);
 			}
 			else
 			{
-				streamedObjects = new List<GameObject>(Resources.FindObjectsOfTypeAll<GameObject>());
+				streamableObjects = new List<GameObject>(Resources.FindObjectsOfTypeAll<GameObject>());
 			}
 
 			//Remove GameObjects not on a streamed collision layer.
-			for(int i = streamedObjects.Count - 1; i >= 0; i--)
+			for(int i = streamableObjects.Count - 1; i >= 0; i--)
 			{
-				GameObject gameObject = streamedObjects[i];
+				GameObject gameObject = streamableObjects[i];
 				if(!IsCollisionLayerStreamed(gameObject.layer))
 				{
-					streamedObjects.RemoveAt(i);
+					streamableObjects.RemoveAt(i);
 				}
 			}
 
-			return streamedObjects;
+			return streamableObjects;
 		}
 
 		//Adds animations events to all extracted AnimationClips, so we can detect when they start playing.

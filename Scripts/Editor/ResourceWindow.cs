@@ -824,6 +824,15 @@ namespace teleport
 				}
 			}
 		}
+		void OnHierarchyChange()
+		{
+			EditorMask.ResetAll();
+		}
+
+		void OnSelectionChange()
+		{
+			EditorMask.ResetAll();
+		}
 
 	}
 }
