@@ -104,7 +104,12 @@ namespace teleport
 
 				session.Disconnect();
 				sessions.Remove(clientID);
-				Destroy(session.gameObject);
+
+				// Don't destory sessions placed in the scene.
+				if (session.Spawned)
+				{
+					Destroy(session.gameObject);
+				}
 
 				if (nestedMainCam && sessions.Count > 0)
 				{
@@ -262,6 +267,9 @@ namespace teleport
 		}
 
 		//PUBLIC MEMBER VARIABLES
+
+		// Was the gameobject the session belongs placed in the level or spawned at runtime.
+		public bool Spawned { get; set; } = false;
 
 		public int maxNodesOnOverlay = 10; //Amount of nodes to show on the overlay before breaking.
 		public int maxLightsOnOverlay = 5; //Amount of lights to show on the overlay before breaking.

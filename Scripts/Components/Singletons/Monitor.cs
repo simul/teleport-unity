@@ -377,7 +377,7 @@ namespace teleport
 			var currentSessions = FindObjectsOfType<Teleport_SessionComponent>();
 			foreach(var s in currentSessions)
 			{
-				if (s.GetClientID() == 0)
+				if (!s.Spawned && s.GetClientID() == 0)
 				{
 					return s;
 				}
@@ -406,6 +406,7 @@ namespace teleport
 				player.name = "TeleportVR_" + Teleport_SessionComponent.sessions.Count;
 
 				session = player.GetComponentsInChildren<Teleport_SessionComponent>()[0];
+				session.Spawned = true;
 
 				if (session.head != null && Camera.main != null && Teleport_SessionComponent.sessions.Count == 0)
 				{
