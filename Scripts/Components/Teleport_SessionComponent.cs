@@ -724,6 +724,10 @@ namespace teleport
 
 		public void StartSession(uid connectedID)
 		{
+			if (connectedID == 0)
+            {
+				return;
+            }
 			clientID = connectedID;
 			sessions[clientID] = this;
 

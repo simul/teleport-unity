@@ -12,7 +12,7 @@ namespace teleport
 	{
 		#region DLLImports
 		[DllImport("TeleportServer")]
-		private static extern void Client_AddNode(uid clientID, uid nodeID);
+		private static extern UInt64 Client_AddNode(uid clientID, uid nodeID);
 		[DllImport("TeleportServer")]
 		private static extern void Client_RemoveNodeByID(uid clientID, uid nodeID);
 		[DllImport("TeleportServer")]
@@ -330,6 +330,13 @@ namespace teleport
 		}
 		public void UpdateGeometryStreaming()
 		{
+			if(!session.IsConnected())
+				return;
+			if(session.GetClientID()==0)
+			{
+				TeleportLog.LogErrorOnce("Client ID is zero.");
+				return;
+			}
 			//Detect changes in geometry that needs to be streamed to the client.
 			if(teleportSettings.LayersToStream != 0)
 			{
@@ -400,16 +407,19 @@ namespace teleport
 			//Stream Teleport_Streamable's hierarchy.
 			foreach(StreamedNode streamedNode in streamable.streamedHierarchy)
 			{
-				if(streamedGameObjects.Contains(streamedNode))
+				if(streamedGameObjects.Contains(streamedNode.gameObject))
 				{
 					continue;
 				}
 
-				Client_AddNode(session.GetClientID(), streamedNode.nodeID);
-				// Check for updated transform???
-				//, avs.Transform.FromLocalUnityTransform(streamedNode.gameObject.transform)
+				int num_nodes_streamed=(int)Client_AddNode(session.GetClientID(), streamedNode.nodeID);
 
 				Client_NodeEnteredBounds(session.GetClientID(), streamedNode.nodeID);
+				if (num_nodes_streamed != streamedGameObjects.Count+1)
+                {
+					Debug.LogError("Object Node count mismatch between dll and C# after adding " + streamedNode.gameObject.name);
+					return false;
+				}
 				streamedGameObjects.Add(streamedNode);
 			}
 
