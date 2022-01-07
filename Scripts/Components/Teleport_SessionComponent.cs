@@ -764,7 +764,9 @@ namespace teleport
 			clientSettings.lightCubemapSize = teleportSettings.casterSettings.defaultLightCubemapSize;
 			clientSettings.shadowmapSize = teleportSettings.casterSettings.defaultShadowmapSize;
 
-			int faceSize = teleportSettings.casterSettings.captureCubeTextureSize;
+			clientSettings.captureCubeTextureSize=teleportSettings.casterSettings.defaultCaptureCubeTextureSize;
+
+			int faceSize = clientSettings.captureCubeTextureSize;
 			int doubleFaceSize = faceSize * 2;
 			int halfFaceSize = (int)(faceSize * 0.5);
 
@@ -776,29 +778,11 @@ namespace teleport
 
 			if (teleportSettings.casterSettings.usePerspectiveRendering)
 			{
-				clientSettings.videoTextureSize.x = teleportSettings.casterSettings.perspectiveWidth;
-				if (teleportSettings.casterSettings.useAlphaLayerEncoding)
-				{
-					clientSettings.videoTextureSize.y = settings.perspectiveHeight + (teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
-				}
-				else
-				{
-					clientSettings.videoTextureSize.y = (int)(settings.perspectiveHeight * 1.5f);
-				}
 				cubeMapsOffset.x = perspectiveWidth / 2;
 				cubeMapsOffset.y = perspectiveHeight;
 			}
 			else
 			{ 
-				clientSettings.videoTextureSize.x = faceSize * 3;
-				if (teleportSettings.casterSettings.useAlphaLayerEncoding)
-				{
-					clientSettings.videoTextureSize.y = faceSize * 2 + (teleportSettings.casterSettings.defaultSpecularCubemapSize * 2);
-				}
-				else
-				{
-					clientSettings.videoTextureSize.y = faceSize * 3;
-				}
 				cubeMapsOffset.x = halfFaceSize * 3;
 				cubeMapsOffset.y = doubleFaceSize;
 			}
@@ -826,6 +810,28 @@ namespace teleport
 				clientSettings.webcamPos = cubeMapsOffset + new Vector2Int(clientSettings.specularCubemapSize * 3, clientSettings.specularCubemapSize * 2);
 				clientSettings.webcamSize = new Vector2Int(settings.webcamWidth, settings.webcamHeight);
 			}
+			// find the size of the video texture.
+			clientSettings.videoTextureSize.x= clientSettings.videoTextureSize.y=0;
+			if (teleportSettings.casterSettings.usePerspectiveRendering)
+			{
+				clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, teleportSettings.casterSettings.perspectiveWidth);
+				clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y,settings.perspectiveHeight);
+			}
+			else
+			{
+				clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, faceSize * 3);
+				clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, faceSize * 2);
+			}
+			// Is depth separate?
+			if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
+			{
+				clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientSettings.videoTextureSize.y+ clientSettings.videoTextureSize.y/2);
+			}
+			clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, clientSettings.diffusePos.x+ clientSettings.diffuseCubemapSize * 3);
+			clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientSettings.diffusePos.y + clientSettings.diffuseCubemapSize *2);
+			clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, clientSettings.webcamPos.x + clientSettings.webcamSize.x);
+			clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientSettings.webcamPos.y + clientSettings.webcamSize.y);
+
 			clientSettings.bodyOffsetFromHead= bodyOffsetFromHead;
 			Client_SetClientSettings(clientID, clientSettings);
 		}

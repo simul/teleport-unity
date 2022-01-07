@@ -23,9 +23,9 @@ namespace SCServer
 		public float clientDrawDistanceOffset = 0; // Offset for distance pixels are clipped at for geometry on the client.
 
 		[Header("Video")]
-		[MarshalAs(UnmanagedType.U1)] public bool isStreamingVideo = true;
-		[MarshalAs(UnmanagedType.U1)] public bool isStreamingWebcam = true;
-		public Int32 captureCubeTextureSize = 512;
+		[MarshalAs(UnmanagedType.U1)] public bool StreamVideo = true;
+		[MarshalAs(UnmanagedType.U1)] public bool StreamWebcam = true;
+		public Int32 defaultCaptureCubeTextureSize = 512;
 		public Int32 webcamWidth = 128;
 		public Int32 webcamHeight = 96;
 		public Int32 videoEncodeFrequency = 2;
@@ -102,17 +102,18 @@ namespace SCServer
 	public class ClientSettings
 	{
 		public Vector2Int videoTextureSize;
-		public Vector2Int specularPos ;
-		public Int32 specularCubemapSize ;
-		public Int32 specularMips ;
+		public Vector2Int specularPos;
+		public Int32 specularCubemapSize;
+		public Int32 specularMips;
 		public Vector2Int diffusePos;
-		public Int32 diffuseCubemapSize ;
+		public Int32 diffuseCubemapSize;
 		public Vector2Int lightPos;
-		public Int32 lightCubemapSize ;
-		public Vector2Int shadowmapPos ;
+		public Int32 lightCubemapSize;
+		public Vector2Int shadowmapPos;
 		public Int32 shadowmapSize;
 		public Vector2Int webcamPos;
 		public Vector2Int webcamSize; 
 		public Vector3 bodyOffsetFromHead;
+		public Int32 captureCubeTextureSize;
 	}
 }

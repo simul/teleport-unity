@@ -889,7 +889,7 @@ namespace teleport
 			long fileId=0;
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(material, out string guid);
 			Debug.Log("GUID for "+material.name+" is "+guid+", fileID is "+ fileId);
-			StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32))), extractedMaterial);
+ 			StoreMaterial(materialID, guid, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32))), extractedMaterial);
 #endif
 
 			return materialID;
@@ -1895,7 +1895,11 @@ namespace teleport
 #if UNITY_EDITOR
 				//Asset we found in the database.
 				UnityAsset asset = null;
-
+				if (guid.Length < 32)
+                {
+					Debug.LogError(name+": guid too short: " + guid);
+					continue;
+                }
 				//Attempt to find asset.
 				string assetPath = AssetDatabase.GUIDToAssetPath(guid.Substring(0,32));
 				UnityEngine.Object[] assetsAtPath = AssetDatabase.LoadAllAssetsAtPath(assetPath);

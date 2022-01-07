@@ -137,7 +137,7 @@ namespace teleport
 
 			cam.enabled = false;
 
-			if (teleportSettings.casterSettings.isStreamingWebcam)
+			if (teleportSettings.casterSettings.StreamWebcam)
 			{
 				Application.RequestUserAuthorization(UserAuthorization.WebCam);
 				if (Application.HasUserAuthorization(UserAuthorization.WebCam))
@@ -203,26 +203,26 @@ namespace teleport
 				}
 				else
 				{
-					int prevSize = settings.captureCubeTextureSize;
+					int prevSize = session.clientSettings.captureCubeTextureSize;
 
 					if (bandwidth > 50)
 					{
-						settings.captureCubeTextureSize = 1024;
+						session.clientSettings.captureCubeTextureSize = 1024;
 					}
 					else if (bandwidth > 35)
 					{
-						settings.captureCubeTextureSize = 512;
+						session.clientSettings.captureCubeTextureSize = 512;
 					}
 					else if (bandwidth > 25)
 					{
-						settings.captureCubeTextureSize = 256;
+						session.clientSettings.captureCubeTextureSize = 256;
 					}
 					else
 					{
-						settings.captureCubeTextureSize = 128;
+						session.clientSettings.captureCubeTextureSize = 128;
 					}
 
-					if (prevSize != settings.captureCubeTextureSize)
+					if (prevSize != session.clientSettings.captureCubeTextureSize)
 					{
 						ChangeQuality(bandwidth);
 					}
@@ -287,7 +287,7 @@ namespace teleport
 				}
 				else
 				{
-					CreateTextures(vidSize.x, vidSize.y, settings.captureCubeTextureSize, settings.captureCubeTextureSize, 24);
+					CreateTextures(vidSize.x, vidSize.y, session.clientSettings.captureCubeTextureSize, session.clientSettings.captureCubeTextureSize, 24);
 				}		
 			}	
 		}

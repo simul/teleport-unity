@@ -805,7 +805,7 @@ namespace teleport
 				camera.transform.rotation = oldRot;
 
 				var videoEncoder = sceneCapture.VideoEncoder;
-				if (ClientID != 0 && teleportSettings.casterSettings.isStreamingVideo && videoEncoder != null)
+				if (ClientID != 0 && teleportSettings.casterSettings.StreamVideo && videoEncoder != null)
 				{
 					var tagDataID = sceneCapture.CurrentTagID;
 					videoEncoder.CreateEncodeCommands(context, camera, tagDataID, max_light);
@@ -842,10 +842,6 @@ namespace teleport
 		}
 		void DrawCubemapFace(ScriptableRenderContext context, Camera camera, Vector3 camDir, CullingResults cullingResultsAll, TeleportRenderPipeline.LightingOrder lightingOrder, int face,float diffuseAmbientScale)
 		{
-			/*if (!Cull(context, camera, out cullingResultsAll))
-			{
-				return;
-			}*/
 			CamView camView = faceCamViews[face];
 			Vector3 to = camView.forward;
 
@@ -908,7 +904,7 @@ namespace teleport
 					videoEncoding.EncodeColor(context, camera, face, sceneCapture);
 					if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
 					{
-						int faceSize = teleportSettings.casterSettings.captureCubeTextureSize;
+						int faceSize = SessionComponent.clientSettings.captureCubeTextureSize;
 						int halfFaceSize = faceSize / 2;
 						int offsetX = VideoEncoding.faceOffsets[face, 0];
 						int offsetY = VideoEncoding.faceOffsets[face, 1];
