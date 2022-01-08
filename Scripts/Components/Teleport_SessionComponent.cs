@@ -43,7 +43,7 @@ namespace teleport
 
 		// Set the client-specific settings, e.g. video layout.
 		[DllImport("TeleportServer")]
-		private static extern void Client_SetClientSettings(uid clientID, SCServer.ClientSettings clientSettings);
+		private static extern void Client_SetClientSettings(uid clientID, teleport.ClientSettings clientSettings);
 
 		[DllImport("TeleportServer")]
 		private static extern bool Client_SetOrigin(uid clientID, UInt64 validCounter, Vector3 pos, [MarshalAs(UnmanagedType.U1)] bool set_rel, Vector3 rel_pos, Quaternion orientation);
@@ -284,7 +284,7 @@ namespace teleport
 		private GameObject body = default, leftHand = default, rightHand = default;
 		public Vector3 bodyOffsetFromHead = default;
 
-		public SCServer.ClientSettings clientSettings = new SCServer.ClientSettings();
+		public teleport.ClientSettings clientSettings = new teleport.ClientSettings();
 
 		//PUBLIC STATIC MEMBER VARIABLES
 
@@ -838,7 +838,7 @@ namespace teleport
 
 		private void SendOriginUpdates()
 		{
-			if (teleportSettings.casterSettings.controlModel == SCServer.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
+			if (teleportSettings.casterSettings.controlModel == teleport.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
 			{
 				if (head != null && clientspaceRoot != null)
 				{
@@ -873,7 +873,7 @@ namespace teleport
 					collisionRoot.transform.hasChanged = false;
 				}
 			}
-			else if (teleportSettings.casterSettings.controlModel == SCServer.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
+			else if (teleportSettings.casterSettings.controlModel == teleport.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
 			{
 				if (head != null && clientspaceRoot != null)
 				{

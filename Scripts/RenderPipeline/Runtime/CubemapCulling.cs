@@ -68,7 +68,7 @@ namespace teleport
 
         public void Reset()
         {
-            SCServer.CasterSettings settings = TeleportSettings.GetOrCreateSettings().casterSettings;
+            teleport.ServerSettings settings = TeleportSettings.GetOrCreateSettings().casterSettings;
             // TODO: can't use the default, it should be the one in ClientSettings:
             cubeWidth = settings.defaultCaptureCubeTextureSize;
             numQuadsAcross = settings.blocksPerCubeFaceAcross;

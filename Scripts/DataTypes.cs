@@ -667,7 +667,7 @@ namespace avs
 	};
 }
 
-namespace SCServer
+namespace teleport
 {
 	/*! Graphics API device handle type. */
 	public enum GraphicsDeviceType

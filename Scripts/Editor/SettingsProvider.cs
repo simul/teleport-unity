@@ -82,6 +82,7 @@ namespace teleport
 		{
 			Tuple.Create(1,  "SRT", false),
 			Tuple.Create(3,  "General", false),
+			Tuple.Create(2, "Background", false),
 			Tuple.Create(5,  "Geometry", false),
 			Tuple.Create(28, "Video", false),
 			Tuple.Create(2,  "Audio", false),
@@ -116,11 +117,11 @@ namespace teleport
 			teleportSettings.certPath = EditorGUILayout.TextField("SSL Cert Path", teleportSettings.certPath);
 			teleportSettings.privateKeyPath = EditorGUILayout.TextField("Private Key Path", teleportSettings.privateKeyPath);
 
-			foreach (var prop in typeof(SCServer.CasterSettings).GetProperties())
+			foreach (var prop in typeof(teleport.ServerSettings).GetProperties())
 			{
 				EditorGUILayout.LabelField(prop.Name);
 			}
-			var orderedFields = typeof(SCServer.CasterSettings).GetFields()
+			var orderedFields = typeof(teleport.ServerSettings).GetFields()
 														 .OrderBy(field => field.MetadataToken).ToArray<System.Reflection.FieldInfo>();
 		
 			int row = 0;
@@ -171,9 +172,17 @@ namespace teleport
 						{
 							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.EnumPopup(field.Name, (avs.RateControlMode)field.GetValue(teleportSettings.casterSettings)));
 						}
-						else if (field.FieldType == typeof(SCServer.ControlModel))
+						else if (field.FieldType == typeof(teleport.ControlModel))
 						{
-							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.EnumPopup(field.Name, (SCServer.ControlModel)field.GetValue(teleportSettings.casterSettings)));
+							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.EnumPopup(field.Name, (teleport.ControlModel)field.GetValue(teleportSettings.casterSettings)));
+						}
+						else if (field.FieldType == typeof(teleport.BackgroundMode))
+						{
+							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.EnumPopup(field.Name, (teleport.BackgroundMode)field.GetValue(teleportSettings.casterSettings)));
+						}
+						else if (field.FieldType == typeof(Color))
+						{
+							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.ColorField(field.Name, (Color)field.GetValue(teleportSettings.casterSettings)));
 						}
 						else
 							EditorGUILayout.LabelField(field.Name, field.FieldType.ToString() + " " + field.GetValue(teleportSettings.casterSettings).ToString());

@@ -2,10 +2,17 @@
 using System.Runtime.InteropServices;
 using UnityEngine;
 
-namespace SCServer
+namespace teleport
 {
+	public enum BackgroundMode: byte
+    {
+		NONE=0, COLOUR, TEXTURE, VIDEO
+    }
+	//! Settings structure for the server, to be shared between C# and the C++ dll.
+	//! These values are set in the Unity Editor under Project Settings/Teleport VR, and passed as const
+	//! to the C++ dll.
 	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
-    public class CasterSettings
+    public class ServerSettings
     {
 		[Header("SRT")]
 		public Int32 requiredLatencyMs = 30;
@@ -15,10 +22,15 @@ namespace SCServer
 		public Int32 detectionSphereBufferDistance = 5;
 		public Int64 throttleKpS = 0;
 
+		[Header("Background")]
+		public BackgroundMode BackgroundMode = BackgroundMode.COLOUR;
+		[MarshalAs(UnmanagedType.ByValArray, ArraySubType =UnmanagedType.R4)]
+		public Color BackgroundColour;
+
 		[Header("Geometry")]
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingGeometry = true;
 		public Int32 geometryTicksPerSecond = 2;
-		public Int32 geometryBufferCutoffSize = 1048576; // Byte amount we stop encoding nodes at.
+		public Int32 geometryBufferCutoffSize = 1048576; // Byte count we stop encoding nodes at.
 		public float confirmationWaitTime = 15; // Seconds to wait before resending a resource.
 		public float clientDrawDistanceOffset = 0; // Offset for distance pixels are clipped at for geometry on the client.
 

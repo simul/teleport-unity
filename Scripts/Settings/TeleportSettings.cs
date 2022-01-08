@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using SCServer;
+using teleport;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -38,7 +38,7 @@ namespace teleport
 		[Header("Geometry")]
 		public uint moveUpdatesPerSecond = 20;
 
-		public CasterSettings casterSettings = new CasterSettings();
+		public ServerSettings casterSettings = new ServerSettings();
 		public LayerMask LayersToStream;  //! Mask of the physics layers the user can choose to stream.
 
 		[Header("Utility")]

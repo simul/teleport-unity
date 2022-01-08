@@ -29,7 +29,7 @@ namespace teleport
 		struct EncodeVideoParamsWrapper
 		{
 			public uid clientID;
-			public SCServer.VideoEncodeParams videoEncodeParams;
+			public teleport.VideoEncodeParams videoEncodeParams;
 		};
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -92,7 +92,7 @@ namespace teleport
 
 			var paramsWrapper = new EncodeVideoParamsWrapper();
 			paramsWrapper.clientID = clientID;
-			paramsWrapper.videoEncodeParams = new SCServer.VideoEncodeParams();
+			paramsWrapper.videoEncodeParams = new teleport.VideoEncodeParams();
 			
 			var encoderTexture = sceneCapture.videoTexture;
 	
@@ -101,17 +101,17 @@ namespace teleport
 			
 			switch (SystemInfo.graphicsDeviceType)
 			{
-				case (GraphicsDeviceType.Direct3D11):
-					paramsWrapper.videoEncodeParams.deviceType = SCServer.GraphicsDeviceType.Direct3D11;
+				case (UnityEngine.Rendering.GraphicsDeviceType.Direct3D11):
+					paramsWrapper.videoEncodeParams.deviceType = teleport.GraphicsDeviceType.Direct3D11;
 					break;
-				case (GraphicsDeviceType.Direct3D12):
-					paramsWrapper.videoEncodeParams.deviceType = SCServer.GraphicsDeviceType.Direct3D12; // May not work if device not created with shared heap flag in Unity source
+				case (UnityEngine.Rendering.GraphicsDeviceType.Direct3D12):
+					paramsWrapper.videoEncodeParams.deviceType = teleport.GraphicsDeviceType.Direct3D12; // May not work if device not created with shared heap flag in Unity source
 					break;
-				case (GraphicsDeviceType.OpenGLCore):
-					paramsWrapper.videoEncodeParams.deviceType = SCServer.GraphicsDeviceType.OpenGL; // Needs to be supported
+				case (UnityEngine.Rendering.GraphicsDeviceType.OpenGLCore):
+					paramsWrapper.videoEncodeParams.deviceType = teleport.GraphicsDeviceType.OpenGL; // Needs to be supported
 					break;
-				case (GraphicsDeviceType.Vulkan):
-					paramsWrapper.videoEncodeParams.deviceType = SCServer.GraphicsDeviceType.Vulkan; // Needs to be supported
+				case (UnityEngine.Rendering.GraphicsDeviceType.Vulkan):
+					paramsWrapper.videoEncodeParams.deviceType = teleport.GraphicsDeviceType.Vulkan; // Needs to be supported
 					break;
 				default:
 					Debug.Log("Graphics api not supported");

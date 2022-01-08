@@ -90,7 +90,7 @@ namespace teleport
 		[DllImport("TeleportServer")]
 		private static extern void SetConnectionTimeout(Int32 timeout);
 		[DllImport("TeleportServer")]
-		private static extern void UpdateCasterSettings(SCServer.CasterSettings newSettings);
+		private static extern void UpdateServerSettings(teleport.ServerSettings newSettings);
 		
 		[DllImport("TeleportServer")]
 		private static extern void SetClientPosition(uid clientID, Vector3 pos);
@@ -187,12 +187,12 @@ namespace teleport
 
 		private void OnEnable()
 		{
-			ulong unmanagedSize = SizeOf("CasterSettings");
-			ulong managedSize = (ulong)Marshal.SizeOf(typeof(SCServer.CasterSettings));
+			ulong unmanagedSize = SizeOf("ServerSettings");
+			ulong managedSize = (ulong)Marshal.SizeOf(typeof(teleport.ServerSettings));
 		
 			if (managedSize != unmanagedSize)
 			{
-				Debug.LogError($"teleport.Monitor failed to initialise! {nameof(SCServer.CasterSettings)} struct size mismatch between unmanaged code({unmanagedSize}) and managed code({managedSize})!");
+				Debug.LogError($"teleport.Monitor failed to initialise! {nameof(teleport.ServerSettings)} struct size mismatch between unmanaged code({unmanagedSize}) and managed code({managedSize})!");
 				return;
 			}
 			if (instance == null)
@@ -343,7 +343,7 @@ namespace teleport
 			if(Application.isPlaying)
 			{
 				TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-				UpdateCasterSettings(teleportSettings.casterSettings);
+				UpdateServerSettings(teleportSettings.casterSettings);
 			}
 		}
 

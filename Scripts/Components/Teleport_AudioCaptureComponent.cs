@@ -13,7 +13,7 @@ namespace teleport
     {
         #region DLLImports
         [DllImport("TeleportServer")]
-        static extern void InitializeAudioEncoder(uid clientID, ref SCServer.AudioParams audioEncodeParams);
+        static extern void InitializeAudioEncoder(uid clientID, ref teleport.AudioParams audioEncodeParams);
         [DllImport("TeleportServer")]
         static extern void SendAudio(uid clientID, IntPtr data, UInt64 dataSize);
         #endregion
@@ -50,7 +50,7 @@ namespace teleport
 
         void Initialize()
         {
-            var audioParams = new SCServer.AudioParams();
+            var audioParams = new teleport.AudioParams();
             audioParams.codec = avs.AudioCodec.PCM;
             audioParams.sampleRate = (UInt32)sampleRate;
             audioParams.bitsPerSample = 32;
