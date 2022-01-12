@@ -765,7 +765,7 @@ namespace teleport
 			clientSettings.shadowmapSize = teleportSettings.casterSettings.defaultShadowmapSize;
 
 			clientSettings.captureCubeTextureSize=teleportSettings.casterSettings.defaultCaptureCubeTextureSize;
-
+			clientSettings.backgroundMode = teleportSettings.casterSettings.backgroundMode;
 			int faceSize = clientSettings.captureCubeTextureSize;
 			int doubleFaceSize = faceSize * 2;
 			int halfFaceSize = (int)(faceSize * 0.5);
@@ -773,18 +773,20 @@ namespace teleport
 			int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
 			int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
 
-			// Offsets to lighting cubemaps in video texture
 			Vector2Int cubeMapsOffset = new Vector2Int(0, 0);
-
-			if (teleportSettings.casterSettings.usePerspectiveRendering)
-			{
-				cubeMapsOffset.x = perspectiveWidth / 2;
-				cubeMapsOffset.y = perspectiveHeight;
-			}
-			else
-			{ 
-				cubeMapsOffset.x = halfFaceSize * 3;
-				cubeMapsOffset.y = doubleFaceSize;
+			// Offsets to lighting cubemaps in video texture
+			if (clientSettings.backgroundMode == BackgroundMode.VIDEO)
+            {
+				if (teleportSettings.casterSettings.usePerspectiveRendering)
+				{
+					cubeMapsOffset.x = perspectiveWidth / 2;
+					cubeMapsOffset.y = perspectiveHeight;
+				}
+				else
+				{ 
+					cubeMapsOffset.x = halfFaceSize * 3;
+					cubeMapsOffset.y = doubleFaceSize;
+				}
 			}
 
 			// Depth is stored in color's alpha channel if alpha layer encoding is enabled.
@@ -811,27 +813,32 @@ namespace teleport
 				clientSettings.webcamSize = new Vector2Int(settings.webcamWidth, settings.webcamHeight);
 			}
 			// find the size of the video texture.
-			clientSettings.videoTextureSize.x= clientSettings.videoTextureSize.y=0;
-			if (teleportSettings.casterSettings.usePerspectiveRendering)
-			{
-				clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, teleportSettings.casterSettings.perspectiveWidth);
-				clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y,settings.perspectiveHeight);
-			}
-			else
-			{
-				clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, faceSize * 3);
-				clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, faceSize * 2);
-			}
-			// Is depth separate?
-			if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
-			{
-				clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientSettings.videoTextureSize.y+ clientSettings.videoTextureSize.y/2);
+			if (clientSettings.backgroundMode == BackgroundMode.VIDEO)
+			{ 
+				clientSettings.videoTextureSize.x= clientSettings.videoTextureSize.y=0;
+				if (teleportSettings.casterSettings.usePerspectiveRendering)
+				{
+					clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, teleportSettings.casterSettings.perspectiveWidth);
+					clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y,settings.perspectiveHeight);
+				}
+				else
+				{
+					clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, faceSize * 3);
+					clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, faceSize * 2);
+				}
+				// Is depth separate?
+				if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
+				{
+					clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientSettings.videoTextureSize.y+ clientSettings.videoTextureSize.y/2);
+				}
 			}
 			clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, clientSettings.diffusePos.x+ clientSettings.diffuseCubemapSize * 3);
 			clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientSettings.diffusePos.y + clientSettings.diffuseCubemapSize *2);
-			clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, clientSettings.webcamPos.x + clientSettings.webcamSize.x);
-			clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientSettings.webcamPos.y + clientSettings.webcamSize.y);
-
+			if (teleportSettings.casterSettings.StreamWebcam)
+            {
+				clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, clientSettings.webcamPos.x + clientSettings.webcamSize.x);
+				clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientSettings.webcamPos.y + clientSettings.webcamSize.y);
+			}
 			clientSettings.bodyOffsetFromHead= bodyOffsetFromHead;
 			Client_SetClientSettings(clientID, clientSettings);
 		}

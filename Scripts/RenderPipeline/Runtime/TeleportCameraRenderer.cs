@@ -527,7 +527,7 @@ namespace teleport
 					camera.nearClipPlane = oldNearClip;
 					videoEncoding.GenerateSpecularMips(context, SessionComponent.sceneCaptureComponent.UnfilteredCubeTexture, sceneCapture.SpecularCubeTexture, face, 0);
 					videoEncoding.GenerateDiffuseCubemap(context, SessionComponent.sceneCaptureComponent.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), sceneCapture.DiffuseCubeTexture, face, diffuseAmbientScale);
-					if(SessionComponent.clientSettings.captureCubeTextureSize>0)
+					if(SessionComponent.clientSettings.captureCubeTextureSize>0&& SessionComponent.clientSettings.backgroundMode==BackgroundMode.VIDEO)
 					{ 
 						videoEncoding.EncodeColor(context, camera, face, sceneCapture);
 						if (!teleportSettings.casterSettings.useAlphaLayerEncoding)

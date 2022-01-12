@@ -23,7 +23,7 @@ namespace teleport
 		public Int64 throttleKpS = 0;
 
 		[Header("Background")]
-		public BackgroundMode BackgroundMode = BackgroundMode.COLOUR;
+		public BackgroundMode backgroundMode = BackgroundMode.COLOUR;
 		[MarshalAs(UnmanagedType.ByValArray, ArraySubType =UnmanagedType.R4)]
 		public Color BackgroundColour;
 
@@ -127,5 +127,6 @@ namespace teleport
 		public Vector2Int webcamSize; 
 		public Vector3 bodyOffsetFromHead;
 		public Int32 captureCubeTextureSize;
+		public BackgroundMode backgroundMode;
 	}
 }
