@@ -13,23 +13,22 @@ namespace teleport
     {
         #region DLLImports
         [DllImport("TeleportServer")]
-        static extern void InitializeAudioEncoder(uid clientID, ref teleport.AudioParams audioEncodeParams);
+        static extern void SetAudioSettings(ref AudioSettings audioSettings);
         [DllImport("TeleportServer")]
-        static extern void SendAudio(uid clientID, IntPtr data, UInt64 dataSize);
+        static extern void SendAudio(IntPtr data, UInt64 dataSize);
         #endregion
 
         TeleportSettings teleportSettings = null;
-        public uid clientID = 0;
         bool running = false;
+        bool initialized = false;
         int sampleRate = 0;
 
         void Start()
         {
             teleportSettings = TeleportSettings.GetOrCreateSettings();
-      
-            clientID = 0;
             running = true;
-            sampleRate = AudioSettings.outputSampleRate;
+            initialized = false;
+            sampleRate = UnityEngine.AudioSettings.outputSampleRate;
         }
 
         private void OnEnable()
@@ -40,32 +39,30 @@ namespace teleport
         void OnDisable()
         {
             running = false;
-            clientID = 0;
+            initialized = false;
         }
 
         void LateUpdate()
         {
-            
+            var heads = FindObjectsOfType<Teleport_Head>();
+            Vector3 pos = Vector3.zero;
+            foreach (var head in heads)
+            {
+                pos += head.gameObject.transform.position;
+            }
+            pos /= heads.Length;
+            gameObject.transform.position = pos;
         }
 
         void Initialize()
         {
-            var audioParams = new teleport.AudioParams();
-            audioParams.codec = avs.AudioCodec.PCM;
-            audioParams.sampleRate = (UInt32)sampleRate;
-            audioParams.bitsPerSample = 32;
-            audioParams.numChannels = 2;
-            InitializeAudioEncoder(clientID, ref audioParams);
-        }
-
-        public void SetClientID(uid id)
-        { 
-            clientID = id;
-
-            if (clientID != 0)
-            {
-                Initialize();
-            } 
+            var audioSettings = new AudioSettings();
+            audioSettings.codec = avs.AudioCodec.PCM;
+            audioSettings.sampleRate = (UInt32)sampleRate;
+            audioSettings.bitsPerSample = 32;
+            audioSettings.numChannels = 2;
+            SetAudioSettings(ref audioSettings);
+            initialized = true;
         }
 
         // This function is called on the audio thread
@@ -76,15 +73,17 @@ namespace teleport
                 return;
             }
 
-            if (clientID != 0)
+            if (!initialized)
             {
-                var sizeInBytes = data.Length * 4;
-                IntPtr ptr = Marshal.AllocHGlobal(sizeInBytes);
-                Marshal.Copy(data, 0, ptr, data.Length);
-                // Send audio to the client
-                SendAudio(clientID, ptr, (UInt64)sizeInBytes);
-                Marshal.FreeHGlobal(ptr);
+                Initialize();
             }
+
+            var sizeInBytes = data.Length * 4;
+            IntPtr ptr = Marshal.AllocHGlobal(sizeInBytes);
+            Marshal.Copy(data, 0, ptr, data.Length);
+            // Send audio to the client
+            SendAudio(ptr, (UInt64)sizeInBytes);
+            Marshal.FreeHGlobal(ptr);  
         }
     }
 }

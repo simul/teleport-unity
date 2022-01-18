@@ -278,7 +278,6 @@ namespace teleport
 		public Teleport_ClientspaceRoot clientspaceRoot = null;
 		public Teleport_CollisionRoot collisionRoot = null;
 		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
-		public Teleport_AudioCaptureComponent audioCaptureComponent = null;
 		public AudioSource inputAudioSource = null;
 		[SerializeField]
 		private GameObject body = default, leftHand = default, rightHand = default;
@@ -356,7 +355,6 @@ namespace teleport
 			}
 			clientID = 0;
 			sceneCaptureComponent.SetClientID(clientID);
-			audioCaptureComponent.SetClientID(clientID);
 		}
 
 		public bool IsConnected()
@@ -516,7 +514,7 @@ namespace teleport
 		public void ProcessAudioInput(float[] data)
 		{
 			int numFrames = data.Length / (sizeof(float) * 2);
-			inputAudioSource.clip = AudioClip.Create("Input", numFrames, 2, AudioSettings.outputSampleRate, false);
+			inputAudioSource.clip = AudioClip.Create("Input", numFrames, 2, UnityEngine.AudioSettings.outputSampleRate, false);
 			inputAudioSource.clip.SetData(data, 0);
 			inputAudioSource.Play();
 		}
@@ -661,7 +659,6 @@ namespace teleport
 			clientspaceRoot = GetSingleComponentFromChildren<Teleport_ClientspaceRoot>();
 			collisionRoot = GetSingleComponentFromChildren<Teleport_CollisionRoot>();
 			sceneCaptureComponent = GetSingleComponentFromChildren<Teleport_SceneCaptureComponent>();
-			audioCaptureComponent = GetSingleComponentFromChildren<Teleport_AudioCaptureComponent>();
 		}
 
 		private void OnEnable()
@@ -751,7 +748,6 @@ namespace teleport
 					streamable.sendMovementUpdates = false;
 				}
 			}
-			audioCaptureComponent.SetClientID(clientID);
 			sceneCaptureComponent.SetClientID(clientID);
 		}
 		private void UpdateClientSettings()

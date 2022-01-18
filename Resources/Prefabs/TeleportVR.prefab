@@ -103,11 +103,10 @@ MonoBehaviour:
   clientspaceRoot: {fileID: 599378067329297328}
   collisionRoot: {fileID: 5838778176377855976}
   sceneCaptureComponent: {fileID: 3991960492684180549}
-  audioCaptureComponent: {fileID: 6948037150948907307}
   inputAudioSource: {fileID: 0}
   body: {fileID: 0}
-  leftHand: {fileID: 0}
-  rightHand: {fileID: 0}
+  leftHand: {fileID: 7874665763676028163}
+  rightHand: {fileID: 6829965221155726695}
   bodyOffsetFromHead: {x: 0, y: 0, z: 0}
   clientSettings:
     videoTextureSize: {x: 0, y: 0}
@@ -123,6 +122,8 @@ MonoBehaviour:
     webcamPos: {x: 0, y: 0}
     webcamSize: {x: 0, y: 0}
     bodyOffsetFromHead: {x: 0, y: 0, z: 0}
+    captureCubeTextureSize: 0
+    backgroundMode: 0
 --- !u!1 &5984580423773437800
 GameObject:
   m_ObjectHideFlags: 0
@@ -196,60 +197,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44e53f737648c084189d70fc1dcd4b0c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!1 &6118041403085450634
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 4434495514488294393}
-  - component: {fileID: 3744165097878429855}
-  - component: {fileID: 6948037150948907307}
-  m_Layer: 0
-  m_Name: AudioCapture
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &4434495514488294393
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6118041403085450634}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 8805389478987335667}
-  m_RootOrder: 1
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!81 &3744165097878429855
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6118041403085450634}
-  m_Enabled: 0
---- !u!114 &6948037150948907307
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6118041403085450634}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 04f116f06c47cce43ba1bef752fe7d84, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  clientID: 0
 --- !u!1 &6334136638645548303
 GameObject:
   m_ObjectHideFlags: 0
@@ -280,7 +227,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8718089245447279965}
-  - {fileID: 4434495514488294393}
   m_Father: {fileID: 4439182914225332721}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -309,7 +255,7 @@ GameObject:
   - component: {fileID: 1409536098537212886}
   - component: {fileID: 76782613021530575}
   - component: {fileID: 6349716853396447547}
-  - component: {fileID: -5986078826211548990}
+  - component: {fileID: 7639223813198443829}
   m_Layer: 0
   m_Name: Right HandController
   m_TagString: TeleportStreamable
@@ -383,7 +329,7 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &-5986078826211548990
+--- !u!114 &7639223813198443829
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -414,7 +360,7 @@ GameObject:
   - component: {fileID: 2566405282351836052}
   - component: {fileID: 505215018338697296}
   - component: {fileID: 3005832818321853292}
-  - component: {fileID: -6463362006392084527}
+  - component: {fileID: -2565780736927575566}
   m_Layer: 0
   m_Name: Left HandController
   m_TagString: TeleportStreamable
@@ -488,7 +434,7 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &-6463362006392084527
+--- !u!114 &-2565780736927575566
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -584,11 +530,26 @@ PrefabInstance:
       propertyPath: m_TagString
       value: TeleportStreamable
       objectReference: {fileID: 0}
+    - target: {fileID: -3982765707489420604, guid: 846cfee221095204ea421daaf47eca96,
+        type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2147483649
+      objectReference: {fileID: 0}
+    - target: {fileID: -1204994864812631534, guid: 846cfee221095204ea421daaf47eca96,
+        type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2147483649
+      objectReference: {fileID: 0}
     - target: {fileID: -1204994864812631534, guid: 846cfee221095204ea421daaf47eca96,
         type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: 6cb6e0f40db8ede46abb8d9631ec5f3e, type: 2}
+    - target: {fileID: -637186554092272738, guid: 846cfee221095204ea421daaf47eca96,
+        type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2147483649
+      objectReference: {fileID: 0}
     - target: {fileID: -637186554092272738, guid: 846cfee221095204ea421daaf47eca96,
         type: 3}
       propertyPath: m_Materials.Array.data[0]
@@ -614,10 +575,25 @@ PrefabInstance:
       propertyPath: m_TagString
       value: TeleportStreamable
       objectReference: {fileID: 0}
+    - target: {fileID: 2573430349552330418, guid: 846cfee221095204ea421daaf47eca96,
+        type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2147483649
+      objectReference: {fileID: 0}
+    - target: {fileID: 2661256268806825091, guid: 846cfee221095204ea421daaf47eca96,
+        type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2147483649
+      objectReference: {fileID: 0}
     - target: {fileID: 2779307452467397949, guid: 846cfee221095204ea421daaf47eca96,
         type: 3}
       propertyPath: m_TagString
       value: TeleportStreamable
+      objectReference: {fileID: 0}
+    - target: {fileID: 6889103094362379925, guid: 846cfee221095204ea421daaf47eca96,
+        type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2147483649
       objectReference: {fileID: 0}
     - target: {fileID: 6889103094362379925, guid: 846cfee221095204ea421daaf47eca96,
         type: 3}
@@ -645,6 +621,11 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 901807340495807592}
     m_Modifications:
+    - target: {fileID: -9038568753049638838, guid: d0c344579ae47a24594c33ae955cf7f4,
+        type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2147483649
+      objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d0c344579ae47a24594c33ae955cf7f4,
         type: 3}
       propertyPath: m_RootOrder
@@ -700,10 +681,25 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -8652260471134173178, guid: d0c344579ae47a24594c33ae955cf7f4,
+        type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2147483649
+      objectReference: {fileID: 0}
+    - target: {fileID: -7180278901023115828, guid: d0c344579ae47a24594c33ae955cf7f4,
+        type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2147483649
+      objectReference: {fileID: 0}
     - target: {fileID: -6977615282902799118, guid: d0c344579ae47a24594c33ae955cf7f4,
         type: 3}
       propertyPath: m_TagString
       value: TeleportStreamable
+      objectReference: {fileID: 0}
+    - target: {fileID: -6001506778852436120, guid: d0c344579ae47a24594c33ae955cf7f4,
+        type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2147483649
       objectReference: {fileID: 0}
     - target: {fileID: -4547719445347791086, guid: d0c344579ae47a24594c33ae955cf7f4,
         type: 3}
@@ -714,6 +710,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_TagString
       value: TeleportStreamable
+      objectReference: {fileID: 0}
+    - target: {fileID: -676996863910170960, guid: d0c344579ae47a24594c33ae955cf7f4,
+        type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2147483649
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: d0c344579ae47a24594c33ae955cf7f4,
         type: 3}
@@ -729,6 +730,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_TagString
       value: TeleportStreamable
+      objectReference: {fileID: 0}
+    - target: {fileID: 6404281400647012352, guid: d0c344579ae47a24594c33ae955cf7f4,
+        type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 2147483649
       objectReference: {fileID: 0}
     - target: {fileID: 6504421957670399338, guid: d0c344579ae47a24594c33ae955cf7f4,
         type: 3}

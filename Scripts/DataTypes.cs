@@ -688,7 +688,7 @@ namespace teleport
 		public IntPtr inputSurfaceResource;
 	}
 
-	public struct AudioParams
+	public struct AudioSettings
 	{
 		public avs.AudioCodec codec;
 		public UInt32 sampleRate;

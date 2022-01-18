@@ -115,6 +115,8 @@ namespace teleport
 
 		private string title = "Teleport";
 
+		public Teleport_AudioCaptureComponent audioCapture = null;
+
 #if UNITY_EDITOR
 		static Monitor()
 		{
@@ -233,6 +235,23 @@ namespace teleport
 			}
 			// Sets connection timeouts for peers (milliseconds)
 			SetConnectionTimeout(teleportSettings.connectionTimeout);
+
+			TeleportSettings settings = TeleportSettings.GetOrCreateSettings();
+			// Create audio component
+			if (settings.casterSettings.isStreamingAudio)
+			{
+				var audioCaptures = FindObjectsOfType<Teleport_AudioCaptureComponent>();
+				if (audioCaptures.Length > 0)
+				{
+					audioCapture = audioCaptures[0];
+				}
+				else
+				{
+					GameObject go = new GameObject("TeleportAudioCapture");
+					go.AddComponent<Teleport_AudioCaptureComponent>();
+					audioCapture = go.GetComponent<Teleport_AudioCaptureComponent>();
+				}
+			}
 		}
 
 		private void OnDisable()
@@ -370,8 +389,6 @@ namespace teleport
 
 		public static Teleport_SessionComponent DefaultCreateSession()
 		{
-			Teleport_SessionComponent session = null;
-
 			// We want to use an existing session in the scene if it doesn't have a client.
 			// This is useful if the session is placed in the scene instead of spawned.
 			var currentSessions = FindObjectsOfType<Teleport_SessionComponent>();
@@ -379,10 +396,12 @@ namespace teleport
 			{
 				if (!s.Spawned && s.GetClientID() == 0)
 				{
+					AddMainCamToSession(s);
 					return s;
 				}
 			}
 
+			Teleport_SessionComponent session = null;
 			if (defaultPlayerPrefab == null)
 			{
 				defaultPlayerPrefab = Resources.Load("Prefabs/TeleportVR") as GameObject;
@@ -403,17 +422,25 @@ namespace teleport
 				}
 
 				GameObject player = Instantiate(defaultPlayerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
-				player.name = "TeleportVR_" + Teleport_SessionComponent.sessions.Count;
+				player.name = "TeleportVR_" + Teleport_SessionComponent.sessions.Count + 1;
 
 				session = player.GetComponentsInChildren<Teleport_SessionComponent>()[0];
 				session.Spawned = true;
 
-				if (session.head != null && Camera.main != null && Teleport_SessionComponent.sessions.Count == 0)
-				{
-					Camera.main.transform.parent = session.head.transform;
-				}
+				AddMainCamToSession(session);
 			}
+
 			return session;
+		}
+
+		static void AddMainCamToSession(Teleport_SessionComponent session)
+		{
+			if (session.head != null && Camera.main != null && Teleport_SessionComponent.sessions.Count == 0)
+			{
+				Camera.main.transform.parent = session.head.transform;
+				Camera.main.transform.localRotation = Quaternion.identity;
+				Camera.main.transform.localPosition = Vector3.zero;
+			}
 		}
 
 		///DLL CALLBACK FUNCTIONS
