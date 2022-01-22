@@ -475,6 +475,28 @@ namespace avs
 		public float framesEncodedPerSec;
 	};
 
+	public struct VideoEncodeCapabilities
+	{
+		/*! Max encode level supported. */
+		public uint maxEncodeLevel;
+		/*! Determines whether encoder supports asynchronous encoding. */
+		public uint isAsyncCapable;
+		/*! Determines whether encoder supports 10-bit encoding. */
+		public uint is10BitCapable;
+		/*! Determines whether encoder supports YUV444 as output format. */
+		public uint isYUV444Capable;
+		/*! Determines whether encoder supports asynchronous encoding. */
+		public uint isAlphaLayerSupported;
+		/*! Minimum input width supported. */
+		public uint minWidth;
+		/*! Maximum output width supported. */
+		public uint maxWidth;
+		/*! Minimum input height supported. */
+		public uint minHeight;
+		/*! Maximum output height supported. */
+		public uint maxHeight;
+	};
+
 	public struct Mat4x4
 	{
 		//[Row, Column]

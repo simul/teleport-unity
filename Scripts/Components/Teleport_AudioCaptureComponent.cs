@@ -25,15 +25,15 @@ namespace teleport
 
         void Start()
         {
+           
+        }
+
+        void OnEnable()
+        {
             teleportSettings = TeleportSettings.GetOrCreateSettings();
             running = true;
             initialized = false;
             sampleRate = UnityEngine.AudioSettings.outputSampleRate;
-        }
-
-        private void OnEnable()
-        {
-
         }
 
         void OnDisable()
@@ -44,6 +44,10 @@ namespace teleport
 
         void LateUpdate()
         {
+            if (!running || !teleportSettings.casterSettings.isStreamingAudio)
+            {
+                return;
+            }
             var heads = FindObjectsOfType<Teleport_Head>();
             Vector3 pos = Vector3.zero;
             foreach (var head in heads)

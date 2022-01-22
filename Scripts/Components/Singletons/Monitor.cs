@@ -238,19 +238,25 @@ namespace teleport
 
 			TeleportSettings settings = TeleportSettings.GetOrCreateSettings();
 			// Create audio component
-			if (settings.casterSettings.isStreamingAudio)
+			var audioCaptures = FindObjectsOfType<Teleport_AudioCaptureComponent>();
+			if (audioCaptures.Length > 0)
 			{
-				var audioCaptures = FindObjectsOfType<Teleport_AudioCaptureComponent>();
-				if (audioCaptures.Length > 0)
-				{
-					audioCapture = audioCaptures[0];
-				}
-				else
-				{
-					GameObject go = new GameObject("TeleportAudioCapture");
-					go.AddComponent<Teleport_AudioCaptureComponent>();
-					audioCapture = go.GetComponent<Teleport_AudioCaptureComponent>();
-				}
+				audioCapture = audioCaptures[0];
+			}
+			else
+			{
+				GameObject go = new GameObject("TeleportAudioCapture");
+				go.AddComponent<Teleport_AudioCaptureComponent>();
+				audioCapture = go.GetComponent<Teleport_AudioCaptureComponent>();
+			}
+
+			if(!settings.casterSettings.isStreamingAudio)
+			{
+				audioCapture.gameObject.SetActive(false);
+				// Setting active to false on game obect does not disable audio listener or capture component
+				// so they must be disabled directly.
+				audioCapture.enabled = false;
+				audioCapture.GetComponent<AudioListener>().enabled = false;
 			}
 		}
 
