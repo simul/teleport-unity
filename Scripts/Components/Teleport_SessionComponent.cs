@@ -770,6 +770,8 @@ namespace teleport
 			int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
 			int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
 
+			
+
 			Vector2Int cubeMapsOffset = new Vector2Int(0, 0);
 			// Offsets to lighting cubemaps in video texture
 			if (clientSettings.backgroundMode == BackgroundMode.VIDEO)
@@ -837,6 +839,14 @@ namespace teleport
 				clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientSettings.webcamPos.y + clientSettings.webcamSize.y);
 			}
 			clientSettings.bodyOffsetFromHead= bodyOffsetFromHead;
+
+			avs.VideoEncodeCapabilities videoEncodeCapabilities = VideoEncoder.GetEncodeCapabilities();
+			if (clientSettings.videoTextureSize.x < videoEncodeCapabilities.minWidth || clientSettings.videoTextureSize.x > videoEncodeCapabilities.maxWidth
+				|| clientSettings.videoTextureSize.y < videoEncodeCapabilities.minHeight || clientSettings.videoTextureSize.y > videoEncodeCapabilities.maxHeight)
+			{
+				Debug.LogError("The video encoder does not support the video texture dimensions.");
+			}
+
 			Client_SetClientSettings(clientID, clientSettings);
 		}
 

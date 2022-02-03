@@ -13,6 +13,8 @@ namespace teleport
 		#region DLLImports
 		[DllImport("TeleportServer")]
 		static extern System.IntPtr GetRenderEventWithDataCallback();
+		[DllImport("TeleportServer")]
+		public static extern bool GetVideoEncodeCapabilities(ref avs.VideoEncodeCapabilities capabilities);
 		#endregion
 		[DllImport("TeleportServer")]
 		public static extern void ConvertTransform(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Transform transform);
@@ -51,10 +53,26 @@ namespace teleport
 
 		CommandBuffer commandBuffer = null;
 
-		bool initalized = false;
+		bool initialized = false;
 		bool _reconfigure = false;
 		int lightWarnCount = 1;
+		static VideoEncodeCapabilities encodeCapabilities;
+		static bool encodeCapabilitiesAvailable = false;
 
+
+		public static VideoEncodeCapabilities GetEncodeCapabilities()
+		{
+			if (!encodeCapabilitiesAvailable)
+			{
+				encodeCapabilities = new VideoEncodeCapabilities();
+				
+				if (GetVideoEncodeCapabilities(ref encodeCapabilities))
+				{
+					encodeCapabilitiesAvailable = true;
+				}
+			}
+			return encodeCapabilities;
+		}
 
 		public bool Reconfigure
 		{
@@ -85,7 +103,7 @@ namespace teleport
 
 		void ConfigureEncoder(Camera camera)
 		{
-			if (initalized && !_reconfigure)
+			if (initialized && !_reconfigure)
 			{
 				return;
 			}
@@ -123,10 +141,10 @@ namespace teleport
 			IntPtr paramsWrapperPtr = Marshal.AllocHGlobal(Marshal.SizeOf(new EncodeVideoParamsWrapper()));
 			Marshal.StructureToPtr(paramsWrapper, paramsWrapperPtr, true);
 
-			if (!initalized)
+			if (!initialized)
 			{
 				commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 0, paramsWrapperPtr);
-				initalized = true;
+				initialized = true;
 			}
 			else
 			{
@@ -137,7 +155,7 @@ namespace teleport
 
 		void CreateEncodeCommand(Camera camera, UInt32 tagDataID,float diffuseAmbientScale)
 		{
-			if (!initalized || _reconfigure)
+			if (!initialized || _reconfigure)
 			{
 				return;
 			}
