@@ -128,5 +128,6 @@ namespace teleport
 		public Vector3 bodyOffsetFromHead;
 		public Int32 captureCubeTextureSize;
 		public BackgroundMode backgroundMode;
+		public float drawDistance;
 	}
 }

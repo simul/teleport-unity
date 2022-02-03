@@ -762,6 +762,7 @@ namespace teleport
 
 			clientSettings.captureCubeTextureSize=teleportSettings.casterSettings.defaultCaptureCubeTextureSize;
 			clientSettings.backgroundMode = teleportSettings.casterSettings.backgroundMode;
+			clientSettings.drawDistance=teleportSettings.casterSettings.detectionSphereRadius;
 			int faceSize = clientSettings.captureCubeTextureSize;
 			int doubleFaceSize = faceSize * 2;
 			int halfFaceSize = (int)(faceSize * 0.5);

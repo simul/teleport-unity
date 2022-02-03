@@ -80,7 +80,8 @@ namespace teleport
 		}
 		public delegate void ControllerEventDelegate(Teleport_Controller controller);
 		public ControllerEventDelegate triggerReleaseDelegates;
-
+		public Dictionary<avs.InputID,ControllerEventDelegate> pressDelegates=new Dictionary<avs.InputID, ControllerEventDelegate>();
+		public Dictionary<avs.InputID, ControllerEventDelegate> releaseDelegates = new Dictionary<avs.InputID, ControllerEventDelegate>();
 		public bool StartedPressing(avs.InputID inputID)
 		{
 			if (buttonPressesAndReleases.TryGetValue(inputID, out List<ButtonEvent> buttonEventList))
@@ -185,7 +186,6 @@ namespace teleport
 					(analogueEvent.inputID == avs.InputID.TRIGGER01
 					|| analogueEvent.inputID == avs.InputID.TRIGGER02))
 				{
-					//Debug.Log("ProcessInputEvents analogueEvent " + analogueEvent.inputID + " " + analogueEvent.strength+" "+ (triggerReleaseDelegates != null));
 					if (triggerReleaseDelegates!=null)
 						triggerReleaseDelegates(this);
 				}
