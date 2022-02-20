@@ -209,15 +209,15 @@ namespace avs
 		public float lightRange;
 		public byte lightType;
 
-		public UInt64 animationAmount;
+		public UInt64 numAnimations;
 		public uid[] animationIDs;
 
-		public UInt64 materialAmount;
+		public UInt64 numMaterials;
 		public uid[] materialIDs;
 
 		public NodeRenderState renderState;
 
-		public UInt64 childAmount;
+		public UInt64 numChildren;
 		public uid[] childIDs;
 
 		public int priority;
@@ -228,18 +228,18 @@ namespace avs
 		[MarshalAs(UnmanagedType.BStr)]
 		public IntPtr name;
 
-		public Int64 primitiveArrayAmount;
+		public Int64 numPrimitiveArrays;
 		public PrimitiveArray[] primitiveArrays;
 
 		public Int64 numAccessors;
 		public uid[] accessorIDs;
 		public Accessor[] accessors;
 
-		public Int64 bufferViewAmount;
+		public Int64 numBufferViews;
 		public uid[] bufferViewIDs;
 		public BufferView[] bufferViews;
 
-		public Int64 bufferAmount;
+		public Int64 numBuffers;
 		public uid[] bufferIDs;
 		public GeometryBuffer[] buffers;
 	}
@@ -249,10 +249,13 @@ namespace avs
 		[MarshalAs(UnmanagedType.BStr)]
 		public IntPtr name;
 
-		public Int64 bindMatrixAmount;
+		public Int64 numInverseBindMatrices;
 		public avs.Mat4x4[] inverseBindMatrices;
 
-		public Int64 jointAmount;
+		public Int64 numBones;
+		public uid[] boneIDs;
+
+		public Int64 numJoints;
 		public uid[] jointIDs;
 
 		public Transform rootTransform;
@@ -352,7 +355,7 @@ namespace teleport
 		[DllImport("TeleportServer")]
 		private static extern void SaveGeometryStore();
 		[DllImport("TeleportServer")]
-		private static extern void LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 materialAmount, out IntPtr loadedMaterials);
+		private static extern void LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 numMaterials, out IntPtr loadedMaterials);
 	
 		[DllImport("TeleportServer")]
 		private static extern void ClearGeometryStore();
@@ -943,47 +946,110 @@ namespace teleport
 		//Extract bone and add to processed resources; will also add parent and child bones.
 		//	bone : The bone we are extracting.
 		//	boneList : Array of bones; usually taken from skinned mesh renderer.
-		public uid AddBone(Transform bone, Transform[] boneList, ForceExtractionMask forceMask)
+		public void CreateBone(Transform bone, ForceExtractionMask forceMask, Dictionary<Transform,uid> boneIDs, List<uid> jointIDs,List<avs.Node> avsNodes)
 		{
-			if(!boneList.Contains(bone))
-			{
-				return 0;
-			}
+			uid boneID=0;
+			processedResources.TryGetValue(bone, out boneID);
+			if (boneID!=0&&jointIDs.Contains(boneID))
+				return ;
+			if (boneID == 0)
+            {
 
-			//Just return the ID; if we have already processed the transform and the bone can be found on the unmanaged side.
-			if(processedResources.TryGetValue(bone, out uid boneID) && IsNodeStored(boneID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
-			{
-				return boneID;
-			}
+                boneID = boneIDs[bone];
+            }
+            else
+            {
+				if(boneID!=boneIDs[bone])
+                {
+					Debug.LogError("Bone id's don't match");
+					return;
+                }
+            }
+            if (boneIDs.ContainsKey(bone))
+            {
+                //Just return the ID; if we have already processed the transform and the bone can be found on the unmanaged side.
+                if (boneID != 0 && IsNodeStored(boneID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
+                {
+                    return ;
+                }
 
-			//Add to processedResources first to prevent a stack overflow from recursion. 
-			boneID = boneID == 0 ? GenerateID() : boneID;
-			processedResources[bone] = boneID;
+                //Add to processedResources first to prevent a stack overflow from recursion. 
+                boneID = boneID == 0 ? GenerateID() : boneID;
+                processedResources[bone] = boneID;
 
-			//Avoid stack overflow by finding parent ID first; we don't get the chance to store the node in unmanaged code before we link up the bone hierarchy.
-			uid parentID = FindResourceID(bone.parent);
-			parentID = parentID == 0 ? AddBone(bone.parent, boneList, forceMask) : parentID;
+                // The parent of the bone might NOT be in the skeleton! Unity's avatar system can skip objects in the hierarchy.
+                // So we must skip transforms to find the parent that's actually in the list of bones!
+                uid parentID = 0;
+				avs.Transform avsTransform = avs.Transform.FromLocalUnityTransform(bone);
 
+				if (bone != boneIDs.First().Key)
+                {
+                    Transform parent = bone.parent;
+                    while (parent.parent != null && parent.parent != boneIDs.First().Key && !boneIDs.ContainsKey(parent))
+					{
+						// We want the transform of the bone relative to its skeleton parent, not its Unity GameObject parent.
+						avsTransform.rotation = parent.localRotation * avsTransform.rotation;
+						avsTransform.position = parent.localRotation * avsTransform.position + parent.localPosition;
+						parent = parent.parent;
+					}
+                    parentID = FindResourceID(parent);
+                    if (parentID == 0)
+                    {
+                        Debug.Log("Unable to extract bone: parent not found for " + bone.name);
+                        return;
+                    }
+				}
+                // There should be only ONE bone with parent id 0.
+                //parentID = parentID == 0 ? AddBone(parent,  forceMask, bones, jointIDs) : parentID;
+
+                avs.Node boneNode = new avs.Node();
+                boneNode.priority = 0;
+                boneNode.name = Marshal.StringToBSTR(bone.name);
+                boneNode.parentID = parentID;
+                boneNode.localTransform = avsTransform;
+
+                boneNode.dataType = avs.NodeDataType.Bone;
+
+                boneNode.numChildren = (ulong)bone.childCount;
+                boneNode.childIDs = new uid[boneNode.numChildren];
+                // don't fill the children yet. We probably don't have their id's.
+				avsNodes.Add(boneNode);
+                //StoreNode(boneID, boneNode);
+                processedResources[bone] = boneID;
+                jointIDs.Add(boneID);
+            }
+			return;
+		}
+		public void BuildBoneNodeList(Transform bone, Dictionary<Transform, uid> boneIDs,List<avs.Node> avsNodes)
+		{
+			processedResources.TryGetValue(bone.parent,out uid parentID);
+			processedResources.TryGetValue(bone, out uid boneID);
+            if (boneID == 0)
+            {
+				boneID=GenerateID();
+                processedResources[bone] = boneID;
+            }
+			boneIDs[bone]=boneID;
+
+			avs.Transform avsTransform = avs.Transform.FromLocalUnityTransform(bone);
 			avs.Node boneNode = new avs.Node();
-			boneNode.priority=0;
+			boneNode.priority = 0;
 			boneNode.name = Marshal.StringToBSTR(bone.name);
 			boneNode.parentID = parentID;
-			boneNode.localTransform = avs.Transform.FromLocalUnityTransform(bone);
-		
+			boneNode.localTransform = avsTransform;
+
 			boneNode.dataType = avs.NodeDataType.Bone;
 
-			boneNode.childAmount = (ulong)bone.childCount;
-			boneNode.childIDs = new uid[boneNode.childAmount];
-
-			for(int i = 0; i < bone.childCount; i++)
-			{
-				boneNode.childIDs[i] = AddBone(bone.GetChild(i), boneList, forceMask);
+			boneNode.numChildren = (ulong)bone.childCount;
+			boneNode.childIDs = new uid[boneNode.numChildren];
+			avsNodes.Add(boneNode);
+			for (uint i = 0; i < boneNode.numChildren; i++)
+            {
+				var child= bone.GetChild((int)i);
+				BuildBoneNodeList(child, boneIDs,avsNodes);
+				boneNode.childIDs[i]=boneIDs[child];
 			}
-
-			StoreNode(boneID, boneNode);
-			return boneID;
 		}
-
 		public void CompressTextures()
 		{
 			UInt64 totalTexturesToCompress = GetAmountOfTexturesWaitingForCompression();
@@ -1021,7 +1087,7 @@ namespace teleport
 
 				childIDs[i] = childID;
 			}
-			extractTo.childAmount = (UInt64)gameObject.transform.childCount;
+			extractTo.numChildren = (UInt64)gameObject.transform.childCount;
 			extractTo.childIDs = childIDs.ToArray();
 		}
 
@@ -1047,7 +1113,7 @@ namespace teleport
 					Debug.LogWarning($"Received 0 for ID of material on game object: {extractTo.name}");
 				}
 			}
-			extractTo.materialAmount = (ulong)materialIDs.Count;
+			extractTo.numMaterials = (ulong)materialIDs.Count;
 			extractTo.materialIDs = materialIDs.ToArray();
 		}
 
@@ -1131,12 +1197,12 @@ namespace teleport
 			if(animator)
 			{
 				extractTo.animationIDs = AnimationExtractor.AddAnimations(animator, forceMask);
-				extractTo.animationAmount = (ulong)extractTo.animationIDs.Length;
+				extractTo.numAnimations = (ulong)extractTo.animationIDs.Length;
 			}
 			else
 			{
 				extractTo.animationIDs = null;
-				extractTo.animationAmount = 0;
+				extractTo.numAnimations = 0;
 			}
 			#endif
 			ExtractNodeMaterials(skinnedMeshRenderer.sharedMaterials, ref extractTo, forceMask);
@@ -1186,16 +1252,39 @@ namespace teleport
 			skin.name = Marshal.StringToBSTR(skinnedMeshRenderer.name);
 
 			skin.inverseBindMatrices = ExtractInverseBindMatrices(skinnedMeshRenderer);
-			skin.bindMatrixAmount = skin.inverseBindMatrices.Count();
+			skin.numInverseBindMatrices = skin.inverseBindMatrices.Count();
 
 			List<uid> jointIDs = new List<uid>();
-			foreach(Transform bone in skinnedMeshRenderer.bones)
+			HashSet<Transform> done=new HashSet<Transform>();
+			Dictionary<Transform,uid> boneIDs=new Dictionary<Transform, uid>();
+			// First, make sure every bone has a uid.
+			List<avs.Node> avsNodes=new List<avs.Node>();
+			// Note: we can end up here with MORE joint ID's than there are "bones" in the Skinned Mesh Renderer, because
+			// Unity is allowed to skip over non-animated nodes. We must obtain the full hierarchy.
+			//foreach (Transform bone in skinnedMeshRenderer.bones)
 			{
-				jointIDs.Add(AddBone(bone, skinnedMeshRenderer.bones, forceMask));
+				//CreateBone(bone, forceMask, boneIDs,jointIDs, avsNodes);
+			}
+			BuildBoneNodeList(skinnedMeshRenderer.rootBone, boneIDs,avsNodes);
+			for (int i = 0; i < avsNodes.Count; i++)
+			{
+				avs.Node avsNode = avsNodes[i];
+				uid id = boneIDs.Values.ElementAt(i);
+				StoreNode(id, avsNode);
 			}
 
+			// Now, we've stored all the nodes in the object hierarchy. This may be more nodes than the actual skeleton has:
+
+			foreach (Transform bone in skinnedMeshRenderer.bones)
+			{
+				uid id=boneIDs[bone];
+				jointIDs.Add(id);
+			}
+			// TODO: uid's may be a bad way to do this because it only applies to one skeleton...
+			skin.boneIDs = boneIDs.Values.ToArray();
+			skin.numBones = boneIDs.Count;
 			skin.jointIDs = jointIDs.ToArray();
-			skin.jointAmount = jointIDs.Count;
+			skin.numJoints = jointIDs.Count;
 
 			skin.rootTransform = avs.Transform.FromLocalUnityTransform(skinnedMeshRenderer.rootBone.parent);
 
@@ -1548,18 +1637,18 @@ namespace teleport
 				{
 					name = Marshal.StringToBSTR(mesh.name),
 
-					primitiveArrayAmount = primitives.Length,
+					numPrimitiveArrays = primitives.Length,
 					primitiveArrays = primitives,
 
 					numAccessors = accessors.Count,
 					accessorIDs = accessors.Keys.ToArray(),
 					accessors = accessors.Values.ToArray(),
 
-					bufferViewAmount = bufferViews.Count,
+					numBufferViews = bufferViews.Count,
 					bufferViewIDs = bufferViews.Keys.ToArray(),
 					bufferViews = bufferViews.Values.ToArray(),
 
-					bufferAmount = buffers.Count,
+					numBuffers = buffers.Count,
 					bufferIDs = buffers.Keys.ToArray(),
 					buffers = buffers.Values.ToArray()
 				},

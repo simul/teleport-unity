@@ -71,15 +71,18 @@ namespace teleport
 				{
 					AnimatorStateInfo animatorState = animator.GetCurrentAnimatorStateInfo(0);
 					//The animation system uses seconds, but we need milliseconds.
-					double timestampOffset = (animatorState.normalizedTime % 1.0) * playingClip.length * 1000;
-					SendAnimationUpdate(playingClip, -(long)timestampOffset);
+					// animator state normalizedTime is how far we are through the anim, and how many loops we have done.
+					// for our purposes we don't care about the number of loops.
+					double timestampOffset = (animatorState.normalizedTime % 1.0) * playingClip.length/animatorState.speed * 1000;
+				
+					SendAnimationUpdate(playingClip, (long)timestampOffset, animatorState.speed);
 				}
 			}
 		}
 
 		//PRIVATE FUNCTIONS
 
-		private void SendAnimationUpdate(AnimationClip playingClip, long timestampOffset = 0)
+		private void SendAnimationUpdate(AnimationClip playingClip, long timestampOffset = 0, float speed=1.0F)
 		{
 			lastPlayingAnimation = playingClip;
 
@@ -92,7 +95,7 @@ namespace teleport
 
 			lastAnimationUpdate = new avs.ApplyAnimation()
 			{
-				timestamp = teleport.Monitor.GetUnixTimestamp() + timestampOffset,
+				startTimestampUnixUTC = teleport.Monitor.GetUnixTimestampNow() - timestampOffset,
 				nodeID = GeometrySource.GetGeometrySource().FindResourceID(skinnedMeshRenderer.gameObject),
 				animationID = animationID,
 			};

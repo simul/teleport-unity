@@ -635,7 +635,7 @@ namespace avs
 	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
 	public struct ApplyAnimation
 	{
-		public Int64 timestamp; //When the animation change was detected.
+		public Int64 startTimestampUnixUTC; //Start time of the animation, in Unix time milliseconds
 		public uid nodeID;		//ID of the node the animation is playing on.
 		public uid animationID; //ID of the animation that is now playing.
 	}

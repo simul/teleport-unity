@@ -162,7 +162,7 @@ namespace teleport
 			}
 		}
 
-		public static Int64 GetUnixTimestamp()
+		public static Int64 GetUnixTimestampNow()
 		{
 			return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		}
@@ -221,7 +221,7 @@ namespace teleport
 				DISCOVERY_PORT = teleportSettings.discoveryPort,
 				reportHandshake = ReportHandshake,
 				audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput,
-				getUnixTimestamp = GetUnixTimestamp,
+				getUnixTimestamp = GetUnixTimestampNow,
 				httpMountDirectory = teleportSettings.cachePath,
 				clientIP = teleportSettings.clientIP,
 				certPath = teleportSettings.certPath,

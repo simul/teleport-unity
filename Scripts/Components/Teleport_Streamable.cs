@@ -309,7 +309,11 @@ namespace teleport
 					}
 				}
 			}
-
+			// If this object has an Animator, grab the whole hierarchy.
+			if(GetComponent<UnityEngine.Animator>()!=null)
+			{
+				AddComponentTypeToHierarchy<Transform>(exploredGameObjects);
+			}
 			//Add components to hierarchy.
 			AddComponentTypeToHierarchy<MeshRenderer>(exploredGameObjects);
 			AddComponentTypeToHierarchy<SkinnedMeshRenderer>(exploredGameObjects);
@@ -391,7 +395,7 @@ namespace teleport
 			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node);
 
 			avs.MovementUpdate update = new avs.MovementUpdate();
-			update.timestamp = teleport.Monitor.GetUnixTimestamp();
+			update.timestamp = teleport.Monitor.GetUnixTimestampNow();
 			update.nodeID = nodeID;
 
 			if (GeometryStreamingService.IsClientRenderingParent(clientID, node))

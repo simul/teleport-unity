@@ -253,10 +253,20 @@ namespace teleport
 							rotation = Quaternion.Inverse(animator.transform.rotation) * boneObject.transform.rotation;
 							//rotation = Quaternion.FromToRotation(animator.transform.forward, boneObject.transform.forward);
 						}
+						if(float.IsNaN(t)|| float.IsNaN(pos.x)|| float.IsNaN(pos.y)| float.IsNaN(pos.z))
+                        {
+							Debug.LogError("NaN in position keyframe");
+							return animationIDs;
+                        }
 						newAnimation.boneKeyframes[j].positionKeyframes[k].time=t;
 						newAnimation.boneKeyframes[j].positionKeyframes[k].value.x = pos.x;
 						newAnimation.boneKeyframes[j].positionKeyframes[k].value.y = pos.y;
 						newAnimation.boneKeyframes[j].positionKeyframes[k].value.z = pos.z;
+						if (float.IsNaN(rotation.w) || float.IsNaN(rotation.x) || float.IsNaN(rotation.y) | float.IsNaN(rotation.z))
+						{
+							Debug.LogError("NaN in rotation keyframe");
+							return animationIDs;
+						}
 						newAnimation.boneKeyframes[j].rotationKeyframes[k].time = t;
 						{ 
 							newAnimation.boneKeyframes[j].rotationKeyframes[k].value.x =rotation.x;
