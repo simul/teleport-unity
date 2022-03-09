@@ -39,7 +39,11 @@ namespace teleport
 		public uint moveUpdatesPerSecond = 20;
 
 		public ServerSettings casterSettings = new ServerSettings();
+
 		public LayerMask LayersToStream;  //! Mask of the physics layers the user can choose to stream.
+
+		[Header("Input")]
+		public List<InputDefinition> inputDefinitions = new List<InputDefinition>();
 
 		[Header("Utility")]
 		public string defaultScene = "";

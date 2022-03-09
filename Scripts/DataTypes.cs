@@ -5,6 +5,19 @@ using uid = System.UInt64;
 
 namespace avs
 {
+	using InputID = UInt16;
+	public enum InputType : byte
+	{
+		//IsEvent=1,
+		//IsReleaseEvent = 2,
+		//IsInteger =4,
+		//IsFloat =8,
+		IntegerState=4,
+		FloatState=8,
+		IntegerEvent=4|1,
+		ReleaseEvent = 4 | 1| 2,
+		FloatEvent =8|1
+	};
 	//
 	// Summary:
 	//     The type of a Light.
@@ -18,7 +31,7 @@ namespace avs
 	}
 	public enum LogSeverity
 	{
-		Never = 0,
+		Never=0,
 		Debug,
 		Info,
 		Warning,
@@ -59,86 +72,6 @@ namespace avs
 		Any = 0,
 		Invalid = 0,
 		PCM
-	};
-
-	public enum InputID
-	{
-		INVALID,
-
-		BUTTON01,
-		BUTTON02,
-		BUTTON03,
-		BUTTON04,
-		BUTTON05,
-		BUTTON06,
-		BUTTON07,
-		BUTTON08,
-		BUTTON09,
-		BUTTON10,
-
-		TRIGGER01,
-		TRIGGER02,
-		TRIGGER03,
-		TRIGGER04,
-		TRIGGER05,
-		TRIGGER06,
-		TRIGGER07,
-		TRIGGER08,
-		TRIGGER09,
-		TRIGGER10,
-
-		MOTION01,
-		MOTION02,
-		MOTION03,
-		MOTION04,
-		MOTION05,
-		MOTION06,
-		MOTION07,
-		MOTION08,
-		MOTION09,
-		MOTION10,
-
-		//Button aliases.
-		BUTTON_A = BUTTON01,
-		BUTTON_B = BUTTON02,
-		BUTTON_X = BUTTON03,
-		BUTTON_Y = BUTTON04,
-
-		BUTTON_LEFT_STICK = BUTTON05,
-		BUTTON_RIGHT_STICK = BUTTON06,
-
-		BUTTON_HOME = BUTTON07,
-
-		//Single stick alias.
-		BUTTON_STICK = BUTTON_LEFT_STICK,
-
-		//Trigger aliases.
-		TRIGGER_LEFT_BACK = TRIGGER01,
-		TRIGGER_RIGHT_BACK = TRIGGER02,
-		TRIGGER_LEFT_FRONT = TRIGGER03,
-		TRIGGER_RIGHT_FRONT = TRIGGER04,
-		TRIGGER_LEFT_GRIP = TRIGGER05,
-		TRIGGER_RIGHT_GRIP = TRIGGER06,
-
-		TRIGGER_LEFT_HAIRLINE_BACK=TRIGGER07,
-		TRIGGER_RIGHT_HAIRLINE_BACK = TRIGGER08,
-
-		//Single trigger aliases.
-		TRIGGER_BACK = TRIGGER_LEFT_BACK,
-		TRIGGER_FRONT = TRIGGER_LEFT_FRONT,
-		TRIGGER_GRIP = TRIGGER_LEFT_GRIP,
-
-		TRIGGER_HAIRLINE_BACK = TRIGGER_LEFT_HAIRLINE_BACK,
-		//Motion aliases.
-		STICK_LEFT = MOTION01,
-		STICK_RIGHT = MOTION02,
-
-		TRACKPAD_LEFT = MOTION03,
-		TRACKPAD_RIGHT = MOTION04,
-
-		//Single motion aliases.
-		STICK = STICK_LEFT,
-		TRACKPAD = TRACKPAD_LEFT,
 	};
 
 	public enum AnimationTimeControl
@@ -559,7 +492,13 @@ namespace avs
 		public UInt64	resourceCount;            //	Number of resources the client has, these are appended to the handshake.
 		public UInt32	maxLightsSupported;       // Maximum number of lights the client can render.
 		public Int32	minimumPriority;		// Minimum priority of node the client will render.
-	};
+	}; 
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct InputDefinitionInterop
+	{
+		public InputID inputID;
+		public InputType inputType;
+	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct InputEventBinary

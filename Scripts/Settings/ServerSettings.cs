@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace teleport
 {
+	using InputID = UInt16;
 	public enum BackgroundMode: byte
     {
 		NONE=0, COLOUR, TEXTURE, VIDEO
@@ -129,5 +131,24 @@ namespace teleport
 		public Int32 captureCubeTextureSize;
 		public BackgroundMode backgroundMode;
 		public float drawDistance;
-	}
+    }
+	/// <summary>
+	/// Definition of an input that the client can send the server.
+	/// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
+    public class InputDefinition
+	{
+		/// <summary>
+		/// The name used on this server to identify this control, usually describes its function in the app.
+		/// </summary>
+		public string name;
+		/// <summary>
+		/// The type of input - event or state, integer, float etc.
+		/// </summary>
+		public avs.InputType inputType;
+		/// <summary>
+		/// A full or partial OpenXR path. The client should try to match this path with one or more of its available inputs.
+		/// </summary>
+		public string controlPath;
+    }
 }

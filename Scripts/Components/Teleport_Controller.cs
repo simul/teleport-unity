@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace teleport
 {
+	using InputID = UInt16;
 	public struct ButtonEvent
 	{
 		public bool pressed;
@@ -37,12 +38,12 @@ namespace teleport
 		public UInt32 buttons = 0;
 
 		// For each input, we create a queue of  events, so that presses and releases are processed in order.
-		public Dictionary<avs.InputID, List<ButtonEvent>> buttonPressesAndReleases = new Dictionary<avs.InputID, List<ButtonEvent>>();
-		private Dictionary<avs.InputID, bool> buttonStates = new Dictionary<avs.InputID, bool>();
-		private Dictionary<avs.InputID, float> triggerStrengths = new Dictionary<avs.InputID, float>();
-		private Dictionary<avs.InputID, avs.Vector2> motionPositions = new Dictionary<avs.InputID, avs.Vector2>();
+		public Dictionary<InputID, List<ButtonEvent>> buttonPressesAndReleases = new Dictionary<InputID, List<ButtonEvent>>();
+		private Dictionary<InputID, bool> buttonStates = new Dictionary<InputID, bool>();
+		private Dictionary<InputID, float> triggerStrengths = new Dictionary<InputID, float>();
+		private Dictionary<InputID, avs.Vector2> motionPositions = new Dictionary<InputID, avs.Vector2>();
 
-		private Dictionary<avs.InputID, bool> previousButtonPresses;
+		private Dictionary<InputID, bool> previousButtonPresses;
 
 		public void SetButtons(UInt32 value)
 		{
@@ -67,7 +68,7 @@ namespace teleport
 
 		// really we need to make this work better.
 		// we should for each control receive a stream of events
-		public bool IsPressing(avs.InputID inputID)
+		public bool IsPressing(InputID inputID)
 		{
 			if(buttonStates.TryGetValue(inputID, out bool pressed))
 			{
@@ -79,10 +80,10 @@ namespace teleport
 			}
 		}
 		public delegate void ControllerEventDelegate(Teleport_Controller controller);
-		public ControllerEventDelegate triggerReleaseDelegates;
-		public Dictionary<avs.InputID,ControllerEventDelegate> pressDelegates=new Dictionary<avs.InputID, ControllerEventDelegate>();
-		public Dictionary<avs.InputID, ControllerEventDelegate> releaseDelegates = new Dictionary<avs.InputID, ControllerEventDelegate>();
-		public bool StartedPressing(avs.InputID inputID)
+		//public ControllerEventDelegate triggerReleaseDelegates;
+		public Dictionary<InputID,ControllerEventDelegate> pressDelegates=new Dictionary<InputID, ControllerEventDelegate>();
+		public Dictionary<InputID, ControllerEventDelegate> releaseDelegates = new Dictionary<InputID, ControllerEventDelegate>();
+		public bool StartedPressing(InputID inputID)
 		{
 			if (buttonPressesAndReleases.TryGetValue(inputID, out List<ButtonEvent> buttonEventList))
 			{
@@ -100,7 +101,7 @@ namespace teleport
 			return false;
 		}
 
-		public bool StoppedPressing(avs.InputID inputID)
+		public bool StoppedPressing(InputID inputID)
 		{
 			if (buttonPressesAndReleases.TryGetValue(inputID, out List<ButtonEvent> buttonEventList))
 			{
@@ -116,22 +117,22 @@ namespace teleport
 			return false;
 		}
 
-		public bool IsTouching(avs.InputID inputID)
+		public bool IsTouching(InputID inputID)
 		{
 			return false;
 		}
 
-		public bool StartedTouching(avs.InputID inputID)
+		public bool StartedTouching(InputID inputID)
 		{
 			return false;
 		}
 
-		public bool StoppedTouching(avs.InputID inputID)
+		public bool StoppedTouching(InputID inputID)
 		{
 			return false;
 		}
 
-		public Vector2 GetAxis(avs.InputID inputID)
+		public Vector2 GetAxis(InputID inputID)
 		{
 			if(motionPositions.TryGetValue(inputID, out avs.Vector2 motionAxis))
 			{
@@ -159,12 +160,10 @@ namespace teleport
 					buttonStates.Add(binaryEvent.inputID, evt.pressed);
 				else
 					buttonStates[binaryEvent.inputID] =evt.pressed;
-				if (!evt.pressed &&
-					(binaryEvent.inputID == avs.InputID.TRIGGER01
-					|| binaryEvent.inputID == avs.InputID.TRIGGER02))
+				if (!evt.pressed)
 				{
-					if (triggerReleaseDelegates != null)
-						triggerReleaseDelegates(this);
+					if (releaseDelegates[binaryEvent.inputID] != null)
+						releaseDelegates[binaryEvent.inputID](this);
 				}
 			}
 
@@ -182,12 +181,10 @@ namespace teleport
 					buttonStates[analogueEvent.inputID] = evt.pressed;
 				}
 				triggerStrengths[analogueEvent.inputID] = analogueEvent.strength;
-				if (!evt.pressed &&
-					(analogueEvent.inputID == avs.InputID.TRIGGER01
-					|| analogueEvent.inputID == avs.InputID.TRIGGER02))
+				if (!evt.pressed )
 				{
-					if (triggerReleaseDelegates!=null)
-						triggerReleaseDelegates(this);
+					if (releaseDelegates[analogueEvent.inputID] != null)
+						releaseDelegates[analogueEvent.inputID](this);
 				}
 			}
 

@@ -188,7 +188,7 @@ namespace teleport
 				EditorGUILayout.EndScrollView();
 			}
 			EditorGUILayout.EndFoldoutHeaderGroup();
-
+		
 			foldout_textures = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_textures, "Last Extracted Textures (" + renderTextures.Length + ")");
 			if(foldout_textures)
 			{
@@ -530,6 +530,9 @@ namespace teleport
 					case TextureFormat.RGBAFloat:
 						renderTextures[i].format = RenderTextureFormat.ARGB32;
 						highQualityUASTC = false;
+						break;
+					case TextureFormat.DXT5:
+						writePng = true;
 						break;
 					case TextureFormat.BC6H:
 						renderTextures[i].format = RenderTextureFormat.ARGB32;

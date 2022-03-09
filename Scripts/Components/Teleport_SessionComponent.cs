@@ -46,6 +46,9 @@ namespace teleport
 		private static extern void Client_SetClientSettings(uid clientID, teleport.ClientSettings clientSettings);
 
 		[DllImport("TeleportServer")]
+		private static extern void Client_SetClientInputDefinitions(uid clientID, int numControls, string[] controlPaths, avs.InputDefinitionInterop[] inputDefinitions);
+
+		[DllImport("TeleportServer")]
 		private static extern bool Client_SetOrigin(uid clientID, UInt64 validCounter, Vector3 pos, [MarshalAs(UnmanagedType.U1)] bool set_rel, Vector3 rel_pos, Quaternion orientation);
 		[DllImport("TeleportServer")]
 		private static extern bool Client_HasOrigin(uid clientID);
@@ -284,6 +287,7 @@ namespace teleport
 		public Vector3 bodyOffsetFromHead = default;
 
 		public teleport.ClientSettings clientSettings = new teleport.ClientSettings();
+		//public teleport.InputDefinition[] inputDefinitions = new teleport.InputDefinition[0];
 
 		//PUBLIC STATIC MEMBER VARIABLES
 
@@ -573,12 +577,9 @@ namespace teleport
 			foreach (Teleport_Controller controller in controllerLookup.Values)
 			{
 				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Controller {0}, {1}", controller.Index, FormatVectorString(controller.transform.position)));
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tbtns:{0} trigger:{1:F3}/{2:F3}", controller.buttons, controller.triggerBack,controller.GetAxis(avs.InputID.TRIGGER01)));
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tbtns:{0} trigger:{1:F3}/{2:F3}", controller.buttons, controller.triggerBack,controller.GetAxis(1)));
 				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tstick:{0:F3},{1:F3}",  controller.joystick.x, controller.joystick.y));
-				if (controller.buttonPressesAndReleases.TryGetValue(avs.InputID.TRIGGER01,out var queue))
-				{
-					GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tevents:{0}", queue.Count));
-				}
+		
 			}
 
 			if (geometryStreamingService != null)
@@ -770,8 +771,6 @@ namespace teleport
 			int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
 			int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
 
-			
-
 			Vector2Int cubeMapsOffset = new Vector2Int(0, 0);
 			// Offsets to lighting cubemaps in video texture
 			if (clientSettings.backgroundMode == BackgroundMode.VIDEO)
@@ -848,6 +847,18 @@ namespace teleport
 			}
 
 			Client_SetClientSettings(clientID, clientSettings);
+			// Just use one set of input defs for now.
+			string [] controlPaths=new string[teleportSettings.inputDefinitions.Count];
+			avs.InputDefinitionInterop[] inputDefsInterop=new avs.InputDefinitionInterop[teleportSettings.inputDefinitions.Count];
+			for (int i = 0; i < teleportSettings.inputDefinitions.Count; i++)
+            {
+				var def= teleportSettings.inputDefinitions[i];
+
+				inputDefsInterop[i].inputID=(System.UInt16)i;
+				inputDefsInterop[i].inputType=def.inputType;
+				controlPaths[i]=def.controlPath;
+			}
+			Client_SetClientInputDefinitions(clientID, inputDefsInterop.Length,controlPaths,inputDefsInterop);
 		}
 
 		private void SendOriginUpdates()

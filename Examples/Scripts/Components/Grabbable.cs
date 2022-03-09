@@ -26,6 +26,7 @@ namespace teleport
         
 		}
 		public uid holderClient=0;
+		public static System.UInt16 GrabInputId =0;
 		GameObject formerParent=null;
 		Vector3 oldRelativePosition=new Vector3();
 		Quaternion oldRelativeRotation=new Quaternion();
@@ -52,8 +53,8 @@ namespace teleport
 			teleport.Monitor.Instance.ReparentNode(topParent, controller.gameObject, relativePosition, relativeRotation);
 			
 			session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
-			controller.triggerReleaseDelegates -= Grab;
-			controller.triggerReleaseDelegates += Drop;
+			controller.releaseDelegates[GrabInputId] -= Grab;
+			controller.releaseDelegates[GrabInputId] += Drop;
 		}
 		public void Drop(Teleport_Controller controller)
 		{
@@ -76,7 +77,7 @@ namespace teleport
 			Teleport_SessionComponent session= controller.session;
 			if (session!=null&&session.GeometryStreamingService!=null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, true);
-			controller.triggerReleaseDelegates+=Grab;
+			controller.releaseDelegates[GrabInputId]+= Grab;
 		}
 		void OnTriggerStay(Collider other)
 		{
@@ -94,7 +95,7 @@ namespace teleport
 			Teleport_SessionComponent session = controller.session;
 			if (session != null && session.GeometryStreamingService != null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
-			controller.triggerReleaseDelegates -= Grab;
+			controller.releaseDelegates[GrabInputId] -= Grab;
 		}
 
 
