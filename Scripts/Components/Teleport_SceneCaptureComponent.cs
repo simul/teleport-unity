@@ -9,6 +9,7 @@ using uid = System.UInt64;
 
 namespace teleport
 {
+	[HelpURL("https://docs.teleportvr.io/unity.html")]
 	public class Teleport_SceneCaptureComponent : MonoBehaviour
 	{
 		private uid clientID = 0; 

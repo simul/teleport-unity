@@ -9,6 +9,7 @@ using uid = System.UInt64;
 
 namespace teleport
 {
+	[HelpURL("https://docs.teleportvr.io/unity.html")]
 	/// <summary>
 	/// This component manages a client session, so there is one Teleport_SessionComponent per session,
 	/// and this typically is attached to the root GameObject of each client.
@@ -176,16 +177,14 @@ namespace teleport
 				return;
 			}
 
-			sessionComponent.SetControllerInput(inputState.controllerID, inputState.buttonsDown, inputState.joystickAxisX, inputState.joystickAxisY, inputState.triggerBack, inputState.triggerGrip);
-
-			avs.InputEventBinary[] binaryEvents = new avs.InputEventBinary[inputState.binaryEventAmount];
-			if (inputState.binaryEventAmount != 0)
+			avs.InputEventBinary[] binaryEvents = new avs.InputEventBinary[inputState.numBinaryEvents];
+			if (inputState.numBinaryEvents != 0)
 			{
 				int binaryEventSize = Marshal.SizeOf<avs.InputEventBinary>();
 
 				//Convert the pointer array into a struct array.
 				IntPtr positionPtr = binaryEventsPtr;
-				for (int i = 0; i < inputState.binaryEventAmount; i++)
+				for (int i = 0; i < inputState.numBinaryEvents; i++)
 				{
 					binaryEvents[i] = Marshal.PtrToStructure<avs.InputEventBinary>(positionPtr);
 					positionPtr += binaryEventSize;
@@ -207,21 +206,21 @@ namespace teleport
 				}
 			}
 
-			avs.InputEventMotion[] motionEvents = new avs.InputEventMotion[inputState.motionEventAmount];
-			if (inputState.motionEventAmount != 0)
+			avs.InputEventMotion[] motionEvents = new avs.InputEventMotion[inputState.numMotionEvents];
+			if (inputState.numMotionEvents != 0)
 			{
 				int motionEventSize = Marshal.SizeOf<avs.InputEventMotion>();
 
 				//Convert the pointer array into a struct array.
 				IntPtr positionPtr = motionEventsPtr;
-				for (int i = 0; i < inputState.motionEventAmount; i++)
+				for (int i = 0; i < inputState.numMotionEvents; i++)
 				{
 					motionEvents[i] = Marshal.PtrToStructure<avs.InputEventMotion>(positionPtr);
 					positionPtr += motionEventSize;
 				}
 			}
 
-			sessionComponent.ProcessControllerEvents(inputState.controllerID, binaryEvents, analogueEvents, motionEvents);
+			sessionComponent.ProcessControllerEvents(binaryEvents, analogueEvents, motionEvents);
 		}
 
 		public static void StaticProcessAudioInput(uid clientID, in IntPtr dataPtr, UInt64 dataSize)
@@ -274,8 +273,8 @@ namespace teleport
 		// Was the gameobject the session belongs placed in the level or spawned at runtime.
 		public bool Spawned { get; set; } = false;
 
-		public int maxNodesOnOverlay = 10; //Amount of nodes to show on the overlay before breaking.
-		public int maxLightsOnOverlay = 5; //Amount of lights to show on the overlay before breaking.
+		public int maxNodesOnOverlay = 10; // Number of nodes to show on the overlay before breaking.
+		public int maxLightsOnOverlay = 5; // Number of lights to show on the overlay before breaking.
 
 		public Teleport_Head head = null;
 		public Teleport_ClientspaceRoot clientspaceRoot = null;
@@ -296,6 +295,14 @@ namespace teleport
 		//PRIVATE MEMBER VARIABLES
 
 		private TeleportSettings teleportSettings = null;
+		private Input _input=null;
+		public Input input
+		{
+			get
+			{
+				return _input;
+			}
+		}
 
 		private uid clientID = 0;
 
@@ -484,25 +491,9 @@ namespace teleport
 			last_received_headPos = newPosition;
 		}
 
-		public void SetControllerInput(int controllerIndex, UInt32 buttons, float stickX, float stickY,float triggerBack,float triggerGrip)
+		public void ProcessControllerEvents( avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
 		{
-			if (!controllerLookup.TryGetValue(controllerIndex, out Teleport_Controller controller))
-			{
-				return;
-			}
-			controller.SetButtons(buttons);
-			controller.SetJoystick(stickX, stickY);
-			controller.SetTriggers(triggerBack,triggerGrip);
-		}
-
-		public void ProcessControllerEvents(int controllerIndex, avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
-		{
-			if (!controllerLookup.TryGetValue(controllerIndex, out Teleport_Controller controller))
-			{
-				return;
-			}
-
-			controller.ProcessInputEvents(binaryEvents, analogueEvents, motionEvents);
+			_input.ProcessInputEvents(binaryEvents, analogueEvents, motionEvents);
 		}
 
 		public void SetControllerPose(int controllerIndex, Quaternion newRotation, Vector3 newPosition)
@@ -577,8 +568,7 @@ namespace teleport
 			foreach (Teleport_Controller controller in controllerLookup.Values)
 			{
 				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Controller {0}, {1}", controller.Index, FormatVectorString(controller.transform.position)));
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tbtns:{0} trigger:{1:F3}/{2:F3}", controller.buttons, controller.triggerBack,controller.GetAxis(1)));
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("\tstick:{0:F3},{1:F3}",  controller.joystick.x, controller.joystick.y));
+
 		
 			}
 
@@ -589,7 +579,7 @@ namespace teleport
 				//Add a break for readability.
 				y += lineHeight;
 
-				//Display amount of nodes.
+				//Display number of nodes.
 				int nodeAmount = geometryStreamingService.GetStreamedObjectCount();
 				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Nodes {0}", nodeAmount));
 
@@ -655,7 +645,9 @@ namespace teleport
 			{
 				inputAudioSource.bypassEffects = true;
 			}
-
+			_input = GetComponent<Input>();
+			if(_input == null)
+				_input = gameObject.AddComponent<Input>();
 			head = GetSingleComponentFromChildren<Teleport_Head>();
 			clientspaceRoot = GetSingleComponentFromChildren<Teleport_ClientspaceRoot>();
 			collisionRoot = GetSingleComponentFromChildren<Teleport_CollisionRoot>();
@@ -734,16 +726,24 @@ namespace teleport
 			if(geometryStreamingService!=null&&teleportSettings.casterSettings.isStreamingGeometry)
 			{
 				if (body != null)
-					geometryStreamingService.SetNodeSubtype(body, avs.NodeDataSubtype.Body);
-				if (leftHand != null)
-					geometryStreamingService.SetNodeSubtype(leftHand, avs.NodeDataSubtype.LeftHand);
-				if (rightHand != null)
-					geometryStreamingService.SetNodeSubtype(rightHand, avs.NodeDataSubtype.RightHand);
+					geometryStreamingService.SetNodeSubtype(body, avs.NodeDataSubtype.Body,"");
 				geometryStreamingService.StreamGlobals();
 			}
 			foreach (Teleport_Controller controller in controllerLookup.Values)
 			{
-				Teleport_Streamable[] streamables =controller.gameObject.GetComponentsInChildren<Teleport_Streamable>();
+				if (controller.poseRegexPath.Length>0)
+				{
+					geometryStreamingService.SetNodeSubtype(controller.gameObject,avs.NodeDataSubtype.Pose,controller.poseRegexPath);
+				}
+				else if (controller.gameObject == leftHand)
+				{
+					geometryStreamingService.SetNodeSubtype(controller.gameObject, avs.NodeDataSubtype.LeftHand, controller.poseRegexPath);
+				}
+				if (controller.gameObject == rightHand)
+				{
+					geometryStreamingService.SetNodeSubtype(controller.gameObject, avs.NodeDataSubtype.RightHand, controller.poseRegexPath);
+				}
+				Teleport_Streamable[] streamables = controller.gameObject.GetComponentsInChildren<Teleport_Streamable>();
 				foreach (Teleport_Streamable streamable in streamables)
 				{
 					streamable.sendMovementUpdates = false;

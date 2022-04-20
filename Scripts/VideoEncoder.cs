@@ -8,6 +8,7 @@ using uid = System.UInt64;
 
 namespace teleport
 {
+	[HelpURL("https://docs.teleportvr.io/unity.html")]
 	public class VideoEncoder
 	{
 		#region DLLImports

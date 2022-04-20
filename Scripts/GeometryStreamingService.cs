@@ -47,7 +47,7 @@ namespace teleport
 		private static extern void Client_ReparentNode(uid clientID, uid nodeID, uid newParentNodeID,avs.Pose localPose);
 
 		[DllImport("TeleportServer")]
-		private static extern void Client_SetNodeSubtype(uid clientID, uid nodeID, avs.NodeDataSubtype subType);
+		private static extern void Client_SetNodeSubtype(uid clientID, uid nodeID, avs.NodeDataSubtype subType, string regexPosePath);
 
 		
 		#endregion
@@ -292,7 +292,7 @@ namespace teleport
 			}
 		}
 
-		public void SetNodeSubtype(GameObject gameObject, avs.NodeDataSubtype t)
+		public void SetNodeSubtype(GameObject gameObject, avs.NodeDataSubtype t,string regexPosePath)
 		{
 			uid nodeID = GeometrySource.GetGeometrySource().FindResourceID(gameObject);
 			if (nodeID == 0)
@@ -302,7 +302,7 @@ namespace teleport
 			else
 			{
 				// for now we assume that these types have no parent.
-				Client_SetNodeSubtype(session.GetClientID(), nodeID, t);
+				Client_SetNodeSubtype(session.GetClientID(), nodeID, t, regexPosePath);
 			}
 		}
 		public void ReparentNode(GameObject child, GameObject newParent, Vector3 relativePos, Quaternion relativeRot)

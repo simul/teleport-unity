@@ -7,6 +7,7 @@ using UnityEngine.Scripting.APIUpdating;
 
 namespace teleport
 {
+	[HelpURL("https://docs.teleportvr.io/unity.html")]
 	public static class RenderingUtils
 	{
 		static Mesh s_FullscreenMesh = null;

@@ -527,18 +527,9 @@ namespace avs
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct InputState
 	{
-		public Int32 controllerID;
-		public UInt32 buttonsDown;
-		public float trackpadAxisX;
-		public float trackpadAxisY;
-		public float joystickAxisX;
-		public float joystickAxisY;
-		public float triggerBack;
-		public float triggerGrip;
-
-		public UInt32 binaryEventAmount;
+		public UInt32 numBinaryEvents;
 		public UInt32 numAnalogueEvents;
-		public UInt32 motionEventAmount;
+		public UInt32 numMotionEvents;
 	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]

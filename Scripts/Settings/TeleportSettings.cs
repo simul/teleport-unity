@@ -8,6 +8,7 @@ using UnityEditor;
 
 namespace teleport
 {
+	[HelpURL("https://docs.teleportvr.io/unity.html")]
 	// Create a new type of Settings Asset.
 	[System.Serializable]
 	public class TeleportSettings : ScriptableObject
@@ -45,6 +46,20 @@ namespace teleport
 		[Header("Input")]
 		public List<InputDefinition> inputDefinitions = new List<InputDefinition>();
 
+		/// <summary>
+		/// Find the index of a given named input.
+		/// </summary>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public System.UInt16 FindInput(string name)
+		{
+			for (int i = 0; i < inputDefinitions.Count; i++)
+			{
+				if(inputDefinitions[i].name==name)
+					return (System.UInt16)i;
+			}
+			return (System.UInt16)(inputDefinitions.Count);
+		}
 		[Header("Utility")]
 		public string defaultScene = "";
 		public string additiveScene = "";

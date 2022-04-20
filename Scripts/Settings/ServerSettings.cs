@@ -9,7 +9,8 @@ namespace teleport
 	public enum BackgroundMode: byte
     {
 		NONE=0, COLOUR, TEXTURE, VIDEO
-    }
+	}
+	[HelpURL("https://docs.teleportvr.io/unity.html")]
 	//! Settings structure for the server, to be shared between C# and the C++ dll.
 	//! These values are set in the Unity Editor under Project Settings/Teleport VR, and passed as const
 	//! to the C++ dll.

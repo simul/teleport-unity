@@ -10,7 +10,11 @@ namespace teleport
 {
 #if UNITY_EDITOR
 	[UnityEditor.InitializeOnLoad]
+	[HelpURL("https://docs.teleportvr.io/unity.html")]
 #endif
+	/// <summary>
+	/// A singleton component which stores per-server-session state.
+	/// </summary>
 	public class Monitor : MonoBehaviour
 	{
 		private static bool initialised = false;
@@ -104,6 +108,7 @@ namespace teleport
 		private static extern uid GetUnlinkedClientID();
 		#endregion
 
+		//! Create a new session, e.g. when a client connects.
 		public delegate Teleport_SessionComponent CreateSession();
 
 		public CreateSession createSessionCallback = DefaultCreateSession;

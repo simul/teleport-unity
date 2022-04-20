@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace teleport
 {
+	[HelpURL("https://docs.teleportvr.io/unity.html")]
 	//! Component to store a gameObject's streamable properties, e.g. priority.
 	class StreamableProperties : MonoBehaviour
 	{

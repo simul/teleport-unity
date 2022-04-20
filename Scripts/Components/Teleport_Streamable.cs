@@ -6,6 +6,7 @@ using uid = System.UInt64;
 
 namespace teleport
 {
+	[HelpURL("https://docs.teleportvr.io/unity.html")]
 	[Serializable]
 	/// Class for storing state and cached components of a node that is streamed in a Teleport_Streamable's hierarchy.
 	public class StreamedNode

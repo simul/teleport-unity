@@ -4,7 +4,8 @@ using UnityEngine;
 namespace teleport
 {
     [CustomEditor(typeof(teleport.Monitor))]
-    public class CasterMonitorEditor : Editor
+	[HelpURL("https://docs.teleportvr.io/unity.html")]
+	public class CasterMonitorEditor : Editor
     {
         public override void OnInspectorGUI()
         {

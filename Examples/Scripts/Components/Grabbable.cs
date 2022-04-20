@@ -3,6 +3,7 @@ using uid = System.UInt64;
 
 namespace teleport
 {
+	using InputID = System.UInt16;
 	/// <summary>
 	/// An example component to make a parent object grabbable by a Teleport client, using Teleport_Controller.
 	/// The transform of the Grabbable maps to the controller position when the object is held.
@@ -18,6 +19,8 @@ namespace teleport
 			while(t.parent!=null)
 				t= t.parent;
 			topParent=t.gameObject;
+			TeleportSettings settings=TeleportSettings.GetOrCreateSettings();
+			GrabInputId=settings.FindInput("Left Trigger");
 		}
 
 		// Update is called once per frame
@@ -26,20 +29,21 @@ namespace teleport
         
 		}
 		public uid holderClient=0;
-		public static System.UInt16 GrabInputId =0;
+		System.UInt16 GrabInputId =0;
 		GameObject formerParent=null;
 		Vector3 oldRelativePosition=new Vector3();
 		Quaternion oldRelativeRotation=new Quaternion();
+		Teleport_Controller nearController = null;
 
-		public void Grab(Teleport_Controller controller)
+		public void Grab(Input input, InputID inputId)
 		{
 			if(holderClient != 0)
 				return;
-			Teleport_SessionComponent session = controller.session;
+			Teleport_SessionComponent session = input.gameObject.GetComponent<Teleport_SessionComponent>();
 			holderClient = session.GetClientID();
 			if(holderClient==0)
 				return;
-			Debug.Log("Grabbed " + topParent + " with " + controller.gameObject);
+			Debug.Log("Grabbed " + topParent + " with " + nearController.gameObject);
 			// For now, we do the reparenting only client-side on that one client.
 			// I expect this to change so that all clients + server recognize the new structure.
 			formerParent= topParent.transform.parent?topParent.transform.parent.gameObject:null;
@@ -50,22 +54,23 @@ namespace teleport
 			Transform childT		= topParent.transform;
 			Quaternion relativeRotation = Quaternion.Inverse(grabbableT.rotation) * childT.rotation;
 			Vector3 relativePosition= Quaternion.Inverse(grabbableT.rotation) *(childT.position- grabbableT.position);
-			teleport.Monitor.Instance.ReparentNode(topParent, controller.gameObject, relativePosition, relativeRotation);
+			teleport.Monitor.Instance.ReparentNode(topParent, nearController.gameObject, relativePosition, relativeRotation);
 			
 			session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
-			controller.releaseDelegates[GrabInputId] -= Grab;
-			controller.releaseDelegates[GrabInputId] += Drop;
+			session.input.RemoveDelegate(GrabInputId, Grab, InputEventType.Release);
+			session.input.AddDelegate(GrabInputId, Drop, InputEventType.Release);
 		}
-		public void Drop(Teleport_Controller controller)
+		public void Drop(Input input, InputID inputId)
 		{
 			if (holderClient == 0)
 				return;
 			Debug.Log("Dropped " + topParent);
+			Teleport_SessionComponent session = input.gameObject.GetComponent<Teleport_SessionComponent>();
+			session.input.RemoveDelegate(GrabInputId, Drop, InputEventType.Release);
 			teleport.Monitor.Instance.ReparentNode(topParent, formerParent, oldRelativePosition, oldRelativeRotation);
 			holderClient=0;
 		}
-
-
+		// This occurs when a collider impinges on the Grabbable.
 		private void OnTriggerEnter(Collider other)
 		{
 			if(holderClient!=0)
@@ -73,11 +78,14 @@ namespace teleport
 			Teleport_Controller controller= other.GetComponentInChildren<Teleport_Controller>();
 			if(!controller)
 				return;
+			if (nearController!=null)
+				return;
 			Debug.Log("Detected collision between " + gameObject.name + " and " + other.name);
 			Teleport_SessionComponent session= controller.session;
 			if (session!=null&&session.GeometryStreamingService!=null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, true);
-			controller.releaseDelegates[GrabInputId]+= Grab;
+			session.input.AddDelegate(GrabInputId, Grab, InputEventType.Release);
+			nearController=controller;
 		}
 		void OnTriggerStay(Collider other)
 		{
@@ -89,16 +97,15 @@ namespace teleport
 			if (holderClient != 0)
 				return;
 			Teleport_Controller controller = other.GetComponentInChildren<Teleport_Controller>();
-			if (!controller)
+			if (!controller|| controller!=nearController)
 				return;
+			nearController=null;
 			Debug.Log(gameObject.name + " and " + other.name + " are no longer colliding");
 			Teleport_SessionComponent session = controller.session;
 			if (session != null && session.GeometryStreamingService != null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
-			controller.releaseDelegates[GrabInputId] -= Grab;
+			session.input.RemoveDelegate(GrabInputId, Grab, InputEventType.Release);
 		}
-
-
 
 	}
 }

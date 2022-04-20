@@ -9,8 +9,9 @@ using uid = System.UInt64;
 
 namespace teleport
 {
-    // Place holder for later
-    class AudioStreamingService
+	// Place holder for later
+	[HelpURL("https://docs.teleportvr.io/unity.html")]
+	class AudioStreamingService
     {
         private readonly Teleport_SessionComponent session;
         private readonly TeleportSettings teleportSettings;

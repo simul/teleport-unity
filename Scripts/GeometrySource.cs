@@ -25,6 +25,7 @@ namespace avs
 	public enum NodeDataSubtype : byte
 	{
 		None,
+		Pose,
 		Body,
 		LeftHand,
 		RightHand
@@ -313,6 +314,7 @@ namespace teleport
 		public avs.Texture textureData;
 	}
 
+	[HelpURL("https://docs.teleportvr.io/unity.html")]
 	public class GeometrySource : ScriptableObject, ISerializationCallbackReceiver
 	{
 		//Meta data on a resource loaded from disk.
