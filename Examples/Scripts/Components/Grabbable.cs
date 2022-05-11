@@ -20,7 +20,8 @@ namespace teleport
 				t= t.parent;
 			topParent=t.gameObject;
 			TeleportSettings settings=TeleportSettings.GetOrCreateSettings();
-			GrabInputId=settings.FindInput("Left Trigger");
+			LeftGrabInputId = settings.FindInput("Left Trigger Click");
+			RightGrabInputId = settings.FindInput("Right Trigger Click");
 		}
 
 		// Update is called once per frame
@@ -29,7 +30,8 @@ namespace teleport
         
 		}
 		public uid holderClient=0;
-		System.UInt16 GrabInputId =0;
+		System.UInt16 LeftGrabInputId =0;
+		System.UInt16 RightGrabInputId = 0;
 		GameObject formerParent=null;
 		Vector3 oldRelativePosition=new Vector3();
 		Quaternion oldRelativeRotation=new Quaternion();
@@ -57,8 +59,8 @@ namespace teleport
 			teleport.Monitor.Instance.ReparentNode(topParent, nearController.gameObject, relativePosition, relativeRotation);
 			
 			session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
-			session.input.RemoveDelegate(GrabInputId, Grab, InputEventType.Release);
-			session.input.AddDelegate(GrabInputId, Drop, InputEventType.Release);
+			session.input.RemoveDelegate(inputId, Grab, InputEventType.Release);
+			session.input.AddDelegate(inputId, Drop, InputEventType.Release);
 		}
 		public void Drop(Input input, InputID inputId)
 		{
@@ -66,7 +68,7 @@ namespace teleport
 				return;
 			Debug.Log("Dropped " + topParent);
 			Teleport_SessionComponent session = input.gameObject.GetComponent<Teleport_SessionComponent>();
-			session.input.RemoveDelegate(GrabInputId, Drop, InputEventType.Release);
+			session.input.RemoveDelegate(inputId, Drop, InputEventType.Release);
 			teleport.Monitor.Instance.ReparentNode(topParent, formerParent, oldRelativePosition, oldRelativeRotation);
 			holderClient=0;
 		}
@@ -84,8 +86,11 @@ namespace teleport
 			Teleport_SessionComponent session= controller.session;
 			if (session!=null&&session.GeometryStreamingService!=null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, true);
-			session.input.AddDelegate(GrabInputId, Grab, InputEventType.Release);
-			nearController=controller;
+			if(controller.poseRegexPath.Contains("left"))
+				session.input.AddDelegate(LeftGrabInputId, Grab, InputEventType.Release);
+			if (controller.poseRegexPath.Contains("right"))
+				session.input.AddDelegate(RightGrabInputId, Grab, InputEventType.Release);
+			nearController =controller;
 		}
 		void OnTriggerStay(Collider other)
 		{
@@ -94,17 +99,20 @@ namespace teleport
 
 		void OnTriggerExit(Collider other)
 		{
-			if (holderClient != 0)
-				return;
 			Teleport_Controller controller = other.GetComponentInChildren<Teleport_Controller>();
-			if (!controller|| controller!=nearController)
+			if (!controller||controller!=nearController)
 				return;
 			nearController=null;
+			if (holderClient != 0)
+				return;
 			Debug.Log(gameObject.name + " and " + other.name + " are no longer colliding");
 			Teleport_SessionComponent session = controller.session;
 			if (session != null && session.GeometryStreamingService != null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
-			session.input.RemoveDelegate(GrabInputId, Grab, InputEventType.Release);
+			if (controller.poseRegexPath.Contains("left"))
+				session.input.RemoveDelegate(LeftGrabInputId, Grab, InputEventType.Release);
+			if (controller.poseRegexPath.Contains("right"))
+				session.input.RemoveDelegate(RightGrabInputId, Grab, InputEventType.Release);
 		}
 
 	}

@@ -169,7 +169,8 @@ namespace teleport
 			sessionComponent.SetControllerPose(index, latestRotation, latestPosition);
 		}
 
-		public static void StaticProcessInput(uid clientID, in avs.InputState inputState, in IntPtr binaryEventsPtr, in IntPtr analogueEventsPtr, in IntPtr motionEventsPtr)
+		public static void StaticProcessInput(uid clientID, in avs.InputState inputState
+			, in IntPtr binaryStatesPtr, in IntPtr analogueStatesPtr, in IntPtr binaryEventsPtr, in IntPtr analogueEventsPtr, in IntPtr motionEventsPtr)
 		{
 			Teleport_SessionComponent sessionComponent = GetSessionComponent(clientID);
 			if (!sessionComponent)
@@ -177,6 +178,28 @@ namespace teleport
 				return;
 			}
 
+			float[] floatStates=new float[inputState.numAnalogueStates];
+			if (inputState.numAnalogueStates != 0)
+			{
+				int analogueStateSize = Marshal.SizeOf<float>();
+				IntPtr positionPtr = analogueStatesPtr;
+				for (int i = 0; i < inputState.numAnalogueStates; i++)
+				{
+					floatStates[i] = Marshal.PtrToStructure<float>(positionPtr);
+					positionPtr += analogueStateSize;
+				}
+			}
+			byte[] boolStates = new byte[inputState.numBinaryStates];
+			if (inputState.numBinaryStates != 0)
+			{
+				int binaryStateSize = Marshal.SizeOf<byte>();
+				IntPtr positionPtr = binaryStatesPtr;
+				for (int i = 0; i < inputState.numBinaryStates; i++)
+				{
+					boolStates[i] = Marshal.PtrToStructure<byte>(positionPtr);
+					positionPtr += binaryStateSize;
+				}
+			}
 			avs.InputEventBinary[] binaryEvents = new avs.InputEventBinary[inputState.numBinaryEvents];
 			if (inputState.numBinaryEvents != 0)
 			{
@@ -188,6 +211,7 @@ namespace teleport
 				{
 					binaryEvents[i] = Marshal.PtrToStructure<avs.InputEventBinary>(positionPtr);
 					positionPtr += binaryEventSize;
+					//Debug.Log("inputState binary event " + binaryEvents[i].inputID + " " + binaryEvents[i].activated);
 				}
 			}
 
@@ -202,7 +226,7 @@ namespace teleport
 				{
 					analogueEvents[i] = Marshal.PtrToStructure<avs.InputEventAnalogue>(positionPtr);
 					positionPtr += analogueEventSize;
-					Debug.Log("inputState analogueEvent "+ analogueEvents[i].inputID+" "+ analogueEvents[i].strength);
+					//Debug.Log("inputState analogue event "+ analogueEvents[i].inputID+" "+ analogueEvents[i].value);
 				}
 			}
 
@@ -220,7 +244,7 @@ namespace teleport
 				}
 			}
 
-			sessionComponent.ProcessControllerEvents(binaryEvents, analogueEvents, motionEvents);
+			sessionComponent.ProcessInput(boolStates, floatStates, binaryEvents, analogueEvents, motionEvents);
 		}
 
 		public static void StaticProcessAudioInput(uid clientID, in IntPtr dataPtr, UInt64 dataSize)
@@ -491,9 +515,9 @@ namespace teleport
 			last_received_headPos = newPosition;
 		}
 
-		public void ProcessControllerEvents( avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
+		public void ProcessInput(byte[] booleanStates,float[] floatStates, avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
 		{
-			_input.ProcessInputEvents(binaryEvents, analogueEvents, motionEvents);
+			_input.ProcessInputEvents(booleanStates,floatStates,binaryEvents, analogueEvents, motionEvents);
 		}
 
 		public void SetControllerPose(int controllerIndex, Quaternion newRotation, Vector3 newPosition)

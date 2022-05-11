@@ -12,10 +12,10 @@ namespace avs
 		//IsReleaseEvent = 2,
 		//IsInteger =4,
 		//IsFloat =8,
-		IntegerState=4,
+		BooleanState=4,
 		FloatState=8,
-		IntegerEvent=4|1,
-		ReleaseEvent = 4 | 1| 2,
+		BooleanEvent=4|1,
+		//ReleaseEvent = 4 | 1| 2,
 		FloatEvent =8|1
 	};
 	//
@@ -513,7 +513,7 @@ namespace avs
 	{
 		public UInt32 eventID;
 		public InputID inputID;
-		public float strength;
+		public float value;
 	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -527,9 +527,11 @@ namespace avs
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct InputState
 	{
-		public UInt32 numBinaryEvents;
-		public UInt32 numAnalogueEvents;
-		public UInt32 numMotionEvents;
+		public UInt16 numBinaryStates;
+		public UInt16 numAnalogueStates;
+		public UInt16 numBinaryEvents;
+		public UInt16 numAnalogueEvents;
+		public UInt16 numMotionEvents;
 	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
