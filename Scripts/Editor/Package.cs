@@ -23,7 +23,7 @@ namespace teleport
 		public static void ExportPackage(string fileName)
 		{
 			List<string> paths = new List<string>();
-			ExportPackageOptions options = ExportPackageOptions.Recurse;
+			ExportPackageOptions options = ExportPackageOptions.Recurse|ExportPackageOptions.IncludeDependencies;
 			paths.Add("Assets/Teleport");
 			AssetDatabase.ExportPackage(paths.ToArray(), fileName, options);
 			UnityEngine.Debug.Log("Exported: " + fileName);

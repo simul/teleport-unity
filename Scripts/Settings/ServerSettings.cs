@@ -131,6 +131,7 @@ namespace teleport
 		public Vector3 bodyOffsetFromHead;
 		public Int32 captureCubeTextureSize;
 		public BackgroundMode backgroundMode;
+		public Vector4 backgroundColour;
 		public float drawDistance;
     }
 	/// <summary>

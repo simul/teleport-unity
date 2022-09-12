@@ -27,6 +27,7 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8805389478987335667}
   m_RootOrder: 0
@@ -77,6 +78,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4439182914225332721}
   m_Father: {fileID: 0}
@@ -102,9 +104,6 @@ MonoBehaviour:
   collisionRoot: {fileID: 5838778176377855976}
   sceneCaptureComponent: {fileID: 3991960492684180549}
   inputAudioSource: {fileID: 0}
-  body: {fileID: 0}
-  leftHand: {fileID: 7874665763676028163}
-  rightHand: {fileID: 6829965221155726695}
   bodyOffsetFromHead: {x: 0, y: 0, z: 0}
   clientSettings:
     videoTextureSize: {x: 0, y: 0}
@@ -122,6 +121,7 @@ MonoBehaviour:
     bodyOffsetFromHead: {x: 0, y: 0, z: 0}
     captureCubeTextureSize: 0
     backgroundMode: 0
+    backgroundColour: {x: 0, y: 0, z: 0, w: 0}
     drawDistance: 0
 --- !u!1 &5984580423773437800
 GameObject:
@@ -135,9 +135,10 @@ GameObject:
   - component: {fileID: 599378067329297328}
   - component: {fileID: 5838778176377855976}
   - component: {fileID: 8558258142342422572}
+  - component: {fileID: 4681993489791672672}
   m_Layer: 0
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: TeleportStreamable
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -152,6 +153,7 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6188751731473364292}
   - {fileID: 901807340495807592}
@@ -196,6 +198,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   motionType: 0
+--- !u!114 &4681993489791672672
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5984580423773437800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60e391b1afa087241a79ed66eea982a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  priority: 0
+  streamedHierarchy: []
+  sendMovementUpdates: 1
+  sendEnabledStateUpdates: 1
+  pollCurrentAnimation: 0
+  uid: 0
 --- !u!1 &6334136638645548303
 GameObject:
   m_ObjectHideFlags: 0
@@ -223,6 +243,7 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8718089245447279965}
   m_Father: {fileID: 4439182914225332721}
@@ -253,7 +274,8 @@ GameObject:
   - component: {fileID: 1409536098537212886}
   - component: {fileID: 76782613021530575}
   - component: {fileID: 6349716853396447547}
-  - component: {fileID: 7639223813198443829}
+  - component: {fileID: 256458345728266316}
+  - component: {fileID: 4356986825909541284}
   m_Layer: 0
   m_Name: Right HandController
   m_TagString: TeleportStreamable
@@ -271,6 +293,7 @@ Transform:
   m_LocalRotation: {x: -0.3826837, y: -0, z: -0, w: 0.9238795}
   m_LocalPosition: {x: 0.099, y: 1.3778702, z: 0.44281107}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5091093642786635598}
   m_Father: {fileID: 4439182914225332721}
@@ -323,7 +346,22 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &7639223813198443829
+--- !u!114 &256458345728266316
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6829965221155726695}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  priority: 0
+  _renderingMask: 0
+  streamOnlyWithParent: 1
+--- !u!114 &4356986825909541284
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -336,7 +374,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   priority: 0
-  streaming_reason: 0
   streamedHierarchy: []
   sendMovementUpdates: 1
   sendEnabledStateUpdates: 1
@@ -354,7 +391,8 @@ GameObject:
   - component: {fileID: 2566405282351836052}
   - component: {fileID: 505215018338697296}
   - component: {fileID: 3005832818321853292}
-  - component: {fileID: -2565780736927575566}
+  - component: {fileID: 6225410090374027571}
+  - component: {fileID: -5313932978729687202}
   m_Layer: 0
   m_Name: Left HandController
   m_TagString: TeleportStreamable
@@ -372,6 +410,7 @@ Transform:
   m_LocalRotation: {x: -0.3826837, y: -0, z: -0, w: 0.9238795}
   m_LocalPosition: {x: -0.276, y: 1.3556439, z: 0.4300764}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4472128270632149356}
   m_Father: {fileID: 4439182914225332721}
@@ -424,7 +463,22 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &-2565780736927575566
+--- !u!114 &6225410090374027571
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7874665763676028163}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  priority: 0
+  _renderingMask: 0
+  streamOnlyWithParent: 1
+--- !u!114 &-5313932978729687202
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -437,7 +491,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   priority: 0
-  streaming_reason: 0
   streamedHierarchy: []
   sendMovementUpdates: 1
   sendEnabledStateUpdates: 1
@@ -448,6 +501,7 @@ PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
+    serializedVersion: 2
     m_TransformParent: {fileID: 6188751731473364292}
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 846cfee221095204ea421daaf47eca96,
@@ -591,6 +645,7 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 2100000, guid: 0570fbc0659bace46b622b824d665378, type: 2}
     m_RemovedComponents: []
+    m_AddedGameObjects: []
   m_SourcePrefab: {fileID: 100100000, guid: 846cfee221095204ea421daaf47eca96, type: 3}
 --- !u!1 &3844913389875936214 stripped
 GameObject:
@@ -609,6 +664,7 @@ PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
+    serializedVersion: 2
     m_TransformParent: {fileID: 901807340495807592}
     m_Modifications:
     - target: {fileID: -9038568753049638838, guid: d0c344579ae47a24594c33ae955cf7f4,
@@ -737,16 +793,17 @@ PrefabInstance:
       value: TeleportStreamable
       objectReference: {fileID: 0}
     m_RemovedComponents: []
+    m_AddedGameObjects: []
   m_SourcePrefab: {fileID: 100100000, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
---- !u!1 &5615111451119953396 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: d0c344579ae47a24594c33ae955cf7f4,
-    type: 3}
-  m_PrefabInstance: {fileID: 4696563697898133669}
-  m_PrefabAsset: {fileID: 0}
 --- !u!4 &5091093642786635598 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d0c344579ae47a24594c33ae955cf7f4,
+    type: 3}
+  m_PrefabInstance: {fileID: 4696563697898133669}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &5615111451119953396 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: d0c344579ae47a24594c33ae955cf7f4,
     type: 3}
   m_PrefabInstance: {fileID: 4696563697898133669}
   m_PrefabAsset: {fileID: 0}

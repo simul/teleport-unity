@@ -16,7 +16,8 @@ namespace teleport
 		//! The larger the priority value, the earlier the object is sent.
 		public int priority=0;
 		public uint _renderingMask =0;
-
+		//! Don't use as a streaming root, even if it has a collider.
+		public bool streamOnlyWithParent=false;
 		public uint RenderingMask
 		{
 		get

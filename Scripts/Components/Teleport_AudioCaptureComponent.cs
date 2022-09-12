@@ -50,14 +50,17 @@ namespace teleport
                 return;
             }
             var heads = FindObjectsOfType<Teleport_Head>();
-            Vector3 pos = Vector3.zero;
-            foreach (var head in heads)
-            {
-                pos += head.gameObject.transform.position;
-            }
-            pos /= heads.Length;
-            gameObject.transform.position = pos;
-        }
+			if (heads.Length>0)
+			{
+				Vector3 pos = Vector3.zero;
+				foreach (var head in heads)
+				{
+					pos += head.gameObject.transform.position;
+				}
+				pos /= heads.Length;
+				gameObject.transform.position = pos;
+			}
+		}
 
         void Initialize()
         {

@@ -22,6 +22,7 @@ namespace teleport
 			TeleportSettings settings=TeleportSettings.GetOrCreateSettings();
 			LeftGrabInputId = settings.FindInput("Left Trigger Click");
 			RightGrabInputId = settings.FindInput("Right Trigger Click");
+			LeftMouseClickInputId = settings.FindInput("Left Mouse Click"); 
 		}
 
 		// Update is called once per frame
@@ -32,6 +33,7 @@ namespace teleport
 		public uid holderClient=0;
 		System.UInt16 LeftGrabInputId =0;
 		System.UInt16 RightGrabInputId = 0;
+		System.UInt16 LeftMouseClickInputId = 0;
 		GameObject formerParent=null;
 		Vector3 oldRelativePosition=new Vector3();
 		Quaternion oldRelativeRotation=new Quaternion();
@@ -87,10 +89,16 @@ namespace teleport
 			if (session!=null&&session.GeometryStreamingService!=null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, true);
 			if(controller.poseRegexPath.Contains("left"))
+			{
 				session.input.AddDelegate(LeftGrabInputId, Grab, InputEventType.Release);
+				session.input.AddDelegate(LeftMouseClickInputId, Grab, InputEventType.Release);
+			}
 			if (controller.poseRegexPath.Contains("right"))
+			{ 
 				session.input.AddDelegate(RightGrabInputId, Grab, InputEventType.Release);
-			nearController =controller;
+				session.input.AddDelegate(LeftMouseClickInputId, Grab, InputEventType.Release);
+			}
+			 nearController =controller;
 		}
 		void OnTriggerStay(Collider other)
 		{
@@ -110,9 +118,15 @@ namespace teleport
 			if (session != null && session.GeometryStreamingService != null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
 			if (controller.poseRegexPath.Contains("left"))
+			{ 
 				session.input.RemoveDelegate(LeftGrabInputId, Grab, InputEventType.Release);
+				session.input.RemoveDelegate(LeftMouseClickInputId, Grab, InputEventType.Release);
+			}
 			if (controller.poseRegexPath.Contains("right"))
+			{
 				session.input.RemoveDelegate(RightGrabInputId, Grab, InputEventType.Release);
+				session.input.RemoveDelegate(LeftMouseClickInputId, Grab, InputEventType.Release);
+			}
 		}
 
 	}

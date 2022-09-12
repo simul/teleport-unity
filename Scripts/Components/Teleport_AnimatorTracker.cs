@@ -74,7 +74,7 @@ namespace teleport
 					//The animation system uses seconds, but we need milliseconds.
 					// animator state normalizedTime is how far we are through the anim, and how many loops we have done.
 					// for our purposes we don't care about the number of loops.
-					double timestampOffset = (animatorState.normalizedTime % 1.0) * playingClip.length/animatorState.speed * 1000;
+					double timestampOffset = (animatorState.normalizedTime % 1.0) * playingClip.length/animatorState.speed;
 				
 					SendAnimationUpdate(playingClip, (long)timestampOffset, animatorState.speed);
 				}

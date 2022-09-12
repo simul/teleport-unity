@@ -99,7 +99,8 @@ namespace teleport
 			if(teleportSettings == null)
 			{
 				teleportSettings = CreateInstance<TeleportSettings>();
-				EnsureAssetPath("Assets/Resources" + k_TeleportSettingsPath);
+				teleportSettings.LayersToStream.value=LayerMask.NameToLayer("Default");
+				EnsureAssetPath("Assets/Resources/" + k_TeleportSettingsPath);
 				AssetDatabase.CreateAsset(teleportSettings, "Assets/Resources/" + k_TeleportSettingsPath + "/" + k_TeleportSettingsFilename + ".asset");
 				AssetDatabase.SaveAssets();
 			}

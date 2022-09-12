@@ -51,7 +51,7 @@
             if(dist<0.01)
                 o.Emission=float3(1.0,1.0,1.0);
             else
-                o.Emission= step(0.5, IN.uv_MainTex.x) * float3(IN.uv_MainTex-float2(0.0,0.5),0.0);
+                o.Emission= frac(IN.uv_MainTex.xyy*5);//step(0.5, IN.uv_MainTex.x) * float3(IN.uv_MainTex-float2(0.0,0.5),0.0);
         }
         ENDCG
     }

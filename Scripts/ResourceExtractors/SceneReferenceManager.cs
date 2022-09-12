@@ -255,9 +255,41 @@ namespace teleport
 			return gameObjectPath;
 		}
 
+#if UNITY_EDITOR
+		public static bool GetResourcePath(UnityEngine.Object obj, out string path)
+		{
+			long localId = 0;
+			string guid;
+			bool result = UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out localId);
+			if (!result)
+			{ 
+				path="";
+				return false;
+			}
+			path = UnityEditor.AssetDatabase.GetAssetPath(obj);
+			// Problem is, Unity can bundle a bunch of individual meshes in one asset file, but use them completely independently.
+			// We can't therefore just use the file name.
+			if(obj.GetType()==typeof(UnityEngine.Mesh))
+			{
+				path=Path.GetDirectoryName(path);
+				path=Path.Combine(path,obj.name);
+			}
+			path=path.Replace("Assets/","");
+			// Need something unique. Within default and editor resources are thousands of assets, often with clashing names.
+			// So here, we do use the localId's to distinguish them.
+			if (path.Contains("unity default resources"))
+			{
+				path +="/"+obj.name+"_"+ localId;
+			}
+			if (path.Contains("unity editor resources"))
+			{
+				path += "/" + obj.name + "_" + localId;
+			}
+			return true;
+		}
 		public static bool GetGUIDAndLocalFileIdentifier(UnityEngine.Object obj, out string guid)
 		{
-			long localId=0;
+			long localId =0;
 			bool result= UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out localId);
 			if(!result)
 				return false;
@@ -265,6 +297,7 @@ namespace teleport
 			guid=guid+localIdString;
 			return true;
 		}
+#endif
 		//Returns first-found mesh or skinned mesh on the GameObject; on the object itself, or its child-hierarchy.
 		private Mesh GetMesh(GameObject gameObject)
 		{
@@ -277,7 +310,25 @@ namespace teleport
 				}
 				else
 				{
-					Debug.LogWarning($"Can't extract {meshFilter.sharedMesh} on {gameObject.name}, as the mesh is not readable!");
+#if UNITY_EDITOR
+					string assetPath= UnityEditor.AssetDatabase.GetAssetPath(meshFilter.sharedMesh);
+					UnityEditor.ModelImporter modelImporter= UnityEditor.ModelImporter.GetAtPath(assetPath) as UnityEditor.ModelImporter;
+					if (modelImporter != null)
+					{
+						modelImporter.isReadable=true;
+						modelImporter.SaveAndReimport();
+					}
+#endif
+					if (!meshFilter.sharedMesh)
+					{
+						Debug.LogWarning($"sharedMesh is null on {gameObject.name}!");
+						return null;
+					}
+					if (!meshFilter.sharedMesh.isReadable)
+					{
+						Debug.LogWarning($"Can't extract {meshFilter.sharedMesh} on {gameObject.name}, as the mesh is not readable!");
+					}
+					return meshFilter.sharedMesh;
 				}
 			}
 
@@ -290,6 +341,19 @@ namespace teleport
 				}
 				else
 				{
+#if UNITY_EDITOR
+					string assetPath = UnityEditor.AssetDatabase.GetAssetPath(skinnedMeshRenderer.sharedMesh);
+					UnityEditor.ModelImporter modelImporter = UnityEditor.ModelImporter.GetAtPath(assetPath) as UnityEditor.ModelImporter;
+					if (modelImporter != null)
+					{
+						modelImporter.isReadable = true;
+						modelImporter.SaveAndReimport();
+					}
+#endif
+					if (skinnedMeshRenderer.sharedMesh.isReadable)
+					{
+						return skinnedMeshRenderer.sharedMesh;
+					}
 					Debug.LogWarning($"Can't extract {skinnedMeshRenderer.sharedMesh} on {gameObject.name}, as the mesh is not readable!");
 				}
 			}
@@ -325,6 +389,12 @@ namespace teleport
 #if UNITY_EDITOR
 			ResourceReferences resourceReferences = new ResourceReferences();
 			//Load all assets at path; there may be multiple meshes sharing a GUID, but differentiated by name.
+			if (saveFormat.meshGUID.Length < 32)
+			{
+				Debug.LogWarning($"meshGUID "+saveFormat.meshGUID+" is too small!");
+				gameObjectPath="";
+				return resourceReferences;
+			}
 			string meshAssetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(saveFormat.meshGUID.Substring(0,32));
 			UnityEngine.Object[] assetsAtPath = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(meshAssetPath);
 

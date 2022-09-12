@@ -83,7 +83,7 @@ Shader "Teleport/CopyCubemap"
 	{
 		float3 view	=CubeFaceAndTexCoordsToView(Face,i.uv);
 		float4 res	=Multiplier*float4(Colour*max(0.0,dot(Direction,view)),1.0);
-		res.rgb=view;
+		//res.rgb=view;
 		return res;
 	}
 		

@@ -29,10 +29,10 @@ namespace teleport
 		#region DLLDelegates
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate bool OnShowNode(uid clientID, uid nodeID);
+		delegate bool OnClientStoppedRenderingNode(uid clientID, uid nodeID);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate bool OnHideNode(uid clientID, uid nodeID);
+		delegate bool OnClientStartedRenderingNode(uid clientID, uid nodeID);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void OnSetHeadPose(uid clientID, in avs.Pose newHeadPose);
@@ -74,8 +74,8 @@ namespace teleport
 			public uint DISCOVERY_PORT;
 			public uint SERVICE_PORT;
 
-			public OnShowNode showNode;
-			public OnHideNode hideNode;
+			public OnClientStoppedRenderingNode clientStoppedRenderingNode;
+			public OnClientStartedRenderingNode clientStartedRenderingNode;
 			public OnSetHeadPose headPoseSetter;
 			public OnSetOriginFromClient setOriginFromCLientFn;
 			public OnSetControllerPose controllerPoseSetter;
@@ -113,7 +113,7 @@ namespace teleport
 
 		public CreateSession createSessionCallback = DefaultCreateSession;
 
-		private static GameObject defaultPlayerPrefab = null;
+		public GameObject defaultPlayerPrefab;
 
 		private GUIStyle overlayFont = new GUIStyle();
 		private GUIStyle clientFont = new GUIStyle();
@@ -214,8 +214,8 @@ namespace teleport
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 			InitialiseState initialiseState = new InitialiseState
 			{
-				showNode = ShowNode,
-				hideNode = HideNode,
+				clientStoppedRenderingNode = ClientStoppedRenderingNode,
+				clientStartedRenderingNode = ClientStartedRenderingNode,
 				headPoseSetter = Teleport_SessionComponent.StaticSetHeadPose,
 				setOriginFromCLientFn = Teleport_SessionComponent.StaticSetOriginFromClient,
 				controllerPoseSetter = Teleport_SessionComponent.StaticSetControllerPose,
@@ -325,12 +325,13 @@ namespace teleport
 				SetRenderingLayerMask(gameObject, invStreamedMask);
 			}
 
-			//Add the Teleport_Streamable component to all streamable objects.
+			//Add the Teleport_Streamable component to all root streamable objects.
+			// Don't add to objects that have a streamable parent!
 			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects();
 			foreach(GameObject gameObject in teleportStreamableObjects)
 			{
 				//Objects with collision will have a Teleport_Streamable component added, as they can be streamed as root objects.
-				if(gameObject.GetComponent<Collider>() != null && gameObject.GetComponent<Teleport_Streamable>() == null)
+				if(gameObject.GetComponent<Collider>() != null && gameObject.GetComponentInParent<Teleport_Streamable>() == null)
 				{
 					gameObject.AddComponent<Teleport_Streamable>();
 				}
@@ -413,17 +414,17 @@ namespace teleport
 			}
 
 			Teleport_SessionComponent session = null;
-			if (defaultPlayerPrefab == null)
+			if (Instance.defaultPlayerPrefab == null)
 			{
-				defaultPlayerPrefab = Resources.Load("Prefabs/TeleportVR") as GameObject;
+				Instance.defaultPlayerPrefab = Resources.Load("Prefabs/TeleportVR") as GameObject;
 			}
-			if (defaultPlayerPrefab != null)
+			if (Instance.defaultPlayerPrefab != null)
 			{
-				var childComponents = defaultPlayerPrefab.GetComponentsInChildren<Teleport_SessionComponent>();
+				var childComponents = Instance.defaultPlayerPrefab.GetComponentsInChildren<Teleport_SessionComponent>();
 
 				if (childComponents.Length != 1)
 				{
-					Debug.LogError($"Exactly <b>one</b> {typeof(Teleport_SessionComponent).Name} child should exist, but <color=red><b>{childComponents.Length}</b></color> were found for \"{defaultPlayerPrefab}\"!");
+					Debug.LogError($"Exactly <b>one</b> {typeof(Teleport_SessionComponent).Name} child should exist, but <color=red><b>{childComponents.Length}</b></color> were found for \"{Instance.defaultPlayerPrefab}\"!");
 					return null;
 				}
 
@@ -432,7 +433,7 @@ namespace teleport
 					return null;
 				}
 
-				GameObject player = Instantiate(defaultPlayerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
+				GameObject player = Instantiate(Instance.defaultPlayerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
 				player.name = "TeleportVR_" + Teleport_SessionComponent.sessions.Count + 1;
 
 				session = player.GetComponentsInChildren<Teleport_SessionComponent>()[0];
@@ -455,14 +456,13 @@ namespace teleport
 		}
 
 		///DLL CALLBACK FUNCTIONS
-
 		[return: MarshalAs(UnmanagedType.U1)]
-		private static bool ShowNode(uid clientID, uid nodeID)
+		private static bool ClientStoppedRenderingNode(uid clientID, uid nodeID)
 		{
 			UnityEngine.Object obj = GeometrySource.GetGeometrySource().FindResource(nodeID);
 			if(!obj)
 			{
-				Debug.LogWarning($"Failed to show node! Could not find a resource with ID {nodeID}!");
+				// Possibly node was already deleted.
 				return false;
 			}
 
@@ -491,7 +491,7 @@ namespace teleport
 		}
 
 		[return: MarshalAs(UnmanagedType.U1)]
-		private static bool HideNode(uid clientID, uid nodeID)
+		private static bool ClientStartedRenderingNode(uid clientID, uid nodeID)
 		{
 			UnityEngine.Object obj = GeometrySource.GetGeometrySource().FindResource(nodeID);
 			if(!obj)
@@ -600,7 +600,7 @@ namespace teleport
 			if (newParent != null)
 			{
 				// Is the new parent owned by a client? If so inform clients of this change:
-				newParentStreamable = newParent.GetComponent<Teleport_Streamable>();
+				newParentStreamable = newParent.GetComponentInParent<Teleport_Streamable>();
 				if (newParentStreamable != null && newParentStreamable.OwnerClient != 0)
 				{
 					newSession = Teleport_SessionComponent.GetSessionComponent(newParentStreamable.OwnerClient);
@@ -612,7 +612,7 @@ namespace teleport
 			}
 			if (oldParent != null)
 			{
-				oldParentStreamable = oldParent.GetComponent<Teleport_Streamable>();
+				oldParentStreamable = oldParent.GetComponentInParent<Teleport_Streamable>();
 				if (oldParentStreamable != null&&oldParentStreamable.OwnerClient != 0)
 				{
 					oldSession = Teleport_SessionComponent.GetSessionComponent(oldParentStreamable.OwnerClient);

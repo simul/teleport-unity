@@ -115,9 +115,6 @@ namespace teleport
 	{
 		//! The highest priority of StreamableProperties found in the streamable's hierarchy.
 		public int priority = 0;
-		// Track the reasons why we're streaming this. A set of bit flags, when it goes to zero you can stop streaming it.
-		// TODO: this should obviously be per-client.
-		public UInt32 streaming_reason = 0;
 
 		//All GameObjects objects in the streamed hierarchy this Teleport_Streamable represents.
 		public List<StreamedNode> streamedHierarchy = new List<StreamedNode>();
@@ -299,8 +296,12 @@ namespace teleport
 			List<Collider> childColliders = new List<Collider>(GetComponentsInChildren<Collider>());
 			foreach(Collider childCollider in childColliders)
 			{
+				StreamableProperties props= childCollider.GetComponent<StreamableProperties>();
+				// Don't ignore if streamOnlyWithParent is set:
+				if (props &&props.streamOnlyWithParent)
+					continue;
 				//GetComponentsInChildren(...) also grabs components from node we are on, but we don't want to exclude the children of the node we are on.
-				if(childCollider.gameObject != gameObject && GeometrySource.GetGeometrySource().IsGameObjectMarkedForStreaming(childCollider.gameObject))
+				if (childCollider.gameObject != gameObject && GeometrySource.GetGeometrySource().IsGameObjectMarkedForStreaming(childCollider.gameObject))
 				{
 					//Mark child's children as explored, as they are part of a different streaming hierarchy.
 					Transform[] childTransforms = childCollider.GetComponentsInChildren<Transform>();
@@ -321,7 +322,8 @@ namespace teleport
 			AddComponentTypeToHierarchy<Light>(exploredGameObjects);
 
 			//Add animator trackers to nodes in streamed hierarchy with animator components.
-			//We use streamedHierarchy, rather than GetComponentInChildren(...), as we need to restrict the search to the streamed hierarchy rather than the entire Transform hierarchy.
+			//We use streamedHierarchy, rather than GetComponentInChildren(...),
+			// as we need to restrict the search to the streamed hierarchy rather than the entire Transform hierarchy.
 			foreach(GameObject gameObject in streamedHierarchy)
 			{
 				AddAnimatorTracker(gameObject);

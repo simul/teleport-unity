@@ -44,6 +44,9 @@ public class TransformAnimationMarshaler : ICustomMarshaler
 		Marshal.WriteIntPtr(ptr, byteOffset, animation.name);
 		byteOffset += Marshal.SizeOf<IntPtr>();
 
+		Marshal.WriteIntPtr(ptr, byteOffset, animation.path);
+		byteOffset += Marshal.SizeOf<IntPtr>();
+
 		Marshal.WriteInt64(ptr, byteOffset, animation.boneAmount);
 		byteOffset += Marshal.SizeOf<Int64>();
 

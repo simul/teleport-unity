@@ -3,13 +3,14 @@ using System.Runtime.InteropServices;
 
 namespace teleport
 {
-    /*
+	using uid = System.UInt64;
+	/*
     * avs.Mesh contains C-Style arrays that themselves contain C-Style arrays, which the default marshaler doesn't like.
     * (Mesh.PrimitiveArray[].Attribute[] and Mesh.GeometryBuffer[].byte[]
     * 
     * This marshaler creates pointers for each C-Style array in avs.Mesh, and copies the data into that pointer using the default marshaler.
     */
-    public class MeshMarshaler : ICustomMarshaler
+	public class MeshMarshaler : ICustomMarshaler
     {
         private static MeshMarshaler staticInstance;
 
@@ -28,7 +29,7 @@ namespace teleport
 
         public void CleanUpNativeData(IntPtr pNativeData)
         {
-            int byteOffset = Marshal.SizeOf<IntPtr>() + Marshal.SizeOf<Int64>();
+            int byteOffset = Marshal.SizeOf<IntPtr>() + Marshal.SizeOf<IntPtr>() + Marshal.SizeOf<Int64>();
 
             //Free pointer for primitive arrays.
             Marshal.FreeCoTaskMem(Marshal.ReadIntPtr(pNativeData, byteOffset));
@@ -50,8 +51,8 @@ namespace teleport
 
         public int GetNativeDataSize()
         {
-            //4 64-bit ints(8), and 8 pointers(8).
-            return 96;
+            //4 64-bit ints(8), and 9 pointers(8).
+            return (4*8+9*8);// 96;
         }
 
         public IntPtr MarshalManagedToNative(object ManagedObj)
@@ -63,25 +64,34 @@ namespace teleport
             {
                 throw new Exception("Could not allocate memory.");
             }
-
+			
             int byteOffset = 0;
 
 			Marshal.WriteIntPtr(ptr, byteOffset, mesh.name);
 			byteOffset += Marshal.SizeOf<IntPtr>();
 
-            //Write primitive arrays.
-            Marshal.WriteInt64(ptr, byteOffset, mesh.numPrimitiveArrays);
-            byteOffset += Marshal.SizeOf(mesh.numPrimitiveArrays);
+			Marshal.WriteIntPtr(ptr, byteOffset, mesh.path);
+			byteOffset += Marshal.SizeOf<IntPtr>();
 
-            {
-                IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.PrimitiveArray>() * mesh.numPrimitiveArrays));
+			//Write primitive arrays.
+			Marshal.WriteInt64(ptr, byteOffset, mesh.numPrimitiveArrays);
+            byteOffset += Marshal.SizeOf(mesh.numPrimitiveArrays);
+			
+			{
+				int primitiivearrays_alloc_size = (int)(Marshal.SizeOf<avs.PrimitiveArray>() * mesh.numPrimitiveArrays);
+				IntPtr arrayPtr = Marshal.AllocCoTaskMem(primitiivearrays_alloc_size);
                 int arrayByteOffset = 0;
                 for(int i = 0; i < mesh.numPrimitiveArrays; i++)
                 {
                     Marshal.StructureToPtr(mesh.primitiveArrays[i], arrayPtr + arrayByteOffset, false);
                     arrayByteOffset += Marshal.SizeOf(mesh.primitiveArrays[i]);
-                }
-                Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
+				}
+				if (arrayByteOffset != primitiivearrays_alloc_size)
+				{
+					UnityEngine.Debug.LogError("arrayByteOffset != primitiivearrays_alloc_size.");
+					throw new Exception("Incorrect data size.");
+				}
+				Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
                 byteOffset += Marshal.SizeOf<IntPtr>();
             }
 
@@ -89,27 +99,39 @@ namespace teleport
             Marshal.WriteInt64(ptr, byteOffset, mesh.numAccessors);
             byteOffset += Marshal.SizeOf(mesh.numAccessors);
 
-            {
-                IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.PrimitiveArray>() * mesh.numAccessors));
+			{
+				int accessors_alloc_size = (int)(Marshal.SizeOf<uid>() * mesh.numAccessors);
+				IntPtr arrayPtr = Marshal.AllocCoTaskMem(accessors_alloc_size);
                 int arrayByteOffset = 0;
                 for(int i = 0; i < mesh.numAccessors; i++)
                 {
                     Marshal.StructureToPtr(mesh.accessorIDs[i], arrayPtr + arrayByteOffset, false);
                     arrayByteOffset += Marshal.SizeOf(mesh.accessorIDs[i]);
-                }
-                Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
+				}
+				if (arrayByteOffset != accessors_alloc_size)
+				{
+					UnityEngine.Debug.LogError("arrayByteOffset != accessors_alloc_size.");
+					throw new Exception("Incorrect data size.");
+				}
+				Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
                 byteOffset += Marshal.SizeOf<IntPtr>();
             }
 
-            {
-                IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.PrimitiveArray>() * mesh.numAccessors));
+			{
+				int accessors_alloc_size = (int)(Marshal.SizeOf<avs.Accessor>() * mesh.numAccessors);
+				IntPtr arrayPtr = Marshal.AllocCoTaskMem(accessors_alloc_size);
                 int arrayByteOffset = 0;
                 for(int i = 0; i < mesh.numAccessors; i++)
                 {
                     Marshal.StructureToPtr(mesh.accessors[i], arrayPtr + arrayByteOffset, false);
                     arrayByteOffset += Marshal.SizeOf(mesh.accessors[i]);
-                }
-                Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
+				}
+				if (arrayByteOffset != accessors_alloc_size)
+				{
+					UnityEngine.Debug.LogError("arrayByteOffset != accessors_alloc_size.");
+					throw new Exception("Incorrect data size.");
+				}
+				Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
                 byteOffset += Marshal.SizeOf<IntPtr>();
             }
 
@@ -117,27 +139,39 @@ namespace teleport
             Marshal.WriteInt64(ptr, byteOffset, mesh.numBufferViews);
             byteOffset += Marshal.SizeOf(mesh.numBufferViews);
 
-            {
-                IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.PrimitiveArray>() * mesh.numBufferViews));
+			{
+				int bufferview_alloc_size = (int)(Marshal.SizeOf<uid>() * mesh.numBufferViews);
+				IntPtr arrayPtr = Marshal.AllocCoTaskMem(bufferview_alloc_size);
                 int arrayByteOffset = 0;
                 for(int i = 0; i < mesh.numBufferViews; i++)
                 {
                     Marshal.StructureToPtr(mesh.bufferViewIDs[i], arrayPtr + arrayByteOffset, false);
                     arrayByteOffset += Marshal.SizeOf(mesh.bufferViewIDs[i]);
-                }
-                Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
+				}
+				if (arrayByteOffset != bufferview_alloc_size)
+				{
+					UnityEngine.Debug.LogError("arrayByteOffset != buffer_alloc_size.");
+					throw new Exception("Incorrect data size.");
+				}
+				Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
                 byteOffset += Marshal.SizeOf<IntPtr>();
             }
 
-            {
-                IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.PrimitiveArray>() * mesh.numBufferViews));
+			{
+				int bufferview_alloc_size = (int)(Marshal.SizeOf<avs.BufferView>() * mesh.numBufferViews);
+				IntPtr arrayPtr = Marshal.AllocCoTaskMem(bufferview_alloc_size);
                 int arrayByteOffset = 0;
                 for(int i = 0; i < mesh.numBufferViews; i++)
                 {
                     Marshal.StructureToPtr(mesh.bufferViews[i], arrayPtr + arrayByteOffset, false);
                     arrayByteOffset += Marshal.SizeOf(mesh.bufferViews[i]);
-                }
-                Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
+				}
+				if (arrayByteOffset != bufferview_alloc_size)
+				{
+					UnityEngine.Debug.LogError("arrayByteOffset != buffer_alloc_size.");
+					throw new Exception("Incorrect data size.");
+				}
+				Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
                 byteOffset += Marshal.SizeOf<IntPtr>();
             }
 
@@ -146,19 +180,26 @@ namespace teleport
             byteOffset += Marshal.SizeOf(mesh.numBuffers);
 
             {
-                IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.PrimitiveArray>() * mesh.numBuffers));
+				int buffer_alloc_size= (int)(Marshal.SizeOf<uid>() * mesh.numBuffers);
+
+				IntPtr arrayPtr = Marshal.AllocCoTaskMem(buffer_alloc_size);
                 int arrayByteOffset = 0;
                 for(int i = 0; i < mesh.numBuffers; i++)
                 {
                     Marshal.StructureToPtr(mesh.bufferIDs[i], arrayPtr + arrayByteOffset, false);
                     arrayByteOffset += Marshal.SizeOf(mesh.bufferIDs[i]);
-                }
-                Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
+				}
+				if (arrayByteOffset != buffer_alloc_size)
+				{
+					UnityEngine.Debug.LogError("arrayByteOffset != buffer_alloc_size.");
+					throw new Exception("Incorrect data size.");
+				}
+				Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
                 byteOffset += Marshal.SizeOf<IntPtr>();
             }
 
             {
-                IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.PrimitiveArray>() * mesh.numBuffers));
+                IntPtr arrayPtr = Marshal.AllocCoTaskMem((int)(Marshal.SizeOf<avs.GeometryBuffer>() * mesh.numBuffers));
                 int arrayByteOffset = 0;
                 for(int i = 0; i < mesh.numBuffers; i++)
                 {
@@ -168,7 +209,11 @@ namespace teleport
                 Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
                 byteOffset += Marshal.SizeOf<IntPtr>();
             }
-
+			if (byteOffset != GetNativeDataSize())
+			{
+				UnityEngine.Debug.LogError("byteOffset!=GetNativeDataSize.");
+				throw new Exception("Incorrect data size.");
+			}
             return ptr;
         }
 

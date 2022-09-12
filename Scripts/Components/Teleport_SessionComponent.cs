@@ -50,7 +50,7 @@ namespace teleport
 		private static extern void Client_SetClientInputDefinitions(uid clientID, int numControls, string[] controlPaths, avs.InputDefinitionInterop[] inputDefinitions);
 
 		[DllImport("TeleportServer")]
-		private static extern bool Client_SetOrigin(uid clientID, UInt64 validCounter, Vector3 pos, [MarshalAs(UnmanagedType.U1)] bool set_rel, Vector3 rel_pos, Quaternion orientation);
+		private static extern bool Client_SetOrigin(uid clientID, uid originNodeID, UInt64 validCounter, Vector3 pos, Quaternion orientation);
 		[DllImport("TeleportServer")]
 		private static extern bool Client_HasOrigin(uid clientID);
 
@@ -305,8 +305,6 @@ namespace teleport
 		public Teleport_CollisionRoot collisionRoot = null;
 		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
 		public AudioSource inputAudioSource = null;
-		[SerializeField]
-		private GameObject body = default, leftHand = default, rightHand = default;
 		public Vector3 bodyOffsetFromHead = default;
 
 		public teleport.ClientSettings clientSettings = new teleport.ClientSettings();
@@ -432,6 +430,8 @@ namespace teleport
 				//Send animation control updates for the grip animation of the controllers.
 				foreach (Teleport_Controller controller in controllerLookup.Values)
 				{
+					if(!controller.controllerModel)
+						continue;
 					SkinnedMeshRenderer skinnedMeshRenderer = controller.controllerModel.GetComponentInChildren<SkinnedMeshRenderer>();
 					if (!skinnedMeshRenderer)
 					{
@@ -659,7 +659,8 @@ namespace teleport
 		private void Start()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
-			geometryStreamingService = new GeometryStreamingService(this);
+			if(geometryStreamingService==null)
+				geometryStreamingService = new GeometryStreamingService(this);
 			networkStats = new avs.NetworkStats();
 			videoEncoderStats = new avs.VideoEncoderStats();
 			inputAudioSource = new AudioSource();
@@ -746,26 +747,19 @@ namespace teleport
 			sessions[clientID] = this;
 
 			UpdateClientSettings();
-
-			if(geometryStreamingService!=null&&teleportSettings.casterSettings.isStreamingGeometry)
+			if (geometryStreamingService == null)
+				geometryStreamingService = new GeometryStreamingService(this);
+			if (geometryStreamingService!=null&&teleportSettings.casterSettings.isStreamingGeometry)
 			{
-				if (body != null)
-					geometryStreamingService.SetNodeSubtype(body, avs.NodeDataSubtype.Body,"");
 				geometryStreamingService.StreamGlobals();
 			}
+			// We must have a root node for the player's client space.
+			geometryStreamingService.SetNodePosePath(clientspaceRoot.gameObject, "root");
 			foreach (Teleport_Controller controller in controllerLookup.Values)
 			{
 				if (controller.poseRegexPath.Length>0)
 				{
-					geometryStreamingService.SetNodeSubtype(controller.gameObject,avs.NodeDataSubtype.Pose,controller.poseRegexPath);
-				}
-				else if (controller.gameObject == leftHand)
-				{
-					geometryStreamingService.SetNodeSubtype(controller.gameObject, avs.NodeDataSubtype.LeftHand, controller.poseRegexPath);
-				}
-				if (controller.gameObject == rightHand)
-				{
-					geometryStreamingService.SetNodeSubtype(controller.gameObject, avs.NodeDataSubtype.RightHand, controller.poseRegexPath);
+					geometryStreamingService.SetNodePosePath(controller.gameObject,controller.poseRegexPath);
 				}
 				Teleport_Streamable[] streamables = controller.gameObject.GetComponentsInChildren<Teleport_Streamable>();
 				foreach (Teleport_Streamable streamable in streamables)
@@ -787,6 +781,7 @@ namespace teleport
 
 			clientSettings.captureCubeTextureSize=teleportSettings.casterSettings.defaultCaptureCubeTextureSize;
 			clientSettings.backgroundMode = teleportSettings.casterSettings.backgroundMode;
+			clientSettings.backgroundColour = teleportSettings.casterSettings.BackgroundColour;
 			clientSettings.drawDistance=teleportSettings.casterSettings.detectionSphereRadius;
 			int faceSize = clientSettings.captureCubeTextureSize;
 			int doubleFaceSize = faceSize * 2;
@@ -887,6 +882,13 @@ namespace teleport
 
 		private void SendOriginUpdates()
 		{
+			uid origin_uid =0;
+			if (clientspaceRoot != null)
+			{
+				Teleport_Streamable streamable =clientspaceRoot.gameObject.GetComponent<Teleport_Streamable> ();
+				if(streamable!=null)
+					origin_uid=streamable.GetUid();
+			}
 			if (teleportSettings.casterSettings.controlModel == teleport.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
 			{
 				if (head != null && clientspaceRoot != null)
@@ -894,7 +896,7 @@ namespace teleport
 					if (!Client_HasOrigin(clientID) || resetOrigin)
 					{
 						originValidCounter++;
-						if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
+						if (Client_SetOrigin(clientID, originValidCounter, origin_uid, clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
 						{
 							last_sent_origin = clientspaceRoot.transform.position;
 							clientspaceRoot.transform.hasChanged = false;
@@ -909,7 +911,7 @@ namespace teleport
 							originValidCounter++;
 						}
 						// Otherwise just a "suggestion" update. ValidCounter is not altered. The client will use the vertical only.
-						if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
+						if (Client_SetOrigin(clientID, originValidCounter, origin_uid, clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
 						{
 							last_sent_origin = clientspaceRoot.transform.position;
 							clientspaceRoot.transform.hasChanged = false;
@@ -929,7 +931,7 @@ namespace teleport
 					if (!Client_HasOrigin(clientID) || resetOrigin || clientspaceRoot.transform.hasChanged)
 					{
 						originValidCounter++;
-						if (Client_SetOrigin(clientID, originValidCounter, clientspaceRoot.transform.position, false, head.transform.position - clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
+						if (Client_SetOrigin(clientID, originValidCounter, origin_uid, clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
 						{
 							last_sent_origin = clientspaceRoot.transform.position;
 							clientspaceRoot.transform.hasChanged = false;
@@ -962,41 +964,9 @@ namespace teleport
 		{
 			List<GameObject> bodyParts = new List<GameObject>();
 
-			if (body)
-			{
-				bodyParts.Add(body);
-			}
-
-			if (leftHand)
-			{
-				bodyParts.Add(leftHand);
-			}
-
-			if (rightHand)
-			{
-				bodyParts.Add(rightHand);
-			}
-
+			var c=GetComponentInChildren<Teleport_Streamable>();
+			bodyParts.Add(c.gameObject);
 			return bodyParts;
-		}
-
-		//Returns which body part the GameObject is.
-		public avs.NodeDataSubtype GetGameObjectBodyPart(GameObject gameObject)
-		{
-			if (gameObject == body)
-			{
-				return avs.NodeDataSubtype.Body;
-			}
-			else if (gameObject == leftHand)
-			{
-				return avs.NodeDataSubtype.LeftHand;
-			}
-			else if (gameObject == rightHand)
-			{
-				return avs.NodeDataSubtype.RightHand;
-			}
-
-			return avs.NodeDataSubtype.None;
 		}
 	}
 }
