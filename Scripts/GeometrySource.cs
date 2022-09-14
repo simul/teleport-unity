@@ -359,7 +359,7 @@ namespace teleport
 		#region DLLImports
 
 		[DllImport("TeleportServer")]
-		private static extern void SetCachePath(string name);
+		private static extern bool SetCachePath(string name);
 		[DllImport("TeleportServer")]
 		private static extern void DeleteUnmanagedArray(in IntPtr unmanagedArray);
 
@@ -534,10 +534,23 @@ namespace teleport
 			sceneReferenceManager = SceneReferenceManager.GetSceneReferenceManager();
 		}
 
+		bool SetGeometryCachePath(string cachePath)
+		{
+			bool valid = SetCachePath(cachePath);
+			if (!valid)
+			{
+				Debug.LogError("Failed to set the Geometry Cache Path to: " + cachePath);
+				Debug.LogError("Unable to Save/Load caching from/to disk.");
+			}
+			return valid;
+		}
+
 		public void SaveToDisk()
 		{
 			var teleportSettings = TeleportSettings.GetOrCreateSettings();
-			SetCachePath(teleportSettings.cachePath);
+			if (!SetGeometryCachePath(teleportSettings.cachePath))
+				return;
+
 			sceneReferenceManager.SaveToDisk();
 			SaveGeometryStore();
 		}
@@ -545,7 +558,8 @@ namespace teleport
 		public void LoadFromDisk()
 		{
 			var teleportSettings = TeleportSettings.GetOrCreateSettings();
-			SetCachePath(teleportSettings.cachePath);
+			if (!SetGeometryCachePath(teleportSettings.cachePath))
+				return;
 			processedResources.Clear();
 
 			//Load data from files.

@@ -105,7 +105,7 @@ namespace teleport
 				AssetDatabase.SaveAssets();
 			}
 			teleportSettings.colorSpace = PlayerSettings.colorSpace;
-			if(teleportSettings.cachePath=="")
+			if(teleportSettings.cachePath=="" || !System.IO.File.Exists(teleportSettings.cachePath))
 				teleportSettings.cachePath = System.IO.Directory.GetParent(Application.dataPath).ToString().Replace("\\","/") + "/teleport_cache";
 
 #endif
