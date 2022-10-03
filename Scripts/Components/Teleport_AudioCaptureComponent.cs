@@ -45,7 +45,7 @@ namespace teleport
 
         void LateUpdate()
         {
-            if (!running || !teleportSettings.casterSettings.isStreamingAudio)
+            if (!running || !teleportSettings.serverSettings.isStreamingAudio)
             {
                 return;
             }
@@ -76,7 +76,7 @@ namespace teleport
         // This function is called on the audio thread
         void OnAudioFilterRead(float[] data, int channels)
         {
-            if (!running || !teleportSettings.casterSettings.isStreamingAudio || data.Length <= 0)
+            if (!running || !teleportSettings.serverSettings.isStreamingAudio || data.Length <= 0)
             {
                 return;
             }

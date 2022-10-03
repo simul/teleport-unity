@@ -140,52 +140,52 @@ namespace teleport
 						var field = orderedFields[r];
 						if (field.FieldType == typeof(Int32))
 						{
-							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.IntField(field.Name, (Int32)field.GetValue(teleportSettings.casterSettings)));
+							field.SetValue(teleportSettings.serverSettings, EditorGUILayout.IntField(field.Name, (Int32)field.GetValue(teleportSettings.serverSettings)));
 						}
 						else if (field.FieldType == typeof(Int64))
 						{
-							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.LongField(field.Name, (Int64)field.GetValue(teleportSettings.casterSettings)));
+							field.SetValue(teleportSettings.serverSettings, EditorGUILayout.LongField(field.Name, (Int64)field.GetValue(teleportSettings.serverSettings)));
 						}
 						else if (field.FieldType == typeof(byte))
 						{
-							int ival=(int)((byte)field.GetValue(teleportSettings.casterSettings));
+							int ival=(int)((byte)field.GetValue(teleportSettings.serverSettings));
 							byte bval = (byte)EditorGUILayout.IntField(field.Name, ival);
-							field.SetValue(teleportSettings.casterSettings,bval);
+							field.SetValue(teleportSettings.serverSettings,bval);
 						}
 						else if (field.FieldType == typeof(float))
 						{
-							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.FloatField(field.Name, (float)field.GetValue(teleportSettings.casterSettings)));
+							field.SetValue(teleportSettings.serverSettings, EditorGUILayout.FloatField(field.Name, (float)field.GetValue(teleportSettings.serverSettings)));
 						}
 						else if (field.FieldType == typeof(string))
 						{
-							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.TextField(field.Name, field.GetValue(teleportSettings.casterSettings).ToString()));
+							field.SetValue(teleportSettings.serverSettings, EditorGUILayout.TextField(field.Name, field.GetValue(teleportSettings.serverSettings).ToString()));
 						}
 						else if (field.FieldType == typeof(bool))
 						{
-							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.Toggle(field.Name, (bool)field.GetValue(teleportSettings.casterSettings)));
+							field.SetValue(teleportSettings.serverSettings, EditorGUILayout.Toggle(field.Name, (bool)field.GetValue(teleportSettings.serverSettings)));
 						}
 						else if (field.FieldType == typeof(avs.VideoCodec))
 						{
-							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.EnumPopup(field.Name, (avs.VideoCodec)field.GetValue(teleportSettings.casterSettings)));
+							field.SetValue(teleportSettings.serverSettings, EditorGUILayout.EnumPopup(field.Name, (avs.VideoCodec)field.GetValue(teleportSettings.serverSettings)));
 						}
 						else if (field.FieldType == typeof(avs.RateControlMode))
 						{
-							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.EnumPopup(field.Name, (avs.RateControlMode)field.GetValue(teleportSettings.casterSettings)));
+							field.SetValue(teleportSettings.serverSettings, EditorGUILayout.EnumPopup(field.Name, (avs.RateControlMode)field.GetValue(teleportSettings.serverSettings)));
 						}
 						else if (field.FieldType == typeof(teleport.ControlModel))
 						{
-							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.EnumPopup(field.Name, (teleport.ControlModel)field.GetValue(teleportSettings.casterSettings)));
+							field.SetValue(teleportSettings.serverSettings, EditorGUILayout.EnumPopup(field.Name, (teleport.ControlModel)field.GetValue(teleportSettings.serverSettings)));
 						}
 						else if (field.FieldType == typeof(teleport.BackgroundMode))
 						{
-							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.EnumPopup(field.Name, (teleport.BackgroundMode)field.GetValue(teleportSettings.casterSettings)));
+							field.SetValue(teleportSettings.serverSettings, EditorGUILayout.EnumPopup(field.Name, (teleport.BackgroundMode)field.GetValue(teleportSettings.serverSettings)));
 						}
 						else if (field.FieldType == typeof(Color))
 						{
-							field.SetValue(teleportSettings.casterSettings, EditorGUILayout.ColorField(field.Name, (Color)field.GetValue(teleportSettings.casterSettings)));
+							field.SetValue(teleportSettings.serverSettings, EditorGUILayout.ColorField(field.Name, (Color)field.GetValue(teleportSettings.serverSettings)));
 						}
 						else
-							EditorGUILayout.LabelField(field.Name, field.FieldType.ToString() + " " + field.GetValue(teleportSettings.casterSettings).ToString());
+							EditorGUILayout.LabelField(field.Name, field.FieldType.ToString() + " " + field.GetValue(teleportSettings.serverSettings).ToString());
 
 					}
 				}

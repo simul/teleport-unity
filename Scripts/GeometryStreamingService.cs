@@ -335,8 +335,8 @@ namespace teleport
 			//Detect changes in geometry that needs to be streamed to the client.
 			if(teleportSettings.LayersToStream != 0)
 			{
-				List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.casterSettings.detectionSphereRadius, teleportSettings.LayersToStream));
-				List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.casterSettings.detectionSphereRadius + teleportSettings.casterSettings.detectionSphereBufferDistance, teleportSettings.LayersToStream));
+				List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.serverSettings.detectionSphereRadius, teleportSettings.LayersToStream));
+				List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.serverSettings.detectionSphereRadius + teleportSettings.serverSettings.detectionSphereBufferDistance, teleportSettings.LayersToStream));
 				List<Collider> gainedColliders = new List<Collider>(innerSphereCollisions.Except(streamedColliders));
 				List<Collider> lostColliders = new List<Collider>(streamedColliders.Except(outerSphereCollisions));
 				

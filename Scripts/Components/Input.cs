@@ -54,6 +54,7 @@ namespace teleport
 		private Dictionary<InputID, bool> previousButtonPresses;
 		public void AddDelegate(InputID inputID, InputEventDelegate d, InputEventType t)
 		{
+			//Debug.Log("AddDelegate " + inputID + " with " + d.ToString());
 			if (t==InputEventType.Press||t==InputEventType.Either)
 			{ 
 				if(pressDelegates.ContainsKey(inputID))
@@ -164,6 +165,7 @@ namespace teleport
 			//Copy old button presses for just triggered comparisons.
 			foreach (avs.InputEventBinary binaryEvent in binaryEvents)
 			{
+				Debug.Log("binaryEvent " + binaryEvent.ToString());
 				if (binaryEvent.activated)
 				{
 					if (pressDelegates.ContainsKey(binaryEvent.inputID) && pressDelegates[binaryEvent.inputID] != null)

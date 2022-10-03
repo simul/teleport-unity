@@ -11,74 +11,75 @@ namespace teleport
 	/// <summary>
 	/// A class to store the connection between GameObjects and Meshes, which is lost when meshes are merged at the start of play.
 	/// </summary>
-	[Serializable]
-	public class SceneReferenceManager : ScriptableObject, ISerializationCallbackReceiver
+	public class SceneReferenceManager : MonoBehaviour, ISerializationCallbackReceiver
 	{
 		//Used to serialise dictionary, so it can be refilled when the object is deserialised.
-		#region CustomSerialisation
+
 		bool isAwake = false;
-		[SerializeField, HideInInspector] string[] gameObjectReferences_keys;
-		[SerializeField, HideInInspector] ResourceReferences[] gameObjectReferences_values;
-		#endregion
+		[SerializeField] UnityEngine.GameObject[] gameObjectReferences_keys;
+		[SerializeField] MeshReference[] gameObjectReferences_values;
+
 
 		[Serializable]
 		//References a GameObject has to resources it uses.
-		public struct ResourceReferences
+		public struct MeshReference
 		{
 			public Mesh mesh;
 		}
+		[NonSerialized]
+		private Dictionary<UnityEngine.GameObject, MeshReference> meshReferences = new Dictionary<UnityEngine.GameObject, MeshReference>(); 
 
-		[Serializable]
-		//Struct used to save references to disk in persistent format.
-		private struct ReferencesSaveFormat
-		{
-			public string gameObjectPath;
-
-			public string meshGUID;
-			public string meshAssetPath;
-			public string meshName;
-		}
-
-		private const string RESOURCES_PATH = "Assets/Resources/";
-		private const string TELEPORT_VR_PATH = "TeleportVR/";
-		//<GameObject Hierarchy Path, ResourceReferences of GameObject>.
-		private Dictionary<string, ResourceReferences> gameObjectReferences = new Dictionary<string, ResourceReferences>(); 
-
-		private static string directoryLocation; //Directory we save persistent references file to.
-		private static string fileLocation; //File path of persistent references file.
-
-		private static SceneReferenceManager instance;
+		private static Dictionary<Scene,SceneReferenceManager> sceneReferenceManagers=new Dictionary<Scene, SceneReferenceManager>();
 
 		//STATIC FUNCTIONS
-
-		public static SceneReferenceManager GetSceneReferenceManager()
+		public static Dictionary<Scene, SceneReferenceManager>  GetSceneReferenceManagers()
 		{
-			if(instance == null)
-			{
-				instance = Resources.Load<SceneReferenceManager>(TELEPORT_VR_PATH + nameof(SceneReferenceManager));
-			}
-
-#if UNITY_EDITOR
-			if(instance == null)
-			{
-				TeleportSettings.EnsureAssetPath(RESOURCES_PATH + TELEPORT_VR_PATH);
-				string assetPath = RESOURCES_PATH + TELEPORT_VR_PATH + nameof(SceneReferenceManager) + ".asset";
-
-				instance = CreateInstance<SceneReferenceManager>();
-				UnityEditor.AssetDatabase.CreateAsset(instance, assetPath);
-				UnityEditor.AssetDatabase.SaveAssets();
-
-				Debug.LogWarning($"Scene Reference Manager asset created with path \"{assetPath}\"!");
-			}
-#endif
-
-			return instance;
+			return sceneReferenceManagers;
 		}
 
+		public static SceneReferenceManager GetSceneReferenceManager(Scene scene)
+		{
+			if(scene==null||scene.path==null)
+				return null;
+			if (sceneReferenceManagers.TryGetValue(scene, out SceneReferenceManager res))
+			{
+				if (res != null)
+					return res;
+			}
+			SceneReferenceManager sceneReferenceManager = null;
+			var objs = scene.GetRootGameObjects();
+			foreach (var o in objs)
+			{
+				SceneReferenceManager m = o.GetComponentInChildren<SceneReferenceManager>();
+				if (m)
+				{
+					sceneReferenceManager = m;
+					break;
+				}
+			}
+			if (sceneReferenceManager == null)
+				sceneReferenceManager = FindObjectOfType<SceneReferenceManager>();
+			if (sceneReferenceManager == null)
+			{
+				var tempObject = new GameObject("SceneReferenceManager");
+				//Add Components
+				tempObject.AddComponent<SceneReferenceManager>();
+				sceneReferenceManager = tempObject.GetComponent<SceneReferenceManager>();
+			}
+			sceneReferenceManagers[scene] = sceneReferenceManager;
+			
+			SceneManager.sceneUnloaded += OnSceneUnloaded;
+			return sceneReferenceManager;
+		}
+		static public void OnSceneUnloaded(Scene scene)
+		{
+			sceneReferenceManagers.Remove(scene);
+			SceneManager.sceneUnloaded -= OnSceneUnloaded;
+		}
 		///PUBLIC FUNCTIONS
 
 		//Add GameObject to SceneReferenceManager; extracting references to resources it uses.
-		public ResourceReferences AddGameObject(GameObject gameObject, string gameObjectPath = null)
+		public MeshReference AddGameObject(GameObject gameObject, string gameObjectPath = null)
 		{
 			if(!gameObject)
 			{
@@ -88,7 +89,7 @@ namespace teleport
 			//Retrieve path of GameObject, if gameObjectPath is null.
 			gameObjectPath = gameObjectPath ?? GetGameObjectPath(gameObject);
 			//Only return what we have in the dictionary, if we are in play-mode; we want to re-extract if we are in the editor to update to any changes made.
-			if(Application.isPlaying && gameObjectReferences.TryGetValue(gameObjectPath, out ResourceReferences references))
+			if(Application.isPlaying && meshReferences.TryGetValue(gameObject, out MeshReference references))
 			{
 				return references;
 			}
@@ -100,7 +101,10 @@ namespace teleport
 				return references;
 			}
 
-			gameObjectReferences[gameObjectPath] = references;
+			meshReferences[gameObject] = references;
+#if UNITY_EDITOR
+			UnityEditor.EditorUtility.SetDirty(this);
+#endif
 			return references;
 		}
 
@@ -110,103 +114,43 @@ namespace teleport
 		{
 			string gameObjectPath = GetGameObjectPath(gameObject);
 			// We want to re-extract the references if we are not in play-mode; i.e. we want to update to changes made in the editor.
-			if(!Application.isPlaying || !gameObjectReferences.TryGetValue(gameObjectPath, out ResourceReferences references))
+			if(!Application.isPlaying || !meshReferences.TryGetValue(gameObject, out MeshReference references))
 			{
 				references = AddGameObject(gameObject, gameObjectPath);
 			}
 
 			return references.mesh;
 		}
+		public Dictionary<GameObject, MeshReference> GetObjectMeshMap()
+		{
+			return meshReferences;
+		}
+		static public void ClearAll()
+		{
+			foreach (var s in sceneReferenceManagers)
+			{ 
+				s.Value.Clear();
+			}
+		}
 
 		public void Clear()
 		{
-			gameObjectReferences.Clear();
-			SaveToDisk();
+			meshReferences.Clear();
 		}
-
-		//Saves ResourceReferences to disk.
-		public void SaveToDisk()
-		{
-			if(!Directory.Exists(directoryLocation))
-			{
-				Directory.CreateDirectory(directoryLocation);
-			}
-
-			FileStream file;
-			if(File.Exists(fileLocation))
-			{
-				file = File.OpenWrite(fileLocation);
-			}
-			else
-			{
-				file = File.Create(fileLocation);
-			}
-
-			BinaryFormatter binaryFormatter = new BinaryFormatter();
-			binaryFormatter.Serialize(file, gameObjectReferences.Count);
-			foreach(var referencePair in gameObjectReferences)
-			{
-				ReferencesSaveFormat saveFormat = ToSaveFormat(referencePair.Value, referencePair.Key);
-
-				//We use JSON to more easily adapt to structure changes in the save format.
-				string json = JsonUtility.ToJson(saveFormat);
-				binaryFormatter.Serialize(file, json);
-			}
-			file.Close();
-		}
-
-		//Loads ResourceReferences from disk.
-		public bool LoadFromDisk()
-		{
-			FileStream file;
-			if(File.Exists(fileLocation))
-			{
-				file = File.OpenRead(fileLocation);
-			}
-			else
-			{
-				return false;
-			}
-
-			// Clear out old data.
-			gameObjectReferences.Clear();
-
-			BinaryFormatter binaryFormatter = new BinaryFormatter();
-			int referenceCount = (int)binaryFormatter.Deserialize(file);
-			for(int i = 0; i < referenceCount; i++)
-			{
-				//We use JSON to more easily adapt to structure changes in the save format.
-				string json = (string)binaryFormatter.Deserialize(file);
-				ReferencesSaveFormat saveFormat = JsonUtility.FromJson<ReferencesSaveFormat>(json);
-
-				ResourceReferences resourceReferences = FromSaveFormat(saveFormat, out string gameObjectPath);
-				gameObjectReferences[gameObjectPath] = resourceReferences;
-			}
-			file.Close();
-
-			return true;
-		}
-
 		///INHERITED FUNCTIONS
 
 		public void OnBeforeSerialize()
 		{
 			//Save everything to serialisable arrays, before the dictionary is discarded by Unity.
-			gameObjectReferences_keys = gameObjectReferences.Keys.ToArray();
-			gameObjectReferences_values = gameObjectReferences.Values.ToArray();
-			gameObjectReferences.Clear();
+			gameObjectReferences_keys = meshReferences.Keys.ToArray();
+			gameObjectReferences_values = meshReferences.Values.ToArray();
 		}
 
 		public void OnAfterDeserialize()
 		{
-			//Don't run during boot.
-			if(isAwake)
+			for(int i = 0; i < gameObjectReferences_keys.Length; i++)
 			{
-				//Re-create the dictionary from the deserialised arrays.
-				for(int i = 0; i < gameObjectReferences_keys.Length; i++)
-				{
-					gameObjectReferences[gameObjectReferences_keys[i]] = gameObjectReferences_values[i];
-				}
+				meshReferences[gameObjectReferences_keys[i]] = gameObjectReferences_values[i];
 			}
 		}
 
@@ -219,15 +163,10 @@ namespace teleport
 
 		private void OnEnable()
 		{
-			//Must be done in OnEnable, as this is a ScriptableObject.
-			directoryLocation = $"{Application.persistentDataPath}/TeleportVR/";
-			fileLocation = $"{directoryLocation}/resource_references.dat";
-			LoadFromDisk();
 		}
 
 		private void OnDisable()
 		{
-			SaveToDisk();
 		}
 
 		///PRIVATE FUNCTIONS
@@ -256,37 +195,6 @@ namespace teleport
 		}
 
 #if UNITY_EDITOR
-		public static bool GetResourcePath(UnityEngine.Object obj, out string path)
-		{
-			long localId = 0;
-			string guid;
-			bool result = UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out localId);
-			if (!result)
-			{ 
-				path="";
-				return false;
-			}
-			path = UnityEditor.AssetDatabase.GetAssetPath(obj);
-			// Problem is, Unity can bundle a bunch of individual meshes in one asset file, but use them completely independently.
-			// We can't therefore just use the file name.
-			if(obj.GetType()==typeof(UnityEngine.Mesh))
-			{
-				path=Path.GetDirectoryName(path);
-				path=Path.Combine(path,obj.name);
-			}
-			path=path.Replace("Assets/","");
-			// Need something unique. Within default and editor resources are thousands of assets, often with clashing names.
-			// So here, we do use the localId's to distinguish them.
-			if (path.Contains("unity default resources"))
-			{
-				path +="/"+obj.name+"_"+ localId;
-			}
-			if (path.Contains("unity editor resources"))
-			{
-				path += "/" + obj.name + "_" + localId;
-			}
-			return true;
-		}
 		public static bool GetGUIDAndLocalFileIdentifier(UnityEngine.Object obj, out string guid)
 		{
 			long localId =0;
@@ -299,7 +207,7 @@ namespace teleport
 		}
 #endif
 		//Returns first-found mesh or skinned mesh on the GameObject; on the object itself, or its child-hierarchy.
-		private Mesh GetMesh(GameObject gameObject)
+		static private Mesh GetMesh(GameObject gameObject)
 		{
 			MeshFilter meshFilter = gameObject.GetComponentInChildren<MeshFilter>();
 			if(meshFilter)
@@ -361,56 +269,5 @@ namespace teleport
 			return null;
 		}
 
-		//FILE READ/WRITE FUNCTIONS
-
-		//Converts ResourceReferences to ReferencesSaveFormat.
-		private ReferencesSaveFormat ToSaveFormat(ResourceReferences resourceReferences, string gameObjectPath)
-		{
-#if UNITY_EDITOR
-			ReferencesSaveFormat saveFormat = new ReferencesSaveFormat();
-			saveFormat.gameObjectPath = gameObjectPath;
-
-			if(resourceReferences.mesh)
-			{
-				GetGUIDAndLocalFileIdentifier(resourceReferences.mesh, out saveFormat.meshGUID);
-				saveFormat.meshAssetPath = UnityEditor.AssetDatabase.GetAssetPath(resourceReferences.mesh);
-				saveFormat.meshName = resourceReferences.mesh.name;
-			}
-
-			return saveFormat;
-#else
-		return new ReferencesSaveFormat();
-#endif
-		}
-
-		//Converts ReferencesSaveFormat to ResourceReferences; outputs path of game object as second parameter.
-		private ResourceReferences FromSaveFormat(ReferencesSaveFormat saveFormat, out string gameObjectPath)
-		{
-#if UNITY_EDITOR
-			ResourceReferences resourceReferences = new ResourceReferences();
-			//Load all assets at path; there may be multiple meshes sharing a GUID, but differentiated by name.
-			if (saveFormat.meshGUID.Length < 32)
-			{
-				Debug.LogWarning($"meshGUID "+saveFormat.meshGUID+" is too small!");
-				gameObjectPath="";
-				return resourceReferences;
-			}
-			string meshAssetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(saveFormat.meshGUID.Substring(0,32));
-			UnityEngine.Object[] assetsAtPath = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(meshAssetPath);
-
-			//Match meshes at the path with the same mesh name; this should only give one result.
-			List<UnityEngine.Object> meshesAtPath = new List<UnityEngine.Object>(assetsAtPath.Where(i => i.name == saveFormat.meshName && (i.GetType() == typeof(Mesh) || i.GetType().IsSubclassOf(typeof(Mesh)))));
-			if(meshesAtPath.Count != 0)
-			{
-				resourceReferences.mesh = (Mesh)meshesAtPath[0];
-			}
-
-			gameObjectPath = saveFormat.gameObjectPath;
-			return resourceReferences;
-#else
-		gameObjectPath = "";
-		return new ResourceReferences();
-#endif
-		}
 	}
 }

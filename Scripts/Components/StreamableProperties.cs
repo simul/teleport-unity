@@ -18,6 +18,20 @@ namespace teleport
 		public uint _renderingMask =0;
 		//! Don't use as a streaming root, even if it has a collider.
 		public bool streamOnlyWithParent=false;
+		bool _isStationary=true;
+		public bool isStationary
+		{
+			get
+			{
+				return _isStationary;
+			}
+			#if UNITY_EDITOR
+			set
+			{
+				_isStationary=value;
+			}
+			#endif
+		}
 		public uint RenderingMask
 		{
 		get

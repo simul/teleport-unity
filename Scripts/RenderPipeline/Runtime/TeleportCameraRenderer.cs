@@ -376,12 +376,12 @@ namespace teleport
 
 			CullingResults cullingResultsAll;
 			float oldNearClip = camera.nearClipPlane;
-			if (teleportSettings.casterSettings.isStreamingGeometry)
+			if (teleportSettings.serverSettings.isStreamingGeometry)
 			{
-				camera.nearClipPlane = teleportSettings.casterSettings.detectionSphereRadius * 0.5f;
+				camera.nearClipPlane = teleportSettings.serverSettings.detectionSphereRadius * 0.5f;
 			}
 			
-			if (Cull(context, camera, out cullingResultsAll, !teleportSettings.casterSettings.usePerspectiveRendering))
+			if (Cull(context, camera, out cullingResultsAll, !teleportSettings.serverSettings.usePerspectiveRendering))
 			{
 				
 				TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
@@ -400,10 +400,10 @@ namespace teleport
 					max_light = Math.Max(Math.Max(Math.Max(max_light, clr.r), clr.g), clr.b);
 				}
 				float diffuseAmbientScale=1.0F/max_light;
-				if (teleportSettings.casterSettings.usePerspectiveRendering)
+				if (teleportSettings.serverSettings.usePerspectiveRendering)
 				{
 					// Draw scene
-					camera.fieldOfView = teleportSettings.casterSettings.perspectiveFOV;
+					camera.fieldOfView = teleportSettings.serverSettings.perspectiveFOV;
 					DrawPerspective(context, camera, cullingResultsAll, lightingOrder);
 					// Draw cubemaps
 					camera.fieldOfView = 90.0F;
@@ -419,7 +419,7 @@ namespace teleport
 						DrawCubemapFace(context, camera, camDir, cullingResultsAll, lightingOrder, i, diffuseAmbientScale);
 					}
 				}
-				if (teleportSettings.casterSettings.StreamWebcam)
+				if (teleportSettings.serverSettings.StreamWebcam)
                 {
 					videoEncoding.EncodeWebcam(context, camera, SessionComponent.clientSettings.webcamPos, SessionComponent.clientSettings.webcamSize, sceneCapture);	
 				}
@@ -431,7 +431,7 @@ namespace teleport
 				camera.transform.rotation = oldRot;
 
 				var videoEncoder = sceneCapture.VideoEncoder;
-				if (ClientID != 0 && teleportSettings.casterSettings.StreamVideo && videoEncoder != null)
+				if (ClientID != 0 && teleportSettings.serverSettings.StreamVideo && videoEncoder != null)
 				{
 					var tagDataID = sceneCapture.CurrentTagID;
 					videoEncoder.CreateEncodeCommands(context, camera, tagDataID, max_light);
@@ -496,7 +496,7 @@ namespace teleport
 			var sceneCapture = SessionComponent.sceneCaptureComponent;
 			StartSample(context, sampleName);
 			{
-				if (teleportSettings.casterSettings.usePerspectiveRendering)
+				if (teleportSettings.serverSettings.usePerspectiveRendering)
 				{
 					context.SetupCameraProperties(camera);
 					Clear(context, camera);
@@ -530,7 +530,7 @@ namespace teleport
 					if(SessionComponent.clientSettings.captureCubeTextureSize>0&& SessionComponent.clientSettings.backgroundMode==BackgroundMode.VIDEO)
 					{ 
 						videoEncoding.EncodeColor(context, camera, face, sceneCapture);
-						if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
+						if (!teleportSettings.serverSettings.useAlphaLayerEncoding)
 						{
 							int faceSize = SessionComponent.clientSettings.captureCubeTextureSize;
 							int halfFaceSize = faceSize / 2;
@@ -576,13 +576,13 @@ namespace teleport
 
 				DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder,false, teleportSettings.highlightStreamableColour);
 				DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
-				if ( teleportSettings.casterSettings.perspectiveWidth > 0)
+				if ( teleportSettings.serverSettings.perspectiveWidth > 0)
 				{ 
 					videoEncoding.EncodeColor(context, camera, 0, sceneCapture);
-					if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
+					if (!teleportSettings.serverSettings.useAlphaLayerEncoding)
 					{
-						int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
-						int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
+						int perspectiveWidth = teleportSettings.serverSettings.perspectiveWidth;
+						int perspectiveHeight = teleportSettings.serverSettings.perspectiveHeight;
 						var depthViewport = new Rect(0, perspectiveHeight, perspectiveWidth / 2, perspectiveHeight / 2);
 						videoEncoding.EncodeDepth(context, camera, depthViewport, sceneCapture);
 					}

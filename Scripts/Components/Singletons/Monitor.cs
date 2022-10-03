@@ -38,9 +38,6 @@ namespace teleport
 		delegate void OnSetHeadPose(uid clientID, in avs.Pose newHeadPose);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate void OnSetOriginFromClient(uid clientID, UInt64 validCounter, in avs.Pose newHeadPose);
-
-		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void OnSetControllerPose(uid clientID, int index, in avs.Pose newHeadPose);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
@@ -77,7 +74,6 @@ namespace teleport
 			public OnClientStoppedRenderingNode clientStoppedRenderingNode;
 			public OnClientStartedRenderingNode clientStartedRenderingNode;
 			public OnSetHeadPose headPoseSetter;
-			public OnSetOriginFromClient setOriginFromCLientFn;
 			public OnSetControllerPose controllerPoseSetter;
 			public OnNewInput newInputProcessing;
 			public OnDisconnect disconnect;
@@ -212,16 +208,16 @@ namespace teleport
 			SceneManager.sceneLoaded += OnSceneLoaded;
 
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+			UpdateServerSettings(teleportSettings.serverSettings);
 			InitialiseState initialiseState = new InitialiseState
 			{
 				clientStoppedRenderingNode = ClientStoppedRenderingNode,
 				clientStartedRenderingNode = ClientStartedRenderingNode,
 				headPoseSetter = Teleport_SessionComponent.StaticSetHeadPose,
-				setOriginFromCLientFn = Teleport_SessionComponent.StaticSetOriginFromClient,
 				controllerPoseSetter = Teleport_SessionComponent.StaticSetControllerPose,
 				newInputProcessing = Teleport_SessionComponent.StaticProcessInput,
 				disconnect = Teleport_SessionComponent.StaticDisconnect,
-				messageHandler = teleportSettings.casterSettings.pipeDllOutputToUnity ? LogMessageHandler : (OnMessageHandler)null,
+				messageHandler = teleportSettings.serverSettings.pipeDllOutputToUnity ? LogMessageHandler : (OnMessageHandler)null,
 				SERVICE_PORT = teleportSettings.listenPort,
 				DISCOVERY_PORT = teleportSettings.discoveryPort,
 				reportHandshake = ReportHandshake,
@@ -255,7 +251,7 @@ namespace teleport
 				audioCapture = go.GetComponent<Teleport_AudioCaptureComponent>();
 			}
 
-			if(!settings.casterSettings.isStreamingAudio)
+			if(!settings.serverSettings.isStreamingAudio)
 			{
 				audioCapture.gameObject.SetActive(false);
 				// Setting active to false on game obect does not disable audio listener or capture component
@@ -374,7 +370,7 @@ namespace teleport
 			if(Application.isPlaying)
 			{
 				TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-				UpdateServerSettings(teleportSettings.casterSettings);
+				UpdateServerSettings(teleportSettings.serverSettings);
 			}
 		}
 

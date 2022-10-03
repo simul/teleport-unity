@@ -8,7 +8,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEngine;
-
+using UnityEngine.SceneManagement;
 using uid = System.UInt64;
 
 namespace avs
@@ -430,8 +430,8 @@ namespace teleport
 
 		#region CustomSerialisation
 		//Dictionaries aren't serialised, so to serialise them I am saving the data to key value arrays. 
-		public UnityEngine.Object[] processedResources_keys = new UnityEngine.Object[0];
-		public uid[] processedResources_values = new uid[0];
+		public UnityEngine.Object[] sessionResourceUids_keys = new UnityEngine.Object[0];
+		public uid[] sessionResourceUids_values = new uid[0];
 		#endregion
 
 		public List<TextureExtractionData> texturesWaitingForExtraction = new List<TextureExtractionData>();
@@ -441,15 +441,18 @@ namespace teleport
 		private const string RESOURCES_PATH = "Assets/Resources/";
 		private const string TELEPORT_VR_PATH = "TeleportVR/";
 
-		private readonly Dictionary<UnityEngine.Object, uid> processedResources = new Dictionary<UnityEngine.Object, uid>(); //<Resource, ResourceID>
+		private readonly Dictionary<UnityEngine.Object, uid> sessionResourceUids = new Dictionary<UnityEngine.Object, uid>(); //<Resource, ResourceID>
 
+		public Dictionary<UnityEngine.Object, uid> GetSessionResourceUids()
+		{
+			return sessionResourceUids;
+		}
 		private bool isAwake = false;
 
 		[SerializeField]
 		private List<AnimationClip> processedAnimations = new List<AnimationClip>(); //AnimationClips stored in the GeometrySource that we need to add an event to.
 		private AnimationEvent teleportAnimationHook = new AnimationEvent(); //Animation event that is added to animation clips, so we can detect when a new animation starts playing.
 
-		[SerializeField] private SceneReferenceManager sceneReferenceManager = null;
 
 		private static GeometrySource geometrySource = null;
 
@@ -480,9 +483,9 @@ namespace teleport
 
 		public void OnBeforeSerialize()
 		{
-			processedResources_keys = processedResources.Keys.ToArray();
-			processedResources_values = processedResources.Values.ToArray();
-			processedResources.Clear();
+			sessionResourceUids_keys = sessionResourceUids.Keys.ToArray();
+			sessionResourceUids_values = sessionResourceUids.Values.ToArray();
+			sessionResourceUids.Clear();
 		}
 
 		public void OnAfterDeserialize()
@@ -490,10 +493,10 @@ namespace teleport
 			//Don't run during boot.
 			if (isAwake)
 			{
-				for (int i = 0; i < processedResources_keys.Length; i++)
+				for (int i = 0; i < sessionResourceUids_keys.Length; i++)
 				{
-					processedResources[processedResources_keys[i]] = processedResources_values[i];
-					//Debug.Log("Restoring resource " + processedResources_values[i]);// ;
+					sessionResourceUids[sessionResourceUids_keys[i]] = sessionResourceUids_values[i];
+					//Debug.Log("Restoring resource " + sessionResourceUids_values[i]);// ;
 				}
 			}
 		}
@@ -505,8 +508,10 @@ namespace teleport
 			{
 				return;
 			}
+		#if UNITY_EDITOR
 			string shaderGUID = AssetDatabase.FindAssets("ExtractTextureData t:ComputeShader")[0];
 			textureShader = AssetDatabase.LoadAssetAtPath<ComputeShader>(UnityEditor.AssetDatabase.GUIDToAssetPath(shaderGUID));
+		#endif
 			// Do this ASAP to prevent infinite loop.
 			geometrySource =this;
 			LoadFromDisk();
@@ -524,21 +529,19 @@ namespace teleport
 			compressedTexturesFolderPath = teleportSettings.cachePath + "/basis_textures/";
 
 			//Remove nodes that have been lost due to level change.
-			var pairsToDelete = processedResources.Where(pair => pair.Key == null).ToArray();
+			var pairsToDelete = sessionResourceUids.Where(pair => pair.Key == null).ToArray();
 			foreach (var pair in pairsToDelete)
 			{
 				RemoveNode(pair.Value);
-				processedResources.Remove(pair.Key);
+				sessionResourceUids.Remove(pair.Key);
 			}
 
-			sceneReferenceManager = SceneReferenceManager.GetSceneReferenceManager();
 		}
 
 		public void SaveToDisk()
 		{
 			var teleportSettings = TeleportSettings.GetOrCreateSettings();
 			SetCachePath(teleportSettings.cachePath);
-			sceneReferenceManager.SaveToDisk();
 			SaveGeometryStore();
 		}
 
@@ -546,7 +549,7 @@ namespace teleport
 		{
 			var teleportSettings = TeleportSettings.GetOrCreateSettings();
 			SetCachePath(teleportSettings.cachePath);
-			processedResources.Clear();
+			sessionResourceUids.Clear();
 
 			//Load data from files.
 			// These are the dll-side resource definitions.
@@ -565,12 +568,54 @@ namespace teleport
 
 		public void ClearData()
 		{
-			processedResources.Clear();
+			sessionResourceUids.Clear();
 			texturesWaitingForExtraction.Clear();
-			sceneReferenceManager.Clear();
+			SceneReferenceManager.ClearAll();
+			SceneResourcePathManager.ClearAll();
 			ClearGeometryStore();
 		}
-
+		public static bool GetResourcePath(UnityEngine.Object obj, out string path)
+		{ 
+			var resourcePathManager = SceneResourcePathManager.GetSceneResourcePathManager(SceneManager.GetActiveScene());
+			path = resourcePathManager.GetResourcePath(obj);
+			if (path!=null&&path.Length > 0)
+				return true;
+#if UNITY_EDITOR
+			long localId = 0;
+			string guid;
+			bool result = UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out localId);
+			if (!result)
+			{
+				path = "";
+				return false;
+			}
+			path = UnityEditor.AssetDatabase.GetAssetPath(obj);
+			// Problem is, Unity can bundle a bunch of individual meshes in one asset file, but use them completely independently.
+			// We can't therefore just use the file name.
+			if (obj.GetType() == typeof(UnityEngine.Mesh))
+			{
+				path = Path.GetDirectoryName(path);
+				path = Path.Combine(path, obj.name);
+			}
+			// Need something unique. Within default and editor resources are thousands of assets, often with clashing names.
+			// So here, we do use the localId's to distinguish them.
+			if (path.Contains("unity default resources"))
+			{
+				path += "/" + obj.name + "_" + localId;
+			}
+			if (path.Contains("unity editor resources"))
+			{
+				path += "/" + obj.name + "_" + localId;
+				// we can't use these.
+				return false;
+			}
+			path= SceneResourcePathManager.StandardizePath(path, "Assets/");
+			resourcePathManager.SetResourcePath(obj,path);
+			return true;
+#else
+			return false;
+#endif
+		}
 		//Add a resource to the GeometrySource; for external extractors.
 		//	resource : Resource that will be tracked by the GeometrySource.
 		//	resourceID : ID of the resource on the unmanaged side.
@@ -590,7 +635,7 @@ namespace teleport
 			}
 
 			//We only want to add the animation clip to the list once.
-			if(resource is AnimationClip && !processedResources.TryGetValue(resource, out uid _))
+			if(resource is AnimationClip && !sessionResourceUids.TryGetValue(resource, out uid _))
 			{
 				AnimationClip animation = (AnimationClip)resource;
 				processedAnimations.Add(animation);
@@ -603,14 +648,14 @@ namespace teleport
 				}
 			}
 
-			processedResources[resource] = resourceID;
+			sessionResourceUids[resource] = resourceID;
 			return true;
 		}
 
 		//Returns whether the GeometrySource has processed the resource.
 		public bool HasResource(UnityEngine.Object resource)
 		{
-			return processedResources.ContainsKey(resource);
+			return sessionResourceUids.ContainsKey(resource);
 		}
 
 		//Returns the ID of the resource if it has been processed, or zero if the resource has not been processed or was passed in null.
@@ -621,7 +666,7 @@ namespace teleport
 				return 0;
 			}
 
-			processedResources.TryGetValue(resource, out uid nodeID);
+			sessionResourceUids.TryGetValue(resource, out uid nodeID);
 			return nodeID;
 		}
 
@@ -635,14 +680,14 @@ namespace teleport
 			uid [] uids=new uid[resources.Length];
 			for(int i=0;i<resources.Length;i++) 
 			{
-				processedResources.TryGetValue(resources[i], out uids[i]);
+				sessionResourceUids.TryGetValue(resources[i], out uids[i]);
 			}
 			return uids;
 		}
 
 		public UnityEngine.Object FindResource(uid resourceID)
 		{
-			return (resourceID == 0) ? null : processedResources.FirstOrDefault(x => x.Value == resourceID).Key;
+			return (resourceID == 0) ? null : sessionResourceUids.FirstOrDefault(x => x.Value == resourceID).Key;
 		}
 
 		//If the passed collision layer is streamed.
@@ -677,19 +722,32 @@ namespace teleport
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 
 			//Find all GameObjects in open scenes that have the streamed tag.
-			List<GameObject> streamableObjects;
-			if (teleportSettings.TagToStream.Length > 0)
+			List<GameObject> streamableObjects=new List<GameObject>();
+			if(SceneManager.sceneCount==0)
+				return streamableObjects;
+			for (int i = 0; i < SceneManager.sceneCount; i++)
 			{
-				GameObject[] taggedGameObjects = Resources.FindObjectsOfTypeAll<GameObject>().Where(g => g.CompareTag(teleportSettings.TagToStream)).ToArray();
-				streamableObjects = new List<GameObject>(taggedGameObjects);
+				Scene scene=SceneManager.GetSceneAt(i);
+				var objs = scene.GetRootGameObjects();
+				foreach (var o in objs)
+				{
+					Transform[] transforms = o.GetComponentsInChildren<Transform>();
+					foreach (var t in transforms)
+					{
+						if (teleportSettings.TagToStream.Length > 0)
+						{
+							if(t.gameObject.CompareTag(teleportSettings.TagToStream))
+								streamableObjects.Add(t.gameObject);
+						}
+						else
+						{
+							streamableObjects.Add(t.gameObject);
+						}
+					}
+				}
 			}
-			else
-			{
-				streamableObjects = new List<GameObject>(Resources.FindObjectsOfTypeAll<GameObject>());
-			}
-
 			//Remove GameObjects not on a streamed collision layer.
-			for(int i = streamableObjects.Count - 1; i >= 0; i--)
+			for (int i = streamableObjects.Count - 1; i >= 0; i--)
 			{
 				GameObject gameObject = streamableObjects[i];
 				if(!IsCollisionLayerStreamed(gameObject.layer))
@@ -725,7 +783,7 @@ namespace teleport
 			//we are not forcing an extraction of nodes, and we are not forcing an extraction on the hierarchy of a node.
 			if
 			(
-				processedResources.TryGetValue(gameObject, out uid nodeID) &&
+				sessionResourceUids.TryGetValue(gameObject, out uid nodeID) &&
 				IsNodeStored(nodeID) &&
 				(
 					!isChildExtraction && (forceMask & ForceExtractionMask.FORCE_NODES) == ForceExtractionMask.FORCE_NOTHING ||
@@ -737,10 +795,23 @@ namespace teleport
 			}
 
 			nodeID = nodeID == 0 ? GenerateUid() : nodeID;
-			processedResources[gameObject] = nodeID;
+			sessionResourceUids[gameObject] = nodeID;
 
 			avs.Node extractedNode = new avs.Node();
 			StreamableProperties streamableProperties=gameObject.GetComponent<StreamableProperties>();
+			extractedNode.name = Marshal.StringToBSTR(gameObject.name);
+#if UNITY_EDITOR
+			// if it's not stationary, it will need a StreamableProperties component to let us know, because isStatic is always false in builds for Unity.
+			if (!gameObject.isStatic)
+			{
+				if (streamableProperties == null)
+				{
+					streamableProperties=gameObject.AddComponent<StreamableProperties>();
+				}
+			}
+			if(streamableProperties!=null&&streamableProperties.isStationary != gameObject.isStatic)
+				streamableProperties.isStationary = gameObject.isStatic;
+#endif
 			if (streamableProperties != null)
 			{
 				extractedNode.priority = streamableProperties.priority;
@@ -750,8 +821,7 @@ namespace teleport
 				extractedNode.priority = 0;
 			}
 			Teleport_Streamable teleport_Streamable = gameObject.GetComponent<Teleport_Streamable>();
-			extractedNode.name = Marshal.StringToBSTR(gameObject.name);
-			extractedNode.stationary = (gameObject.isStatic);
+			extractedNode.stationary = streamableProperties? streamableProperties.isStationary:true;
 			
 			extractedNode.ownerClientId = teleport_Streamable!=null? teleport_Streamable.OwnerClient:0;
 			ExtractNodeHierarchy(gameObject, ref extractedNode, forceMask, verify);
@@ -783,16 +853,17 @@ namespace teleport
 				Debug.LogError("Mesh extraction failure! Null mesh passed to AddMesh(...) in GeometrySource!");
 				return 0;
 			}
-
+			// Make sure there's a path for this mesh.
+			GetResourcePath(mesh, out string resourcePath);
 			//We can't extract an unreadable mesh.
-			if(!mesh.isReadable)
+			if (!mesh.isReadable)
 			{
 				Debug.LogWarning($"Failed to extract mesh \"{mesh.name}\"! Mesh is unreadable!");
 				return 0;
 			}
 
 			//Just return the ID; if we have already processed the mesh, the mesh can be found on the unmanaged side, and we are not forcing extraction.
-			if(processedResources.TryGetValue(mesh, out uid meshID))
+			if(sessionResourceUids.TryGetValue(mesh, out uid meshID))
 			{
 				if (IsMeshStored(meshID))
 				{
@@ -802,17 +873,14 @@ namespace teleport
 					}
 				}
 			}
-
-
-				bool running = Application.isPlaying;
+			bool running = Application.isPlaying;
+			//resourcePath = avs.AxesStandard.EngineeringStyle.ToString().Replace("Style", "").ToLower() + "/" + resourcePath;
+			meshID = meshID == 0 ? GetOrGenerateUid(resourcePath) : meshID;
+			sessionResourceUids[mesh] = meshID;
 			// only compress if not running - too slow...
 			// Actually, let's ONLY extract offline. 
 			if (!running)
 			{
-				SceneReferenceManager.GetResourcePath(mesh, out string resourcePath);
-				resourcePath = avs.AxesStandard.EngineeringStyle.ToString().Replace("Style", "").ToLower() + "/" + resourcePath;
-				meshID = meshID == 0 ? GetOrGenerateUid(resourcePath) : meshID;
-				processedResources[mesh] = meshID;
 				bool enable_compression = (forceMask & ForceExtractionMask.FORCE_UNCOMPRESSED) != ForceExtractionMask.FORCE_UNCOMPRESSED;
 				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID, enable_compression && !running,verify);
 				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID, enable_compression && !running, verify);
@@ -820,9 +888,9 @@ namespace teleport
 			}
 			else
 			{
-				if (!processedResources.TryGetValue(mesh, out meshID))
+				if (!sessionResourceUids.TryGetValue(mesh, out meshID))
 				{
- 					Debug.LogError("Mesh missing! Mesh " + mesh.name + " was not in processedResources.");
+ 					Debug.LogError("Mesh missing! Mesh " + mesh.name + " was not in sessionResourceUids.");
 					return 0;
 				}
 				if(!IsMeshStored(meshID))
@@ -832,7 +900,7 @@ namespace teleport
 					return 0;
 				}
 			}
-			return 0;
+			return meshID;
 		}
 
 		public uid AddMaterial(Material material, ForceExtractionMask forceMask)
@@ -843,15 +911,17 @@ namespace teleport
 			}
 
 			//Just return the ID; if we have already processed the material, the material can be found on the unmanaged side, and we are not forcing an update.
-			if(processedResources.TryGetValue(material, out uid materialID) && IsMaterialStored(materialID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
+			if(sessionResourceUids.TryGetValue(material, out uid materialID) && IsMaterialStored(materialID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
 			{
 				return materialID;
 			}
 
-			SceneReferenceManager.GetResourcePath(material, out string resourcePath);
+			if(!GetResourcePath(material, out string resourcePath))
+				return 0;
 			if (materialID == 0)
 			{
 				materialID =  GetOrGenerateUid(resourcePath) ;
+				//Debug.Log("Generated uid "+materialID+ " for "+resourcePath);
 			}
 			else
 			{
@@ -861,7 +931,7 @@ namespace teleport
 					return 0;
 				}
 			}
-			processedResources[material] = materialID;
+			sessionResourceUids[material] = materialID;
 
 			avs.Material extractedMaterial = new avs.Material();
 			extractedMaterial.name = Marshal.StringToBSTR(material.name);
@@ -950,7 +1020,7 @@ namespace teleport
 			if (idx >= 0)
 				compressedFilePath = compressedFilePath.Remove(idx); //Remove file extension.
 			string folderPath = compressedTexturesFolderPath;
-			//Create directiory if it doesn't exist.
+			//Create directory if it doesn't exist.
 			if (!Directory.Exists(folderPath))
 			{
 				Directory.CreateDirectory(folderPath);
@@ -963,6 +1033,7 @@ namespace teleport
 			else return "";
 			return compressedFilePath;
 		}
+	#if UNITY_EDITOR
 		private RenderTexture[] renderTextures = new RenderTexture[0];
 		public bool ExtractTextures(bool forceOverwrite)
 		{
@@ -991,7 +1062,7 @@ namespace teleport
 				int targetWidth = sourceTexture.width;
 				int targetHeight = sourceTexture.height;
 				int scale = 1;
-				while (Math.Max(targetWidth, targetHeight) > teleportSettings.casterSettings.maximumTextureSize)
+				while (Math.Max(targetWidth, targetHeight) > teleportSettings.serverSettings.maximumTextureSize)
 				{
 					targetWidth = (targetWidth + 1) / 2;
 					targetHeight = (targetHeight + 1) / 2;
@@ -1295,17 +1366,18 @@ namespace teleport
 			}
 #endif
 		}
+#endif
 		public void AddTextureData(Texture texture, avs.Texture textureData, bool highQualityUASTC, bool forceOverwrite )
 		{
-			if(!processedResources.TryGetValue(texture, out uid textureID))
+			if(!sessionResourceUids.TryGetValue(texture, out uid textureID))
 			{
 				Debug.LogError(texture.name + " had its data extracted, but is not in the dictionary of processed resources!");
 				return;
 			}
 
+			GetResourcePath(texture, out string resourcePath);
 #if UNITY_EDITOR
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(texture, out string guid);
-			SceneReferenceManager.GetResourcePath(texture, out string resourcePath);
 
 			string textureAssetPath = AssetDatabase.GetAssetPath(texture);
 			long lastModified = GetAssetWriteTimeUTC(textureAssetPath);
@@ -1326,7 +1398,7 @@ namespace teleport
 		public void CreateBone(Transform bone, ForceExtractionMask forceMask, Dictionary<Transform,uid> boneIDs, List<uid> jointIDs,List<avs.Node> avsNodes)
 		{
 			uid boneID=0;
-			processedResources.TryGetValue(bone, out boneID);
+			sessionResourceUids.TryGetValue(bone, out boneID);
 			if (boneID!=0&&jointIDs.Contains(boneID))
 				return ;
 			if (boneID == 0)
@@ -1350,9 +1422,9 @@ namespace teleport
                     return ;
                 }
 
-                //Add to processedResources first to prevent a stack overflow from recursion. 
+                //Add to sessionResourceUids first to prevent a stack overflow from recursion. 
                 boneID = boneID == 0 ? GenerateUid() : boneID;
-                processedResources[bone] = boneID;
+                sessionResourceUids[bone] = boneID;
 
                 // The parent of the bone might NOT be in the skeleton! Unity's avatar system can skip objects in the hierarchy.
                 // So we must skip transforms to find the parent that's actually in the list of bones!
@@ -1392,19 +1464,19 @@ namespace teleport
                 // don't fill the children yet. We probably don't have their id's.
 				avsNodes.Add(boneNode);
                 //StoreNode(boneID, boneNode);
-                processedResources[bone] = boneID;
+                sessionResourceUids[bone] = boneID;
                 jointIDs.Add(boneID);
             }
 			return;
 		}
 		public void BuildBoneNodeList(Transform bone, Dictionary<Transform, uid> boneIDs,List<avs.Node> avsNodes)
 		{
-			processedResources.TryGetValue(bone.parent,out uid parentID);
-			processedResources.TryGetValue(bone, out uid boneID);
+			sessionResourceUids.TryGetValue(bone.parent,out uid parentID);
+			sessionResourceUids.TryGetValue(bone, out uid boneID);
             if (boneID == 0)
             {
 				boneID=GenerateUid();
-                processedResources[bone] = boneID;
+                sessionResourceUids[bone] = boneID;
             }
 			boneIDs[bone]=boneID;
 
@@ -1433,7 +1505,7 @@ namespace teleport
 			UInt64 totalTexturesToCompress = GetNumberOfTexturesWaitingForCompression();
 
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-			SetCompressionLevels(teleportSettings.casterSettings.compressionLevel, teleportSettings.casterSettings.qualityLevel);
+			SetCompressionLevels(teleportSettings.serverSettings.compressionLevel, teleportSettings.serverSettings.qualityLevel);
 #if UNITY_EDITOR
 			for (UInt64 i = 0; i < totalTexturesToCompress; i++)
 			{
@@ -1510,22 +1582,38 @@ namespace teleport
 				// If this index not found? These errors are not fatal, but should not occur.
 				if(meshRenderer.lightmapIndex>=giTextures.Length)
 				{
-					Debug.LogError($"In sceneReferenceManager.GetGameObjectMesh for GameObject \"{gameObject.name}\", lightmap "+ meshRenderer.lightmapIndex + " was not listed in GlobalIlluminationExtractor!");
+					Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap "+ meshRenderer.lightmapIndex + " was not listed in GlobalIlluminationExtractor!");
 				}
 				else
 				{
-					extractTo.renderState.globalIlluminationTextureUid = FindResourceID(giTextures[meshRenderer.lightmapIndex]);
+					var lightmap_texture= giTextures[meshRenderer.lightmapIndex];
+					extractTo.renderState.globalIlluminationTextureUid = FindResourceID(lightmap_texture);
 					if (extractTo.renderState.globalIlluminationTextureUid == 0)
 					{
-						Debug.LogError($"In sceneReferenceManager.GetGameObjectMesh for GameObject \"{gameObject.name}\", lightmap " + meshRenderer.lightmapIndex + " was not found in GeometrySource!");
+						extractTo.renderState.globalIlluminationTextureUid=AddTexture(lightmap_texture, forceMask);
+						if (extractTo.renderState.globalIlluminationTextureUid == 0)
+						{
+							Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap " + meshRenderer.lightmapIndex + " was not found in GeometrySource!");
+						}
 					}
 				}
 			}
 			//Extract mesh used on node.
+			SceneReferenceManager sceneReferenceManager= SceneReferenceManager.GetSceneReferenceManager(gameObject.scene);
+			if (sceneReferenceManager == null)
+			{
+				Debug.LogError($"Failed to get SceneReferenceManager for GameObject \"{gameObject.name}\"!");
+				return false;
+			}
 			Mesh mesh = sceneReferenceManager.GetMeshFromGameObject(gameObject);
+			if((mesh.hideFlags&UnityEngine.HideFlags.DontSave)== UnityEngine.HideFlags.DontSave)
+			{
+				// This is ok, it just means we're extracting one of the standard meshes: sphere, cube, etc.
+				//Debug.Log("GeometrySource.ExtractNodeMeshData extracting "+gameObject.name+" with HideFlags!");
+			}
 			if (mesh == null)
 			{
-				Debug.LogError($"Failed sceneReferenceManager.GetGameObjectMesh for GameObject \"{gameObject.name}\"!");
+				Debug.LogError($"Failed GeometrySource.ExtractNodeMeshData for GameObject \"{gameObject.name}\"!");
 				return false;
 			}
 			extractTo.dataID = AddMesh(mesh, forceMask, verify);
@@ -1555,6 +1643,12 @@ namespace teleport
 			if (skinnedMeshRenderer.lightmapIndex >= 0 && skinnedMeshRenderer.lightmapIndex < giTextures.Length)
 				extractTo.renderState.globalIlluminationTextureUid = FindResourceID(giTextures[skinnedMeshRenderer.lightmapIndex]);
 			//Extract mesh used on node.
+			SceneReferenceManager sceneReferenceManager = SceneReferenceManager.GetSceneReferenceManager(gameObject.scene);
+			if(!sceneReferenceManager)
+			{
+				Debug.LogError($"Failed to get SceneReferenceManager for GameObject: {gameObject.name}");
+				return false;
+			}
 			Mesh mesh = sceneReferenceManager.GetMeshFromGameObject(gameObject);
 			extractTo.dataID = AddMesh(mesh, forceMask,verify);
 
@@ -1596,11 +1690,11 @@ namespace teleport
 				return false;
 			}
 
-			if(!processedResources.TryGetValue(light, out extractTo.dataID))
+			if(!sessionResourceUids.TryGetValue(light, out extractTo.dataID))
 			{
 				extractTo.dataID = GenerateUid();
 			}
-			processedResources[light] = extractTo.dataID;
+			sessionResourceUids[light] = extractTo.dataID;
 			extractTo.dataType = avs.NodeDataType.Light;
 
 			Color lightColour = light.color;
@@ -1618,13 +1712,13 @@ namespace teleport
 		private uid AddSkin(SkinnedMeshRenderer skinnedMeshRenderer, ForceExtractionMask forceMask)
 		{
 			//Just return the ID; if we have already processed the skin and the skin can be found on the unmanaged side.
-			if(processedResources.TryGetValue(skinnedMeshRenderer, out uid skinID) && IsSkinStored(skinID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
+			if(sessionResourceUids.TryGetValue(skinnedMeshRenderer, out uid skinID) && IsSkinStored(skinID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
 			{
 				return skinID;
 			}
 
 			skinID = skinID == 0 ? GenerateUid() : skinID;
-			processedResources[skinnedMeshRenderer] = skinID;
+			sessionResourceUids[skinnedMeshRenderer] = skinID;
 
 			avs.Skin skin = new avs.Skin();
 			skin.name = Marshal.StringToBSTR(skinnedMeshRenderer.name);
@@ -2008,8 +2102,8 @@ namespace teleport
 
 #if UNITY_EDITOR
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(mesh, out string guid);
-			SceneReferenceManager.GetResourcePath(mesh, out string resourcePath);
-			resourcePath = extractToBasis.ToString().Replace("Style","").ToLower()+"/"+ resourcePath;
+			GetResourcePath(mesh, out string resourcePath);
+			//resourcePath = extractToBasis.ToString().Replace("Style","").ToLower()+"/"+ resourcePath;
 			long last_modified=0;
 			// If it's one of the default resources, we must generate a prop
 			if (!guid.Contains("0000000000000000e000000000000000")|| resourcePath.Contains("unity default resources"))
@@ -2287,33 +2381,41 @@ namespace teleport
 			}
 
 			//Just return the ID; if we have already processed the texture and the texture can be found on the unmanaged side.
-			if(processedResources.TryGetValue(texture, out uid textureID) && IsTextureStored(textureID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
+			if(sessionResourceUids.TryGetValue(texture, out uid textureID) && IsTextureStored(textureID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
 			{
 				return textureID;
 			}
 
-			//We can't extract textures in play-mode.
-			if(Application.isPlaying)
-			{
-				Debug.LogWarning("Texture <b>" + texture.name + "</b> has not been extracted, but is being used on streamed geometry!");
-				return 0;
-			}
-
-			SceneReferenceManager.GetResourcePath(texture, out string resourcePath);
+			GetResourcePath(texture, out string resourcePath);
+			uid uid_from_path= GetOrGenerateUid(resourcePath);
 			if (textureID == 0)
 			{
-				textureID = GetOrGenerateUid(resourcePath);
+				textureID = uid_from_path;
 			}
 			else
 			{
-				if (textureID != GetOrGenerateUid(resourcePath))
+				if (textureID != uid_from_path)
 				{
 					Debug.LogError("Uid mismatch for texture " + texture.name + " at path " + resourcePath);
+					GetOrGenerateUid(resourcePath);
 					return 0;
 				}
 			}
-			processedResources[texture] = textureID;
-
+			sessionResourceUids[texture] = textureID;
+			if(IsTextureStored(textureID))
+			{
+				if (Application.isPlaying||(forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
+					return textureID;
+			}
+			else
+			{ 
+				//We can't extract textures in play-mode.
+				if (Application.isPlaying)
+				{
+					Debug.LogWarning("Texture <b>" + texture.name + "</b> has not been extracted, but is being used on streamed geometry!");
+					return 0;
+				}
+			}
 			avs.Texture extractedTexture = new avs.Texture()
 			{
 				name = Marshal.StringToBSTR(texture.name),
@@ -2412,7 +2514,7 @@ namespace teleport
 					//Use the asset as is, if it has not been modified since it was saved.
 					if(metaResource.lastModified >= lastModified)
 					{
-						processedResources[asset] = metaResource.id;
+						sessionResourceUids[asset] = metaResource.id;
 					}
 					else
 					{

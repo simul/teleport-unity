@@ -41,7 +41,8 @@ namespace teleport
 
 		public void Grab(Input input, InputID inputId)
 		{
-			if(holderClient != 0)
+			Debug.Log("Grab");
+			if (holderClient != 0)
 				return;
 			Teleport_SessionComponent session = input.gameObject.GetComponent<Teleport_SessionComponent>();
 			holderClient = session.GetClientID();

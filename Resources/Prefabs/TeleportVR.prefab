@@ -107,13 +107,6 @@ MonoBehaviour:
   bodyOffsetFromHead: {x: 0, y: 0, z: 0}
   clientSettings:
     videoTextureSize: {x: 0, y: 0}
-    specularPos: {x: 0, y: 0}
-    specularCubemapSize: 0
-    specularMips: 0
-    diffusePos: {x: 0, y: 0}
-    diffuseCubemapSize: 0
-    lightPos: {x: 0, y: 0}
-    lightCubemapSize: 0
     shadowmapPos: {x: 0, y: 0}
     shadowmapSize: 0
     webcamPos: {x: 0, y: 0}
@@ -123,6 +116,17 @@ MonoBehaviour:
     backgroundMode: 0
     backgroundColour: {x: 0, y: 0, z: 0, w: 0}
     drawDistance: 0
+  clientDynamicLighting:
+    specularPos: {x: 0, y: 0}
+    specularCubemapSize: 0
+    specularMips: 0
+    diffusePos: {x: 0, y: 0}
+    diffuseCubemapSize: 0
+    lightPos: {x: 0, y: 0}
+    lightCubemapSize: 0
+    specularCubemapTexture: 0
+    diffuseCubemapTexture: 0
+    lightingMode: 1
 --- !u!1 &5984580423773437800
 GameObject:
   m_ObjectHideFlags: 0

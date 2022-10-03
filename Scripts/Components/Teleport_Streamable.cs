@@ -255,7 +255,6 @@ namespace teleport
 		private void OnEnable()
 		{
 			uid = GeometrySource.GetGeometrySource().AddNode(gameObject, GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
-			sendMovementUpdates&=!gameObject.isStatic;
 			CreateStreamedHierarchy();
 		}
 
@@ -286,11 +285,27 @@ namespace teleport
 			//We need to stop once we reach this node, so we add it to the explored list, but that means we now have to explicitly add it to the streamed hierarchy.
 			exploredGameObjects.Add(gameObject);
 			streamedHierarchy.Add(new StreamedNode(gameObject));
+			// Check for nonstatic:
+			#if UNITY_EDITOR
+			List<Transform> children = new List<Transform>(GetComponentsInChildren<Transform>());
+			foreach (Transform t in children)
+			{
+				if (!t.gameObject.isStatic)
+				{
+					StreamableProperties streamableProperties=t.gameObject.GetComponent<StreamableProperties>();
+					if(streamableProperties==null)
+						streamableProperties=t.gameObject.AddComponent<StreamableProperties>();
+					streamableProperties.isStationary = gameObject.isStatic;
+				}
+			}
+			#endif
+			sendMovementUpdates=false;
 			// Get all the StreamableProperties instances in the hierarchy, and use them to find the maximum "priority" value.
 			List<StreamableProperties> streamablePropertiesList = new List<StreamableProperties>(GetComponentsInChildren<StreamableProperties>());
 			foreach (StreamableProperties streamableProperties in streamablePropertiesList)
 			{
 				priority=Math.Max(priority, streamableProperties.priority);
+				sendMovementUpdates|= !streamableProperties.isStationary;
 			}
 			//Mark all children that will be streamed separately as explored; i.e. marked for streaming.
 			List<Collider> childColliders = new List<Collider>(GetComponentsInChildren<Collider>());

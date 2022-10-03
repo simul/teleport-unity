@@ -5,10 +5,15 @@ using System.Collections.Generic;
 
 namespace teleport
 {
+	using uid = System.UInt64;
 	using InputID = UInt16;
 	public enum BackgroundMode: byte
     {
 		NONE=0, COLOUR, TEXTURE, VIDEO
+	}
+	public enum LightingMode : byte
+	{
+		NONE = 0, TEXTURE, VIDEO
 	}
 	[HelpURL("https://docs.teleportvr.io/unity.html")]
 	//! Settings structure for the server, to be shared between C# and the C++ dll.
@@ -32,7 +37,7 @@ namespace teleport
 
 		[Header("Geometry")]
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingGeometry = true;
-		public Int32 geometryTicksPerSecond = 2;
+		public UInt32 geometryTicksPerSecond = 2;
 		public Int32 geometryBufferCutoffSize = 1048576; // Byte count we stop encoding nodes at.
 		public float confirmationWaitTime = 15; // Seconds to wait before resending a resource.
 		public float clientDrawDistanceOffset = 0; // Offset for distance pixels are clipped at for geometry on the client.
@@ -117,13 +122,6 @@ namespace teleport
 	public class ClientSettings
 	{
 		public Vector2Int videoTextureSize;
-		public Vector2Int specularPos;
-		public Int32 specularCubemapSize;
-		public Int32 specularMips;
-		public Vector2Int diffusePos;
-		public Int32 diffuseCubemapSize;
-		public Vector2Int lightPos;
-		public Int32 lightCubemapSize;
 		public Vector2Int shadowmapPos;
 		public Int32 shadowmapSize;
 		public Vector2Int webcamPos;
@@ -133,11 +131,29 @@ namespace teleport
 		public BackgroundMode backgroundMode;
 		public Vector4 backgroundColour;
 		public float drawDistance;
-    }
+	}
+	/// <summary>
+	/// Settings specific to a given client, as decided engine-side.
+	/// </summary>
+	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
+	public class ClientDynamicLighting
+	{
+		public Vector2Int specularPos;
+		public Int32 specularCubemapSize;
+		public Int32 specularMips;
+		public Vector2Int diffusePos;
+		public Int32 diffuseCubemapSize;
+		public Vector2Int lightPos;
+		public Int32 lightCubemapSize;
+		public uid specularCubemapTexture=0;
+		public uid diffuseCubemapTexture=0;
+		public LightingMode lightingMode = LightingMode.TEXTURE;
+	}
+
 	/// <summary>
 	/// Definition of an input that the client can send the server.
 	/// </summary>
-    [StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
+	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
     public class InputDefinition
 	{
 		/// <summary>

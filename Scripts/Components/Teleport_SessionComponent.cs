@@ -45,6 +45,9 @@ namespace teleport
 		// Set the client-specific settings, e.g. video layout.
 		[DllImport("TeleportServer")]
 		private static extern void Client_SetClientSettings(uid clientID, teleport.ClientSettings clientSettings);
+		// Set the client-specific lighting, e.g. video or texture lighting.
+		[DllImport("TeleportServer")]
+		private static extern void Client_SetClientDynamicLighting(uid clientID, teleport.ClientDynamicLighting clientDynamicLighting);
 
 		[DllImport("TeleportServer")]
 		private static extern void Client_SetClientInputDefinitions(uid clientID, int numControls, string[] controlPaths, avs.InputDefinitionInterop[] inputDefinitions);
@@ -78,7 +81,7 @@ namespace teleport
 		{
 			if (!sessions.TryGetValue(clientID, out Teleport_SessionComponent sessionComponent))
 			{
-				TeleportLog.LogErrorOnce($"No session component found for Client_{clientID}!");
+				return null;
 			}
 
 			return sessionComponent;
@@ -130,18 +133,6 @@ namespace teleport
 			Client_StopStreaming(clientID);
 		}
 
-		public static void StaticSetOriginFromClient(uid clientID, UInt64 validCounter, in avs.Pose newPose)
-		{
-			Teleport_SessionComponent sessionComponent = GetSessionComponent(clientID);
-			if (!sessionComponent)
-			{
-				return;
-			}
-
-			Quaternion rotation = new Quaternion(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
-			Vector3 position = new Vector3(newPose.position.x, newPose.position.y, newPose.position.z);
-			sessionComponent.SetOriginFromClient(validCounter, rotation, position);
-		}
 
 		public static void StaticSetHeadPose(uid clientID, in avs.Pose newHeadPose)
 		{
@@ -308,6 +299,7 @@ namespace teleport
 		public Vector3 bodyOffsetFromHead = default;
 
 		public teleport.ClientSettings clientSettings = new teleport.ClientSettings();
+		public teleport.ClientDynamicLighting clientDynamicLighting =new teleport.ClientDynamicLighting();
 		//public teleport.InputDefinition[] inputDefinitions = new teleport.InputDefinition[0];
 
 		//PUBLIC STATIC MEMBER VARIABLES
@@ -419,7 +411,7 @@ namespace teleport
 		{
 			handshake = receivedHandshake;
 
-			if (teleportSettings.casterSettings.isStreamingGeometry)
+			if (teleportSettings.serverSettings.isStreamingGeometry)
 			{
 				GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 
@@ -492,15 +484,6 @@ namespace teleport
 			}
 		}
 
-		public void SetOriginFromClient(UInt64 validCounter, Quaternion newRotation, Vector3 newPosition)
-		{
-			if (clientspaceRoot != null && validCounter == originValidCounter)
-			{
-				clientspaceRoot.transform.SetPositionAndRotation(newPosition, newRotation);
-				last_received_origin = newPosition;
-			}
-		}
-
 		public void SetHeadPose(Quaternion newRotation, Vector3 newPosition)
 		{
 			if (!head)
@@ -526,7 +509,17 @@ namespace teleport
 			{
 				return;
 			}
-
+			var streamable=controller.GetComponent<Teleport_Streamable>();
+			if (!streamable)
+			{
+				Debug.LogError("Trying to set pose of controlled object that has no Teleport_Streamable.");
+				return;
+			}
+			if (streamable.OwnerClient != clientID)
+			{
+				Debug.LogError("Trying to set pose of controlled object whose owner client "+streamable.OwnerClient+" is not the client ID "+clientID.ToString()+".");
+				return;
+			}
 			controller.transform.SetPositionAndRotation(newPosition, newRotation);
 		}
 
@@ -603,31 +596,9 @@ namespace teleport
 				//Add a break for readability.
 				y += lineHeight;
 
-				//Display number of nodes.
-				int nodeAmount = geometryStreamingService.GetStreamedObjectCount();
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Nodes {0}", nodeAmount));
-
-				List<GameObject> streamedGameObjects = geometryStreamingService.GetStreamedObjects();
-				//List nodes to the maximum.
-				for (int i = 0; i < nodeAmount && i < maxNodesOnOverlay; i++)
-				{
-					GameObject node = streamedGameObjects[i];
-					uid nodeID = geometrySource.FindResourceID(node);
-					GUI.Label(new Rect(x, y += lineHeight, 500, 20), string.Format("\t{0} {1}", nodeID, node.name));
-				}
-
-				//Display an ellipsis if there are more than the maximum nodes to display.
-				if (nodeAmount > maxNodesOnOverlay)
-				{
-					GUI.Label(new Rect(x, y += lineHeight, 500, 20), "\t...");
-				}
-
-				//Add a break for readability.
-				y += lineHeight;
-
-				//Display amount of lights.
-				int lightAmount = geometryStreamingService.GetStreamedLightCount();
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Lights {0}", lightAmount));
+				//Display Count of lights.
+				int lightCount = geometryStreamingService.GetStreamedLightCount();
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Lights {0}", lightCount));
 
 				int validLightIndex = 0;
 				foreach (var lightPair in geometryStreamingService.GetStreamedLights())
@@ -644,7 +615,7 @@ namespace teleport
 						validLightIndex++;
 					}
 
-					//Break if we have displayed the maximum amount of lights.
+					//Break if we have displayed the maximum Count of lights.
 					if (validLightIndex >= maxLightsOnOverlay)
 					{
 						GUI.Label(new Rect(x, y += lineHeight, 500, 20), "\t...");
@@ -726,7 +697,7 @@ namespace teleport
 				Client_GetClientVideoEncoderStats(clientID, ref videoEncoderStats);
 			}
 
-			if (teleportSettings.casterSettings.isStreamingGeometry)
+			if (teleportSettings.serverSettings.isStreamingGeometry)
 			{
 				if (geometryStreamingService != null)
 				{
@@ -749,7 +720,7 @@ namespace teleport
 			UpdateClientSettings();
 			if (geometryStreamingService == null)
 				geometryStreamingService = new GeometryStreamingService(this);
-			if (geometryStreamingService!=null&&teleportSettings.casterSettings.isStreamingGeometry)
+			if (geometryStreamingService!=null&&teleportSettings.serverSettings.isStreamingGeometry)
 			{
 				geometryStreamingService.StreamGlobals();
 			}
@@ -769,32 +740,52 @@ namespace teleport
 			}
 			sceneCaptureComponent.SetClientID(clientID);
 		}
+		private void UpdateClientDynamicLighting(Vector2Int cubeMapsOffset)
+		{
+			clientDynamicLighting.specularCubemapSize = teleportSettings.serverSettings.defaultSpecularCubemapSize;
+			clientDynamicLighting.specularMips = teleportSettings.serverSettings.defaultSpecularMips;
+			clientDynamicLighting.diffuseCubemapSize = teleportSettings.serverSettings.defaultDiffuseCubemapSize;
+			clientDynamicLighting.lightCubemapSize = teleportSettings.serverSettings.defaultLightCubemapSize;
+			// Depth is stored in color's alpha channel if alpha layer encoding is enabled.
+			if (teleportSettings.serverSettings.useAlphaLayerEncoding)
+			{
+				cubeMapsOffset.x = 0;
+				const int MIPS_WIDTH = 378;
+				clientDynamicLighting.specularPos = new Vector2Int(cubeMapsOffset.x, cubeMapsOffset.y);
+				clientDynamicLighting.diffusePos = clientDynamicLighting.specularPos + new Vector2Int(MIPS_WIDTH, 0);
+			}
+			else
+			{
+				clientDynamicLighting.specularPos = new Vector2Int(cubeMapsOffset.x, cubeMapsOffset.y);
+				clientDynamicLighting.diffusePos = clientDynamicLighting.specularPos + new Vector2Int(0, clientDynamicLighting.specularCubemapSize * 2);
+				clientDynamicLighting.lightPos = clientDynamicLighting.diffusePos + new Vector2Int(clientDynamicLighting.specularCubemapSize * 3 / 2, clientDynamicLighting.specularCubemapSize * 2);
+			}
+			clientDynamicLighting.diffuseCubemapTexture=0;
+			clientDynamicLighting.specularCubemapTexture = 0;
+			clientDynamicLighting.lightingMode=LightingMode.TEXTURE;
+		}
 		private void UpdateClientSettings()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
-			var settings = teleportSettings.casterSettings;
-			clientSettings.specularCubemapSize = teleportSettings.casterSettings.defaultSpecularCubemapSize;
-			clientSettings.specularMips = teleportSettings.casterSettings.defaultSpecularMips;
-			clientSettings.diffuseCubemapSize = teleportSettings.casterSettings.defaultDiffuseCubemapSize;
-			clientSettings.lightCubemapSize = teleportSettings.casterSettings.defaultLightCubemapSize;
-			clientSettings.shadowmapSize = teleportSettings.casterSettings.defaultShadowmapSize;
+			var settings = teleportSettings.serverSettings;
+			clientSettings.shadowmapSize = teleportSettings.serverSettings.defaultShadowmapSize;
 
-			clientSettings.captureCubeTextureSize=teleportSettings.casterSettings.defaultCaptureCubeTextureSize;
-			clientSettings.backgroundMode = teleportSettings.casterSettings.backgroundMode;
-			clientSettings.backgroundColour = teleportSettings.casterSettings.BackgroundColour;
-			clientSettings.drawDistance=teleportSettings.casterSettings.detectionSphereRadius;
+			clientSettings.captureCubeTextureSize=teleportSettings.serverSettings.defaultCaptureCubeTextureSize;
+			clientSettings.backgroundMode = teleportSettings.serverSettings.backgroundMode;
+			clientSettings.backgroundColour = teleportSettings.serverSettings.BackgroundColour;
+			clientSettings.drawDistance=teleportSettings.serverSettings.detectionSphereRadius;
 			int faceSize = clientSettings.captureCubeTextureSize;
 			int doubleFaceSize = faceSize * 2;
 			int halfFaceSize = (int)(faceSize * 0.5);
 
-			int perspectiveWidth = teleportSettings.casterSettings.perspectiveWidth;
-			int perspectiveHeight = teleportSettings.casterSettings.perspectiveHeight;
+			int perspectiveWidth = teleportSettings.serverSettings.perspectiveWidth;
+			int perspectiveHeight = teleportSettings.serverSettings.perspectiveHeight;
 
 			Vector2Int cubeMapsOffset = new Vector2Int(0, 0);
 			// Offsets to lighting cubemaps in video texture
 			if (clientSettings.backgroundMode == BackgroundMode.VIDEO)
             {
-				if (teleportSettings.casterSettings.usePerspectiveRendering)
+				if (teleportSettings.serverSettings.usePerspectiveRendering)
 				{
 					cubeMapsOffset.x = perspectiveWidth / 2;
 					cubeMapsOffset.y = perspectiveHeight;
@@ -805,37 +796,28 @@ namespace teleport
 					cubeMapsOffset.y = doubleFaceSize;
 				}
 			}
-
+			UpdateClientDynamicLighting(cubeMapsOffset);
 			// Depth is stored in color's alpha channel if alpha layer encoding is enabled.
-			if (teleportSettings.casterSettings.useAlphaLayerEncoding)
+			if (teleportSettings.serverSettings.useAlphaLayerEncoding)
 			{
-				cubeMapsOffset.x = 0;
-				const int MIPS_WIDTH = 378;
-				clientSettings.specularPos = new Vector2Int(cubeMapsOffset.x, cubeMapsOffset.y);
-				clientSettings.diffusePos = clientSettings.specularPos + new Vector2Int(MIPS_WIDTH, 0);
 				// We don't currently encode shadows or use light cubemap
 				//clientSettings.lightPos = clientSettings.diffusePos + new Vector2Int(clientSettings.diffuseCubemapSize * 3, 0);
 				//clientSettings.shadowmapPos = clientSettings.lightPos + new Vector2Int(MIPS_WIDTH, 0);
-				clientSettings.webcamPos = clientSettings.diffusePos + new Vector2Int(clientSettings.diffuseCubemapSize * 3, 0);
-				clientSettings.webcamSize = new Vector2Int(settings.webcamWidth, settings.webcamHeight);
+				clientSettings.webcamPos = clientDynamicLighting.diffusePos + new Vector2Int(clientDynamicLighting.diffuseCubemapSize * 3, 0);
 			}
 			else
 			{
-				clientSettings.specularPos = new Vector2Int(cubeMapsOffset.x, cubeMapsOffset.y);
-				clientSettings.diffusePos = clientSettings.specularPos + new Vector2Int(0, clientSettings.specularCubemapSize * 2);
-				clientSettings.lightPos = clientSettings.diffusePos + new Vector2Int(clientSettings.specularCubemapSize * 3 / 2, clientSettings.specularCubemapSize * 2);
-				clientSettings.shadowmapPos = clientSettings.diffusePos + new Vector2Int(0, 2 * clientSettings.diffuseCubemapSize);
-
-				clientSettings.webcamPos = cubeMapsOffset + new Vector2Int(clientSettings.specularCubemapSize * 3, clientSettings.specularCubemapSize * 2);
-				clientSettings.webcamSize = new Vector2Int(settings.webcamWidth, settings.webcamHeight);
+				clientSettings.shadowmapPos = clientDynamicLighting.diffusePos + new Vector2Int(0, 2 * clientDynamicLighting.diffuseCubemapSize);
+				clientSettings.webcamPos = cubeMapsOffset + new Vector2Int(clientDynamicLighting.specularCubemapSize * 3, clientDynamicLighting.specularCubemapSize * 2);
 			}
+			clientSettings.webcamSize = new Vector2Int(settings.webcamWidth, settings.webcamHeight);
 			// find the size of the video texture.
 			if (clientSettings.backgroundMode == BackgroundMode.VIDEO)
 			{ 
 				clientSettings.videoTextureSize.x= clientSettings.videoTextureSize.y=0;
-				if (teleportSettings.casterSettings.usePerspectiveRendering)
+				if (teleportSettings.serverSettings.usePerspectiveRendering)
 				{
-					clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, teleportSettings.casterSettings.perspectiveWidth);
+					clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, teleportSettings.serverSettings.perspectiveWidth);
 					clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y,settings.perspectiveHeight);
 				}
 				else
@@ -844,14 +826,14 @@ namespace teleport
 					clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, faceSize * 2);
 				}
 				// Is depth separate?
-				if (!teleportSettings.casterSettings.useAlphaLayerEncoding)
+				if (!teleportSettings.serverSettings.useAlphaLayerEncoding)
 				{
 					clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientSettings.videoTextureSize.y+ clientSettings.videoTextureSize.y/2);
 				}
 			}
-			clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, clientSettings.diffusePos.x+ clientSettings.diffuseCubemapSize * 3);
-			clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientSettings.diffusePos.y + clientSettings.diffuseCubemapSize *2);
-			if (teleportSettings.casterSettings.StreamWebcam)
+			clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, clientDynamicLighting.diffusePos.x+ clientDynamicLighting.diffuseCubemapSize * 3);
+			clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientDynamicLighting.diffusePos.y + clientDynamicLighting.diffuseCubemapSize *2);
+			if (teleportSettings.serverSettings.StreamWebcam)
             {
 				clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, clientSettings.webcamPos.x + clientSettings.webcamSize.x);
 				clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientSettings.webcamPos.y + clientSettings.webcamSize.y);
@@ -866,6 +848,7 @@ namespace teleport
 			}
 
 			Client_SetClientSettings(clientID, clientSettings);
+			Client_SetClientDynamicLighting(clientID, clientDynamicLighting); 
 			// Just use one set of input defs for now.
 			string [] controlPaths=new string[teleportSettings.inputDefinitions.Count];
 			avs.InputDefinitionInterop[] inputDefsInterop=new avs.InputDefinitionInterop[teleportSettings.inputDefinitions.Count];
@@ -889,7 +872,7 @@ namespace teleport
 				if(streamable!=null)
 					origin_uid=streamable.GetUid();
 			}
-			if (teleportSettings.casterSettings.controlModel == teleport.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
+			if (teleportSettings.serverSettings.controlModel == teleport.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
 			{
 				if (head != null && clientspaceRoot != null)
 				{
@@ -924,7 +907,7 @@ namespace teleport
 					collisionRoot.transform.hasChanged = false;
 				}
 			}
-			else if (teleportSettings.casterSettings.controlModel == teleport.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
+			else if (teleportSettings.serverSettings.controlModel == teleport.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
 			{
 				if (head != null && clientspaceRoot != null)
 				{
@@ -964,8 +947,11 @@ namespace teleport
 		{
 			List<GameObject> bodyParts = new List<GameObject>();
 
-			var c=GetComponentInChildren<Teleport_Streamable>();
-			bodyParts.Add(c.gameObject);
+			var c=GetComponentsInChildren<Teleport_Streamable>();
+			foreach (var o in c)
+			{
+				bodyParts.Add(o.gameObject);
+			}
 			return bodyParts;
 		}
 	}

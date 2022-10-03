@@ -311,12 +311,12 @@ namespace teleport
 			buffer.name = "EncodeLightingCubemaps";
 			
 			// 3 mips each of specular and rough-specular texture.
-			Decompose(buffer, sceneCaptureComponent.SpecularCubeTexture, sceneCaptureComponent.videoTexture, session.clientSettings.specularPos, face,Math.Min(6,sceneCaptureComponent.SpecularCubeTexture.mipmapCount));
+			Decompose(buffer, sceneCaptureComponent.SpecularCubeTexture, sceneCaptureComponent.videoTexture, session.clientDynamicLighting.specularPos, face,Math.Min(6,sceneCaptureComponent.SpecularCubeTexture.mipmapCount));
 
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 			buffer = new CommandBuffer();
-			Decompose(buffer, sceneCaptureComponent.DiffuseCubeTexture, sceneCaptureComponent.videoTexture, session.clientSettings.diffusePos, face,1);
+			Decompose(buffer, sceneCaptureComponent.DiffuseCubeTexture, sceneCaptureComponent.videoTexture, session.clientDynamicLighting.diffusePos, face,1);
 			//Decompose(context, sceneCaptureComponent.LightingCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.lightOffset, face);
 
 			context.ExecuteCommandBuffer(buffer);

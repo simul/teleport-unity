@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Management;
-using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -14,7 +10,7 @@ namespace teleport
 {
 	public class ResourceWindow : EditorWindow
 	{
-		enum ResourceWindowCategories {EXTRACTION, SETUP, RESOURCES, DEBUG};
+		enum ResourceWindowCategories {EXTRACTION, SETUP, RESOURCES, SCENE_REFS, DEBUG};
 
 		//References to assets.
 		private GeometrySource geometrySource;
@@ -24,7 +20,6 @@ namespace teleport
 		//List of data that was extracted in the last extraction operation.
 		private List<GameObject> lastExtractedGameObjects = new List<GameObject>(); //List of streamable GameObjects that were found during the last operation.
 		private RenderTexture[] renderTextures = new RenderTexture[0];
-		private bool includePlayerParts = true;
 		private bool compressGeometry = true;
 		private bool verifyGeometry = false;
 
@@ -32,6 +27,8 @@ namespace teleport
 		private GUIStyle richText = new GUIStyle();
 		private GUIStyle warningText = new GUIStyle();
 		private GUIStyle errorText = new GUIStyle();
+		private GUIStyle scrollbarStyle = new GUIStyle();
+		private GUIStyle scrollwindowStyle = new GUIStyle();
 
 		//GUI variables that control user-changeable properties.
 		private Vector2 scrollPosition_gameObjects;
@@ -81,14 +78,17 @@ namespace teleport
 
 		private void OnGUI()
 		{
+			DrawExtractionLayout();
+			EditorGUILayout.Separator();
+			EditorGUILayout.Space();
 			EditorGUILayout.BeginHorizontal();
 			selectedCategory = GUILayout.SelectionGrid(selectedCategory, categories, 1, GUILayout.ExpandWidth(false));
 
 			EditorGUILayout.BeginVertical();
-			switch((ResourceWindowCategories)selectedCategory)
+			resourceSearchText = EditorGUILayout.TextField("Search ", resourceSearchText);
+			switch ((ResourceWindowCategories)selectedCategory)
 			{
 				case ResourceWindowCategories.EXTRACTION:
-					DrawExtractionLayout();
 					break;
 				case ResourceWindowCategories.SETUP:
 					DrawSetupLayout();
@@ -96,6 +96,9 @@ namespace teleport
 				case ResourceWindowCategories.RESOURCES:
 					DrawResourcesLayout();
 					break;
+				case ResourceWindowCategories.SCENE_REFS:
+					DrawSceneRefsLayout();
+					break; 
 				case ResourceWindowCategories.DEBUG:
 					DrawDebugLayout();
 					break;
@@ -108,7 +111,6 @@ namespace teleport
 		private void DrawExtractionLayout()
 		{
 			GUI.enabled = !Application.isPlaying;
-			includePlayerParts = GUILayout.Toggle(includePlayerParts, "Include Player Parts");
 			compressGeometry = GUILayout.Toggle(compressGeometry, "Compress Geometry");
 			verifyGeometry = GUILayout.Toggle(verifyGeometry, "Verify Compressed Geometry");
 			
@@ -214,103 +216,119 @@ namespace teleport
 			EditorGUILayout.EndFoldoutHeaderGroup();
 			GUI.enabled=true;
 		}
+		private Vector2 scrollPosition_scenes;
+		private Vector2 scrollPosition_sceneMeshes;
+		private Vector2 scrollPosition_sceneResourcePaths;
+		private Scene selected_scene;
+		void DrawSceneRefsLayout()
+		{
+			SceneReferenceManager.GetSceneReferenceManager(SceneManager.GetActiveScene());
+			var scenerefs=SceneReferenceManager.GetSceneReferenceManagers();
+			SceneResourcePathManager.GetSceneResourcePathManager(SceneManager.GetActiveScene());
+			var sceneres = SceneResourcePathManager.GetSceneResourcePathManagers();
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField("Scene", GUILayout.Width(300));
+			EditorGUILayout.LabelField("Meshes");
+			EditorGUILayout.LabelField("Resource Paths");
+			EditorGUILayout.EndHorizontal();
+
+			//GUI.skin.scrollView ;
+			scrollwindowStyle= GUI.skin.box;
+			//.normal.background = Color.white; 
+			scrollPosition_scenes = EditorGUILayout.BeginScrollView(scrollPosition_scenes,false,true,scrollbarStyle,scrollbarStyle,scrollwindowStyle);
+			foreach (var s in scenerefs)
+			{
+				SceneResourcePathManager p=null;
+				sceneres.TryGetValue(s.Key,out p);
+				EditorGUILayout.BeginHorizontal();
+				if (EditorGUILayout.LinkButton(s.Key.name, GUILayout.Width(300)))
+				{
+					selected_scene=s.Key;
+				}
+				EditorGUILayout.LabelField(s.Value.GetObjectMeshMap().Count.ToString());
+				EditorGUILayout.LabelField(p?p.GetResourcePathMap().Count.ToString():"0");
+				EditorGUILayout.EndHorizontal();
+			}
+			EditorGUILayout.EndScrollView();
+			EditorGUILayout.Separator();
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.BeginVertical();
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField("Game Object");
+			EditorGUILayout.LabelField("Mesh");
+			EditorGUILayout.EndHorizontal();
+			scrollPosition_sceneMeshes = EditorGUILayout.BeginScrollView(scrollPosition_sceneMeshes, false, true, scrollbarStyle, scrollbarStyle, scrollwindowStyle);
+			var sceneReferenceManager= SceneReferenceManager.GetSceneReferenceManager(selected_scene);
+			if (sceneReferenceManager)
+			{
+				foreach (var s in sceneReferenceManager.GetObjectMeshMap())
+				{
+					if (resourceSearchText.Length > 0)
+					{
+						if (!(s.Key.name.ToString().Contains(resourceSearchText)) && !s.Value.mesh.name.Contains(resourceSearchText))
+						{
+							continue;
+						}
+					}
+					EditorGUILayout.BeginHorizontal();
+					EditorGUILayout.LabelField(s.Key.name);
+					EditorGUILayout.LabelField(s.Value.mesh.name);
+					EditorGUILayout.EndHorizontal();
+				}
+			}
+			EditorGUILayout.EndScrollView();
+			EditorGUILayout.EndVertical();
+			EditorGUILayout.BeginVertical();
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField("Resource");
+			EditorGUILayout.LabelField("Type");
+			EditorGUILayout.LabelField("Resource Path");
+			EditorGUILayout.EndHorizontal();
+			scrollPosition_sceneResourcePaths = EditorGUILayout.BeginScrollView(scrollPosition_sceneResourcePaths, false, true, scrollbarStyle, scrollbarStyle, scrollwindowStyle);
+			var sceneResourcePathManager = SceneResourcePathManager.GetSceneResourcePathManager(selected_scene);
+			if (sceneResourcePathManager)
+			{
+				foreach (var s in sceneResourcePathManager.GetResourcePathMap())
+				{
+					if (resourceSearchText.Length > 0)
+					{
+						if (!(s.Key.name.ToString().Contains(resourceSearchText)) && !s.Key.GetType().ToString().Contains(resourceSearchText)&&!s.Value.Contains(resourceSearchText))
+						{
+							continue;
+						}
+					}
+					EditorGUILayout.BeginHorizontal();
+					EditorGUILayout.LabelField(s.Key.name);
+					EditorGUILayout.LabelField(s.Key.GetType().ToString());
+					EditorGUILayout.LabelField(s.Value);
+					EditorGUILayout.EndHorizontal();
+				}
+			}
+			EditorGUILayout.EndScrollView();
+			EditorGUILayout.EndVertical();
+			EditorGUILayout.EndHorizontal();
+		}
 		string resourceSearchText="";
 		void DrawResourcesLayout()
 		{
-			// searchable table of extracted meshes.
-
-			resourceSearchText = EditorGUILayout.TextField("Search ",resourceSearchText);
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.LabelField("Name");
-			EditorGUILayout.LabelField("guid");
-			EditorGUILayout.LabelField("uid");
+			EditorGUILayout.LabelField("Uid");
 			EditorGUILayout.EndHorizontal();
-			scrollPosition_meshTable = EditorGUILayout.BeginScrollView(scrollPosition_meshTable);
-			try
+			foreach (var u in GeometrySource.GetGeometrySource().GetSessionResourceUids())
 			{
-				var myDir = teleportSettings.cachePath+"/meshes/engineering";
-				var dirInfo = new DirectoryInfo(myDir);
-				var meshFiles = dirInfo.EnumerateFiles("*.mesh", SearchOption.AllDirectories);
-
-				EditorGUILayout.BeginVertical();
-				foreach (var name in meshFiles)
+				if (resourceSearchText.Length > 0)
 				{
-					EditorGUILayout.BeginHorizontal();
-					int last_underscore=name.Name.LastIndexOf("_");
-					int last_dot = name.Name.LastIndexOf(".");
-					var guid=name.Name.Substring(last_underscore+1,last_dot-last_underscore-1).Substring(0,32);
-					var object_name = name.Name.Substring(0,  last_underscore);
-					string asset_path=AssetDatabase.GUIDToAssetPath(guid);
-					var obj=AssetDatabase.LoadAssetAtPath<Mesh>(asset_path);
-					uid u =0;
-					if (obj != null)
+					if (!(u.Key.name.ToString().Contains(resourceSearchText)) && !u.Value.ToString().Contains(resourceSearchText))
 					{
-						u = geometrySource.FindResourceID(obj);
+						continue;
 					}
-
-					if (resourceSearchText.Length > 0)
-					{
-						if (!(u.ToString().Contains(resourceSearchText)) && !object_name.Contains(resourceSearchText))
-						{
-							EditorGUILayout.EndHorizontal();
-							continue;
-						}
-					}
-					EditorGUILayout.LabelField(object_name);
-					using (new EditorGUI.DisabledScope(true))
-					{
-						EditorGUILayout.LabelField(guid);
-						EditorGUILayout.LabelField(u.ToString());
-					}
-
-					EditorGUILayout.EndHorizontal();
 				}
-				EditorGUILayout.EndVertical();
-
-
-				var textureDir = teleportSettings.cachePath + "/textures";
-				var textureDirDirInfo = new DirectoryInfo(textureDir);
-				var textureFiles = textureDirDirInfo.EnumerateFiles("*.texture", SearchOption.AllDirectories);
-				EditorGUILayout.BeginVertical();
-				foreach (var name in textureFiles)
-				{
-					EditorGUILayout.BeginHorizontal();
-					int last_underscore = name.Name.LastIndexOf("_");
-					int last_dot = name.Name.LastIndexOf(".");
-					var guid = name.Name.Substring(last_underscore + 1, last_dot - last_underscore - 1).Substring(0, 32);
-					var object_name = name.Name.Substring(0, last_underscore);
-					string asset_path = AssetDatabase.GUIDToAssetPath(guid);
-					var obj = AssetDatabase.LoadAssetAtPath<Texture>(asset_path);
-					uid u = 0;
-					if (obj != null)
-					{
-						u = geometrySource.FindResourceID(obj);
-					}
-
-					if (resourceSearchText.Length > 0)
-					{
-						if (!(u.ToString().Contains(resourceSearchText)) && !object_name.Contains(resourceSearchText))
-						{
-							EditorGUILayout.EndHorizontal();
-							continue;
-						}
-					}
-					EditorGUILayout.LabelField(object_name);
-					using (new EditorGUI.DisabledScope(true))
-					{
-						EditorGUILayout.LabelField(guid);
-						EditorGUILayout.LabelField(u.ToString());
-					}
-
-					EditorGUILayout.EndHorizontal();
-				}
-				EditorGUILayout.EndVertical();
+				EditorGUILayout.BeginHorizontal();
+				EditorGUILayout.LabelField(u.Key.name);
+				EditorGUILayout.LabelField(u.Value.ToString());
+				EditorGUILayout.EndHorizontal();
 			}
-			catch
-			{
-
-			}
-			EditorGUILayout.EndScrollView();
 		}
 		private void DrawSetupLayout()
 		{

@@ -39,7 +39,7 @@ namespace teleport
 		[Header("Geometry")]
 		public uint moveUpdatesPerSecond = 20;
 
-		public ServerSettings casterSettings = new ServerSettings();
+		public ServerSettings serverSettings = new ServerSettings();
 
 		public LayerMask LayersToStream;  //! Mask of the physics layers the user can choose to stream.
 
@@ -74,7 +74,9 @@ namespace teleport
 #if UNITY_EDITOR
 		public static void EnsureAssetPath(string requiredPath)
 		{
-			var settings_folders = requiredPath.Split('/');
+			string dir= System.IO.Path.GetDirectoryName(requiredPath);
+			dir=dir.Replace("\\","/");
+			var settings_folders = dir.Split('/');
 			string path = "";
 			string fullpath = "";
 			for (int i = 0; i < settings_folders.Length; i++)
