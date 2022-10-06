@@ -15,5 +15,6 @@ public class RotateShipSection : MonoBehaviour
 	{
 		var ea = transform.rotation.eulerAngles;
 		ea.z++;
+		transform.rotation.eulerAngles.Set(ea.x, ea.y, ea.z);
 	}
 }
