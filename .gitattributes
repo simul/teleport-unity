@@ -1,0 +1,5 @@
+Examples/Skyboxes/Real filter=lfs diff=lfs merge=lfs -text
+Stars filter=lfs diff=lfs merge=lfs -text
+Skybox/StarSkybox04/CubemapStars.cubemap filter=lfs diff=lfs merge=lfs -text
+Skybox/StarSkybox04Named/CubemapStarsNamed.cubemap filter=lfs diff=lfs merge=lfs -text
+Skybox/StarSkybox04NamedConstell/CubemapStarsNamedConstellations.cubemap filter=lfs diff=lfs merge=lfs -text
