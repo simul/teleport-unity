@@ -225,7 +225,7 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: 3f98616840f66d342b5c74947570167d,
         type: 3}
       propertyPath: m_RenderingLayerMask
-      value: 3221225471
+      value: 2147483647
       objectReference: {fileID: 0}
     - target: {fileID: -7511558181221131132, guid: 3f98616840f66d342b5c74947570167d,
         type: 3}
@@ -311,7 +311,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 3221225471
+  m_RenderingLayerMask: 2147483647
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 7e476d059f1941b4f8d0e9c7c80f00e5, type: 2}
@@ -534,16 +534,11 @@ MonoBehaviour:
   - {fileID: 1920382872}
   - {fileID: 294772265}
   - {fileID: 2054451661}
-  - {fileID: 1649521232}
+  - {fileID: 0}
   - {fileID: 165832134}
   - {fileID: 1823254204}
   - {fileID: 1688018692}
   - {fileID: 1963103632}
-  - {fileID: 498404048}
-  - {fileID: 550959377}
-  - {fileID: 1399609056}
-  - {fileID: 838035321}
-  - {fileID: 1282671001}
   gameObjectReferences_values:
   - mesh: {fileID: -7892432015762708264, guid: 846cfee221095204ea421daaf47eca96, type: 3}
   - mesh: {fileID: -1258100815225046197, guid: 846cfee221095204ea421daaf47eca96, type: 3}
@@ -564,11 +559,6 @@ MonoBehaviour:
   - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 2534964839176971238, guid: c7f2f2e3bb573574a92960a18fa9e378, type: 3}
-  - mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 2534964839176971238, guid: 16881fe7324fe6d498a711cd4ea7cc34, type: 3}
 --- !u!4 &252811101
 Transform:
   m_ObjectHideFlags: 0
@@ -634,7 +624,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 3221225471
+  m_RenderingLayerMask: 2147483647
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 1d60d8e2a00caf943a55b85947b0c122, type: 2}
@@ -799,7 +789,7 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: 16881fe7324fe6d498a711cd4ea7cc34,
         type: 3}
       propertyPath: m_RenderingLayerMask
-      value: 3221225471
+      value: 2147483647
       objectReference: {fileID: 0}
     - target: {fileID: -7511558181221131132, guid: 16881fe7324fe6d498a711cd4ea7cc34,
         type: 3}
@@ -899,7 +889,7 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: c7f2f2e3bb573574a92960a18fa9e378,
         type: 3}
       propertyPath: m_RenderingLayerMask
-      value: 3221225471
+      value: 2147483647
       objectReference: {fileID: 0}
     - target: {fileID: -7511558181221131132, guid: c7f2f2e3bb573574a92960a18fa9e378,
         type: 3}
@@ -1053,7 +1043,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 3221225471
+  m_RenderingLayerMask: 2147483647
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: ac17c4921b7928541b04760195625272, type: 2}
@@ -1289,7 +1279,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 812780439}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 1.25}
+  m_LocalPosition: {x: 0, y: 0, z: -1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1385,6 +1375,9 @@ MonoBehaviour:
   - {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
   - {fileID: 2100000, guid: 98426873e66ffcb40b52424ef79fe505, type: 2}
   - {fileID: 2534964839176971238, guid: 16881fe7324fe6d498a711cd4ea7cc34, type: 3}
+  - {fileID: -2124705421725058983, guid: 8e81a9c05f31c804fbb40f87ca8f5eb0, type: 3}
+  - {fileID: 2534964839176971238, guid: 5540fd741f796ae4ea52b09ebcba37dd, type: 3}
+  - {fileID: 2534964839176971238, guid: 07134946752dd9d44aad388afcc13eb0, type: 3}
   sceneResourcePaths_values:
   - Teleport/Examples/Meshes/Controllers/Oculus_L_Button_X
   - Teleport/Examples/Meshes/Controllers/Oculus_L_Button_Y
@@ -1408,6 +1401,9 @@ MonoBehaviour:
   - Teleport/Meshes/Cylinder
   - Library/Quad
   - Teleport/Examples/Materials/Gloss%Black%Plastic
+  - Teleport/Meshes/Cylinder
+  - Teleport/Meshes/Circle
+  - Teleport/Meshes/Cylinder
   - Teleport/Meshes/Cylinder
 --- !u!4 &828319270
 Transform:
@@ -1489,7 +1485,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 3221225471
+  m_RenderingLayerMask: 2147483647
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 98426873e66ffcb40b52424ef79fe505, type: 2}
@@ -1576,7 +1572,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 862373349}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 8.203481, y: -3.545274, z: 2.9580045}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1706,7 +1702,7 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: d8298ef2b89fbaf49bd44b50413043f6,
         type: 3}
       propertyPath: m_RenderingLayerMask
-      value: 3221225471
+      value: 2147483647
       objectReference: {fileID: 0}
     - target: {fileID: -7511558181221131132, guid: d8298ef2b89fbaf49bd44b50413043f6,
         type: 3}
@@ -1924,7 +1920,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 3221225471
+  m_RenderingLayerMask: 2147483647
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: ac17c4921b7928541b04760195625272, type: 2}
@@ -2114,10 +2110,10 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 3221225471
+  m_RenderingLayerMask: 2147483647
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: cd75e73ca91c1a942a0b3a495a59848c, type: 2}
+  - {fileID: 2100000, guid: 2f8e806f46268b54e9f4e22b92360967, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2188,7 +2184,7 @@ PrefabInstance:
     - target: {fileID: 1332186173640770814, guid: c7bd090313c3e8c4ca1c4c5470243103,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 1.25
+      value: -1
       objectReference: {fileID: 0}
     - target: {fileID: 1332186173640770814, guid: c7bd090313c3e8c4ca1c4c5470243103,
         type: 3}
@@ -2379,10 +2375,10 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 3221225471
+  m_RenderingLayerMask: 2147483647
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2f89dab3279c21b48b3c6fdae2d7171c, type: 2}
+  - {fileID: 2100000, guid: cd75e73ca91c1a942a0b3a495a59848c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2576,10 +2572,10 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 3221225471
+  m_RenderingLayerMask: 2147483647
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2f8e806f46268b54e9f4e22b92360967, type: 2}
+  - {fileID: 2100000, guid: 2f89dab3279c21b48b3c6fdae2d7171c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2675,8 +2671,8 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 96063231}
-  - {fileID: 1077204495}
   - {fileID: 498404047}
+  - {fileID: 1077204495}
   - {fileID: 550959378}
   - {fileID: 1399609057}
   - {fileID: 1282671002}
