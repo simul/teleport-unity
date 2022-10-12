@@ -84,9 +84,9 @@ namespace teleport
 			p=p.Replace('\\','/');
 			if(path_root.Length>0)
 				p=p.Replace(path_root, "" );
-			int last_dot_pos = p.LastIndexOf('.');
-			if(last_dot_pos>0&&last_dot_pos < p.Length)
-				p=p.Substring(0,last_dot_pos);
+			//int last_dot_pos = p.LastIndexOf('.');
+			//if(last_dot_pos>0&&last_dot_pos < p.Length)
+			//	p=p.Substring(0,last_dot_pos);
 			return p;
 		}
 		public void SetResourcePath(UnityEngine.Object o,string p)

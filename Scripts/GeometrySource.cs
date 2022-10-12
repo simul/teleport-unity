@@ -613,10 +613,11 @@ namespace teleport
 			{
 				string filename = Path.GetFileName(path);
 				int dot=filename.LastIndexOf(".");
-				if(dot>0&&dot<filename.Length)
-					filename=filename.Substring(0,dot);
+				//if(dot>0&&dot<filename.Length)
+				//	filename=filename.Substring(0,dot);
 				path = Path.GetDirectoryName(path);
 				path = Path.Combine(path, filename);
+				path = Path.Combine(path, obj.name);
 			}
 			// Need something unique. Within default and editor resources are thousands of assets, often with clashing names.
 			// So here, we do use the localId's to distinguish them.
@@ -937,7 +938,7 @@ namespace teleport
 				return materialID;
 			}
 
-			if(!GetResourcePath(material, out string resourcePath))
+			if(!GetResourcePath(material, out string resourcePath, (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_SUBRESOURCES))
 				return 0;
 			if (materialID == 0)
 			{
@@ -1506,7 +1507,7 @@ namespace teleport
 				return;
 			}
 
-			GetResourcePath(texture, out string resourcePath);
+			GetResourcePath(texture, out string resourcePath, false);
 #if UNITY_EDITOR
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(texture, out string guid);
 
@@ -2233,7 +2234,7 @@ namespace teleport
 
 #if UNITY_EDITOR
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(mesh, out string guid);
-			GetResourcePath(mesh, out string resourcePath);
+			GetResourcePath(mesh, out string resourcePath, false);
 			//resourcePath = extractToBasis.ToString().Replace("Style","").ToLower()+"/"+ resourcePath;
 			long last_modified=0;
 			// If it's one of the default resources, we must generate a prop
@@ -2545,7 +2546,7 @@ namespace teleport
 				return textureID;
 			}
 
-			GetResourcePath(texture, out string resourcePath);
+			GetResourcePath(texture, out string resourcePath, (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_SUBRESOURCES);
 			uid uid_from_path= GetOrGenerateUid(resourcePath);
 			if (textureID == 0)
 			{
