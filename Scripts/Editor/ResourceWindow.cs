@@ -127,6 +127,11 @@ namespace teleport
 
 			EditorGUILayout.BeginVertical();
 			{
+				UnityEngine.Object[] activeGOs =
+					Selection.GetFiltered(
+						typeof(GameObject),
+						SelectionMode.Editable | SelectionMode.TopLevel);
+				//EditorGUILayout.disab
 				EditorGUILayout.BeginHorizontal(); 
 				GUILayout.Label("Selected Geometry:", labelText, GUILayout.Width(300));
 				if (GUILayout.Button("Extract"))
@@ -304,9 +309,16 @@ namespace teleport
 						}
 					}
 					EditorGUILayout.BeginHorizontal();
-					EditorGUILayout.LabelField(s.Key.name);
-					EditorGUILayout.LabelField(s.Key.GetType().ToString());
-					EditorGUILayout.LabelField(s.Value);
+					if (s.Key != null)
+					{
+						EditorGUILayout.LabelField(s.Key.name);
+						EditorGUILayout.LabelField(s.Key.GetType().ToString());
+						EditorGUILayout.LabelField(s.Value);
+					}
+					else
+					{
+						EditorGUILayout.LabelField("Null key");
+					}
 					EditorGUILayout.EndHorizontal();
 				}
 			}

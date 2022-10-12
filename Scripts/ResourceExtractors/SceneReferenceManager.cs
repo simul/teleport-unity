@@ -15,8 +15,8 @@ namespace teleport
 	{
 		//Used to serialise dictionary, so it can be refilled when the object is deserialised.
 
-		[SerializeField] UnityEngine.GameObject[] gameObjectReferences_keys;
-		[SerializeField] MeshReference[] gameObjectReferences_values;
+		[SerializeField] UnityEngine.GameObject[] gameObjectReferences_keys=new UnityEngine.GameObject[0];
+		[SerializeField] MeshReference[] gameObjectReferences_values = new MeshReference[0];
 
 
 		[Serializable]
@@ -141,15 +141,20 @@ namespace teleport
 		public void OnBeforeSerialize()
 		{
 			//Save everything to serialisable arrays, before the dictionary is discarded by Unity.
+			if(meshReferences.ContainsKey(null))
+				meshReferences.Remove(null);
 			gameObjectReferences_keys = meshReferences.Keys.ToArray();
 			gameObjectReferences_values = meshReferences.Values.ToArray();
+		
 		}
 
 		public void OnAfterDeserialize()
 		{
+			if(gameObjectReferences_keys!=null)
 			for(int i = 0; i < gameObjectReferences_keys.Length; i++)
 			{
-				meshReferences[gameObjectReferences_keys[i]] = gameObjectReferences_values[i];
+				if(gameObjectReferences_keys[i]!=null)
+					meshReferences[gameObjectReferences_keys[i]] = gameObjectReferences_values[i];
 			}
 		}
 

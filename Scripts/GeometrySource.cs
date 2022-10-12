@@ -1022,7 +1022,7 @@ namespace teleport
 			long fileId=0;
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(material, out string guid);
 			extractedMaterial.path = Marshal.StringToBSTR(resourcePath);
-			Debug.Log("GUID for "+material.name+" is "+guid+", fileID is "+ fileId);
+			//Debug.Log("GUID for "+material.name+" is "+guid+", fileID is "+ fileId);
  			StoreMaterial(materialID, guid, resourcePath, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32))), extractedMaterial);
 #endif
 
