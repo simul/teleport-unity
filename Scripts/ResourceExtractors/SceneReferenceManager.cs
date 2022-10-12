@@ -141,8 +141,6 @@ namespace teleport
 		public void OnBeforeSerialize()
 		{
 			//Save everything to serialisable arrays, before the dictionary is discarded by Unity.
-			if(meshReferences.ContainsKey(null))
-				meshReferences.Remove(null);
 			gameObjectReferences_keys = meshReferences.Keys.ToArray();
 			gameObjectReferences_values = meshReferences.Values.ToArray();
 		

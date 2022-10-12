@@ -6,6 +6,13 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using uid = System.UInt64;
 
+public static class StringExtensions
+{
+	public static bool Contains(this string source, string toCheck, StringComparison comp)
+	{
+		return source?.IndexOf(toCheck, comp) >= 0;
+	}
+}
 namespace teleport
 {
 	public class ResourceWindow : EditorWindow
@@ -88,11 +95,11 @@ namespace teleport
 				scrollwindowStyle = new GUIStyle(GUI.skin.box);
 				titleStyle.fontSize = (GUI.skin.label.fontSize * 3) / 2;
 			}
-			EditorGUILayout.LabelField("Extraction", titleStyle);
 			DrawExtractionLayout();
 			EditorGUILayout.Separator();
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField("Advanced",titleStyle);
+			EditorGUILayout.Space(10);
 			EditorGUILayout.BeginHorizontal();
 			selectedCategory = GUILayout.SelectionGrid(selectedCategory, categories, 1, GUILayout.ExpandWidth(false));
 
@@ -120,6 +127,8 @@ namespace teleport
 
 		private void DrawExtractionLayout()
 		{
+			EditorGUILayout.LabelField("Extraction", titleStyle);
+			EditorGUILayout.Space(10);
 			GUI.enabled = !Application.isPlaying;
 			labelText.alignment=TextAnchor.MiddleRight;
 			EditorGUILayout.Space(10);
@@ -276,11 +285,11 @@ namespace teleport
 				{
 					if (resourceSearchText.Length > 0)
 					{
-						if (!(s.Key.name.ToString().Contains(resourceSearchText)) && !s.Value.mesh.name.Contains(resourceSearchText))
+						if (!(s.Key.name.ToString().Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase)) && !s.Value.mesh.name.Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase))
 						{
 							continue;
 						}
-					}
+					} 
 					EditorGUILayout.BeginHorizontal();
 					EditorGUILayout.LabelField(s.Key.name);
 					EditorGUILayout.LabelField(s.Value.mesh.name);
@@ -303,7 +312,7 @@ namespace teleport
 				{
 					if (resourceSearchText.Length > 0)
 					{
-						if (!(s.Key.name.ToString().Contains(resourceSearchText)) && !s.Key.GetType().ToString().Contains(resourceSearchText)&&!s.Value.Contains(resourceSearchText))
+						if (!(s.Key.name.ToString().Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase)) && !s.Key.GetType().ToString().Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase) &&!s.Value.Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase))
 						{
 							continue;
 						}
@@ -337,7 +346,7 @@ namespace teleport
 			{
 				if (resourceSearchText.Length > 0)
 				{
-					if (!(u.Key.name.ToString().Contains(resourceSearchText)) && !u.Value.ToString().Contains(resourceSearchText))
+					if (!(u.Key.name.ToString().Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase)) && !u.Value.ToString().Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase))
 					{
 						continue;
 					}

@@ -591,11 +591,11 @@ namespace teleport
 			SceneResourcePathManager.ClearAll();
 			ClearGeometryStore();
 		}
-		public static bool GetResourcePath(UnityEngine.Object obj, out string path)
+		public static bool GetResourcePath(UnityEngine.Object obj, out string path,bool force)
 		{ 
 			var resourcePathManager = SceneResourcePathManager.GetSceneResourcePathManager(SceneManager.GetActiveScene());
 			path = resourcePathManager.GetResourcePath(obj);
-			if (path!=null&&path.Length > 0)
+			if (!force&&path != null&&path.Length > 0)
 				return true;
 #if UNITY_EDITOR
 			long localId = 0;
@@ -611,8 +611,12 @@ namespace teleport
 			// We can't therefore just use the file name.
 			if (obj.GetType() == typeof(UnityEngine.Mesh))
 			{
+				string filename = Path.GetFileName(path);
+				int dot=filename.LastIndexOf(".");
+				if(dot>0&&dot<filename.Length)
+					filename=filename.Substring(0,dot);
 				path = Path.GetDirectoryName(path);
-				path = Path.Combine(path, obj.name);
+				path = Path.Combine(path, filename);
 			}
 			// Need something unique. Within default and editor resources are thousands of assets, often with clashing names.
 			// So here, we do use the localId's to distinguish them.
@@ -871,7 +875,7 @@ namespace teleport
 				return 0;
 			}
 			// Make sure there's a path for this mesh.
-			GetResourcePath(mesh, out string resourcePath);
+			GetResourcePath(mesh, out string resourcePath, (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_SUBRESOURCES);
 			//We can't extract an unreadable mesh.
 			if (!mesh.isReadable)
 			{
