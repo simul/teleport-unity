@@ -289,6 +289,9 @@ namespace avs
 		public uid samplerID;
 
 		public float valueScale;
+
+		[MarshalAs(UnmanagedType.I1)]
+		public bool cubemap;
 	}
 
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
@@ -1048,31 +1051,60 @@ namespace teleport
 			return compressedFilePath;
 		}
 	#if UNITY_EDITOR
-		private RenderTexture[] renderTextures = new RenderTexture[0];
+		private List<RenderTexture> renderTextures = new List<RenderTexture>();
 		public bool ExtractTextures(bool forceOverwrite)
 		{
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 			//According to the Unity docs, we need to call Release() on any render textures we are done with.
-			for (int i = geometrySource.texturesWaitingForExtraction.Count; i < renderTextures.Length; i++)
-			{
-				if (renderTextures[i])
-				{
-					renderTextures[i].Release();
-				}
-			}
 			//Resize the array, instead of simply creating a new one, as we want to keep the same render textures for quicker debugging.
-			Array.Resize(ref renderTextures, geometrySource.texturesWaitingForExtraction.Count);
-
+			int rendertextureIndex=0;
 			//Extract texture data with a compute shader, rip the data, and store in the native C++ plugin.
-			for (int i = 0; i < renderTextures.Length; i++)
+			for (int i = 0; i < geometrySource.texturesWaitingForExtraction.Count; i++)
 			{
+				TextureExtractionData textureExtractionData= geometrySource.texturesWaitingForExtraction[i];
 				bool highQualityUASTC = false;
-				Texture2D sourceTexture = (Texture2D)geometrySource.texturesWaitingForExtraction[i].unityTexture;
+				Texture sourceTexture = textureExtractionData.unityTexture;
 
-				if (EditorUtility.DisplayCancelableProgressBar($"Extracting Textures ({i + 1} / {renderTextures.Length})", $"Processing \"{sourceTexture.name}\".", (float)(i + 1) / renderTextures.Length))
+				if (EditorUtility.DisplayCancelableProgressBar($"Extracting Textures ({i + 1} / {geometrySource.texturesWaitingForExtraction.Count})", $"Processing \"{sourceTexture.name}\".", (float)(i + 1) / geometrySource.texturesWaitingForExtraction.Count))
 				{
+					EditorUtility.ClearProgressBar();
 					return false;
 				}
+				bool writePng = false;
+				TextureFormat textureFormat = TextureFormat.RGBA32;
+				bool isCubemap = false;
+				int arraySize = 1;
+				int numImages=1;
+				if (sourceTexture.GetType() == typeof(Texture2D))
+				{
+					var sourceTexture2D = (Texture2D)sourceTexture;
+					textureFormat = sourceTexture2D.format;
+				}
+				else if (sourceTexture.GetType() == typeof(Texture3D))
+				{
+					var sourceTexture3D = (Texture3D)sourceTexture;
+					textureFormat = sourceTexture3D.format;
+				}
+				else if (sourceTexture.GetType() == typeof(Cubemap))
+				{
+					var sourceCubemap = (Cubemap)sourceTexture;
+					textureFormat = sourceCubemap.format;
+					isCubemap = true;
+					arraySize = 6;
+				}
+				else if (sourceTexture.GetType() == typeof(RenderTexture))
+				{
+					var sourceRenderTexture = (RenderTexture)sourceTexture;
+					textureFormat = ConvertRenderTextureFormatToTextureFormat(sourceRenderTexture.format);
+					if(sourceRenderTexture.dimension==UnityEngine.Rendering.TextureDimension.Cube
+						|| sourceRenderTexture.dimension == UnityEngine.Rendering.TextureDimension.CubeArray)
+					{ 
+						isCubemap = true;
+						arraySize = 6;
+					}
+				}
+				int mipCount= (int)textureExtractionData.textureData.mipCount;
+				numImages =arraySize*mipCount;
 				int targetWidth = sourceTexture.width;
 				int targetHeight = sourceTexture.height;
 				int scale = 1;
@@ -1082,17 +1114,72 @@ namespace teleport
 					targetHeight = (targetHeight + 1) / 2;
 					scale *= 2;
 				}
+				int w = targetWidth, h = targetHeight;
+				int n = 0;
+				
 				//If we always created a new render texture, then reloading would lose the link to the render texture in the inspector.
-				if (renderTextures[i] == null)
-				{
-					renderTextures[i] = new RenderTexture(targetWidth, targetHeight, 0);
-				}
-				else
-				{
-					renderTextures[i].Release();
-					renderTextures[i].width = targetWidth;
-					renderTextures[i].height = targetHeight;
-					renderTextures[i].depth = 0;
+				for (int m = 0; m < mipCount; m++)
+				{ 
+					for (int j=0;j<arraySize;j++)
+					{
+						RenderTexture rt;
+						if (rendertextureIndex+n>=renderTextures.Count)
+						{
+							rt = new RenderTexture(w, h, 0);
+							renderTextures.Add(rt);
+						}
+						else
+						{ 
+							rt=renderTextures[rendertextureIndex + n];
+							if(rt&&rt.width==w&&rt.height==h)
+								rt.Release();
+							else
+							{
+								rt = new RenderTexture(w, h, 0);
+								renderTextures[rendertextureIndex + n]=rt;
+							}
+						}
+						RenderTextureFormat rtFormat = RenderTextureFormat.ARGB32;
+						switch (textureFormat)
+						{
+							case TextureFormat.RGBAFloat:
+								rtFormat = RenderTextureFormat.ARGB32;
+								highQualityUASTC = false;
+								break;
+							case TextureFormat.DXT5:
+								writePng = true;
+								break;
+							case TextureFormat.BC6H:
+								rtFormat = RenderTextureFormat.ARGB32;
+								highQualityUASTC = true;
+								writePng = true;
+								break;
+							case TextureFormat.RGBAHalf:
+								rtFormat = RenderTextureFormat.ARGBHalf;
+								break;
+							case TextureFormat.RGBA32:
+								rtFormat = RenderTextureFormat.ARGBInt;
+								break;
+							case TextureFormat.ARGB32:
+								rtFormat = RenderTextureFormat.ARGB32;
+								break;
+							default:
+								break;
+						}
+						if (rt.width!=w||rt.height!=h||rt.format!=rtFormat)
+						{
+							rt.Release();
+						}
+						rt.width = w;
+						rt.height = h;
+						rt.depth = 0;
+						rt.enableRandomWrite = true;
+						rt.name = $"{textureExtractionData.unityTexture.name} ({textureExtractionData.id}) {n}";
+						rt.Create();
+						n++;
+					}
+					w = (w + 1) / 2;
+					h = (h + 1) / 2;
 				}
 				bool isNormal = false;
 				//Normal maps need to be extracted differently; i.e. convert from DXT5nm format.
@@ -1104,89 +1191,106 @@ namespace teleport
 					TextureImporterType textureType = textureImporter ? textureImporter.textureType : TextureImporterType.Default;
 					isNormal = textureType == UnityEditor.TextureImporterType.NormalMap;
 				}
-				bool writePng = false;
-				switch (sourceTexture.format)
-				{
-					case TextureFormat.RGBAFloat:
-						renderTextures[i].format = RenderTextureFormat.ARGB32;
-						highQualityUASTC = false;
-						break;
-					case TextureFormat.DXT5:
-						writePng = true;
-						break;
-					case TextureFormat.BC6H:
-						renderTextures[i].format = RenderTextureFormat.ARGB32;
-						highQualityUASTC = true;
-						writePng = true;
-						break;
-					case TextureFormat.RGBAHalf:
-						renderTextures[i].format = RenderTextureFormat.ARGBHalf;
-						break;
-					case TextureFormat.RGBA32:
-						renderTextures[i].format = RenderTextureFormat.ARGBInt;
-						break;
-					case TextureFormat.ARGB32:
-						renderTextures[i].format = RenderTextureFormat.ARGB32;
-						break;
-					default:
-						break;
-				}
+				
 				if (isNormal || textureImporter != null && textureImporter.GetDefaultPlatformTextureSettings().textureCompression == TextureImporterCompression.CompressedHQ)
 					highQualityUASTC = true;
-				renderTextures[i].enableRandomWrite = true;
-				renderTextures[i].name = $"{geometrySource.texturesWaitingForExtraction[i].unityTexture.name} ({geometrySource.texturesWaitingForExtraction[i].id})";
-				renderTextures[i].Create();
-
-				string shaderName = isNormal ? "ExtractNormalMap" : "ExtractTexture";
+				string shaderName = isCubemap?"ExtractCubeFace":isNormal ? "ExtractNormalMap" : "ExtractTexture";
 				shaderName += UnityEditor.PlayerSettings.colorSpace == ColorSpace.Gamma ? "Gamma" : "Linear";
 
 				int kernelHandle = textureShader.FindKernel(shaderName);
-				textureShader.SetTexture(kernelHandle, "Source", sourceTexture);
-				textureShader.SetTexture(kernelHandle, "Result", renderTextures[i]);
+				textureShader.SetTexture(kernelHandle, "Source", sourceTexture,0);
+				if(isCubemap)
+					textureShader.SetTexture(kernelHandle, "SourceCube", sourceTexture);
 				textureShader.SetInt("Scale", scale);
-				textureShader.Dispatch(kernelHandle, targetWidth / 8, targetHeight / 8, 1);
-
-				if (!SystemInfo.IsFormatSupported(renderTextures[i].graphicsFormat, UnityEngine.Experimental.Rendering.FormatUsage.Sample))
+				List<RenderTexture> textureArray = new List<RenderTexture>();
+				for (int m = 0; m < mipCount; m++)
 				{
-					UnityEngine.Debug.LogError("Format of texture " + i + " is not supported for Texture2D.");
+					for (int j = 0; j < arraySize; j++)
+					{
+						var rt= renderTextures[rendertextureIndex + j];
+						textureShader.SetTexture(kernelHandle, "Result", rt);
+						textureShader.SetInt("ArrayIndex", j);
+						textureShader.SetInt("Face", j);
+						textureShader.Dispatch(kernelHandle, (rt.width +7)/ 8, (rt.height+7)/ 8, 1);
+						textureArray.Add(rt);
+					}
+				}
+				if (!SystemInfo.IsFormatSupported(renderTextures[rendertextureIndex].graphicsFormat, UnityEngine.Experimental.Rendering.FormatUsage.Sample))
+				{
+					UnityEngine.Debug.LogError("Format of texture " + i + " is not supported.");
+					rendertextureIndex+=arraySize;
 					continue;
 				}
-
 				//Rip data from render texture, and store in GeometryStore.
-				{
-					//Read pixel data into Texture2D, so that it can be read.
-					Texture2D readTexture = new Texture2D(renderTextures[i].width, renderTextures[i].height, renderTextures[i].graphicsFormat
-						, UnityEngine.Experimental.Rendering.TextureCreationFlags.None);
+				ExtractAndStoreTexture(sourceTexture, textureArray, textureExtractionData.textureData, targetWidth, targetHeight, writePng, highQualityUASTC, forceOverwrite);
+				rendertextureIndex+=arraySize;
+			}
 
+			for (int i = rendertextureIndex; i < renderTextures.Count; i++)
+			{
+				if (renderTextures[i])
+				{
+					renderTextures[i].Release();
+				}
+			}
+			geometrySource.CompressTextures();
+			geometrySource.texturesWaitingForExtraction.Clear();
+			EditorUtility.ClearProgressBar();
+			return true;
+		}
+		class SubresourceImage
+		{
+			public byte[] bytes;
+		}
+
+		void ExtractAndStoreTexture(Texture sourceTexture, List<RenderTexture> renderTextures, avs.Texture textureData,int targetWidth, int targetHeight,bool writePng, bool highQualityUASTC,  bool forceOverwrite)
+		{
+			int arraySize=1;
+			if(sourceTexture.GetType()==typeof(Cubemap))
+			{ 
+				textureData.cubemap=true;
+				arraySize=6;
+			}
+			textureData.data=(IntPtr)0;
+			if(highQualityUASTC)
+				writePng=true;
+			List<SubresourceImage> subresourceImages=new List<SubresourceImage>();
+			
+			if (textureData.mipCount * arraySize != renderTextures.Count)
+			{
+				Debug.LogError("Image count mismatch");
+				return;
+			}
+			for (int j = 0; j < textureData.mipCount; j++)
+			{
+				for (int i=0;i<arraySize;i++)
+				{
+					SubresourceImage subresourceImage=new SubresourceImage();
+					subresourceImages.Add(subresourceImage);
+					var rt= renderTextures[i];
+					//Read pixel data into Texture2D, so that it can be read.
+					Texture2D readTexture = new Texture2D(targetWidth, targetHeight, rt.graphicsFormat
+								, UnityEngine.Experimental.Rendering.TextureCreationFlags.None);
 
 					RenderTexture oldActive = RenderTexture.active;
 
-					RenderTexture.active = renderTextures[i];
-					readTexture.ReadPixels(new Rect(0, 0, renderTextures[i].width, renderTextures[i].height), 0, 0);
+					RenderTexture.active = rt;
+					readTexture.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
 					readTexture.Apply();
 
 					RenderTexture.active = oldActive;
 
-					avs.Texture textureData = geometrySource.texturesWaitingForExtraction[i].textureData;
-					textureData.width = (uint)targetWidth;
-					textureData.height = (uint)targetHeight;
+					textureData.width = (uint) targetWidth;
+					textureData.height = (uint) targetHeight;
 					if (readTexture.format == TextureFormat.RGBAFloat)
 					{
 						Color[] pixelData = readTexture.GetPixels();
 						textureData.format = avs.TextureFormat.RGBAFloat;
 						textureData.bytesPerPixel = 16;
-
 						int floatSize = Marshal.SizeOf<float>();
-						textureData.dataSize = (uint)(pixelData.Length * 4 * floatSize);
-						textureData.data = Marshal.AllocCoTaskMem((int)textureData.dataSize);
-
-						int byteOffset = 0;
-						foreach (Color pixel in pixelData)
-						{
-							float[] f = { pixel.r, pixel.g, pixel.b, pixel.a };
-							Marshal.Copy(f, 0, textureData.data + byteOffset, 4);
-							byteOffset += 4 * floatSize;
-						}
+						int imageSize= Marshal.SizeOf<Color>() * pixelData.Length;
+						var srcBytes = MemoryMarshal.Cast<Color, byte>(pixelData);
+						subresourceImage.bytes=srcBytes.ToArray();
 					}
 					else
 					{
@@ -1195,29 +1299,15 @@ namespace teleport
 						textureData.format = avs.TextureFormat.RGBA8;
 						textureData.bytesPerPixel = 4;
 
-						int byteSize = Marshal.SizeOf<byte>();
-						textureData.dataSize = (uint)(pixelData.Length * 4 * byteSize);
-						textureData.data = Marshal.AllocCoTaskMem((int)textureData.dataSize);
-
-						int byteOffset = 0;
-						foreach (Color32 pixel in pixelData)
-						{
-							Marshal.WriteByte(textureData.data, byteOffset, pixel.r);
-							byteOffset += byteSize;
-
-							Marshal.WriteByte(textureData.data, byteOffset, pixel.g);
-							byteOffset += byteSize;
-
-							Marshal.WriteByte(textureData.data, byteOffset, pixel.b);
-							byteOffset += byteSize;
-
-							Marshal.WriteByte(textureData.data, byteOffset, pixel.a);
-							byteOffset += byteSize;
-						}
+						int imageSize =pixelData.Length * Marshal.SizeOf<Color32>();
+						subresourceImage.bytes = new byte[imageSize];
+						var srcBytes = MemoryMarshal.Cast<Color32, byte>(pixelData);
+						subresourceImage.bytes = srcBytes.ToArray();
 					}
-					// Test: write to png.
+					// Test: write to png. Only for observation/debugging.
 					if (writePng || highQualityUASTC)
 					{
+						// If it's png, let's have a uint16 here, N with the number of images, then a list of N size_t offsets. Each is a subresource image. Then image 0 starts.
 						string textureAssetPath = AssetDatabase.GetAssetPath(sourceTexture);
 						string basisFile = geometrySource.GenerateCompressedFilePath(textureAssetPath, avs.TextureCompression.BASIS_COMPRESSED);
 						string dirPath = System.IO.Path.GetDirectoryName(basisFile);
@@ -1246,8 +1336,10 @@ namespace teleport
 								}
 							}*/
 						string pngFile = basisFile.Replace(".basis", ".png");
-						byte[] png_bytes = readTexture.EncodeToPNG();
-						File.WriteAllBytes(pngFile, png_bytes);
+						if(arraySize>1)
+							pngFile=pngFile.Replace(".png","_"+i.ToString()+".png");
+						subresourceImage.bytes = readTexture.EncodeToPNG();
+						File.WriteAllBytes(pngFile, subresourceImage.bytes);
 						/*
 						 * exr is way too big.
 						string exrFile = basisFile.Replace(".basis", ".exr");
@@ -1262,24 +1354,45 @@ namespace teleport
 						}
 						else
 							textureData.compression = avs.TextureCompression.PNG;
-						textureData.dataSize = (uint)(png_bytes.Length);
-						textureData.data = Marshal.AllocCoTaskMem((int)textureData.dataSize);
 						textureData.valueScale = valueScale;
-						Marshal.Copy(png_bytes, 0, textureData.data, (int)textureData.dataSize);
-						geometrySource.AddTextureData(sourceTexture, textureData, highQualityUASTC, forceOverwrite);
+						// copy the png into texture data.
 					}
 					else
 					{
 						textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
-						geometrySource.AddTextureData(sourceTexture, textureData, highQualityUASTC, forceOverwrite);
 					}
-					Marshal.FreeCoTaskMem(textureData.data);
 				}
 			}
 
-			geometrySource.CompressTextures();
-			geometrySource.texturesWaitingForExtraction.Clear();
-			return true;
+
+			// Now we will write the subresource images into textureData, prepending with the subresource count.
+			// let's have a uint16 here, N , then a list of N size_t offsets.
+			// Therefore the memory we need is (subresource memory)+sizeof(uint16)+N*uint32
+			int memoryRequired = Marshal.SizeOf<UInt16>();
+			List<UInt32> offsets=new List<UInt32>();
+			memoryRequired += Marshal.SizeOf<UInt32>()* subresourceImages.Count;
+			foreach (SubresourceImage subresourceImage in subresourceImages)
+			{
+				offsets.Add((UInt32)memoryRequired);
+				memoryRequired +=subresourceImage.bytes.Length;
+			}
+			textureData.dataSize = (uint)(memoryRequired);
+			textureData.data = Marshal.AllocCoTaskMem((int)textureData.dataSize);
+			IntPtr targetPtr = textureData.data;
+			UInt16 [] numImages = {((UInt16)subresourceImages.Count)};
+			byte[] numImagesBytes = MemoryMarshal.Cast<UInt16, byte>(numImages).ToArray();
+			Marshal.Copy(numImagesBytes, 0, targetPtr, Marshal.SizeOf<UInt16>());
+			targetPtr += Marshal.SizeOf<UInt16>();
+			byte[] offsetsBytes = MemoryMarshal.Cast<UInt32, byte>(offsets.ToArray()).ToArray();
+			Marshal.Copy(offsetsBytes, 0, targetPtr, offsetsBytes.Length);
+			targetPtr += offsetsBytes.Length;
+			foreach (SubresourceImage subresourceImage in subresourceImages)
+			{
+				Marshal.Copy(subresourceImage.bytes, 0, targetPtr, (int)subresourceImage.bytes.Length);
+				targetPtr += subresourceImage.bytes.Length;
+			}
+			geometrySource.AddTextureData(sourceTexture, textureData, highQualityUASTC, forceOverwrite);
+			Marshal.FreeCoTaskMem(textureData.data);
 		}
 		static string basisUExe = "";
 		/// <summary>
@@ -1526,8 +1639,8 @@ namespace teleport
 				string compressionMessage = GetMessageForNextCompressedTexture(i, totalTexturesToCompress);
 
 				bool cancelled = EditorUtility.DisplayCancelableProgressBar("Compressing Textures", compressionMessage, (float)(i + 1) / totalTexturesToCompress);
-				if(cancelled) break;
-
+				if(cancelled)
+					break;
 				CompressNextTexture();
 			}
 
@@ -2308,7 +2421,7 @@ namespace teleport
 
 		private static uint GetBytesPerPixel(TextureFormat format)
 		{
-			switch(format)
+			switch (format)
 			{
 				case TextureFormat.Alpha8: return 1;
 				case TextureFormat.ARGB4444: return 2;
@@ -2386,8 +2499,36 @@ namespace teleport
 					return 8;
 			}
 		}
-
-		public uid AddTexture(Texture texture, ForceExtractionMask forceMask)
+		private static TextureFormat ConvertRenderTextureFormatToTextureFormat(RenderTextureFormat rtf)
+		{
+			string formatName = Enum.GetName(typeof(RenderTextureFormat), rtf);
+			TextureFormat texFormat = TextureFormat.RGBA32;
+			foreach (TextureFormat f in Enum.GetValues(typeof(TextureFormat)))
+			{
+				string fName = Enum.GetName(typeof(TextureFormat), f);
+				if (fName.Equals(formatName, StringComparison.Ordinal))
+				{
+					texFormat = f;
+					break;
+				}
+			}
+			Debug.LogError("No equivalent TextureFormat found for RenderTextureFormat " + rtf.ToString());
+			return texFormat;
+		}
+		private static uint GetBytesPerPixel(RenderTextureFormat format)
+		{
+			switch (format)
+			{
+				case RenderTextureFormat.ARGBFloat: return 16;
+				case RenderTextureFormat.ARGB32: return 4;
+				default:
+					TextureFormat f= ConvertRenderTextureFormatToTextureFormat(format);
+					return GetBytesPerPixel(f);
+					//Debug.LogWarning("Defaulting to <color=red>8</color> bytes per pixel as format is unsupported: " + format);
+					//return 8;
+			}
+		}
+		public uid AddTexture(Texture texture, ForceExtractionMask forceMask= ForceExtractionMask.FORCE_NOTHING)
 		{
 			if(!texture)
 			{
@@ -2461,6 +2602,23 @@ namespace teleport
 					extractedTexture.depth = (uint)texture3D.depth;
 					extractedTexture.arrayCount = 1;
 					extractedTexture.bytesPerPixel = GetBytesPerPixel(texture3D.format);
+					break;
+				case Cubemap cubemap:
+					extractedTexture.depth = 1;
+					extractedTexture.arrayCount = 6;
+					extractedTexture.bytesPerPixel = GetBytesPerPixel(cubemap.format);
+					extractedTexture.cubemap=true;
+					break;
+				case RenderTexture renderTexture:
+					extractedTexture.depth = 1;
+					extractedTexture.arrayCount = 1;
+					if (renderTexture.dimension == UnityEngine.Rendering.TextureDimension.Cube)
+					{
+						extractedTexture.arrayCount = 6;
+						extractedTexture.cubemap = true;
+					}
+					extractedTexture.mipCount=(uint)renderTexture.mipmapCount;
+					extractedTexture.bytesPerPixel = GetBytesPerPixel(renderTexture.format);
 					break;
 				default:
 					Debug.LogError("Passed texture was unsupported type: " + texture.GetType() + "!");

@@ -181,7 +181,15 @@ namespace teleport
 				if (m > 3)
 					m = 0;
 				uint renderMask = (uint)(0x7);*/
-				renderer.Render(context, camera,0x7FFFFFFF, 0xFFFFFFFF);
+			// The Monitor's dummy camera is used only to generate static env maps.
+				if (camera.gameObject.TryGetComponent<teleport.Monitor>(out teleport.Monitor m))
+				{
+					renderer.GenerateEnvMaps(context);
+					context.Submit();
+				}
+				else
+					renderer.Render(context, camera, 0x7FFFFFFF, 0xFFFFFFFF);
+
 				viewmat = camera.worldToCameraMatrix;
 			}
 		}

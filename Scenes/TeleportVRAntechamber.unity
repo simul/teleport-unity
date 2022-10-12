@@ -1471,6 +1471,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   defaultPlayerPrefab: {fileID: 0}
   audioCapture: {fileID: 0}
+  diffuseCubemap: {fileID: 8900000, guid: 799677c60dffa4e43a9c545781f3da0c, type: 3}
 --- !u!4 &843734288
 Transform:
   m_ObjectHideFlags: 0
@@ -2122,6 +2123,7 @@ MonoBehaviour:
   - {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
   - {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   - {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  - {fileID: 8900000, guid: 799677c60dffa4e43a9c545781f3da0c, type: 3}
   sceneResourcePaths_values:
   - Meshes/Owned/Cafe/HightPoly_02
   - Meshes/Owned/Cafe/ChairWood
@@ -2187,6 +2189,7 @@ MonoBehaviour:
   - Library/Plane
   - Library/Cylinder
   - Library/Cube
+  - Licensed%Content/HQ%PBR/HQ%Retro%Office/Scene/HQPBR_Retro_Office/ReflectionProbe-0
 --- !u!4 &990844616
 Transform:
   m_ObjectHideFlags: 0

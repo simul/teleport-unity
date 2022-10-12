@@ -10,8 +10,17 @@ namespace teleport
         public override void OnInspectorGUI()
         {
             base.OnInspectorGUI();
+			teleport.Monitor monitor = (teleport.Monitor)target;
+			GUILayout.Space(10);
+			if (GUILayout.Button("Generate Env Maps"))
+			{
+				if(monitor&&monitor.environmentCubemap)
+				{
+					monitor.generateEnvMaps=true;
+				}
+			}
 
-            GUILayout.Space(10);
+			GUILayout.Space(10);
             if(GUILayout.Button("Open Resource Window"))
                 teleport.ResourceWindow.OpenResourceWindow();
         }

@@ -15,7 +15,6 @@ namespace teleport
 	{
 		//Used to serialise dictionary, so it can be refilled when the object is deserialised.
 
-		bool isAwake = false;
 		[SerializeField] UnityEngine.GameObject[] gameObjectReferences_keys;
 		[SerializeField] MeshReference[] gameObjectReferences_values;
 
@@ -158,7 +157,6 @@ namespace teleport
 
 		private void Awake()
 		{
-			isAwake = true;
 		}
 
 		private void OnEnable()

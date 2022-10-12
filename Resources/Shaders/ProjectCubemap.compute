@@ -25,7 +25,7 @@ int2 WebcamSize;
 int2 TagDataIdOffset;
 int TagDataId;
 int Face;
-mat4 FaceToWorldMatrix;
+//mat4 FaceToWorldMatrix;
 
 // Here. we will encode the id of the video tag data in 4x4 blocks of monochrome colour.
 [numthreads(32, 4, 1)]

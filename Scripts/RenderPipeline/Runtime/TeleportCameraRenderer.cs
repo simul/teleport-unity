@@ -285,7 +285,13 @@ namespace teleport
 		{
 			EditorMask editorMask = EditorMask.GetInstance();
 		}
-
+		public void GenerateEnvMaps(ScriptableRenderContext context)
+		{
+			for (int face = 0; face < 6; face++)
+			{
+				VideoEncoding.GenerateSpecularMips(context, Monitor.Instance.environmentCubemap, Monitor.Instance.specularRenderTexture, face, 0);
+			}
+		}
 		public void Render(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask)
 		{
 			CullingResults cullingResultsAll;
@@ -298,7 +304,7 @@ namespace teleport
 			TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
 			teleportLighting.renderSettings = renderSettings;
 			teleportLighting.RenderShadows(context, camera, cullingResultsAll, lightingOrder);
-			DrawDepthPass(context, camera,  layerMask,  renderingMask, cullingResultsAll);
+			DrawDepthPass(context, camera, layerMask, renderingMask, cullingResultsAll);
 			teleportLighting.RenderScreenspaceShadows(context, camera, lightingOrder, cullingResultsAll, depthTexture);
 			context.SetupCameraProperties(camera);
 			Clear(context, camera);
@@ -505,8 +511,8 @@ namespace teleport
 					DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder, false, teleportSettings.highlightStreamableColour,sceneCapture.UnfilteredCubeTexture, face);
 					DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
 		
-					videoEncoding.GenerateSpecularMips(context, sceneCapture.UnfilteredCubeTexture, sceneCapture.SpecularCubeTexture, face, 0);
-					videoEncoding.GenerateDiffuseCubemap(context, sceneCapture.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), sceneCapture.DiffuseCubeTexture, face,diffuseAmbientScale);
+					VideoEncoding.GenerateSpecularMips(context, sceneCapture.UnfilteredCubeTexture, sceneCapture.SpecularCubeTexture, face, 0);
+					VideoEncoding.GenerateDiffuseCubemap(context, sceneCapture.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), sceneCapture.DiffuseCubeTexture, face,diffuseAmbientScale);
 					videoEncoding.EncodeLightingCubemaps(context, sceneCapture, SessionComponent,face);
 				}
 				else
@@ -525,8 +531,8 @@ namespace teleport
 					camera.nearClipPlane = 5.0f;
 					videoEncoding.DrawCubemaps(context, SessionComponent.sceneCaptureComponent.rendererTexture, sceneCapture.UnfilteredCubeTexture, face);
 					camera.nearClipPlane = oldNearClip;
-					videoEncoding.GenerateSpecularMips(context, SessionComponent.sceneCaptureComponent.UnfilteredCubeTexture, sceneCapture.SpecularCubeTexture, face, 0);
-					videoEncoding.GenerateDiffuseCubemap(context, SessionComponent.sceneCaptureComponent.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), sceneCapture.DiffuseCubeTexture, face, diffuseAmbientScale);
+					VideoEncoding.GenerateSpecularMips(context, SessionComponent.sceneCaptureComponent.UnfilteredCubeTexture, sceneCapture.SpecularCubeTexture, face, 0);
+					VideoEncoding.GenerateDiffuseCubemap(context, SessionComponent.sceneCaptureComponent.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), sceneCapture.DiffuseCubeTexture, face, diffuseAmbientScale);
 					if(SessionComponent.clientSettings.captureCubeTextureSize>0&& SessionComponent.clientSettings.backgroundMode==BackgroundMode.VIDEO)
 					{ 
 						videoEncoding.EncodeColor(context, camera, face, sceneCapture);

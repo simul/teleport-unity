@@ -15,6 +15,7 @@ namespace teleport
 	/// <summary>
 	/// A singleton component which stores per-server-session state.
 	/// </summary>
+	[ExecuteInEditMode]
 	public class Monitor : MonoBehaviour
 	{
 		private static bool initialised = false;
@@ -104,6 +105,14 @@ namespace teleport
 		private static extern uid GetUnlinkedClientID();
 		#endregion
 
+		// This will point to a saved asset texture.
+		public RenderTexture specularRenderTexture;
+#if UNITY_EDITOR
+		//! For generating static cubemaps in Editor.
+		public RenderTexture dummyRenderTexture;
+		public Camera dummyCam = null;
+		public bool generateEnvMaps=false;
+#endif
 		//! Create a new session, e.g. when a client connects.
 		public delegate Teleport_SessionComponent CreateSession();
 
@@ -118,6 +127,7 @@ namespace teleport
 
 		public Teleport_AudioCaptureComponent audioCapture = null;
 
+		public Cubemap environmentCubemap=null;
 #if UNITY_EDITOR
 		static Monitor()
 		{
@@ -129,7 +139,6 @@ namespace teleport
 		{
 			createSessionCallback = callback;
 		}
-
 		public static Monitor Instance
 		{
 			get
@@ -263,7 +272,13 @@ namespace teleport
 
 		private void OnDisable()
 		{
-			SceneManager.sceneLoaded -= OnSceneLoaded;
+#if UNITY_EDITOR
+			if (dummyCam)
+			{
+				DestroyImmediate(dummyCam);
+			}
+#endif
+		SceneManager.sceneLoaded -= OnSceneLoaded;
 			Shutdown();
 		}
 		
@@ -342,13 +357,62 @@ namespace teleport
 
 		private void Update()
 		{
-			if(initialised)
+			if(initialised&&Application.isPlaying)
 			{
 				Tick(Time.deltaTime);
 				CheckForClients();
 			}
+#if UNITY_EDITOR
+			if (generateEnvMaps)
+			{
+				GenerateEnvMaps();
+				//generateEnvMaps=false;
+				//dummyCam.enabled = true;
+			}
+#endif
 		}
+#if UNITY_EDITOR
+		private void GenerateEnvMaps()
+		{
+			// we will render this source cubemap into a target that has mips for roughness, and also into a diffuse cubemap.
+			// We will save those two cubemaps to disk, and store them as the client dynamic lighting textures.
 
+			if (dummyRenderTexture == null)
+			{
+				dummyRenderTexture = new RenderTexture(8, 8
+					, 24, UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_UNorm, 1);
+			}
+			if (dummyCam == null)
+			{
+				GameObject monitorObject = gameObject;
+				monitorObject.TryGetComponent<Camera>(out dummyCam);
+				if (dummyCam == null)
+					dummyCam=monitorObject.AddComponent<Camera>();
+				dummyCam.targetTexture= dummyRenderTexture;
+				dummyCam.enabled = true;
+			}
+			int mips = 21;
+			while (mips > 1 && ((1 << mips) > environmentCubemap.width))
+			{
+				mips--;
+			}
+			string scenePath = SceneManager.GetActiveScene().path;
+			//RenderTextureDescriptor desc=new RenderTextureDescriptor();
+			if (specularRenderTexture == null || specularRenderTexture.width != environmentCubemap.width ||
+				specularRenderTexture.mipmapCount != mips)
+			{
+				specularRenderTexture = new RenderTexture(environmentCubemap.width, environmentCubemap.width
+					, 24, UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_UNorm, mips);
+				specularRenderTexture.dimension = UnityEngine.Rendering.TextureDimension.Cube;
+				specularRenderTexture.useMipMap = true;
+				// We will generate the mips with shaders in the render call.
+				specularRenderTexture.autoGenerateMips = false;
+				string assetPath = scenePath.Replace(".unity", "/specularRenderTexture.renderTexture");
+				UnityEditor.AssetDatabase.CreateAsset(specularRenderTexture, assetPath);
+			}
+			dummyCam.Render();
+		}
+#endif
 		private void OnGUI()
 		{
 			if ( Application.isPlaying)

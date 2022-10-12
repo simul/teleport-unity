@@ -42,7 +42,7 @@ namespace teleport
 		//downCopyFaceKernel = computeShader.FindKernel("DownCopyFaceCS");
 		}
 
-		private void InitDepthShader()
+		static private void InitDepthShader()
 		{
 			if (depthMaterial == null)
 			{
@@ -58,11 +58,11 @@ namespace teleport
 			}
 		}
 
-		public void EnsureMaterial(ref Material m,ref Shader s,string shaderName)
+		static public void EnsureMaterial(ref Material m,ref Shader s,string shaderName)
 		{
 			if (m == null)
 			{
-				s = Shader.Find("Teleport/CopyCubemap");
+				s = Shader.Find(shaderName);
 				if (s != null)
 				{
 					m = new Material(s);
@@ -115,7 +115,7 @@ namespace teleport
 		/// But Unity is missing the necessary API functions to render with one mip of input and one as output of the same texture.
 		/// So instead we will render directly to the video texture.
 		/// </summary>
-		public void SpecularRoughnessMip(CommandBuffer buffer, RenderTexture SourceCubeTexture, RenderTexture SpecularCubeTexture, int face, int MipIndex, int mipOffset)
+		static public void SpecularRoughnessMip(CommandBuffer buffer, Texture SourceCubeTexture, RenderTexture SpecularCubeTexture, int face, int MipIndex, int mipOffset)
 		{
 			float roughness =  RoughnessFromMip((float)( MipIndex+ mipOffset), (float)( SpecularCubeTexture.mipmapCount));
 			int w = SpecularCubeTexture.width << MipIndex;
@@ -136,7 +136,7 @@ namespace teleport
 			// 
 			buffer.DrawProcedural(Matrix4x4.identity, createLightingCubemapMaterial, 1, MeshTopology.Triangles,6);
 		}
-		public void GenerateSpecularMips(ScriptableRenderContext context, RenderTexture SourceCubeTexture, RenderTexture SpecularCubeTexture, int face,int mip_offset)
+		static public void GenerateSpecularMips(ScriptableRenderContext context, Texture SourceCubeTexture, RenderTexture SpecularCubeTexture, int face,int mip_offset)
 		{
 			var buffer = new CommandBuffer();
 			buffer.name = "Generate Specular Mips";
@@ -145,7 +145,7 @@ namespace teleport
 			EnsureMaterial(ref createLightingCubemapMaterial, ref cubemapShader, "Teleport/CopyCubemap");
 			EnsureMaterial(ref encodeLightingCubemapMaterial, ref cubemapShader, "Teleport/CopyCubemap");
 
-			// Only do 3 mips.
+	
 			for (int i = 0; i < SpecularCubeTexture.mipmapCount; i++)
 			{
 				SpecularRoughnessMip(buffer, SourceCubeTexture, SpecularCubeTexture, face,i,mip_offset);
@@ -153,7 +153,7 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
-		public void GenerateDiffuseCubemap(ScriptableRenderContext context, RenderTexture SourceCubeTexture, HashSet<Light> bakedLights, RenderTexture DiffuseCubeTexture, int face,float light_scale)
+		static public void GenerateDiffuseCubemap(ScriptableRenderContext context, Texture SourceCubeTexture, HashSet<Light> bakedLights, RenderTexture DiffuseCubeTexture, int face,float light_scale)
 		{
 			var buffer = new CommandBuffer();
 			buffer.name = "Diffuse";

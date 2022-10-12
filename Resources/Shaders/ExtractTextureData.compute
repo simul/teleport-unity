@@ -2,12 +2,29 @@
 #pragma kernel ExtractTextureGamma
 #pragma kernel ExtractNormalMapLinear
 #pragma kernel ExtractNormalMapGamma
+#pragma kernel ExtractCubeFaceLinear
+#pragma kernel ExtractCubeFaceGamma
 
 #include "UnityCG.cginc"
 
+float4 GammaToLinearSpaceExact (float4 value)
+{
+	return float4(GammaToLinearSpaceExact(value.x),GammaToLinearSpaceExact(value.y),GammaToLinearSpaceExact(value.z),GammaToLinearSpaceExact(value.w));
+}
+
 Texture2D<float4> Source;
+TextureCube<float4> SourceCube;
 RWTexture2D<float4> Result;
+SamplerState samplerSourceCube
+{
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = Mirror;
+	AddressV = Mirror;
+	AddressW = Mirror;
+};
+
 int Scale;
+int Face;
 
 //Extract textures from linear space.
 [numthreads(8, 8, 1)]
@@ -21,7 +38,7 @@ void ExtractTextureLinear(uint3 id : SV_DispatchThreadID)
 void ExtractTextureGamma(uint3 id : SV_DispatchThreadID)
 {
 	float4 src = Source[id.xy * Scale];
-	Result[id.xy].rgba = float4(GammaToLinearSpaceExact(src.r), GammaToLinearSpaceExact(src.g), GammaToLinearSpaceExact(src.b), GammaToLinearSpaceExact(src.a));
+	Result[id.xy].rgba = GammaToLinearSpaceExact(src);
 }
 
 [numthreads(8, 8, 1)]
@@ -36,8 +53,52 @@ void ExtractNormalMapLinear(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void ExtractNormalMapGamma(uint3 id : SV_DispatchThreadID)
 {
-	float4 src = Source[id.xy * Scale];
-	float3 unpackedNormal = UnpackNormalDXT5nm(src);
-	unpackedNormal = unpackedNormal * 0.5 + 0.5;
-	Result[id.xy] = float4(unpackedNormal, unpackedNormal.r);
+	float4 src				= Source[id.xy * Scale];
+	float3 unpackedNormal	= UnpackNormalDXT5nm(src);
+	unpackedNormal			= unpackedNormal * 0.5 + 0.5;
+	Result[id.xy]			= float4(unpackedNormal, unpackedNormal.r);
+}
+
+float4 FromCubemap(int2 pos)
+{
+	float4x4 cubeInvViewProj[6] = {
+		{ {0,0,-1,0}	,{0,-1,0,0}	,{1,0,0,0}	,{0,0,0,1}	}
+		, { {0,0,1,0}	,{0,-1,0,0}	,{-1,0,0,0}	,{0,0,0,1} }
+		,{ {-1,0,0,0}	,{0,0,-1,0}	,{0,1,0,0}	,{0,0,0,1}	}
+		,{ {-1,0,0,0}	,{0,0,1,0}	,{0,-1,0,0},{0,0,0,1}	}
+		,{ {-1,0,0,0}	,{0,-1,0,0}	,{0,0,-1,0}	,{0,0,0,1}	}
+		,{ {1,0,0,0}	,{0,-1,0,0}	,{0,0,1,0}	,{0,0,0,1}	}
+	};
+	float4x4 cubeInvViewProj0	= { { 0, 0, -1, 0 }, { 0, -1, 0, 0 }, { 1, 0, 0, 0 }, { 0, 0, 0, 1 } };
+
+	uint InputW, InputH, numFaces;
+	SourceCube.GetDimensions(InputW, InputH);
+	int2 ipos		=int2(pos.x, InputH - 1 - pos.y);
+	int2 sz			=int2(InputW,InputH);
+	float3 dir		=float3(float2(ipos.xy)/float2(sz)*2.0-float2(1.0,1.0),1.0);
+	float3 dir_g	=(mul(cubeInvViewProj[Face],float4(dir,1.0))).xyz;
+	float4 colour	= SourceCube.SampleLevel(samplerSourceCube,normalize(dir_g),0);
+	//float3 faceColour[6]={{1.0,0,0},{0.2,0,0},{0,1.0,0},{0,0.2,0},{0,0,1.0},{0,0,0.4}};
+	//colour.rgb+=dir_g;//faceColour[ArrayIndex];
+	//colour.r+=float(pos.x)/float(InputW);
+	//colour.g+=float(pos.y)/float(InputH);
+	return colour;
+} 
+ 
+//Extract cubemap textures from linear space.
+[numthreads(8, 8, 1)]
+void ExtractCubeFaceLinear(uint3 id : SV_DispatchThreadID)
+{
+	int2 pos=int2(id.xy);
+	float4 colour	= FromCubemap(pos);
+	Result[id.xy].rgba = saturate(colour);
+}
+
+//Extract cubemap textures from gamma space.
+[numthreads(8, 8, 1)]
+void ExtractCubeFaceGamma(uint3 id : SV_DispatchThreadID)
+{
+	float4 colour	= FromCubemap(int2(id.xy));
+	//float4 src = SourceArray[int3(id.xy * Scale,ArrayIndex)];
+	Result[id.xy].rgba = GammaToLinearSpaceExact(colour);
 }
