@@ -6,17 +6,14 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using uid = System.UInt64;
 
-public static class StringExtensions
-{
-	public static bool Contains(this string source, string toCheck, StringComparison comp)
-	{
-		return source?.IndexOf(toCheck, comp) >= 0;
-	}
-}
 namespace teleport
 {
 	public class ResourceWindow : EditorWindow
 	{
+		public static bool SearchStringMatch(string source, string toCheck)
+		{
+			return source?.IndexOf(toCheck, StringComparison.OrdinalIgnoreCase) >= 0;
+		}
 		enum ResourceWindowCategories { SETUP, RESOURCES, SCENE_REFS, DEBUG};
 
 		//References to assets.
@@ -32,10 +29,11 @@ namespace teleport
 		private bool forceExtraction=false;
 
 		//Text styles.
-		private GUIStyle richText = new GUIStyle();
-		private GUIStyle warningText = new GUIStyle();
-		private GUIStyle errorText = new GUIStyle();
-		private GUIStyle scrollbarStyle = new GUIStyle();
+		private GUIStyle richText ;
+		private GUIStyle warningText ;
+		private GUIStyle errorText ;
+		private GUIStyle hScrollbarStyle;
+		private GUIStyle vScrollbarStyle;
 		private GUIStyle scrollwindowStyle;
 		private GUIStyle labelText ;
 		private GUIStyle titleStyle ; 
@@ -71,11 +69,6 @@ namespace teleport
 		//Use this to setup variables that are likely to change on a hot-reload.
 		private void OnFocus()
 		{
-			richText.normal.textColor = Color.white;
-			richText.richText = true;
-			
-			warningText.normal.textColor = new Color(1.0f, 1.0f, 0.0f);
-			errorText.normal.textColor = Color.red;
 
 			//Fill categories array with enumeration names.
 			categories = Enum.GetNames(typeof(ResourceWindowCategories));
@@ -90,10 +83,20 @@ namespace teleport
 		{
 			if (labelText==null)
 			{
+				richText = new GUIStyle(GUI.skin.textArea);
+				warningText = new GUIStyle(GUI.skin.label);
+				errorText = new GUIStyle(GUI.skin.label);
+				hScrollbarStyle = new GUIStyle(GUI.skin.horizontalScrollbar);
+				vScrollbarStyle = new GUIStyle(GUI.skin.verticalScrollbar);
 				labelText = new GUIStyle(GUI.skin.label);
 				titleStyle = new GUIStyle(GUI.skin.label);
 				scrollwindowStyle = new GUIStyle(GUI.skin.box);
 				titleStyle.fontSize = (GUI.skin.label.fontSize * 3) / 2;
+				richText.normal.textColor = Color.white;
+				richText.richText = true;
+
+				warningText.normal.textColor = new Color(1.0f, 1.0f, 0.0f);
+				errorText.normal.textColor = Color.red;
 			}
 			DrawExtractionLayout();
 			EditorGUILayout.Separator();
@@ -255,7 +258,7 @@ namespace teleport
 
 			//GUI.skin.scrollView ;
 			//.normal.background = Color.white; 
-			scrollPosition_scenes = EditorGUILayout.BeginScrollView(scrollPosition_scenes,false,true,scrollbarStyle,scrollbarStyle,scrollwindowStyle);
+			scrollPosition_scenes = EditorGUILayout.BeginScrollView(scrollPosition_scenes,false,true,hScrollbarStyle,vScrollbarStyle,scrollwindowStyle);
 			foreach (var s in scenerefs)
 			{
 				SceneResourcePathManager p=null;
@@ -271,13 +274,14 @@ namespace teleport
 			}
 			EditorGUILayout.EndScrollView();
 			EditorGUILayout.Separator();
+			EditorGUILayout.Space(10);
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.BeginVertical();
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.LabelField("Game Object");
 			EditorGUILayout.LabelField("Mesh");
 			EditorGUILayout.EndHorizontal();
-			scrollPosition_sceneMeshes = EditorGUILayout.BeginScrollView(scrollPosition_sceneMeshes, false, true, scrollbarStyle, scrollbarStyle, scrollwindowStyle);
+			scrollPosition_sceneMeshes = EditorGUILayout.BeginScrollView(scrollPosition_sceneMeshes, false, true, hScrollbarStyle,vScrollbarStyle, scrollwindowStyle);
 			var sceneReferenceManager= SceneReferenceManager.GetSceneReferenceManager(selected_scene);
 			if (sceneReferenceManager)
 			{
@@ -285,7 +289,7 @@ namespace teleport
 				{
 					if (resourceSearchText.Length > 0)
 					{
-						if (!(s.Key.name.ToString().Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase)) && !s.Value.mesh.name.Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase))
+						if (!SearchStringMatch(s.Key.name,resourceSearchText) && !SearchStringMatch(s.Value.mesh.name,resourceSearchText))
 						{
 							continue;
 						}
@@ -298,13 +302,14 @@ namespace teleport
 			}
 			EditorGUILayout.EndScrollView();
 			EditorGUILayout.EndVertical();
+			EditorGUILayout.Space(10);
 			EditorGUILayout.BeginVertical();
 			EditorGUILayout.BeginHorizontal();
-			EditorGUILayout.LabelField("Resource");
-			EditorGUILayout.LabelField("Type");
+			EditorGUILayout.LabelField("Resource", GUILayout.Width(150));
+			EditorGUILayout.LabelField("Type", GUILayout.Width(150));
 			EditorGUILayout.LabelField("Resource Path");
 			EditorGUILayout.EndHorizontal();
-			scrollPosition_sceneResourcePaths = EditorGUILayout.BeginScrollView(scrollPosition_sceneResourcePaths, false, true, scrollbarStyle, scrollbarStyle, scrollwindowStyle);
+			scrollPosition_sceneResourcePaths = EditorGUILayout.BeginScrollView(scrollPosition_sceneResourcePaths, false, true, hScrollbarStyle, vScrollbarStyle, scrollwindowStyle);
 			var sceneResourcePathManager = SceneResourcePathManager.GetSceneResourcePathManager(selected_scene);
 			if (sceneResourcePathManager)
 			{
@@ -312,7 +317,7 @@ namespace teleport
 				{
 					if (resourceSearchText.Length > 0)
 					{
-						if (!(s.Key.name.ToString().Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase)) && !s.Key.GetType().ToString().Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase) &&!s.Value.Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase))
+						if (!(SearchStringMatch(s.Key.name,resourceSearchText)) && !SearchStringMatch(s.Key.GetType().ToString(),resourceSearchText) &&!SearchStringMatch(s.Value,resourceSearchText))
 						{
 							continue;
 						}
@@ -320,13 +325,13 @@ namespace teleport
 					EditorGUILayout.BeginHorizontal();
 					if (s.Key != null)
 					{
-						EditorGUILayout.LabelField(s.Key.name);
-						EditorGUILayout.LabelField(s.Key.GetType().ToString());
+						EditorGUILayout.LabelField(s.Key.name, GUILayout.Width(150));
+						EditorGUILayout.LabelField(s.Key.GetType().ToString(), GUILayout.Width(150));
 						EditorGUILayout.LabelField(s.Value);
 					}
 					else
 					{
-						EditorGUILayout.LabelField("Null key");
+						EditorGUILayout.LabelField("Null key", GUILayout.Width(150));
 					}
 					EditorGUILayout.EndHorizontal();
 				}
@@ -346,7 +351,7 @@ namespace teleport
 			{
 				if (resourceSearchText.Length > 0)
 				{
-					if (!(u.Key.name.ToString().Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase)) && !u.Value.ToString().Contains(resourceSearchText, StringComparison.OrdinalIgnoreCase))
+					if (!(SearchStringMatch(u.Key.name,resourceSearchText)) && !SearchStringMatch(u.Value.ToString(),resourceSearchText))
 					{
 						continue;
 					}
