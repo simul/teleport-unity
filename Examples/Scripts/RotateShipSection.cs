@@ -30,7 +30,7 @@ public class RotateShipSection : MonoBehaviour
 	// Update is called once per frame
 	void Update()
 	{
-		if (m_StartRotation)
+		if (m_StartRotation && !m_Rotating)
 		{
 			SetNextStation();
 			m_StartRotation = false;

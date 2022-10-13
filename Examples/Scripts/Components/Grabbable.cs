@@ -28,7 +28,7 @@ namespace teleport
 		// Update is called once per frame
 		void Update()
 		{
-        
+		
 		}
 		public uid holderClient=0;
 		System.UInt16 LeftGrabInputId =0;
