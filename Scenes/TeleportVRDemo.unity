@@ -99,7 +99,7 @@ LightmapSettings:
     m_LightProbeSampleCountMultiplier: 4
   m_LightingDataAsset: {fileID: 112000000, guid: 56613028f7a00a443a4a1af4ce1eae68,
     type: 2}
-  m_LightingSettings: {fileID: 4890085278179872738, guid: aa18d6a311ed7734680df4b5d5526306,
+  m_LightingSettings: {fileID: 4890085278179872738, guid: 0eacdbbee5e9e744ea7d4f6eb27a1898,
     type: 2}
 --- !u!196 &4
 NavMeshSettings:
@@ -638,11 +638,11 @@ GameObject:
   - component: {fileID: 294772271}
   m_Layer: 0
   m_Name: Ball
-  m_TagString: TeleportStreamable
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!135 &294772266
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -874,11 +874,7 @@ PrefabInstance:
       value: 2147483647
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 16881fe7324fe6d498a711cd4ea7cc34,
-        type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 838035322}
+    m_AddedGameObjects: []
   m_SourcePrefab: {fileID: 100100000, guid: 16881fe7324fe6d498a711cd4ea7cc34, type: 3}
 --- !u!1001 &498404046
 PrefabInstance:
@@ -1553,7 +1549,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &838035322
 Transform:
   m_ObjectHideFlags: 0
@@ -1561,12 +1557,12 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 838035321}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.709, z: 0}
-  m_LocalScale: {x: 0.4, y: 0.5, z: 0.4}
+  m_LocalRotation: {x: 0.000000021855696, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: -7.09, z: 0}
+  m_LocalScale: {x: 4, y: 5, z: 4}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1282671002}
+  m_Father: {fileID: 2021897483}
   m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!65 &838035323
@@ -2441,7 +2437,7 @@ PrefabInstance:
     - target: {fileID: 1332186173640770814, guid: c7bd090313c3e8c4ca1c4c5470243103,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: -1
+      value: -1.368
       objectReference: {fileID: 0}
     - target: {fileID: 1332186173640770814, guid: c7bd090313c3e8c4ca1c4c5470243103,
         type: 3}
@@ -3075,6 +3071,7 @@ Transform:
   - {fileID: 1823254205}
   - {fileID: 1688018693}
   - {fileID: 1963103633}
+  - {fileID: 838035322}
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
