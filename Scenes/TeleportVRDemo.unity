@@ -565,7 +565,8 @@ MonoBehaviour:
   - {fileID: 1920382872}
   - {fileID: 294772265}
   - {fileID: 2054451661}
-  - {fileID: 0}
+  - {fileID: 838035321}
+  - {fileID: 1282671001}
   - {fileID: 165832134}
   - {fileID: 1823254204}
   - {fileID: 1688018692}
@@ -574,8 +575,6 @@ MonoBehaviour:
   - {fileID: 1649521232}
   - {fileID: 550959377}
   - {fileID: 1399609056}
-  - {fileID: 838035321}
-  - {fileID: 1282671001}
   gameObjectReferences_values:
   - mesh: {fileID: -7892432015762708264, guid: 846cfee221095204ea421daaf47eca96, type: 3}
   - mesh: {fileID: -1258100815225046197, guid: 846cfee221095204ea421daaf47eca96, type: 3}
@@ -591,7 +590,8 @@ MonoBehaviour:
   - mesh: {fileID: 2888647440349190436, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
   - mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
   - mesh: {fileID: -2124705421725058983, guid: 3f98616840f66d342b5c74947570167d, type: 3}
-  - mesh: {fileID: -2124705421725058983, guid: d8298ef2b89fbaf49bd44b50413043f6, type: 3}
+  - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  - mesh: {fileID: 2534964839176971238, guid: 16881fe7324fe6d498a711cd4ea7cc34, type: 3}
   - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
@@ -600,8 +600,6 @@ MonoBehaviour:
   - mesh: {fileID: -2124705421725058983, guid: d8298ef2b89fbaf49bd44b50413043f6, type: 3}
   - mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
   - mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 2534964839176971238, guid: 16881fe7324fe6d498a711cd4ea7cc34, type: 3}
 --- !u!4 &252811101
 Transform:
   m_ObjectHideFlags: 0
@@ -1264,7 +1262,6 @@ GameObject:
   m_Component:
   - component: {fileID: 812780442}
   - component: {fileID: 812780441}
-  - component: {fileID: 812780440}
   - component: {fileID: 812780443}
   m_Layer: 0
   m_Name: Main Camera
@@ -1273,14 +1270,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!81 &812780440
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 812780439}
-  m_Enabled: 1
 --- !u!20 &812780441
 Camera:
   m_ObjectHideFlags: 0
@@ -1448,37 +1437,57 @@ MonoBehaviour:
   - {fileID: -7128306230164726044, guid: 846cfee221095204ea421daaf47eca96, type: 3}
   - {fileID: 2937447515504839170, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
   - {fileID: -6445355563670790259, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
+  - {fileID: 2100000, guid: 0570fbc0659bace46b622b824d665378, type: 2}
+  - {fileID: 3683541717083760493, guid: 846cfee221095204ea421daaf47eca96, type: 3}
+  - {fileID: 2937447515504839170, guid: 846cfee221095204ea421daaf47eca96, type: 3}
+  - {fileID: 2100000, guid: 6cb6e0f40db8ede46abb8d9631ec5f3e, type: 2}
+  - {fileID: 3683541717083760493, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
+  - {fileID: -7128306230164726044, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
+  - {fileID: 2100000, guid: 1d60d8e2a00caf943a55b85947b0c122, type: 2}
+  - {fileID: 2100000, guid: 7e476d059f1941b4f8d0e9c7c80f00e5, type: 2}
+  - {fileID: 2100000, guid: 2f8e806f46268b54e9f4e22b92360967, type: 2}
+  - {fileID: 2100000, guid: ac17c4921b7928541b04760195625272, type: 2}
   sceneResourcePaths_values:
-  - Teleport/Examples/Meshes/Controllers/Oculus_L_Button_X
-  - Teleport/Examples/Meshes/Controllers/Oculus_L_Button_Y
-  - Teleport/Examples/Meshes/Controllers/Oculus_L_Grip
-  - Teleport/Examples/Meshes/Controllers/Oculus_L_Loop
-  - Teleport/Examples/Meshes/Controllers/Oculus_L_Stick
-  - Teleport/Examples/Meshes/Controllers/Oculus_L_Trigger
-  - Teleport/Examples/Meshes/Controllers/Oculus_R_Button_A
-  - Teleport/Examples/Meshes/Controllers/Oculus_R_Button_B
-  - Teleport/Examples/Meshes/Controllers/Oculus_R_Grip
-  - Teleport/Examples/Meshes/Controllers/Oculus_R_Main
-  - Teleport/Examples/Meshes/Controllers/Oculus_R_Stick
-  - Teleport/Examples/Meshes/Controllers/Oculus_R_Trigger
-  - Library/Sphere
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Button_X
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Button_Y
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Grip
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Loop
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Stick
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Trigger
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Button_A
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Button_B
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Grip
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Main
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Stick
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Trigger
+  - Library/unity%default%resources/Sphere/Sphere_10207
+  - Teleport/Meshes/CupolaWindow.fbx/Circle
+  - Teleport/Examples/Materials/Matt%Grey.mat
+  - Teleport/Meshes/Disk.blend/Circle
+  - Library/unity%default%resources/Cube/Cube_10202
+  - Teleport/Examples/Materials/Matt%Purple.mat
+  - Teleport/Examples/Materials/Matt%Orange.mat
+  - Teleport/Meshes/HollowCylinder.blend/Cylinder
+  - Library/unity%default%resources/Quad/Quad_10210
+  - Teleport/Examples/Materials/Gloss%Black%Plastic.mat
+  - Teleport/Meshes/HollowCylinderWindowed.blend/Cylinder
   - Teleport/Meshes/Circle
-  - Teleport/Examples/Materials/Matt%Grey
-  - Teleport/Meshes/Circle
-  - Library/Cube
-  - Teleport/Examples/Materials/Matt%Purple
-  - Teleport/Examples/Materials/Matt%Orange
-  - Teleport/Meshes/Cylinder
-  - Library/Quad
-  - Teleport/Examples/Materials/Gloss%Black%Plastic
-  - Teleport/Meshes/Cylinder
-  - Teleport/Meshes/Circle
   - Teleport/Meshes/Cylinder
   - Teleport/Meshes/Cylinder
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx
+  - Teleport/Examples/Meshes/Controllers/Black%Plastic%Gloss.mat
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx
+  - Teleport/Examples/Meshes/Controllers/Black%Plastic%Matt.mat
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx
+  - Teleport/Examples/Materials/Matt%Red.mat
+  - Teleport/Examples/Materials/Matt%Green.mat
+  - Teleport/Examples/Materials/Matt%Blue.mat
+  - Teleport/Examples/Materials/Strip%Light%Glow.mat
 --- !u!4 &828319270
 Transform:
   m_ObjectHideFlags: 0
@@ -1636,8 +1645,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d77736cfc7b91ae46a6764bdea599cb6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  specularRenderTexture: {fileID: 0}
+  dummyRenderTexture: {fileID: 0}
+  dummyCam: {fileID: 0}
+  generateEnvMaps: 0
   defaultPlayerPrefab: {fileID: 0}
-  audioCapture: {fileID: 0}
+  audioCapture: {fileID: 1784659127}
+  environmentCubemap: {fileID: 0}
 --- !u!4 &862373351
 Transform:
   m_ObjectHideFlags: 0
@@ -2432,6 +2446,59 @@ PrefabInstance:
     m_RemovedComponents: []
     m_AddedGameObjects: []
   m_SourcePrefab: {fileID: 100100000, guid: c7bd090313c3e8c4ca1c4c5470243103, type: 3}
+--- !u!1 &1784659126
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1784659129}
+  - component: {fileID: 1784659128}
+  - component: {fileID: 1784659127}
+  m_Layer: 0
+  m_Name: TeleportAudioCapture
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1784659127
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1784659126}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04f116f06c47cce43ba1bef752fe7d84, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!81 &1784659128
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1784659126}
+  m_Enabled: 1
+--- !u!4 &1784659129
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1784659126}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 7
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1798363533 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1893335125025546896, guid: c7bd090313c3e8c4ca1c4c5470243103,
@@ -2846,6 +2913,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1973552488}
   - component: {fileID: 1973552489}
+  - component: {fileID: 1973552490}
   m_Layer: 0
   m_Name: GameObject
   m_TagString: Untagged
@@ -2881,6 +2949,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   holderClient: 0
+--- !u!114 &1973552490
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1973552487}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  priority: 0
+  _renderingMask: 0
+  streamOnlyWithParent: 0
 --- !u!1 &2021897482
 GameObject:
   m_ObjectHideFlags: 0

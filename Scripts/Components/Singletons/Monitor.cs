@@ -275,7 +275,7 @@ namespace teleport
 #if UNITY_EDITOR
 			if (dummyCam)
 			{
-				DestroyImmediate(dummyCam);
+				//DestroyImmediate(dummyCam);
 			}
 #endif
 		SceneManager.sceneLoaded -= OnSceneLoaded;
@@ -366,8 +366,8 @@ namespace teleport
 			if (generateEnvMaps)
 			{
 				GenerateEnvMaps();
-				//generateEnvMaps=false;
-				//dummyCam.enabled = true;
+				generateEnvMaps=false;
+				dummyCam.enabled = true;
 			}
 #endif
 		}

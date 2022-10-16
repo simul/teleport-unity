@@ -484,8 +484,25 @@ namespace teleport
 			return geometrySource;
 		}
 
+		public void EliminateDuplicates()
+		{
+			sessionResourceUids_keys = sessionResourceUids.Keys.ToArray();
+			sessionResourceUids_values = sessionResourceUids.Values.ToArray();
+			for (int i = 0; i < sessionResourceUids_keys.Length; i++)
+			{
+				for (int j = i + 1; j < sessionResourceUids_keys.Length; j++)
+				{
+					if (sessionResourceUids_values[i] == sessionResourceUids_values[j])
+					{
+						Debug.LogWarning("Duplicate Uid "+ sessionResourceUids_values [i]+ "found for objects " + sessionResourceUids_keys[i].name+" and " + sessionResourceUids_keys[j]+".");
+						sessionResourceUids.Remove(sessionResourceUids_keys[j]);
+					}
+				}
+			}
+		}
 		public void OnBeforeSerialize()
 		{
+			EliminateDuplicates();
 			sessionResourceUids_keys = sessionResourceUids.Keys.ToArray();
 			sessionResourceUids_values = sessionResourceUids.Values.ToArray();
 			sessionResourceUids.Clear();
@@ -494,14 +511,15 @@ namespace teleport
 		public void OnAfterDeserialize()
 		{
 			//Don't run during boot.
-			if (isAwake)
+		/*	if (isAwake)
 			{
 				for (int i = 0; i < sessionResourceUids_keys.Length; i++)
 				{
 					sessionResourceUids[sessionResourceUids_keys[i]] = sessionResourceUids_values[i];
 					//Debug.Log("Restoring resource " + sessionResourceUids_values[i]);// ;
 				}
-			}
+			}*/
+			EliminateDuplicates();
 		}
 
 		public void Awake()
@@ -607,12 +625,12 @@ namespace teleport
 				return false;
 			}
 			path = UnityEditor.AssetDatabase.GetAssetPath(obj);
-			// Problem is, Unity can bundle a bunch of individual meshes in one asset file, but use them completely independently.
+			// Problem is, Unity can bundle a bunch of individual meshes/materials/etc in one asset file, but use them completely independently.
 			// We can't therefore just use the file name.
-			if (obj.GetType() == typeof(UnityEngine.Mesh))
+			//if (obj.GetType() == typeof(UnityEngine.Mesh))
 			{
 				string filename = Path.GetFileName(path);
-				int dot=filename.LastIndexOf(".");
+				//int dot=filename.LastIndexOf(".");
 				//if(dot>0&&dot<filename.Length)
 				//	filename=filename.Substring(0,dot);
 				path = Path.GetDirectoryName(path);
@@ -950,7 +968,7 @@ namespace teleport
 				if (materialID != GetOrGenerateUid(resourcePath))
 				{
 					Debug.LogError("Uid mismatch for object "+material.name+" at path "+resourcePath);
-					return 0;
+					sessionResourceUids.Remove(material);
 				}
 			}
 			sessionResourceUids[material] = materialID;
@@ -1024,7 +1042,7 @@ namespace teleport
 			extractedMaterial.extensions = null;
 
 #if UNITY_EDITOR
-			long fileId=0;
+			//long fileId=0;
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(material, out string guid);
 			extractedMaterial.path = Marshal.StringToBSTR(resourcePath);
 			//Debug.Log("GUID for "+material.name+" is "+guid+", fileID is "+ fileId);
@@ -1119,6 +1137,13 @@ namespace teleport
 					targetHeight = (targetHeight + 1) / 2;
 					scale *= 2;
 				}
+				int maxSize= (1 << (mipCount - 1));
+				while (maxSize > targetWidth || maxSize > targetHeight)
+				{
+					mipCount--;
+					maxSize = (1 << (mipCount - 1));
+					textureExtractionData.textureData.mipCount=(uint)mipCount;
+				}
 				int w = targetWidth, h = targetHeight;
 				int n = 0;
 				
@@ -1189,35 +1214,50 @@ namespace teleport
 				bool isNormal = false;
 				//Normal maps need to be extracted differently; i.e. convert from DXT5nm format.
 				string path = AssetDatabase.GetAssetPath(sourceTexture);
-				TextureImporter textureImporter = (TextureImporter)AssetImporter.GetAtPath(path);
-				if (textureImporter != null)
-				{
-					textureImporter.isReadable = true;
-					TextureImporterType textureType = textureImporter ? textureImporter.textureType : TextureImporterType.Default;
-					isNormal = textureType == UnityEditor.TextureImporterType.NormalMap;
+				AssetImporter aa =AssetImporter.GetAtPath(path);
+				TextureImporter textureImporter=null;
+				if (aa.GetType()==typeof(TextureImporter))
+				{ 
+					textureImporter = (TextureImporter)aa;
+					if (textureImporter != null)
+					{
+						textureImporter.isReadable = true;
+						TextureImporterType textureType = textureImporter ? textureImporter.textureType : TextureImporterType.Default;
+						isNormal = textureType == UnityEditor.TextureImporterType.NormalMap;
+					}
 				}
-				
 				if (isNormal || textureImporter != null && textureImporter.GetDefaultPlatformTextureSettings().textureCompression == TextureImporterCompression.CompressedHQ)
 					highQualityUASTC = true;
 				string shaderName = isCubemap?"ExtractCubeFace":isNormal ? "ExtractNormalMap" : "ExtractTexture";
 				shaderName += UnityEditor.PlayerSettings.colorSpace == ColorSpace.Gamma ? "Gamma" : "Linear";
-
-				int kernelHandle = textureShader.FindKernel(shaderName);
-				textureShader.SetTexture(kernelHandle, "Source", sourceTexture,0);
-				if(isCubemap)
-					textureShader.SetTexture(kernelHandle, "SourceCube", sourceTexture);
-				textureShader.SetInt("Scale", scale);
+				// make as many copies of textureShader as we have images!!!
+				List<ComputeShader> textureShaders=new List<ComputeShader>();
 				List<RenderTexture> textureArray = new List<RenderTexture>();
+				n = 0;
+				string shaderGUID = AssetDatabase.FindAssets($"ExtractTextureData t:ComputeShader")[0];
+				ComputeShader shader = AssetDatabase.LoadAssetAtPath<ComputeShader>(UnityEditor.AssetDatabase.GUIDToAssetPath(shaderGUID));
+
 				for (int m = 0; m < mipCount; m++)
 				{
 					for (int j = 0; j < arraySize; j++)
 					{
-						var rt= renderTextures[rendertextureIndex + j];
-						textureShader.SetTexture(kernelHandle, "Result", rt);
-						textureShader.SetInt("ArrayIndex", j);
-						textureShader.SetInt("Face", j);
-						textureShader.Dispatch(kernelHandle, (rt.width +7)/ 8, (rt.height+7)/ 8, 1);
+						textureShaders.Add(shader);
+						int kernelHandle = shader.FindKernel(shaderName);
+						shader.SetInt("Scale", scale);
+						shader.SetTexture(kernelHandle, "Source", sourceTexture);
+						if (isCubemap)
+							shader.SetTexture(kernelHandle, "SourceCube", sourceTexture);
+						var rt = renderTextures[rendertextureIndex + m * arraySize + j];
+						shader.SetTexture(kernelHandle, "Result", rt);
+						shader.SetInt("ArrayIndex", j);
+						shader.SetInt("Face", j);
+						shader.SetInt("Mip",m);
+						int NID= Shader.PropertyToID("N");
+						shader.SetInt(NID, n);
+						shader.Dispatch(kernelHandle, (rt.width +7)/ 8, (rt.height+7)/ 8, 1);
+						
 						textureArray.Add(rt);
+						n++;
 					}
 				}
 				if (!SystemInfo.IsFormatSupported(renderTextures[rendertextureIndex].graphicsFormat, UnityEngine.Experimental.Rendering.FormatUsage.Sample))
@@ -1251,7 +1291,8 @@ namespace teleport
 		void ExtractAndStoreTexture(Texture sourceTexture, List<RenderTexture> renderTextures, avs.Texture textureData,int targetWidth, int targetHeight,bool writePng, bool highQualityUASTC,  bool forceOverwrite)
 		{
 			int arraySize=1;
-			if(sourceTexture.GetType()==typeof(Cubemap))
+			if(sourceTexture.GetType()==typeof(Cubemap)|| sourceTexture.GetType() == typeof(RenderTexture)&&
+				(sourceTexture.dimension== UnityEngine.Rendering.TextureDimension.Cube|| sourceTexture.dimension == UnityEngine.Rendering.TextureDimension.CubeArray))
 			{ 
 				textureData.cubemap=true;
 				arraySize=6;
@@ -1266,15 +1307,18 @@ namespace teleport
 				Debug.LogError("Image count mismatch");
 				return;
 			}
+			int w=targetWidth;
+			int h=targetHeight;
+			int n=0;
 			for (int j = 0; j < textureData.mipCount; j++)
 			{
 				for (int i=0;i<arraySize;i++)
 				{
 					SubresourceImage subresourceImage=new SubresourceImage();
 					subresourceImages.Add(subresourceImage);
-					var rt= renderTextures[i];
+					var rt= renderTextures[n];
 					//Read pixel data into Texture2D, so that it can be read.
-					Texture2D readTexture = new Texture2D(targetWidth, targetHeight, rt.graphicsFormat
+					Texture2D readTexture = new Texture2D(w, h, rt.graphicsFormat
 								, UnityEngine.Experimental.Rendering.TextureCreationFlags.None);
 
 					RenderTexture oldActive = RenderTexture.active;
@@ -1340,7 +1384,7 @@ namespace teleport
 									valueScale=1.0f;
 								}
 							}*/
-						string pngFile = basisFile.Replace(".basis", ".png");
+						string pngFile = basisFile.Replace(".basis", $"_mip{j}_slice{i}.png");
 						if(arraySize>1)
 							pngFile=pngFile.Replace(".png","_"+i.ToString()+".png");
 						subresourceImage.bytes = readTexture.EncodeToPNG();
@@ -1366,7 +1410,10 @@ namespace teleport
 					{
 						textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
 					}
+					n++;
 				}
+				w=(w+1)/2;
+				h=(h+1)/2;
 			}
 
 
@@ -1519,7 +1566,6 @@ namespace teleport
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 			compressedFilePath = GenerateCompressedFilePath(textureAssetPath, textureData.compression);
 			bool genMips=false;
-			textureData.mipCount=1;
 			StoreTexture(textureID, guid, resourcePath, lastModified, textureData, compressedFilePath,  genMips, highQualityUASTC, forceOverwrite);
 #endif
 		}
@@ -2514,8 +2560,15 @@ namespace teleport
 				if (fName.Equals(formatName, StringComparison.Ordinal))
 				{
 					texFormat = f;
-					break;
+					return texFormat;
 				}
+			}
+			switch (rtf)
+			{
+				case RenderTextureFormat.ARGB64:
+					return TextureFormat.RGBAHalf;
+				default:
+					break;
 			}
 			Debug.LogError("No equivalent TextureFormat found for RenderTextureFormat " + rtf.ToString());
 			return texFormat;
@@ -2526,6 +2579,7 @@ namespace teleport
 			{
 				case RenderTextureFormat.ARGBFloat: return 16;
 				case RenderTextureFormat.ARGB32: return 4;
+				case RenderTextureFormat.ARGB64: return 8;
 				default:
 					TextureFormat f= ConvertRenderTextureFormatToTextureFormat(format);
 					return GetBytesPerPixel(f);
@@ -2557,6 +2611,7 @@ namespace teleport
 				if (textureID != uid_from_path)
 				{
 					Debug.LogError("Uid mismatch for texture " + texture.name + " at path " + resourcePath);
+					sessionResourceUids.Remove(texture);
 					GetOrGenerateUid(resourcePath);
 					return 0;
 				}

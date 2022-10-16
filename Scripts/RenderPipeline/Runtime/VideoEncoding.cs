@@ -126,7 +126,7 @@ namespace teleport
 			// but Unity can't cope with changing the value between Draw calls...
 			//createLightingCubemapMaterial.SetFloat("Roughness", roughness);
 
-			// Instead we must user buffer.SetGlobalFloat etc.
+			// Instead we must use buffer.SetGlobalFloat etc.
 			buffer.SetGlobalFloat("Roughness", roughness);
 			buffer.SetGlobalInt("MipIndex", MipIndex);
 			buffer.SetGlobalInt("NumMips", SpecularCubeTexture.mipmapCount);

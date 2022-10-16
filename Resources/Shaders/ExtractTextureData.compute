@@ -25,26 +25,28 @@ SamplerState samplerSourceCube
 
 int Scale;
 int Face;
+int Mip;
 
 //Extract textures from linear space.
 [numthreads(8, 8, 1)]
 void ExtractTextureLinear(uint3 id : SV_DispatchThreadID)
 {
-	Result[id.xy].rgba = saturate(Source[id.xy * Scale]);
+	float4 src = Source.Load(int3(id.xy * Scale,Mip));
+	Result[id.xy].rgba = saturate(src);
 }
 
 //Extract textures from gamma space.
 [numthreads(8, 8, 1)]
 void ExtractTextureGamma(uint3 id : SV_DispatchThreadID)
 {
-	float4 src = Source[id.xy * Scale];
-	Result[id.xy].rgba = GammaToLinearSpaceExact(src);
+	float4 src			= Source.Load(int3(id.xy * Scale,Mip));
+	Result[id.xy].rgba	= GammaToLinearSpaceExact(src);
 }
 
 [numthreads(8, 8, 1)]
 void ExtractNormalMapLinear(uint3 id : SV_DispatchThreadID)
 {
-	float4 src = Source[id.xy * Scale];
+	float4 src = Source.Load(int3(id.xy * Scale,Mip));
 	float3 unpackedNormal = UnpackNormalDXT5nm(src);
 	unpackedNormal=unpackedNormal * 0.5 + 0.5;
 	Result[id.xy] = float4(unpackedNormal, unpackedNormal.r);
@@ -53,7 +55,7 @@ void ExtractNormalMapLinear(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void ExtractNormalMapGamma(uint3 id : SV_DispatchThreadID)
 {
-	float4 src				= Source[id.xy * Scale];
+	float4 src				= Source.Load(int3(id.xy * Scale,Mip));
 	float3 unpackedNormal	= UnpackNormalDXT5nm(src);
 	unpackedNormal			= unpackedNormal * 0.5 + 0.5;
 	Result[id.xy]			= float4(unpackedNormal, unpackedNormal.r);
@@ -71,13 +73,13 @@ float4 FromCubemap(int2 pos)
 	};
 	float4x4 cubeInvViewProj0	= { { 0, 0, -1, 0 }, { 0, -1, 0, 0 }, { 1, 0, 0, 0 }, { 0, 0, 0, 1 } };
 
-	uint InputW, InputH, numFaces;
-	SourceCube.GetDimensions(InputW, InputH);
-	int2 ipos		=int2(pos.x, InputH - 1 - pos.y);
-	int2 sz			=int2(InputW,InputH);
+	uint FaceWidth, FaceHeight, numFaces;
+	Result.GetDimensions(FaceWidth, FaceHeight);
+	int2 ipos		=int2(pos.x, FaceHeight - 1 - pos.y);
+	int2 sz			=int2(FaceWidth,FaceHeight);
 	float3 dir		=float3(float2(ipos.xy)/float2(sz)*2.0-float2(1.0,1.0),1.0);
 	float3 dir_g	=(mul(cubeInvViewProj[Face],float4(dir,1.0))).xyz;
-	float4 colour	= SourceCube.SampleLevel(samplerSourceCube,normalize(dir_g),0);
+	float4 colour	= SourceCube.SampleLevel(samplerSourceCube,normalize(dir_g),Mip);
 	//float3 faceColour[6]={{1.0,0,0},{0.2,0,0},{0,1.0,0},{0,0.2,0},{0,0,1.0},{0,0,0.4}};
 	//colour.rgb+=dir_g;//faceColour[ArrayIndex];
 	//colour.r+=float(pos.x)/float(InputW);

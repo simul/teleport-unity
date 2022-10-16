@@ -58,6 +58,7 @@ namespace teleport
 
 		private void Awake()
 		{
+			labelText = null;
 			geometrySource = GeometrySource.GetGeometrySource();
 
 			string shaderGUID = AssetDatabase.FindAssets("ExtractTextureData t:ComputeShader")[0];
@@ -69,7 +70,7 @@ namespace teleport
 		//Use this to setup variables that are likely to change on a hot-reload.
 		private void OnFocus()
 		{
-
+			labelText=null;
 			//Fill categories array with enumeration names.
 			categories = Enum.GetNames(typeof(ResourceWindowCategories));
 			//Change names to title-case; i.e. EXTRACTION -> Extraction.
@@ -143,14 +144,19 @@ namespace teleport
 					Selection.GetFiltered(
 						typeof(GameObject),
 						SelectionMode.Editable | SelectionMode.TopLevel);
-				//EditorGUILayout.disab
-				EditorGUILayout.BeginHorizontal(); 
-				GUILayout.Label("Selected Geometry:", labelText, GUILayout.Width(300));
-				if (GUILayout.Button("Extract"))
-				{
-					ExtractSelectedGeometry(forceExtraction? GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES:GeometrySource.ForceExtractionMask.FORCE_NODES);
+				{ 
+					bool wasEnabled=GUI.enabled;
+					GUI.enabled = activeGOs.Length>0;
+					//EditorGUILayout.disab
+					EditorGUILayout.BeginHorizontal(); 
+					GUILayout.Label("Selected Geometry:", labelText, GUILayout.Width(300));
+					if (GUILayout.Button("Extract"))
+					{
+						ExtractSelectedGeometry(forceExtraction? GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES:GeometrySource.ForceExtractionMask.FORCE_NODES);
+					}
+					EditorGUILayout.EndHorizontal();
+					GUI.enabled=wasEnabled;
 				}
-				EditorGUILayout.EndHorizontal();
 				EditorGUILayout.BeginHorizontal();
 				GUILayout.Label("Scene Geometry:", labelText, GUILayout.Width(300));
 				if (GUILayout.Button("Extract"))
@@ -549,11 +555,11 @@ namespace teleport
 		{
 			if (Monitor.Instance)
 			{
-			/*	if (Monitor.Instance.environmentCubemap != null)
+				if (Monitor.Instance.environmentCubemap != null)
 				{
 					geometrySource.AddTexture(Monitor.Instance.environmentCubemap, GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
 					geometrySource.ExtractTextures(true);
-				}*/
+				}
 				if (Monitor.Instance.specularRenderTexture != null)
 				{
 					geometrySource.AddTexture(Monitor.Instance.specularRenderTexture, GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);

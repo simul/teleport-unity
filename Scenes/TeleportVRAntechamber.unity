@@ -146,6 +146,59 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!1 &119303607
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 119303610}
+  - component: {fileID: 119303609}
+  - component: {fileID: 119303608}
+  m_Layer: 0
+  m_Name: TeleportAudioCapture
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &119303608
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 119303607}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04f116f06c47cce43ba1bef752fe7d84, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!81 &119303609
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 119303607}
+  m_Enabled: 1
+--- !u!4 &119303610
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 119303607}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 36
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &126385756
 GameObject:
   m_ObjectHideFlags: 0
@@ -1450,6 +1503,7 @@ GameObject:
   m_Component:
   - component: {fileID: 843734288}
   - component: {fileID: 843734287}
+  - component: {fileID: 843734289}
   m_Layer: 0
   m_Name: Monitor
   m_TagString: Untagged
@@ -1469,9 +1523,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d77736cfc7b91ae46a6764bdea599cb6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  specularRenderTexture: {fileID: 8400000, guid: 4dab61d44269458499c75380b78d284d,
+    type: 2}
+  dummyRenderTexture: {fileID: 1582784442}
+  dummyCam: {fileID: 843734289}
+  generateEnvMaps: 0
   defaultPlayerPrefab: {fileID: 0}
-  audioCapture: {fileID: 0}
-  diffuseCubemap: {fileID: 8900000, guid: 799677c60dffa4e43a9c545781f3da0c, type: 3}
+  audioCapture: {fileID: 119303608}
+  environmentCubemap: {fileID: 8900000, guid: 69f06136f5c8b264f9fe02ade03945c7, type: 3}
 --- !u!4 &843734288
 Transform:
   m_ObjectHideFlags: 0
@@ -1487,6 +1546,49 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 10
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!20 &843734289
+Camera:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 843734286}
+  m_Enabled: 0
+  serializedVersion: 2
+  m_ClearFlags: 1
+  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_projectionMatrixMode: 1
+  m_GateFitMode: 2
+  m_FOVAxisMode: 0
+  m_SensorSize: {x: 36, y: 24}
+  m_LensShift: {x: 0, y: 0}
+  m_FocalLength: 50
+  m_NormalizedViewPortRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 1
+    height: 1
+  near clip plane: 0.3
+  far clip plane: 1000
+  field of view: 60
+  orthographic: 0
+  orthographic size: 5
+  m_Depth: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingPath: -1
+  m_TargetTexture: {fileID: 1582784442}
+  m_TargetDisplay: 0
+  m_TargetEye: 3
+  m_HDR: 1
+  m_AllowMSAA: 1
+  m_AllowDynamicResolution: 0
+  m_ForceIntoRT: 0
+  m_OcclusionCulling: 1
+  m_StereoConvergence: 10
+  m_StereoSeparation: 0.022
 --- !u!1 &908411843
 GameObject:
   m_ObjectHideFlags: 0
@@ -2124,72 +2226,76 @@ MonoBehaviour:
   - {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   - {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   - {fileID: 8900000, guid: 799677c60dffa4e43a9c545781f3da0c, type: 3}
+  - {fileID: 8900000, guid: 69f06136f5c8b264f9fe02ade03945c7, type: 3}
+  - {fileID: 8400000, guid: 4dab61d44269458499c75380b78d284d, type: 2}
   sceneResourcePaths_values:
-  - Meshes/Owned/Cafe/HightPoly_02
-  - Meshes/Owned/Cafe/ChairWood
-  - Meshes/Owned/Cafe/WoodMaterial/Table+Dark_Wood/Unreal_Export/T_Walnut_Ovrly_01_D
-  - Meshes/Owned/Cafe/WoodMaterial/Table+Dark_Wood/Unreal_Export/T_Walnut_Ovrly_01_N
-  - Meshes/Owned/Cafe/CafeChair
-  - Meshes/Owned/Cafe/Chair_Material_Test_02/Padding/CafeChairTest_02_BaseColor
-  - Meshes/Owned/Cafe/Chair_Material_Test_02/Padding/CafeChairTest_02__Normal
-  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-0_comp_light
-  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-1_comp_light
-  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-2_comp_light
-  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-3_comp_light
-  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-4_comp_light
-  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-5_comp_light
-  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-6_comp_light
-  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-7_comp_light
-  - Teleport/Examples/Meshes/Sword_low
-  - Teleport/Examples/Materials/Sword
-  - Teleport/Examples/Textures/Sword_Base_Color
-  - Teleport/Examples/Materials/Textures/Sword_low_DefaultMaterial_MetallicSmoothness
-  - Meshes/Licensed/Sword
-  - Meshes/Licensed/Sword_2_model/sword_2_material
-  - Meshes/Licensed/Sword_2_model/Sword_2_UV_Sword2_Mat_AlbedoTransparency
-  - Meshes/Licensed/Sword_2_model/Sword_2_UV_Sword2_Mat_MetallicSmoothness
-  - Meshes/Licensed/Sword_2_model/Sword_2_UV_Sword2_Mat_Normal
-  - Teleport/Examples/Meshes/Controllers/Oculus_L_Button_X
-  - Teleport/Examples/Meshes/Controllers/Black%Plastic%Gloss
-  - Teleport/Examples/Meshes/Controllers/Oculus_L_Button_Y
-  - Teleport/Examples/Meshes/Controllers/Oculus_L_Grip
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/Oculus_L_Loop
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/Oculus_L_Stick
-  - Teleport/Examples/Meshes/Controllers/Black%Plastic%Matt
-  - Teleport/Examples/Meshes/Controllers/Oculus_L_Trigger
-  - Teleport/Examples/Meshes/Controllers/Oculus_R_Button_A
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Teleport/Examples/Meshes/Controllers/Oculus_R_Button_B
-  - Teleport/Examples/Meshes/Controllers/Oculus_R_Grip
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Teleport/Examples/Meshes/Controllers/Oculus_R_Main
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Teleport/Examples/Meshes/Controllers/Oculus_R_Stick
-  - Teleport/Examples/Meshes/Controllers/Oculus_R_Trigger
-  - Teleport/Meshes/Wand
-  - Teleport/Examples/Materials/Blue%Glow
-  - Teleport/Examples/Materials/Matt
-  - Teleport/Examples/Meshes/Text
-  - Teleport/Examples/Materials/Face%Glow
-  - Teleport/Examples/Meshes/TeleportVRLogo
-  - Teleport/Scenes/Standard
-  - Teleport/Examples/Materials/Matt%Blue
-  - Resources/unity_builtin_extra
-  - Teleport/Examples/Materials/Matt%Red
-  - Teleport/Examples/Materials/Gloss
-  - Teleport/Examples/Materials/Chrome
-  - Teleport/Examples/Materials/Iron
-  - Teleport/Examples/Materials/Strip%Light%Glow
-  - Library/Sphere
-  - Library/Plane
-  - Library/Cylinder
-  - Library/Cube
+  - Meshes/Owned/Cafe/CafeChairTest_02.FBX/HightPoly_02
+  - Meshes/Owned/Cafe/ChairWood.mat/ChairWood
+  - Meshes/Owned/Cafe/WoodMaterial/Table+Dark_Wood/Unreal_Export/T_Walnut_Ovrly_01_D.TGA/T_Walnut_Ovrly_01_D
+  - Meshes/Owned/Cafe/WoodMaterial/Table+Dark_Wood/Unreal_Export/T_Walnut_Ovrly_01_N.TGA/T_Walnut_Ovrly_01_N
+  - Meshes/Owned/Cafe/CafeChair.mat/CafeChair
+  - Meshes/Owned/Cafe/Chair_Material_Test_02/Padding/CafeChairTest_02_BaseColor.png/CafeChairTest_02_BaseColor
+  - Meshes/Owned/Cafe/Chair_Material_Test_02/Padding/CafeChairTest_02__Normal.png/CafeChairTest_02__Normal
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-0_comp_light.exr/Lightmap-0_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-1_comp_light.exr/Lightmap-1_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-2_comp_light.exr/Lightmap-2_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-3_comp_light.exr/Lightmap-3_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-4_comp_light.exr/Lightmap-4_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-5_comp_light.exr/Lightmap-5_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-6_comp_light.exr/Lightmap-6_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-7_comp_light.exr/Lightmap-7_comp_light
+  - Teleport/Examples/Meshes/sword_low_new.fbx/Sword_low
+  - Teleport/Examples/Materials/Sword.mat/Sword
+  - Teleport/Examples/Textures/Sword_Base_Color.tga/Sword_Base_Color
+  - Teleport/Examples/Materials/Textures/Sword_low_DefaultMaterial_MetallicSmoothness.png/Sword_low_DefaultMaterial_MetallicSmoothness
+  - Meshes/Licensed/Sword_2_model.fbx/Sword
+  - Meshes/Licensed/Sword_2_model/sword_2_material.mat/sword_2_material
+  - Meshes/Licensed/Sword_2_model/Sword_2_UV_Sword2_Mat_AlbedoTransparency.png/Sword_2_UV_Sword2_Mat_AlbedoTransparency
+  - Meshes/Licensed/Sword_2_model/Sword_2_UV_Sword2_Mat_MetallicSmoothness.png/Sword_2_UV_Sword2_Mat_MetallicSmoothness
+  - Meshes/Licensed/Sword_2_model/Sword_2_UV_Sword2_Mat_Normal.png/Sword_2_UV_Sword2_Mat_Normal
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Button_X
+  - Teleport/Examples/Meshes/Controllers/Black%Plastic%Gloss.mat/Black%Plastic%Gloss
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Button_Y
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Grip
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/WhitePlasticGloss
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Loop
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/WhiteMatt
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Black%Plastic%Matt
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Black%Plastic%Gloss
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Stick
+  - Teleport/Examples/Meshes/Controllers/Black%Plastic%Matt.mat/Black%Plastic%Matt
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Trigger
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Button_A
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Black%Plastic%Gloss
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Button_B
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Grip
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/WhitePlasticGloss
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Main
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Black%Plastic%Matt
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/WhiteMatt
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Stick
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Trigger
+  - Teleport/Meshes/TeleportClientWand.fbx/Wand
+  - Teleport/Examples/Materials/Blue%Glow.mat/Blue%Glow
+  - Teleport/Examples/Materials/Matt.mat/Matt
+  - Teleport/Examples/Meshes/TeleportVRLogo.fbx/Text.002
+  - Teleport/Examples/Materials/Face%Glow.mat/Face%Glow
+  - Teleport/Examples/Meshes/TeleportVRLogo.fbx/Plastic%Surround
+  - Teleport/Scenes/Standard.mat/Standard
+  - Teleport/Examples/Materials/Matt%Blue.mat/Matt%Blue
+  - Resources/unity_builtin_extra/Default-Material
+  - Teleport/Examples/Materials/Matt%Red.mat/Matt%Red
+  - Teleport/Examples/Materials/Gloss.mat/Gloss
+  - Teleport/Examples/Materials/Chrome.mat/Chrome
+  - Teleport/Examples/Materials/Iron.mat/Iron
+  - Teleport/Examples/Materials/Strip%Light%Glow.mat/Strip%Light%Glow
+  - Library/unity%default%resources/Sphere/Sphere_10207
+  - Library/unity%default%resources/Plane/Plane_10209
+  - Library/unity%default%resources/Cylinder/Cylinder_10206
+  - Library/unity%default%resources/Cube/Cube_10202
   - Licensed%Content/HQ%PBR/HQ%Retro%Office/Scene/HQPBR_Retro_Office/ReflectionProbe-0
+  - Licensed%Content/HQ%PBR/HQ%Retro%Office/Scene/HQPBR_Retro_Office/ReflectionProbe-22.exr/ReflectionProbe-22
+  - Teleport/Scenes/TeleportVRAntechamber/specularRenderTexture.renderTexture/specularRenderTexture
 --- !u!4 &990844616
 Transform:
   m_ObjectHideFlags: 0
@@ -3457,6 +3563,43 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!84 &1582784442
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_ForcedFallbackFormat: 4
+  m_DownscaleFallback: 0
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 5
+  m_Width: 8
+  m_Height: 8
+  m_AntiAliasing: 1
+  m_MipCount: 1
+  m_DepthStencilFormat: 94
+  m_ColorFormat: 24
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 0
+  m_UseDynamicScale: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 0
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &1622920830
 GameObject:
   m_ObjectHideFlags: 0

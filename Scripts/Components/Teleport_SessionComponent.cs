@@ -761,11 +761,15 @@ namespace teleport
 				clientDynamicLighting.lightPos = clientDynamicLighting.diffusePos + new Vector2Int(clientDynamicLighting.specularCubemapSize * 3 / 2, clientDynamicLighting.specularCubemapSize * 2);
 			}
 			clientDynamicLighting.diffuseCubemapTexture= 0;
+			clientDynamicLighting.specularCubemapTexture = 0;
 			if (Monitor.Instance.environmentCubemap)
 			{
 				clientDynamicLighting.diffuseCubemapTexture=GeometrySource.GetGeometrySource().AddTexture(Monitor.Instance.environmentCubemap);
 			}
-			clientDynamicLighting.specularCubemapTexture = 0;
+			if (Monitor.Instance.specularRenderTexture)
+			{
+				clientDynamicLighting.specularCubemapTexture = GeometrySource.GetGeometrySource().AddTexture(Monitor.Instance.specularRenderTexture);
+			}
 			clientDynamicLighting.lightingMode=LightingMode.TEXTURE;
 		}
 		private void UpdateClientSettings()

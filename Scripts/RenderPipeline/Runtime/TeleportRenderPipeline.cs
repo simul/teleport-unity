@@ -186,6 +186,9 @@ namespace teleport
 				{
 					renderer.GenerateEnvMaps(context);
 					context.Submit();
+					m.generateEnvMaps=false;
+					if(m.dummyCam)
+						m.dummyCam.enabled=false;
 				}
 				else
 					renderer.Render(context, camera, 0x7FFFFFFF, 0xFFFFFFFF);

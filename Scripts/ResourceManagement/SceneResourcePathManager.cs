@@ -77,6 +77,22 @@ namespace teleport
 		{
 			sceneResourcePaths.Clear();
 		}
+		public void CheckForDuplicates()
+		{
+			sceneResourcePaths_keys = sceneResourcePaths.Keys.ToArray();
+			sceneResourcePaths_values = sceneResourcePaths.Values.ToArray();
+			for (int i = 0; i < sceneResourcePaths_keys.Length; i++)
+			{
+				for(int j=i+1;j< sceneResourcePaths_keys.Length;j++)
+				{
+					if (sceneResourcePaths_values[i] == sceneResourcePaths_values[j])
+					{
+						sceneResourcePaths.Remove(sceneResourcePaths_keys[j]);
+						Debug.LogWarning($"Removed duplicate resource path {sceneResourcePaths_values[j]} for {sceneResourcePaths_keys[j].name} and {sceneResourcePaths_keys[j].name}.");
+					}
+				}
+			}
+		}
 		static public string StandardizePath(string file_name,string path_root)
 		{
 			string p = file_name;
@@ -91,6 +107,16 @@ namespace teleport
 		}
 		public void SetResourcePath(UnityEngine.Object o,string p)
 		{
+			sceneResourcePaths_keys = sceneResourcePaths.Keys.ToArray();
+			sceneResourcePaths_values = sceneResourcePaths.Values.ToArray();
+			for (int i = 0; i < sceneResourcePaths_keys.Length; i++)
+			{
+				if (sceneResourcePaths_keys[i]!=o&&sceneResourcePaths_values[i] == p)
+				{
+					Debug.LogError($"Trying to add duplicate resource path {p} for {o.name}, but already present for {sceneResourcePaths_keys[i].name}.");
+					return;
+				}
+			}
 			sceneResourcePaths[o]= StandardizePath(p,"");
 #if UNITY_EDITOR
 			UnityEditor.EditorUtility.SetDirty(this);
