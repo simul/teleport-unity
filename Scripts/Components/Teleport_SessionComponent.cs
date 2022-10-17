@@ -147,7 +147,7 @@ namespace teleport
 			sessionComponent.SetHeadPose(rotation, position);
 		}
 
-		public static void StaticSetControllerPose(uid clientID, int index, in avs.Pose newPose)
+		public static void StaticSetControllerPose(uid clientID, uid id, in avs.Pose newPose)
 		{
 			Teleport_SessionComponent sessionComponent = GetSessionComponent(clientID);
 			if (!sessionComponent)
@@ -157,7 +157,7 @@ namespace teleport
 
 			Quaternion latestRotation = new Quaternion(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
 			Vector3 latestPosition = new Vector3(newPose.position.x, newPose.position.y, newPose.position.z);
-			sessionComponent.SetControllerPose(index, latestRotation, latestPosition);
+			sessionComponent.SetControllerPose(id, latestRotation, latestPosition);
 		}
 
 		public static void StaticProcessInput(uid clientID, in avs.InputState inputState
@@ -503,13 +503,14 @@ namespace teleport
 			_input.ProcessInputEvents(booleanStates,floatStates,binaryEvents, analogueEvents, motionEvents);
 		}
 
-		public void SetControllerPose(int controllerIndex, Quaternion newRotation, Vector3 newPosition)
+		public void SetControllerPose(uid id, Quaternion newRotation, Vector3 newPosition)
 		{
-			if (!controllerLookup.TryGetValue(controllerIndex, out Teleport_Controller controller))
+			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
+			if (!geometrySource.GetSessionNodes().TryGetValue(id, out GameObject gameObject))
 			{
 				return;
 			}
-			var streamable=controller.GetComponent<Teleport_Streamable>();
+			var streamable= gameObject.GetComponent<Teleport_Streamable>();
 			if (!streamable)
 			{
 				Debug.LogError("Trying to set pose of controlled object that has no Teleport_Streamable.");
@@ -520,7 +521,8 @@ namespace teleport
 				Debug.LogError("Trying to set pose of controlled object whose owner client "+streamable.OwnerClient+" is not the client ID "+clientID.ToString()+".");
 				return;
 			}
-			controller.transform.SetPositionAndRotation(newPosition, newRotation);
+			gameObject.transform.localPosition=newPosition;
+			gameObject.transform.localRotation=newRotation;
 		}
 
 		public void ProcessAudioInput(float[] data)

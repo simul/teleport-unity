@@ -39,7 +39,7 @@ namespace teleport
 		delegate void OnSetHeadPose(uid clientID, in avs.Pose newHeadPose);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate void OnSetControllerPose(uid clientID, int index, in avs.Pose newHeadPose);
+		delegate void OnSetControllerPose(uid clientID, uid index, in avs.Pose newHeadPose);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void OnNewInput(uid clientID, in avs.InputState inputState, in IntPtr binaryStatesPtr, in IntPtr analogueStateasPtr, in IntPtr binaryEventsPtr, in IntPtr analogueEventsPtr, in IntPtr motionEventsPtr);

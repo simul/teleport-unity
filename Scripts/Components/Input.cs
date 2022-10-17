@@ -40,6 +40,10 @@ namespace teleport
 			}
 		}
 		List<InputID> floatStateIDs = new List<InputID>();
+		public InputID [] GetFloatStateIDs()
+		{
+			return floatStateIDs.ToArray();
+		}
 		List<InputID> booleanStateIDs = new List<InputID>();
 		public delegate void InputEventDelegate(Input input,InputID inputId);
 		public delegate void FloatEventDelegate(Input input, InputID inputId,float value);
@@ -158,6 +162,11 @@ namespace teleport
 			{
 				InputID inputID = floatStateIDs[i];
 				float f= analogueStates[i];
+				if (f < -1.0F || f > 1.0F)
+				{
+					Debug.LogError("Analogue state too large "+f.ToString());
+					continue;
+				}
 				if (!floatStates.ContainsKey(inputID))
 					floatStates.Add(inputID, f);
 				floatStates[inputID] = f;

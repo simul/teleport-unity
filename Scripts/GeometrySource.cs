@@ -445,7 +445,11 @@ namespace teleport
 		private const string TELEPORT_VR_PATH = "TeleportVR/";
 
 		private readonly Dictionary<UnityEngine.Object, uid> sessionResourceUids = new Dictionary<UnityEngine.Object, uid>(); //<Resource, ResourceID>
-
+		private readonly Dictionary< uid, UnityEngine.GameObject> sessionNodes = new Dictionary<uid, UnityEngine.GameObject>(); //<Resource, ResourceID>
+		public Dictionary<uid, UnityEngine.GameObject> GetSessionNodes()
+		{
+			return sessionNodes;
+		}
 		public Dictionary<UnityEngine.Object, uid> GetSessionResourceUids()
 		{
 			return sessionResourceUids;
@@ -823,8 +827,7 @@ namespace teleport
 			//we are not forcing an extraction of nodes, and we are not forcing an extraction on the hierarchy of a node.
 			if
 			(
-				sessionResourceUids.TryGetValue(gameObject, out uid nodeID) &&
-				IsNodeStored(nodeID) &&
+				sessionResourceUids.TryGetValue(gameObject, out uid nodeID) && IsNodeStored(nodeID) &&
 				(
 					!isChildExtraction && (forceMask & ForceExtractionMask.FORCE_NODES) == ForceExtractionMask.FORCE_NOTHING ||
 					(isChildExtraction && (forceMask & ForceExtractionMask.FORCE_HIERARCHIES) == ForceExtractionMask.FORCE_NOTHING)
@@ -836,6 +839,7 @@ namespace teleport
 
 			nodeID = nodeID == 0 ? GenerateUid() : nodeID;
 			sessionResourceUids[gameObject] = nodeID;
+			sessionNodes[nodeID]=gameObject;
 
 			avs.Node extractedNode = new avs.Node();
 			StreamableProperties streamableProperties=gameObject.GetComponent<StreamableProperties>();

@@ -59,7 +59,16 @@ namespace teleport
 			int nodeCount = geometryStreamingService.GetStreamedObjectCount();
 			EditorGUILayout.LabelField("Nodes", string.Format("{0}", nodeCount));
 
-			scrollPosition_streamed=EditorGUILayout.BeginScrollView(scrollPosition_streamed,false, true, GUI.skin.verticalScrollbar, GUI.skin.verticalScrollbar, GUI.skin.textField);
+			EditorGUILayout.BeginVertical();
+			EditorGUILayout.LabelField("Inputs");
+			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+			foreach (var id in session.input.GetFloatStateIDs())
+			{
+				var def=teleportSettings.inputDefinitions[id];
+				EditorGUILayout.LabelField(def.name+": "+session.input.GetFloatState(id).ToString());
+			}
+			EditorGUILayout.EndVertical();
+			scrollPosition_streamed =EditorGUILayout.BeginScrollView(scrollPosition_streamed,false, true, GUI.skin.verticalScrollbar, GUI.skin.verticalScrollbar, GUI.skin.textField);
 
 			List<GameObject> streamedGameObjects = geometryStreamingService.GetStreamedObjects();
 			//List nodes to the maximum.
