@@ -153,6 +153,8 @@ namespace teleport
 			for (int i = 0; i < booleanStates.Length; i++)
 			{
 				var b= booleanStates[i] != 0;
+				if(i>= booleanStateIDs.Count)
+					break;
 				InputID inputID=booleanStateIDs[i];
 				if (!buttonStates.ContainsKey(inputID))
 					buttonStates.Add(inputID, b);

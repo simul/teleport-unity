@@ -77,7 +77,7 @@ public class ExampleMotion : MonoBehaviour
 		forward.y = 0;
 		Vector3 right = head.transform.right;
 		right.y = 0;
-		float playerMoveMultiplier = 0.5F;
+		float playerMoveMultiplier = 0.2F;
 		float sprintMultiplier = 1.0F;
 		float moveMod = playerMoveMultiplier;//Time.deltaTime * playerMoveMultiplier * sprintMultiplier;
 		forward_backward = 0.0F;
