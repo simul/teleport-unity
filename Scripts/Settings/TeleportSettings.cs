@@ -51,14 +51,35 @@ namespace teleport
 		/// </summary>
 		/// <param name="name"></param>
 		/// <returns></returns>
-		public System.UInt16 FindInput(string name)
+		public System.UInt16[] FindInputsByName(string name)
 		{
+			List<System.UInt16> inp = new List<System.UInt16>();
 			for (int i = 0; i < inputDefinitions.Count; i++)
 			{
 				if(inputDefinitions[i].name==name)
-					return (System.UInt16)i;
+					inp.Add((System.UInt16)i);
 			}
-			return (System.UInt16)(inputDefinitions.Count);
+			return inp.ToArray();
+		}
+		/// <summary>
+		/// Find the indices that match a given named input. We do a regex match of the inputs' paths with the string.
+		/// </summary>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public System.UInt16 [] FindInputsByPath(string p)
+		{
+			List<System.UInt16> inp=new List<System.UInt16>();
+			for (int i = 0; i < inputDefinitions.Count; i++)
+			{
+				System.Text.RegularExpressions.Regex rg = new System.Text.RegularExpressions.Regex(inputDefinitions[i].controlPath,System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+				System.Text.RegularExpressions.MatchCollection matched = rg.Matches(p);
+				for(int count = 0; count < matched.Count; count++)
+				{ 
+					if(matched[count].Value.Length>0)
+						inp.Add((System.UInt16)i);
+				}
+			}
+			return inp.ToArray();
 		}
 		[Header("Utility")]
 		public string defaultScene = "";

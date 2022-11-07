@@ -9,16 +9,19 @@ namespace teleport
 	public class VideoEncoding
 	{
 		public static Shader cubemapShader = null;
-		public static Material createLightingCubemapMaterial = null;
-		public static Material encodeLightingCubemapMaterial = null; 
+		public static Material copyCubemapMaterial = null;
 		static Mesh fullscreenMesh = null;
 		static Shader depthShader = null;
 		static Material depthMaterial = null;
 		public ComputeShader computeShader = null;
 		public int encodeTagIdKernel = -1;
 		public int encodeColorKernel = -1;
-		public int encodeCubemapFaceKernel = -1;
 		public int encodeWebcamKernel = -1;
+		static int CopyCubemap_plain_copy=0;
+		static int CopyCubemap_mip_frag = 1;
+		static int CopyCubemap_encode_face_frag = 2;
+		static int CopyCubemap_ambient_diffuse_frag = 3;
+		static int CopyCubemap_directional_diffuse_frag = 4; 
 		//int downCopyFaceKernel = 0;
 		const int THREADGROUP_SIZE = 32;
 
@@ -36,7 +39,6 @@ namespace teleport
 			}
 			encodeTagIdKernel = computeShader.FindKernel("EncodeTagDataIdCS");
 			encodeColorKernel = computeShader.FindKernel("EncodeColorCS");
-			encodeCubemapFaceKernel = computeShader.FindKernel("EncodeCubemapFaceCS");
 			encodeWebcamKernel = computeShader.FindKernel("EncodeWebcamCS");
 
 		//downCopyFaceKernel = computeShader.FindKernel("DownCopyFaceCS");
@@ -77,7 +79,7 @@ namespace teleport
 		/// <summary>
 		/// Copy from the full size texture to the cubemaps, starting with the reflection cube.
 		/// </summary>
-		public void DrawCubemaps(ScriptableRenderContext context, RenderTexture sourceTexture, RenderTexture outputTexture, int face)
+		public void CopyOneFace(ScriptableRenderContext context, RenderTexture sourceTexture, RenderTexture outputTexture, int face)
 		{
 			// Ordinarily, we would use a compute shader to downcopy from the full-size cubemap face to the smaller specular cubemaps.
 			// But Unity can't handle treating a cubemap as a 2D Texture array, so we'll have to make do with a vertex/pixel shader copy.
@@ -90,14 +92,13 @@ namespace teleport
 				fullScreenMeshStruct.far_plane_distance = 1000.0F;
 				fullscreenMesh = teleport.RenderingUtils.CreateFullscreenMesh(fullScreenMeshStruct);
 			}
-			EnsureMaterial(ref encodeLightingCubemapMaterial,ref cubemapShader, "Teleport/CopyCubemap");
-			EnsureMaterial(ref createLightingCubemapMaterial,ref cubemapShader, "Teleport/CopyCubemap");
+			EnsureMaterial(ref copyCubemapMaterial,ref cubemapShader, "Teleport/CopyCubemap");
 
 			var buffer = new CommandBuffer();
 			buffer.name = "Copy Cubemap Face";
 			buffer.SetRenderTarget(outputTexture, 0, (CubemapFace)face);
-			createLightingCubemapMaterial.SetTexture("_SourceTexture", sourceTexture);
-			buffer.DrawMesh(fullscreenMesh, Matrix4x4.identity, createLightingCubemapMaterial, 0, 0);
+			copyCubemapMaterial.SetTexture("_SourceTexture", sourceTexture);
+			buffer.DrawMesh(fullscreenMesh, Matrix4x4.identity, copyCubemapMaterial, 0, CopyCubemap_plain_copy);
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
@@ -108,14 +109,32 @@ namespace teleport
 			return (float)Math.Pow(Math.Exp(C), 2.0);
 			//return (float)Math.Pow(Math.Exp((3.0 + mip - numMips) / roughness_mip_scale), 2.0);
 		}
+		static Matrix4x4 GetTargetToSourceTransform(avs.AxesStandard targetAxesStandard)
+		{
+			Matrix4x4 transformTargetToSource = Matrix4x4.identity;
+			if (targetAxesStandard == avs.AxesStandard.GlStyle)
+			{
 
+			}
+			else if (targetAxesStandard == avs.AxesStandard.EngineeringStyle)
+			{
+				// transform from eng to gl to precede cubemap lookup.
+				//view_gl = view_eng.zxy;
+				transformTargetToSource.SetColumn(0, new Vector4(0, 0, 1.0F, 0));
+				transformTargetToSource.SetColumn(1, new Vector4(1.0F, 0, 0, 0));
+				transformTargetToSource.SetColumn(2, new Vector4(0, -1.0F, 0, 0));
+			}
+			else
+				Debug.LogError("Unsupported axes standard for this function.");
+			return transformTargetToSource;
+		}
 		/// <summary>
 		/// For a specular cubemap, we render the lower-detail mipmaps to represent reflections for rougher materials.
 		/// We SHOULD here be rendering down from higher to lower detail mips of the same cubemap.
 		/// But Unity is missing the necessary API functions to render with one mip of input and one as output of the same texture.
 		/// So instead we will render directly to the video texture.
 		/// </summary>
-		static public void SpecularRoughnessMip(CommandBuffer buffer, Texture SourceCubeTexture, RenderTexture SpecularCubeTexture, int face, int MipIndex, int mipOffset)
+		static public void SpecularRoughnessMip(CommandBuffer buffer, Texture SourceCubeTexture, RenderTexture SpecularCubeTexture, int face, int MipIndex, int mipOffset,avs.AxesStandard targetAxesStandard)
 		{
 			float roughness =  RoughnessFromMip((float)( MipIndex+ mipOffset), (float)( SpecularCubeTexture.mipmapCount));
 			int w = SpecularCubeTexture.width << MipIndex;
@@ -124,41 +143,46 @@ namespace teleport
 
 			// We WOULD be sending roughness this way...
 			// but Unity can't cope with changing the value between Draw calls...
-			//createLightingCubemapMaterial.SetFloat("Roughness", roughness);
+			//copyCubemapMaterial.SetFloat("Roughness", roughness);
 
 			// Instead we must use buffer.SetGlobalFloat etc.
+			buffer.SetGlobalMatrix("TargetToSourceAxes", GetTargetToSourceTransform(targetAxesStandard));
 			buffer.SetGlobalFloat("Roughness", roughness);
 			buffer.SetGlobalInt("MipIndex", MipIndex);
 			buffer.SetGlobalInt("NumMips", SpecularCubeTexture.mipmapCount);
 			buffer.SetGlobalInt("Face", face);
 			// But SetGlobalTexture() doesn't work - we must instead put it in the material, here:
-			createLightingCubemapMaterial.SetTexture("_SourceCubemapTexture", SourceCubeTexture);
+			copyCubemapMaterial.SetTexture("_SourceCubemapTexture", SourceCubeTexture);
 			// 
-			buffer.DrawProcedural(Matrix4x4.identity, createLightingCubemapMaterial, 1, MeshTopology.Triangles,6);
+			buffer.DrawProcedural(Matrix4x4.identity, copyCubemapMaterial, CopyCubemap_mip_frag, MeshTopology.Triangles,6);
 		}
-		static public void GenerateSpecularMips(ScriptableRenderContext context, Texture SourceCubeTexture, RenderTexture SpecularCubeTexture, int face,int mip_offset)
+		//! Generate mipmaps into a target cubemap rendertexture. The source is considered to be in the Unity/OpenGL layout.
+		//! The target layout is specified by avs.AxesStandard axesStandard.
+		static public void GenerateSpecularMips(ScriptableRenderContext context, Texture SourceCubeTexture, RenderTexture SpecularCubeTexture, int face,int mip_offset, avs.AxesStandard axesStandard)
 		{
 			var buffer = new CommandBuffer();
 			buffer.name = "Generate Specular Mips";
 
 			// For perspective rendering
-			EnsureMaterial(ref createLightingCubemapMaterial, ref cubemapShader, "Teleport/CopyCubemap");
-			EnsureMaterial(ref encodeLightingCubemapMaterial, ref cubemapShader, "Teleport/CopyCubemap");
+			EnsureMaterial(ref copyCubemapMaterial, ref cubemapShader, "Teleport/CopyCubemap");
 
-	
 			for (int i = 0; i < SpecularCubeTexture.mipmapCount; i++)
 			{
-				SpecularRoughnessMip(buffer, SourceCubeTexture, SpecularCubeTexture, face,i,mip_offset);
+				SpecularRoughnessMip(buffer, SourceCubeTexture, SpecularCubeTexture, face,i,mip_offset, axesStandard);
 			}
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
-		static public void GenerateDiffuseCubemap(ScriptableRenderContext context, Texture SourceCubeTexture, HashSet<Light> bakedLights, RenderTexture DiffuseCubeTexture, int face,float light_scale)
+		//! Generate a target diffuse cubemap rendertexture. The source is considered to be in the Unity/OpenGL layout.
+		//! The target layout is specified by avs.AxesStandard axesStandard.
+		static public void GenerateDiffuseCubemap(ScriptableRenderContext context, Texture SourceCubeTexture, HashSet<Light> bakedLights, RenderTexture DiffuseCubeTexture, int face,float light_scale,avs.AxesStandard targetAxesStandard)
 		{
 			var buffer = new CommandBuffer();
 			buffer.name = "Diffuse";
 
 			buffer.SetRenderTarget(DiffuseCubeTexture, 0, (CubemapFace)face);
+			Matrix4x4 transformTargetToSource = Matrix4x4.identity;
+			buffer.SetGlobalMatrix("TargetToSourceAxes", GetTargetToSourceTransform(targetAxesStandard));
 			buffer.SetGlobalInt("MipIndex", 0);
 			buffer.SetGlobalInt("NumMips", 1);
 			buffer.SetGlobalInt("Face", face);
@@ -167,7 +191,7 @@ namespace teleport
 			// We downscale the whole diffuse so that it peaks at the maximum colour value.
 			buffer.SetGlobalFloat("Multiplier", light_scale);
 			// Here we encode the contribution of the diffuse cubemap.
-			buffer.DrawProcedural(Matrix4x4.identity, createLightingCubemapMaterial,3, MeshTopology.Triangles, 6);
+			buffer.DrawProcedural(Matrix4x4.identity, copyCubemapMaterial,CopyCubemap_ambient_diffuse_frag, MeshTopology.Triangles, 6);
 			// Now we encode the contribution of the baked lights.
 			foreach(Light light in bakedLights)
 			{
@@ -177,7 +201,7 @@ namespace teleport
 				var dir = light.transform.forward;
 				buffer.SetGlobalVector("Colour", new Vector4(clr.r, clr.g, clr.b, clr.a));
 				buffer.SetGlobalVector("Direction", new Vector4(dir.x,dir.y, dir.z, 0.0F));
-				buffer.DrawProcedural(Matrix4x4.identity, createLightingCubemapMaterial, 4, MeshTopology.Triangles, 6);
+				buffer.DrawProcedural(Matrix4x4.identity, copyCubemapMaterial,CopyCubemap_directional_diffuse_frag, MeshTopology.Triangles, 6);
 			}
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
@@ -222,7 +246,7 @@ namespace teleport
 			buffer.SetViewport(viewport);
 			buffer.BeginSample(buffer.name);
 
-			buffer.DrawProcedural(Matrix4x4.identity, depthMaterial, 0, MeshTopology.Triangles, 6);
+			buffer.DrawProcedural(Matrix4x4.identity, depthMaterial,CopyCubemap_plain_copy, MeshTopology.Triangles, 6);
 			buffer.EndSample(buffer.name);
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
@@ -279,7 +303,7 @@ namespace teleport
 		/// <summary>
 		/// Write the specified cubemap to the video texture.
 		/// </summary>
-		void Decompose(CommandBuffer buffer, RenderTexture cubeTexture, RenderTexture videoTexture, Vector2Int StartOffset, int face, int mips)
+		void DecomposeCubemapTo2D(CommandBuffer buffer, RenderTexture cubeTexture, RenderTexture videoTexture, Vector2Int StartOffset, int face, int mips)
 		{
 			if (!computeShader)
 				InitShaders();
@@ -298,7 +322,7 @@ namespace teleport
 				buffer.SetGlobalTexture("_SourceCubemapTexture", cubeTexture);
 				buffer.SetGlobalInt("MipIndex", m);
 				buffer.SetGlobalInt("Face", face);
-				buffer.DrawProcedural(Matrix4x4.identity, encodeLightingCubemapMaterial, 2, MeshTopology.Triangles,6);
+				buffer.DrawProcedural(Matrix4x4.identity, copyCubemapMaterial, CopyCubemap_encode_face_frag, MeshTopology.Triangles,6);
 				Offset.x+=w*3;
 				w /= 2;
 			}
@@ -309,15 +333,15 @@ namespace teleport
 				InitShaders();
 			var buffer = new CommandBuffer();
 			buffer.name = "EncodeLightingCubemaps";
-			
+
 			// 3 mips each of specular and rough-specular texture.
-			Decompose(buffer, sceneCaptureComponent.SpecularCubeTexture, sceneCaptureComponent.videoTexture, session.clientDynamicLighting.specularPos, face,Math.Min(6,sceneCaptureComponent.SpecularCubeTexture.mipmapCount));
+			DecomposeCubemapTo2D(buffer, sceneCaptureComponent.SpecularCubeTexture, sceneCaptureComponent.videoTexture, session.clientDynamicLighting.specularPos, face,sceneCaptureComponent.SpecularCubeTexture.mipmapCount);
 
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 			buffer = new CommandBuffer();
-			Decompose(buffer, sceneCaptureComponent.DiffuseCubeTexture, sceneCaptureComponent.videoTexture, session.clientDynamicLighting.diffusePos, face,1);
-			//Decompose(context, sceneCaptureComponent.LightingCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.lightOffset, face);
+			DecomposeCubemapTo2D(buffer, sceneCaptureComponent.DiffuseCubeTexture, sceneCaptureComponent.videoTexture, session.clientDynamicLighting.diffusePos, face,1);
+			//DecomposeCubemapTo2D(context, sceneCaptureComponent.LightingCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.lightOffset, face);
 
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();

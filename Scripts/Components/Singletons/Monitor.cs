@@ -39,7 +39,7 @@ namespace teleport
 		delegate void OnSetHeadPose(uid clientID, in avs.Pose newHeadPose);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate void OnSetControllerPose(uid clientID, uid index, in avs.Pose newHeadPose);
+		delegate void OnSetControllerPose(uid clientID, uid index, in avs.PoseDynamic newHeadPose);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void OnNewInput(uid clientID, in avs.InputState inputState, in IntPtr binaryStatesPtr, in IntPtr analogueStateasPtr, in IntPtr binaryEventsPtr, in IntPtr analogueEventsPtr, in IntPtr motionEventsPtr);
@@ -48,9 +48,9 @@ namespace teleport
 		delegate void OnDisconnect(uid clientID);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate void OnMessageHandler(avs.LogSeverity Severity, string Msg, in IntPtr userData);
+		public delegate void OnMessageHandler(avs.LogSeverity Severity, string Msg, in IntPtr userData); 
 
-		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+		 [UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void ReportHandshakeFn(uid clientID, in avs.Handshake handshake);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
@@ -60,7 +60,7 @@ namespace teleport
 		delegate Int64 GetUnixTimestampFn();
 
 		#endregion
-
+		public static OnMessageHandler editorMessageHandler=null;
 		#region DLLImport
 
 		struct InitialiseState
@@ -85,6 +85,9 @@ namespace teleport
 		};
 
 		[DllImport("TeleportServer")]
+		static extern void SetMessageHandlerDelegate(OnMessageHandler m);
+		
+		[DllImport("TeleportServer")]
 		public static extern UInt64 SizeOf(string name);
 		[DllImport("TeleportServer")]
 		private static extern bool Teleport_Initialize(InitialiseState initialiseState);
@@ -107,6 +110,8 @@ namespace teleport
 
 		// This will point to a saved asset texture.
 		public RenderTexture specularRenderTexture;
+		// This will point to a saved asset texture.
+		public RenderTexture diffuseRenderTexture;
 #if UNITY_EDITOR
 		//! For generating static cubemaps in Editor.
 		public RenderTexture dummyRenderTexture;
@@ -215,6 +220,8 @@ namespace teleport
 				return;
 			}
 			SceneManager.sceneLoaded += OnSceneLoaded;
+			if (!Application.isPlaying)
+				return;
 
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 			UpdateServerSettings(teleportSettings.serverSettings);
@@ -238,7 +245,7 @@ namespace teleport
 				privateKeyPath = teleportSettings.privateKeyPath
 			};
 
-			initialised = Teleport_Initialize(initialiseState);
+				initialised = Teleport_Initialize(initialiseState);
 			if(!initialised)
 			{
 				Debug.LogError($"Teleport_Initialize failed, so server cannot start.");
@@ -272,13 +279,14 @@ namespace teleport
 
 		private void OnDisable()
 		{
+			SetMessageHandlerDelegate(null);
 #if UNITY_EDITOR
 			if (dummyCam)
 			{
 				//DestroyImmediate(dummyCam);
 			}
 #endif
-		SceneManager.sceneLoaded -= OnSceneLoaded;
+			SceneManager.sceneLoaded -= OnSceneLoaded;
 			Shutdown();
 		}
 		
@@ -397,7 +405,7 @@ namespace teleport
 				mips--;
 			}
 			string scenePath = SceneManager.GetActiveScene().path;
-			//RenderTextureDescriptor desc=new RenderTextureDescriptor();
+			// If specular rendertexture is unassigned or not the same size as the env cubemap, recreate it as a saved asset.
 			if (specularRenderTexture == null || specularRenderTexture.width != environmentCubemap.width ||
 				specularRenderTexture.mipmapCount != mips)
 			{
@@ -409,6 +417,19 @@ namespace teleport
 				specularRenderTexture.autoGenerateMips = false;
 				string assetPath = scenePath.Replace(".unity", "/specularRenderTexture.renderTexture");
 				UnityEditor.AssetDatabase.CreateAsset(specularRenderTexture, assetPath);
+			}
+			// If diffuse rendertexture is unassigned or not the same size as the env cubemap, recreate it as a saved asset.
+			if (diffuseRenderTexture == null || diffuseRenderTexture.width != environmentCubemap.width ||
+				diffuseRenderTexture.mipmapCount != mips)
+			{
+				diffuseRenderTexture = new RenderTexture(environmentCubemap.width, environmentCubemap.width
+					, 24, UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_UNorm, mips);
+				diffuseRenderTexture.dimension = UnityEngine.Rendering.TextureDimension.Cube;
+				diffuseRenderTexture.useMipMap = true;
+				// We will generate the mips with shaders in the render call.
+				diffuseRenderTexture.autoGenerateMips = true;
+				string assetPath = scenePath.Replace(".unity", "/diffuseRenderTexture.renderTexture");
+				UnityEditor.AssetDatabase.CreateAsset(diffuseRenderTexture, assetPath);
 			}
 			dummyCam.Render();
 		}
@@ -597,6 +618,10 @@ namespace teleport
 		{
 			if(Msg.Length<1)
 				return;
+			if(editorMessageHandler!=null)
+				editorMessageHandler(Severity,Msg,userData);
+#if UNITY_EDITOR
+#else
 			switch(Severity)
 			{
 				case avs.LogSeverity.Debug:
@@ -641,16 +666,20 @@ namespace teleport
 
 					break;
 			}
+#endif
 		}
-		public void ReparentNode(GameObject child, GameObject newParent, Vector3 relativePos, Quaternion relativeRot)
+		public void ReparentNode(GameObject child, GameObject newParent, Vector3 relativePos, Quaternion relativeRot,bool keepWorldPos)
 		{
 			GameObject oldParent = child.transform.parent != null ? child.transform.parent.gameObject : null;
 			if (newParent != null)
-				child.transform.SetParent(newParent.transform, false);
+				child.transform.SetParent(newParent.transform, keepWorldPos);
 			else
-				child.transform.SetParent(null, false);
-			child.transform.localPosition = relativePos;
-			child.transform.localRotation= relativeRot;
+				child.transform.SetParent(null, keepWorldPos);
+			if(!keepWorldPos)
+			{
+				child.transform.localPosition = relativePos;
+				child.transform.localRotation= relativeRot;
+			}
 			Teleport_Streamable teleport_Streamable = child.GetComponent<Teleport_Streamable>();
 			// Is the new parent owned by a client? If so inform clients of this change:
 			Teleport_SessionComponent oldSession=null;
@@ -670,6 +699,8 @@ namespace teleport
 			{
 				teleport_Streamable.OwnerClient = newSession.GetClientID();
 			}
+			else
+				teleport_Streamable.OwnerClient = 0;
 			if (oldParent != null)
 			{
 				oldParentStreamable = oldParent.GetComponentInParent<Teleport_Streamable>();
@@ -686,6 +717,8 @@ namespace teleport
 			{
 				newSession.GeometryStreamingService.ReparentNode(child, newParent, relativePos, relativeRot);
 			}
+			teleport_Streamable.stageSpaceVelocity=new Vector3(0,0,0);
+			teleport_Streamable.stageSpaceAngularVelocity = new Vector3(0, 0, 0);
 		}
 	}
 }

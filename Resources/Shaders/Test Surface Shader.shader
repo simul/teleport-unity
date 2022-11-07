@@ -2,10 +2,8 @@
 {
     Properties
     {
-        _Color ("Color", Color) = (1,1,1,1)
         _MainTex ("Albedo (RGB)", 2D) = "white" {}
-        _Glossiness ("Smoothness", Range(0,1)) = 0.5
-        _Metallic ("Metallic", Range(0,1)) = 0.0
+		 _Cube ("Cubemap", CUBE) = "" {}
     }
     SubShader
     {
@@ -20,14 +18,14 @@
         #pragma target 3.0
 
         sampler2D _MainTex;
+        samplerCUBE _Cube;
 
         struct Input
         {
             float2 uv_MainTex;
+          float3 worldPos ;
         };
 
-        half _Glossiness;
-        half _Metallic;
         fixed4 _Color;
 
         // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
@@ -43,15 +41,11 @@
             fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _Color;
             o.Albedo = fixed3(0,0,0);
             // Metallic and smoothness come from slider variables
-            o.Metallic = _Metallic;
-            o.Smoothness = _Glossiness;
             o.Alpha = c.a;
             float2 diff=abs(IN.uv_MainTex-float2(0.25,0.75));
             float dist=min(diff.x,diff.y);
-            if(dist<0.01)
-                o.Emission=float3(1.0,1.0,1.0);
-            else
-                o.Emission= frac(IN.uv_MainTex.xyy*5);//step(0.5, IN.uv_MainTex.x) * float3(IN.uv_MainTex-float2(0.0,0.5),0.0);
+			o.Emission = texCUBE (_Cube, IN.worldPos).rgb;
+			o.Emission+=.5*IN.worldPos .xyz;
         }
         ENDCG
     }

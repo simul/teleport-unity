@@ -20,9 +20,9 @@ namespace teleport
 				t= t.parent;
 			topParent=t.gameObject;
 			TeleportSettings settings=TeleportSettings.GetOrCreateSettings();
-			LeftGrabInputId = settings.FindInput("Left Grip Click");
-			RightGrabInputId = settings.FindInput("Right Grip Click");
-			LeftMouseClickInputId = settings.FindInput("Left Mouse Click"); 
+			LeftGrabInputIds = settings.FindInputsByName("Left Grip Click");
+			RightGrabInputIds = settings.FindInputsByName("Right Grip Click");
+			LeftMouseClickInputIds = settings.FindInputsByName("Left Mouse Click"); 
 		}
 
 		// Update is called once per frame
@@ -31,9 +31,9 @@ namespace teleport
 		
 		}
 		public uid holderClient=0;
-		System.UInt16 LeftGrabInputId =0;
-		System.UInt16 RightGrabInputId = 0;
-		System.UInt16 LeftMouseClickInputId = 0;
+		System.UInt16 [] LeftGrabInputIds ={ };
+		System.UInt16 [] RightGrabInputIds = { };
+		System.UInt16 [] LeftMouseClickInputIds = { };
 		GameObject formerParent=null;
 		Vector3 oldRelativePosition=new Vector3();
 		Quaternion oldRelativeRotation=new Quaternion();
@@ -59,7 +59,7 @@ namespace teleport
 			Transform childT		= topParent.transform;
 			Quaternion relativeRotation = Quaternion.Inverse(grabbableT.rotation) * childT.rotation;
 			Vector3 relativePosition= Quaternion.Inverse(grabbableT.rotation) *(childT.position- grabbableT.position);
-			teleport.Monitor.Instance.ReparentNode(topParent, nearController.gameObject, relativePosition, relativeRotation);
+			teleport.Monitor.Instance.ReparentNode(topParent, nearController.gameObject, relativePosition, relativeRotation, false);
 			
 			session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
 			session.input.RemoveDelegate(inputId, Grab, InputEventType.Press);
@@ -72,7 +72,7 @@ namespace teleport
 			Debug.Log("Dropped " + topParent);
 			Teleport_SessionComponent session = input.gameObject.GetComponent<Teleport_SessionComponent>();
 			session.input.RemoveDelegate(inputId, Drop, InputEventType.Release);
-			teleport.Monitor.Instance.ReparentNode(topParent, formerParent, oldRelativePosition, oldRelativeRotation);
+			teleport.Monitor.Instance.ReparentNode(topParent, formerParent, oldRelativePosition, oldRelativeRotation, false);
 			holderClient=0;
 		}
 		// This occurs when a collider impinges on the Grabbable.
@@ -91,13 +91,13 @@ namespace teleport
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, true);
 			if(controller.poseRegexPath.Contains("left"))
 			{
-				session.input.AddDelegate(LeftGrabInputId, Grab, InputEventType.Press);
-				session.input.AddDelegate(LeftMouseClickInputId, Grab, InputEventType.Press);
+				session.input.AddDelegate(LeftGrabInputIds, Grab, InputEventType.Press);
+				session.input.AddDelegate(LeftMouseClickInputIds, Grab, InputEventType.Press);
 			}
 			if (controller.poseRegexPath.Contains("right"))
 			{ 
-				session.input.AddDelegate(RightGrabInputId, Grab, InputEventType.Press);
-				session.input.AddDelegate(LeftMouseClickInputId, Grab, InputEventType.Press);
+				session.input.AddDelegate(RightGrabInputIds, Grab, InputEventType.Press);
+				session.input.AddDelegate(LeftMouseClickInputIds, Grab, InputEventType.Press);
 			}
 			 nearController =controller;
 		}
@@ -120,13 +120,13 @@ namespace teleport
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
 			if (controller.poseRegexPath.Contains("left"))
 			{ 
-				session.input.RemoveDelegate(LeftGrabInputId, Grab, InputEventType.Press);
-				session.input.RemoveDelegate(LeftMouseClickInputId, Grab, InputEventType.Press);
+				session.input.RemoveDelegate(LeftGrabInputIds, Grab, InputEventType.Press);
+				session.input.RemoveDelegate(LeftMouseClickInputIds, Grab, InputEventType.Press);
 			}
 			if (controller.poseRegexPath.Contains("right"))
 			{
-				session.input.RemoveDelegate(RightGrabInputId, Grab, InputEventType.Press);
-				session.input.RemoveDelegate(LeftMouseClickInputId, Grab, InputEventType.Press);
+				session.input.RemoveDelegate(RightGrabInputIds, Grab, InputEventType.Press);
+				session.input.RemoveDelegate(LeftMouseClickInputIds, Grab, InputEventType.Press);
 			}
 		}
 

@@ -454,7 +454,7 @@ namespace teleport
 		{
 			return sessionResourceUids;
 		}
-		private bool isAwake = false;
+		//private bool isAwake = false;
 
 		[SerializeField]
 		private List<AnimationClip> processedAnimations = new List<AnimationClip>(); //AnimationClips stored in the GeometrySource that we need to add an event to.
@@ -543,7 +543,7 @@ namespace teleport
 
 			CreateAnimationHook();
 
-			isAwake = true;
+		//	isAwake = true;
 		}
 
 		public void OnEnable()

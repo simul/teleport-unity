@@ -48,6 +48,7 @@ float4 Prepare(float4 SceneColour)
 
 float3 CubeFaceAndTexCoordsToView(uint face, vec2 texCoords)
 {
+	//GL-style
 	float4x4 cubeInvViewProj[6] = {
 		{ {0,0,-1,0}	,{0,-1,0,0}	,{1,0,0,0}	,{0,0,0,1}	}
 		, { {0,0,1,0}	,{0,-1,0,0}	,{-1,0,0,0}	,{0,0,0,1} }
@@ -59,7 +60,7 @@ float3 CubeFaceAndTexCoordsToView(uint face, vec2 texCoords)
 	float4 clip_pos = float4(-1.0, -1.0, 1.0, 1.0);
 	clip_pos.x += 2.0 * texCoords.x;
 	clip_pos.y += 2.0 * texCoords.y;
-	float3 view = -normalize(mul(cubeInvViewProj[face], clip_pos).xyz);
+	float3 view = -normalize(mul(cubeInvViewProj[face], clip_pos));
 	return view;
 }
 

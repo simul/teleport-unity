@@ -3,14 +3,13 @@
 
 #pragma kernel EncodeTagDataIdCS
 #pragma kernel EncodeColorCS
-#pragma kernel EncodeCubemapFaceCS
+//#pragma kernel EncodeCubemapFaceCS
 #pragma kernel EncodeWebcamCS
 
 #include "Common.cginc"
 // Conventional layout
 static const int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
 // GL Layout
-//static const int2 FaceOffsets[] = { {2,1},{1,1},{0,0},{1,0},{2,0},{0,1} };
 
 Texture2D<float4> InputColorTexture;
 Texture2D<float4> InputDepthTexture;
@@ -25,7 +24,6 @@ int2 WebcamSize;
 int2 TagDataIdOffset;
 int TagDataId;
 int Face;
-//mat4 FaceToWorldMatrix;
 
 // Here. we will encode the id of the video tag data in 4x4 blocks of monochrome colour.
 [numthreads(32, 4, 1)]
@@ -77,10 +75,12 @@ void EncodeColorCS(uint2 ThreadID : SV_DispatchThreadID)
 	SceneColor.z = sqrt(SceneColor.z);
 	SceneColor.w = GetDepth(ipos, int(InputW));
 	pos = pos.xy + Offset + FaceOffsets[Face] * InputW;
-
+	float3 FaceDirections[] = { float3(1.0,0,0),float3(0,1.0,1.0),float3(0,1.0,0),float3(1.0,0,1.0),float3(0,0,1.0),float3(1.0,1.0,0) };
+//	SceneColor.rgb+=0.4*FaceDirections[Face];
 	RWOutputColorTexture[pos] = SceneColor;
 }
 
+/*
 [numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
 void EncodeCubemapFaceCS(uint2 ThreadID : SV_DispatchThreadID)
 {
@@ -94,8 +94,7 @@ void EncodeCubemapFaceCS(uint2 ThreadID : SV_DispatchThreadID)
 	int4 ipos = int4(pos.x, InputH - 1 - pos.y,Face,0);
 	// we must convert Face index and pos into a 3D direction, to get around Unity's API limitations.
 	float3 dir=float3(float2(ipos.xy)*2.0-float2(1.0,1.0),1.0);
-	// A MATRIX TRANSFORMATION, just to extract a pixel value that we should be able to look up directly...
-	// use FaceToWorldMatrix.
+
 	
 	dir = float3(-dir.z, dir.x, dir.y);
 	float4 SceneColor = InputCubemapTexture.SampleLevel(samplerInputCubemapTexture,normalize(dir),0);
@@ -106,7 +105,7 @@ void EncodeCubemapFaceCS(uint2 ThreadID : SV_DispatchThreadID)
 	pos += Offset+FaceOffsets[Face] * InputW;
 
 	RWOutputColorTexture[pos] = SceneColor;
-}
+}*/
 
 [numthreads(THREADGROUP_SIZEX, THREADGROUP_SIZEY, 1)]
 void EncodeWebcamCS(uint2 ThreadID : SV_DispatchThreadID)

@@ -113,8 +113,18 @@ namespace teleport
 			{
 				if (sceneResourcePaths_keys[i]!=o&&sceneResourcePaths_values[i] == p)
 				{
-					Debug.LogError($"Trying to add duplicate resource path {p} for {o.name}, but already present for {sceneResourcePaths_keys[i].name}.");
-					return;
+					if(sceneResourcePaths_keys[i]==null)
+					{
+						// already have this path, but for a deleted object. Let's remove that. But although C# is able to leave null keys lying around,
+						// it WON'T let you remove them!
+						//sceneResourcePaths.Remove(null);
+						sceneResourcePaths_values[i]="";
+					}
+					else
+					{
+						Debug.LogError($"Trying to add duplicate resource path {p} for {o.name}, but already present for {sceneResourcePaths_keys[i].name}.");
+						return;
+					}
 				}
 			}
 			sceneResourcePaths[o]= StandardizePath(p,"");
@@ -136,6 +146,19 @@ namespace teleport
 		{
 			sceneResourcePaths_keys = sceneResourcePaths.Keys.ToArray();
 			sceneResourcePaths_values = sceneResourcePaths.Values.ToArray();
+			for (int i = 0; i < sceneResourcePaths_keys.Length; i++)
+			{
+				if(sceneResourcePaths_keys[i]==null)
+				{ 
+					var keys= sceneResourcePaths_keys.ToList();
+					var vals = sceneResourcePaths_values.ToList();
+					keys.RemoveAt(i);
+					vals.RemoveAt(i);
+					sceneResourcePaths_keys=keys.ToArray();
+					sceneResourcePaths_values = vals.ToArray();
+					i--;
+				}
+			}
 		}
 
 		public void OnAfterDeserialize()

@@ -9,6 +9,11 @@ using uid = System.UInt64;
 
 namespace teleport
 {
+	// declaring an interface
+	public interface SessionSubcomponent
+	{
+		void OnSessionStart();
+	}
 	[HelpURL("https://docs.teleportvr.io/unity.html")]
 	/// <summary>
 	/// This component manages a client session, so there is one Teleport_SessionComponent per session,
@@ -147,7 +152,7 @@ namespace teleport
 			sessionComponent.SetHeadPose(rotation, position);
 		}
 
-		public static void StaticSetControllerPose(uid clientID, uid id, in avs.Pose newPose)
+		public static void StaticSetControllerPose(uid clientID, uid id, in avs.PoseDynamic newPose)
 		{
 			Teleport_SessionComponent sessionComponent = GetSessionComponent(clientID);
 			if (!sessionComponent)
@@ -157,7 +162,9 @@ namespace teleport
 
 			Quaternion latestRotation = new Quaternion(newPose.orientation.x, newPose.orientation.y, newPose.orientation.z, newPose.orientation.w);
 			Vector3 latestPosition = new Vector3(newPose.position.x, newPose.position.y, newPose.position.z);
-			sessionComponent.SetControllerPose(id, latestRotation, latestPosition);
+			Vector3 velocity = new Vector3(newPose.velocity.x, newPose.velocity.y, newPose.velocity.z);
+			Vector3 angularVelocity= new Vector3(newPose.angularVelocity.x, newPose.angularVelocity.y, newPose.angularVelocity.z);
+			sessionComponent.SetControllerPose(id, latestRotation, latestPosition, velocity, angularVelocity);
 		}
 
 		public static void StaticProcessInput(uid clientID, in avs.InputState inputState
@@ -503,7 +510,7 @@ namespace teleport
 			_input.ProcessInputEvents(booleanStates,floatStates,binaryEvents, analogueEvents, motionEvents);
 		}
 
-		public void SetControllerPose(uid id, Quaternion newRotation, Vector3 newPosition)
+		public void SetControllerPose(uid id, Quaternion newRotation, Vector3 newPosition, Vector3 velocity, Vector3 angularVelocity)
 		{
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 			if (!geometrySource.GetSessionNodes().TryGetValue(id, out GameObject gameObject))
@@ -513,16 +520,18 @@ namespace teleport
 			var streamable= gameObject.GetComponent<Teleport_Streamable>();
 			if (!streamable)
 			{
-				Debug.LogError("Trying to set pose of controlled object that has no Teleport_Streamable.");
+				Debug.LogError("Trying to set pose of controlled object "+gameObject.name+" that has no Teleport_Streamable.");
 				return;
 			}
 			if (streamable.OwnerClient != clientID)
 			{
-				Debug.LogError("Trying to set pose of controlled object whose owner client "+streamable.OwnerClient+" is not the client ID "+clientID.ToString()+".");
+				Debug.LogError("Trying to set pose of controlled object " + gameObject.name + " whose owner client " + streamable.OwnerClient+" is not the client ID "+clientID.ToString()+".");
 				return;
 			}
 			gameObject.transform.localPosition=newPosition;
 			gameObject.transform.localRotation=newRotation;
+			streamable.stageSpaceVelocity=velocity;
+			streamable.stageSpaceAngularVelocity=angularVelocity;
 		}
 
 		public void ProcessAudioInput(float[] data)
@@ -650,6 +659,12 @@ namespace teleport
 			clientspaceRoot = GetSingleComponentFromChildren<Teleport_ClientspaceRoot>();
 			collisionRoot = GetSingleComponentFromChildren<Teleport_CollisionRoot>();
 			sceneCaptureComponent = GetSingleComponentFromChildren<Teleport_SceneCaptureComponent>();
+			// Now we've initialized the session, we can initialize any subcomponents that depend on this component.
+			var subComponents=GetComponentsInChildren<SessionSubcomponent> ();
+			foreach(var s in subComponents)
+			{
+				s.OnSessionStart();
+			}
 		}
 
 		private void OnEnable()
@@ -764,9 +779,9 @@ namespace teleport
 			}
 			clientDynamicLighting.diffuseCubemapTexture= 0;
 			clientDynamicLighting.specularCubemapTexture = 0;
-			if (Monitor.Instance.environmentCubemap)
+			if (Monitor.Instance.diffuseRenderTexture)
 			{
-				clientDynamicLighting.diffuseCubemapTexture=GeometrySource.GetGeometrySource().AddTexture(Monitor.Instance.environmentCubemap);
+				clientDynamicLighting.diffuseCubemapTexture=GeometrySource.GetGeometrySource().AddTexture(Monitor.Instance.diffuseRenderTexture);
 			}
 			if (Monitor.Instance.specularRenderTexture)
 			{

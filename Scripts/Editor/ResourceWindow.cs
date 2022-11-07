@@ -555,9 +555,9 @@ namespace teleport
 		{
 			if (Monitor.Instance)
 			{
-				if (Monitor.Instance.environmentCubemap != null)
+				if (Monitor.Instance.diffuseRenderTexture != null)
 				{
-					geometrySource.AddTexture(Monitor.Instance.environmentCubemap, GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
+					geometrySource.AddTexture(Monitor.Instance.diffuseRenderTexture, GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
 					geometrySource.ExtractTextures(true);
 				}
 				if (Monitor.Instance.specularRenderTexture != null)

@@ -280,6 +280,7 @@ GameObject:
   - component: {fileID: 6349716853396447547}
   - component: {fileID: 256458345728266316}
   - component: {fileID: 4356986825909541284}
+  - component: {fileID: 5540971829307833008}
   m_Layer: 0
   m_Name: Right HandController
   m_TagString: TeleportStreamable
@@ -383,6 +384,24 @@ MonoBehaviour:
   sendEnabledStateUpdates: 1
   pollCurrentAnimation: 0
   uid: 0
+--- !u!114 &5540971829307833008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6829965221155726695}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 010652e5310e5b547b78ad78b3d2f0dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ButtonA: {fileID: 6775397436875306071}
+  ButtonB: {fileID: 7186663055245243583}
+  ButtonAPath1: right/input/x/click
+  ButtonAPath2: right/input/a/click
+  ButtonBPath1: right/input/y/click
+  ButtonBPath2: right/input/b/click
 --- !u!1 &7874665763676028163
 GameObject:
   m_ObjectHideFlags: 0
@@ -397,6 +416,7 @@ GameObject:
   - component: {fileID: 3005832818321853292}
   - component: {fileID: 6225410090374027571}
   - component: {fileID: -5313932978729687202}
+  - component: {fileID: 2583375213908465877}
   m_Layer: 0
   m_Name: Left HandController
   m_TagString: TeleportStreamable
@@ -500,6 +520,24 @@ MonoBehaviour:
   sendEnabledStateUpdates: 1
   pollCurrentAnimation: 0
   uid: 0
+--- !u!114 &2583375213908465877
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7874665763676028163}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 010652e5310e5b547b78ad78b3d2f0dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ButtonA: {fileID: 2405591392692788875}
+  ButtonB: {fileID: 3755890326884199992}
+  ButtonAPath1: left/input/x/click
+  ButtonAPath2: left/input/a/click
+  ButtonBPath1: left/input/y/click
+  ButtonBPath2: left/input/b/click
 --- !u!1001 &4150781235590825607
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -651,6 +689,18 @@ PrefabInstance:
     m_RemovedComponents: []
     m_AddedGameObjects: []
   m_SourcePrefab: {fileID: 100100000, guid: 846cfee221095204ea421daaf47eca96, type: 3}
+--- !u!1 &2405591392692788875 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -7423927615170324468, guid: 846cfee221095204ea421daaf47eca96,
+    type: 3}
+  m_PrefabInstance: {fileID: 4150781235590825607}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &3755890326884199992 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -8249165354308360001, guid: 846cfee221095204ea421daaf47eca96,
+    type: 3}
+  m_PrefabInstance: {fileID: 4150781235590825607}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &3844913389875936214 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 846cfee221095204ea421daaf47eca96,
@@ -808,6 +858,18 @@ Transform:
 --- !u!1 &5615111451119953396 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: d0c344579ae47a24594c33ae955cf7f4,
+    type: 3}
+  m_PrefabInstance: {fileID: 4696563697898133669}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &6775397436875306071 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -6977615282902799118, guid: d0c344579ae47a24594c33ae955cf7f4,
+    type: 3}
+  m_PrefabInstance: {fileID: 4696563697898133669}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &7186663055245243583 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2490961409834642458, guid: d0c344579ae47a24594c33ae955cf7f4,
     type: 3}
   m_PrefabInstance: {fileID: 4696563697898133669}
   m_PrefabAsset: {fileID: 0}

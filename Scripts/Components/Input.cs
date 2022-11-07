@@ -74,12 +74,26 @@ namespace teleport
 					releaseDelegates.Add(inputID, d);
 			}
 		}
+		public void AddDelegate(InputID [] inputIDs, InputEventDelegate d, InputEventType t)
+		{
+			foreach (var id in inputIDs)
+			{
+				AddDelegate(id,d,t);
+			}	
+		}
 		public void AddFloatDelegate(InputID inputID, FloatEventDelegate d)
 		{
 			if (floatEventDelegates.ContainsKey(inputID))
 				floatEventDelegates[inputID] += d;
 			else
 				floatEventDelegates.Add(inputID, d);
+		}
+		public void AddFloatDelegate(InputID [] inputIDs, FloatEventDelegate d)
+		{
+			foreach (var id in inputIDs)
+			{
+				AddFloatDelegate(id, d);
+			}
 		}
 		public void RemoveDelegate(InputID inputID, InputEventDelegate d, InputEventType t)
 		{
@@ -94,10 +108,24 @@ namespace teleport
 					releaseDelegates[inputID]-=d;
 			}
 		}
+		public void RemoveDelegate(InputID [] inputIDs, InputEventDelegate d, InputEventType t)
+		{
+			foreach (var id in inputIDs)
+			{
+				RemoveDelegate(id, d, t);
+			}
+		}
 		public void RemoveFloatDelegate(InputID inputID, FloatEventDelegate d)
 		{
 			if (floatEventDelegates.ContainsKey(inputID))
 				floatEventDelegates[inputID] -= d;
+		}
+		public void RemoveFloatDelegate(InputID[] inputIDs, FloatEventDelegate d)
+		{
+			foreach (var id in inputIDs)
+			{
+				RemoveFloatDelegate(id, d);
+			}
 		}
 		// really we need to make this work better.
 		// we should for each control receive a stream of events
@@ -111,6 +139,15 @@ namespace teleport
 			{
 				return false;
 			}
+		}
+		public float GetFloatState(InputID [] inputIDs)
+		{
+			float v=0.0F;
+			foreach (InputID i in inputIDs)
+			{
+				v+= GetFloatState(i);
+			}
+			return v;
 		}
 		public float GetFloatState(InputID inputID)
 		{
@@ -176,7 +213,7 @@ namespace teleport
 			//Copy old button presses for just triggered comparisons.
 			foreach (avs.InputEventBinary binaryEvent in binaryEvents)
 			{
-				Debug.Log("binaryEvent " + binaryEvent.ToString());
+				//Debug.Log("binaryEvent " + binaryEvent.ToString());
 				if (binaryEvent.activated)
 				{
 					if (pressDelegates.ContainsKey(binaryEvent.inputID) && pressDelegates[binaryEvent.inputID] != null)

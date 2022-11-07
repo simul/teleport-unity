@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -20,14 +21,23 @@ namespace teleport
 		public RenderTexture depthTexture = null;
 
 		// Switch back and front because Unity view matrices have -z for forward
-		static CamView frontCamView = new CamView(Vector3.forward, Vector3.right);
-		static CamView backCamView = new CamView(Vector3.back, Vector3.right);
-		static CamView rightCamView = new CamView(Vector3.right, Vector3.down);
-		static CamView leftCamView = new CamView(Vector3.left, Vector3.up);
-		static CamView upCamView = new CamView(Vector3.up, Vector3.right);
-		static CamView downCamView = new CamView(Vector3.down, Vector3.right);
-		static CamView[] faceCamViews = new CamView[] { frontCamView, backCamView, rightCamView, leftCamView, upCamView, downCamView };
-		static Matrix4x4[] faceViewMatrices = new Matrix4x4[6];
+		// These are the views for  a GL-style cubemap with Y vertical.
+		static CamView frontCamViewGL = new CamView(Vector3.forward, Vector3.up);
+		static CamView backCamViewGL = new CamView(Vector3.back, Vector3.up);
+		static CamView rightCamViewGL = new CamView(Vector3.right, Vector3.up);
+		static CamView leftCamViewGL = new CamView(Vector3.left, Vector3.up);
+		static CamView upCamViewGL = new CamView(Vector3.up, Vector3.right);
+		static CamView downCamViewGL = new CamView(Vector3.down, Vector3.right);
+		static CamView[] faceCamViewsGL = new CamView[] { backCamViewGL, frontCamViewGL,  downCamViewGL, upCamViewGL, leftCamViewGL, rightCamViewGL };
+		// These are the views for an engineering style cubemap with Z up.
+		static CamView backCamView = new CamView(Vector3.forward, Vector3.up);
+		static CamView frontCamView= new CamView(Vector3.back, Vector3.down);
+		static CamView rightCamView = new CamView(Vector3.right, Vector3.forward);
+		static CamView leftCamView = new CamView(Vector3.left, Vector3.forward);
+		static CamView upCamView = new CamView(Vector3.up, Vector3.forward);
+		static CamView downCamView = new CamView(Vector3.down, Vector3.forward);
+		static CamView[] faceCamViewsEngineering = new CamView[] { leftCamView, rightCamView, frontCamView, backCamView, downCamView, upCamView };
+
 		// End cubemap members
 
 		TeleportLighting teleportLighting = new TeleportLighting();
@@ -289,7 +299,18 @@ namespace teleport
 		{
 			for (int face = 0; face < 6; face++)
 			{
-				VideoEncoding.GenerateSpecularMips(context, Monitor.Instance.environmentCubemap, Monitor.Instance.specularRenderTexture, face, 0);
+				VideoEncoding.GenerateSpecularMips(context, Monitor.Instance.environmentCubemap, Monitor.Instance.specularRenderTexture, face, 0, avs.AxesStandard.EngineeringStyle);
+				HashSet<Light> bakedLights =new HashSet<Light> ();
+				Light[] lights = UnityEngine.Object.FindObjectsOfType<Light>();
+				// include only baked lights in range.
+				foreach(Light l in lights)
+				{
+					if(l.lightmapBakeType!=LightmapBakeType.Realtime)
+					{
+						bakedLights.Add(l);
+					}
+				}
+				VideoEncoding.GenerateDiffuseCubemap(context, Monitor.Instance.environmentCubemap, bakedLights, Monitor.Instance.diffuseRenderTexture, face, 1.0F, avs.AxesStandard.EngineeringStyle);
 			}
 		}
 		public void Render(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask)
@@ -389,7 +410,6 @@ namespace teleport
 			
 			if (Cull(context, camera, out cullingResultsAll, !teleportSettings.serverSettings.usePerspectiveRendering))
 			{
-				
 				TeleportRenderPipeline.LightingOrder lightingOrder = TeleportRenderPipeline.GetLightingOrder(cullingResultsAll);
 
 				teleportLighting.renderSettings = renderSettings;
@@ -474,7 +494,12 @@ namespace teleport
 		}
 		void DrawCubemapFace(ScriptableRenderContext context, Camera camera, Vector3 camDir, CullingResults cullingResultsAll, TeleportRenderPipeline.LightingOrder lightingOrder, int face,float diffuseAmbientScale)
 		{
-			CamView camView = faceCamViews[face];
+			bool GL=false;
+			CamView camView;
+			if(GL)
+				camView=faceCamViewsGL[face];
+			else
+				camView=faceCamViewsEngineering[face];
 			Vector3 to = camView.forward;
 
 			// Don't render faces that are completely invisible to the camera.
@@ -489,11 +514,13 @@ namespace teleport
 			
 			Matrix4x4 view = camera.transform.localToWorldMatrix;
 			view = Matrix4x4.Inverse(view);
-			view.m20 *= -1f;
-			view.m21 *= -1f;
-			view.m22 *= -1f;
-			view.m23 *= -1f;
-			faceViewMatrices[face] = view;
+			/*if(GL)
+			{
+				view.m20 *= -1f;
+				view.m21 *= -1f;
+				view.m22 *= -1f;
+				view.m23 *= -1f;
+			}*/
 			int layerMask = 0x7FFFFFFF;
 			uint renderingMask = (uint)((1 << 25)|0x7);	// canvasrenderers hard coded to have mask 0x7..!
 			camera.worldToCameraMatrix = view;
@@ -501,57 +528,57 @@ namespace teleport
 
 			var sceneCapture = SessionComponent.sceneCaptureComponent;
 			StartSample(context, sampleName);
+			
+			if (teleportSettings.serverSettings.usePerspectiveRendering)
 			{
-				if (teleportSettings.serverSettings.usePerspectiveRendering)
-				{
-					context.SetupCameraProperties(camera);
-					Clear(context, camera);
-					PrepareForSceneWindow(context, camera);
+				context.SetupCameraProperties(camera);
+				Clear(context, camera);
+				PrepareForSceneWindow(context, camera);
 
-					DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder, false, teleportSettings.highlightStreamableColour,sceneCapture.UnfilteredCubeTexture, face);
-					DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
+				DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder, false, teleportSettings.highlightStreamableColour,sceneCapture.UnfilteredCubeTexture, face);
+				DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
 		
-					VideoEncoding.GenerateSpecularMips(context, sceneCapture.UnfilteredCubeTexture, sceneCapture.SpecularCubeTexture, face, 0);
-					VideoEncoding.GenerateDiffuseCubemap(context, sceneCapture.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), sceneCapture.DiffuseCubeTexture, face,diffuseAmbientScale);
-					videoEncoding.EncodeLightingCubemaps(context, sceneCapture, SessionComponent,face);
-				}
-				else
-				{
-					DrawDepthPass(context, camera, layerMask, renderingMask, cullingResultsAll);
-					teleportLighting.RenderScreenspaceShadows(context, camera, lightingOrder, cullingResultsAll, depthTexture);
-					context.SetupCameraProperties(camera);
-					Clear(context, camera);
-					PrepareForSceneWindow(context, camera);
-
-					DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder,false, teleportSettings.highlightStreamableColour);
-					DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
-					
-					// The unfiltered (reflection cube) should render close objects (though maybe only static ones).
-					float oldNearClip = camera.nearClipPlane;
-					camera.nearClipPlane = 5.0f;
-					videoEncoding.DrawCubemaps(context, SessionComponent.sceneCaptureComponent.rendererTexture, sceneCapture.UnfilteredCubeTexture, face);
-					camera.nearClipPlane = oldNearClip;
-					VideoEncoding.GenerateSpecularMips(context, SessionComponent.sceneCaptureComponent.UnfilteredCubeTexture, sceneCapture.SpecularCubeTexture, face, 0);
-					VideoEncoding.GenerateDiffuseCubemap(context, SessionComponent.sceneCaptureComponent.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), sceneCapture.DiffuseCubeTexture, face, diffuseAmbientScale);
-					if(SessionComponent.clientSettings.captureCubeTextureSize>0&& SessionComponent.clientSettings.backgroundMode==BackgroundMode.VIDEO)
-					{ 
-						videoEncoding.EncodeColor(context, camera, face, sceneCapture);
-						if (!teleportSettings.serverSettings.useAlphaLayerEncoding)
-						{
-							int faceSize = SessionComponent.clientSettings.captureCubeTextureSize;
-							int halfFaceSize = faceSize / 2;
-							int offsetX = VideoEncoding.faceOffsets[face, 0];
-							int offsetY = VideoEncoding.faceOffsets[face, 1];
-							var depthViewport = new Rect(offsetX * halfFaceSize, (faceSize * 2) + (offsetY * halfFaceSize), halfFaceSize, halfFaceSize);
-							videoEncoding.EncodeDepth(context, camera, depthViewport, sceneCapture);
-						}
-					}
-					videoEncoding.EncodeLightingCubemaps(context, sceneCapture, SessionComponent, face);
-#if UNITY_EDITOR
-					DrawUnsupportedShaders(context, camera);
-#endif
-				}
+				VideoEncoding.GenerateSpecularMips(context, sceneCapture.UnfilteredCubeTexture, sceneCapture.SpecularCubeTexture, face, 0, avs.AxesStandard.EngineeringStyle);
+				VideoEncoding.GenerateDiffuseCubemap(context, sceneCapture.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), sceneCapture.DiffuseCubeTexture, face,diffuseAmbientScale, avs.AxesStandard.GlStyle);
+				videoEncoding.EncodeLightingCubemaps(context, sceneCapture, SessionComponent,face);
 			}
+			else
+			{
+				DrawDepthPass(context, camera, layerMask, renderingMask, cullingResultsAll);
+				teleportLighting.RenderScreenspaceShadows(context, camera, lightingOrder, cullingResultsAll, depthTexture);
+				context.SetupCameraProperties(camera);
+				Clear(context, camera);
+				PrepareForSceneWindow(context, camera);
+
+				DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder,false, teleportSettings.highlightStreamableColour);
+				DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
+				
+				// The unfiltered (reflection cube) should render close objects (though maybe only static ones).
+				float oldNearClip		= camera.nearClipPlane;
+				camera.nearClipPlane	= 5.0f;
+				videoEncoding.CopyOneFace(context, SessionComponent.sceneCaptureComponent.rendererTexture, sceneCapture.UnfilteredCubeTexture, face);
+				camera.nearClipPlane	= oldNearClip;
+				VideoEncoding.GenerateSpecularMips(context, SessionComponent.sceneCaptureComponent.UnfilteredCubeTexture, sceneCapture.SpecularCubeTexture, face, 0, avs.AxesStandard.GlStyle);
+				VideoEncoding.GenerateDiffuseCubemap(context, SessionComponent.sceneCaptureComponent.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), sceneCapture.DiffuseCubeTexture, face, diffuseAmbientScale, avs.AxesStandard.GlStyle);
+				if(SessionComponent.clientSettings.captureCubeTextureSize>0&& SessionComponent.clientSettings.backgroundMode==BackgroundMode.VIDEO)
+				{ 
+					videoEncoding.EncodeColor(context, camera, face, sceneCapture);
+					if (!teleportSettings.serverSettings.useAlphaLayerEncoding)
+					{
+						int faceSize		= SessionComponent.clientSettings.captureCubeTextureSize;
+						int halfFaceSize	= faceSize / 2;
+						int offsetX			= VideoEncoding.faceOffsets[face, 0];
+						int offsetY			= VideoEncoding.faceOffsets[face, 1];
+						var depthViewport	= new Rect(offsetX * halfFaceSize, (faceSize * 2) + (offsetY * halfFaceSize), halfFaceSize, halfFaceSize);
+						videoEncoding.EncodeDepth(context, camera, depthViewport, sceneCapture);
+					}
+				}
+				videoEncoding.EncodeLightingCubemaps(context, sceneCapture, SessionComponent, face);
+#if UNITY_EDITOR
+				DrawUnsupportedShaders(context, camera);
+#endif
+			}
+			
 			EndSample(context, sampleName);
 			EndCamera(context, camera);
 			camera.ResetWorldToCameraMatrix();

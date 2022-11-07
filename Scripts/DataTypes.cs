@@ -542,6 +542,15 @@ namespace avs
 	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct PoseDynamic
+	{
+		public Vector4 orientation;
+		public Vector3 position;
+		public Vector3 velocity;
+		public Vector3 angularVelocity;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct MovementUpdate
 	{
 		public Int64 timestamp;

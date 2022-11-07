@@ -143,6 +143,10 @@ namespace teleport
 			}
 		}
 
+		// These can be received from 
+		public Vector3 stageSpaceVelocity			=new Vector3(0,0,0);
+		public Vector3 stageSpaceAngularVelocity	= new Vector3(0, 0, 0);
+
 		private HashSet<Teleport_SessionComponent> sessions = new HashSet<Teleport_SessionComponent>();
 
 		//Animator trackers in this TeleportStreamable's hierarchy.

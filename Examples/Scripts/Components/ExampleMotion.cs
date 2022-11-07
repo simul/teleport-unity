@@ -15,10 +15,10 @@ public class ExampleMotion : MonoBehaviour
 	teleport.Teleport_Controller[]  controllers;
 	teleport.Teleport_Head head;
 	teleport.Teleport_SessionComponent session=null;
-	InputID LeftThumbstickX=0;
-	InputID LeftThumbstickY=0;
-	InputID RightThumbstickX = 0;
-	InputID RightThumbstickY = 0; 
+	InputID [] LeftThumbstickX;
+	InputID [] LeftThumbstickY;
+	InputID [] RightThumbstickX ;
+	InputID [] RightThumbstickY; 
 	// Start is called before the first frame update
 	void Start()
 	{
@@ -30,17 +30,17 @@ public class ExampleMotion : MonoBehaviour
 	void HookupInputs()
 	{
 		teleport.TeleportSettings teleportSettings = teleport.TeleportSettings.GetOrCreateSettings();
-		LeftThumbstickX= teleportSettings.FindInput("Left Thumbstick X");
-		LeftThumbstickY = teleportSettings.FindInput("Left Thumbstick Y");
-		RightThumbstickX = teleportSettings.FindInput("Right Thumbstick X");
-		RightThumbstickY = teleportSettings.FindInput("Right Thumbstick Y");
+		LeftThumbstickX= teleportSettings.FindInputsByName("Left Thumbstick X");
+		LeftThumbstickY = teleportSettings.FindInputsByName("Left Thumbstick Y");
+		RightThumbstickX = teleportSettings.FindInputsByName("Right Thumbstick X");
+		RightThumbstickY = teleportSettings.FindInputsByName("Right Thumbstick Y");
 	}
 
    float forward_backward = 0.0F;
 	// Update is called once per frame
 	void Update()
 	{
-		if (LeftThumbstickX==0)
+		if (LeftThumbstickX==null||LeftThumbstickX.Length==0)
 		{
 			HookupInputs();
 		}
@@ -78,7 +78,7 @@ public class ExampleMotion : MonoBehaviour
 		Vector3 right = head.transform.right;
 		right.y = 0;
 		float playerMoveMultiplier = 0.2F;
-		float sprintMultiplier = 1.0F;
+		//float sprintMultiplier = 1.0F;
 		float moveMod = playerMoveMultiplier;//Time.deltaTime * playerMoveMultiplier * sprintMultiplier;
 		forward_backward = 0.0F;
 		float left_right=0.0F;
@@ -88,7 +88,8 @@ public class ExampleMotion : MonoBehaviour
 			leftInputX*=0.9F;
 			leftInputY*=0.9F;
 			rightInputX *= 0.9F;
-			rightInputY *= 0.9F; 
+			rightInputY *= 0.9F;
+			
 			leftInputX +=0.1F* session.input.GetFloatState(LeftThumbstickX);
 			leftInputY += 0.1F * session.input.GetFloatState(LeftThumbstickY);
 			rightInputX +=0.1F* session.input.GetFloatState(RightThumbstickX);
