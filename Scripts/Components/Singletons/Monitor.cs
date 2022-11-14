@@ -405,6 +405,12 @@ namespace teleport
 				mips--;
 			}
 			string scenePath = SceneManager.GetActiveScene().path;
+			if (specularRenderTexture)
+			{
+				string specularRenderTexturePath = UnityEditor.AssetDatabase.GetAssetPath(specularRenderTexture);
+				if(specularRenderTexturePath=="")
+					specularRenderTexture = null;
+			}
 			// If specular rendertexture is unassigned or not the same size as the env cubemap, recreate it as a saved asset.
 			if (specularRenderTexture == null || specularRenderTexture.width != environmentCubemap.width ||
 				specularRenderTexture.mipmapCount != mips)
@@ -416,7 +422,17 @@ namespace teleport
 				// We will generate the mips with shaders in the render call.
 				specularRenderTexture.autoGenerateMips = false;
 				string assetPath = scenePath.Replace(".unity", "/specularRenderTexture.renderTexture");
+				string assetDirectory = scenePath.Replace(".unity", "");
+				string parentDirectory=System.IO.Path.GetDirectoryName(scenePath);
+				string subDirectory = System.IO.Path.GetFileNameWithoutExtension(scenePath);
+				UnityEditor.AssetDatabase.CreateFolder(parentDirectory,subDirectory);
 				UnityEditor.AssetDatabase.CreateAsset(specularRenderTexture, assetPath);
+			}
+			if (diffuseRenderTexture)
+			{
+				string diffuseRenderTexturePath = UnityEditor.AssetDatabase.GetAssetPath(diffuseRenderTexture);
+				if (diffuseRenderTexturePath == "")
+					diffuseRenderTexture = null;
 			}
 			// If diffuse rendertexture is unassigned or not the same size as the env cubemap, recreate it as a saved asset.
 			if (diffuseRenderTexture == null || diffuseRenderTexture.width != environmentCubemap.width ||

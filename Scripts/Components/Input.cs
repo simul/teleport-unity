@@ -157,6 +157,24 @@ namespace teleport
 			}
 			return 0.0f;
 		}
+		public bool GetBooleanState(InputID[] inputIDs)
+		{
+			bool v = false;
+			foreach (InputID i in inputIDs)
+			{
+				v |= GetBooleanState(i);
+			}
+			return v;
+		}
+		public bool GetBooleanState(InputID inputID)
+		{
+			if (buttonStates.TryGetValue(inputID, out bool value))
+			{
+				return value;
+			}
+			return false;
+		}
+		
 		public bool IsTouching(InputID inputID)
 		{
 			return false;
@@ -210,7 +228,7 @@ namespace teleport
 					floatStates.Add(inputID, f);
 				floatStates[inputID] = f;
 			}
-			//Copy old button presses for just triggered comparisons.
+
 			foreach (avs.InputEventBinary binaryEvent in binaryEvents)
 			{
 				//Debug.Log("binaryEvent " + binaryEvent.ToString());

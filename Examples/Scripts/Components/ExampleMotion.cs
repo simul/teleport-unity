@@ -17,8 +17,16 @@ public class ExampleMotion : MonoBehaviour
 	teleport.Teleport_SessionComponent session=null;
 	InputID [] LeftThumbstickX;
 	InputID [] LeftThumbstickY;
-	InputID [] RightThumbstickX ;
-	InputID [] RightThumbstickY; 
+	InputID [] RightThumbstickX;
+	InputID [] RightThumbstickY;
+
+
+	InputID[] RotateLeft;
+	InputID[] RotateRight;
+	InputID[] Forward;
+	InputID[] Backward;
+	InputID[] Left;
+	InputID[] Right;
 	// Start is called before the first frame update
 	void Start()
 	{
@@ -34,6 +42,13 @@ public class ExampleMotion : MonoBehaviour
 		LeftThumbstickY = teleportSettings.FindInputsByName("Left Thumbstick Y");
 		RightThumbstickX = teleportSettings.FindInputsByName("Right Thumbstick X");
 		RightThumbstickY = teleportSettings.FindInputsByName("Right Thumbstick Y");
+
+		RotateLeft	= teleportSettings.FindInputsByName("RotateLeft");
+		RotateRight = teleportSettings.FindInputsByName("RotateRight");
+		Forward		= teleportSettings.FindInputsByName("Forward");
+		Backward	= teleportSettings.FindInputsByName("Backward");
+		Left		= teleportSettings.FindInputsByName("Left");
+		Right		= teleportSettings.FindInputsByName("Right");
 	}
 
    float forward_backward = 0.0F;
@@ -90,10 +105,10 @@ public class ExampleMotion : MonoBehaviour
 			rightInputX *= 0.9F;
 			rightInputY *= 0.9F;
 			
-			leftInputX +=0.1F* session.input.GetFloatState(LeftThumbstickX);
-			leftInputY += 0.1F * session.input.GetFloatState(LeftThumbstickY);
-			rightInputX +=0.1F* session.input.GetFloatState(RightThumbstickX);
-			rightInputY += 0.1F * session.input.GetFloatState(RightThumbstickY);
+			leftInputX	+=0.1F*(session.input.GetFloatState(LeftThumbstickX) +(session.input.GetBooleanState(RotateRight)?1.0F:0.0F)-(session.input.GetBooleanState(RotateLeft)?1.0F:0.0F));
+			leftInputY	+=0.1F*(session.input.GetFloatState(LeftThumbstickY) );
+			rightInputX +=0.1F*(session.input.GetFloatState(RightThumbstickX)+(session.input.GetBooleanState(Right)?1.0F:0.0F)-(session.input.GetBooleanState(Left)?1.0F:0.0F));
+			rightInputY +=0.1F*(session.input.GetFloatState(RightThumbstickY)+(session.input.GetBooleanState(Forward)?1.0F:0.0F)-(session.input.GetBooleanState(Backward)?1.0F:0.0F));
 			if(leftInputX > 0.5f)
 				turnRight=true;
 			else if(leftInputX < -.5f)

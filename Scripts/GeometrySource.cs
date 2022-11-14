@@ -1134,12 +1134,14 @@ namespace teleport
 				numImages =arraySize*mipCount;
 				int targetWidth = sourceTexture.width;
 				int targetHeight = sourceTexture.height;
-				int scale = 1;
+				int [] scale = {1,1};
+				int[] offsets= {0, 0};
 				while (Math.Max(targetWidth, targetHeight) > teleportSettings.serverSettings.maximumTextureSize)
 				{
 					targetWidth = (targetWidth + 1) / 2;
 					targetHeight = (targetHeight + 1) / 2;
-					scale *= 2;
+					scale[0] *= 2;
+					scale[1] *= 2;
 				}
 				int maxSize= (1 << (mipCount - 1));
 				while (maxSize > targetWidth || maxSize > targetHeight)
@@ -1232,6 +1234,18 @@ namespace teleport
 				}
 				if (isNormal || textureImporter != null && textureImporter.GetDefaultPlatformTextureSettings().textureCompression == TextureImporterCompression.CompressedHQ)
 					highQualityUASTC = true;
+				if (highQualityUASTC)
+					writePng = true;
+				bool flipY= true;
+				if(writePng||isCubemap)
+				{
+					flipY=false;
+				}
+				if (flipY)
+				{
+					scale[1] *= -1;
+					offsets[1]= sourceTexture.height-1;
+				}
 				string shaderName = isCubemap?"ExtractCubeFace":isNormal ? "ExtractNormalMap" : "ExtractTexture";
 				shaderName += UnityEditor.PlayerSettings.colorSpace == ColorSpace.Gamma ? "Gamma" : "Linear";
 				// make as many copies of textureShader as we have images!!!
@@ -1241,13 +1255,17 @@ namespace teleport
 				string shaderGUID = AssetDatabase.FindAssets($"ExtractTextureData t:ComputeShader")[0];
 				ComputeShader shader = AssetDatabase.LoadAssetAtPath<ComputeShader>(UnityEditor.AssetDatabase.GUIDToAssetPath(shaderGUID));
 
+				// Here we will use a shader to extract from the source texture into the target which is readable.
+				// Unity stores all textures FLIPPED in the y direction. So the shader must handle re-flipping the images back to normal.
+				// But when unity encodes a png, it re-flips it. So we only do this reversal when the texture will be sent direct.
 				for (int m = 0; m < mipCount; m++)
 				{
 					for (int j = 0; j < arraySize; j++)
 					{
 						textureShaders.Add(shader);
 						int kernelHandle = shader.FindKernel(shaderName);
-						shader.SetInt("Scale", scale);
+						shader.SetInts("Scale", scale);
+						shader.SetInts("Offset", offsets);
 						shader.SetTexture(kernelHandle, "Source", sourceTexture);
 						if (isCubemap)
 							shader.SetTexture(kernelHandle, "SourceCube", sourceTexture);
@@ -1263,6 +1281,7 @@ namespace teleport
 						textureArray.Add(rt);
 						n++;
 					}
+					offsets[1] =(offsets[1]+1)/2-1;
 				}
 				if (!SystemInfo.IsFormatSupported(renderTextures[rendertextureIndex].graphicsFormat, UnityEngine.Experimental.Rendering.FormatUsage.Sample))
 				{
@@ -1302,8 +1321,6 @@ namespace teleport
 				arraySize=6;
 			}
 			textureData.data=(IntPtr)0;
-			if(highQualityUASTC)
-				writePng=true;
 			List<SubresourceImage> subresourceImages=new List<SubresourceImage>();
 			
 			if (textureData.mipCount * arraySize != renderTextures.Count)
@@ -1357,17 +1374,17 @@ namespace teleport
 						var srcBytes = MemoryMarshal.Cast<Color32, byte>(pixelData);
 						subresourceImage.bytes = srcBytes.ToArray();
 					}
+					string textureAssetPath = AssetDatabase.GetAssetPath(sourceTexture);
+					string basisFile = geometrySource.GenerateCompressedFilePath(textureAssetPath, avs.TextureCompression.BASIS_COMPRESSED);
+					string dirPath = System.IO.Path.GetDirectoryName(basisFile);
+					if (!Directory.Exists(dirPath))
+					{
+						Directory.CreateDirectory(dirPath);
+					}
 					// Test: write to png. Only for observation/debugging.
 					if (writePng || highQualityUASTC)
 					{
 						// If it's png, let's have a uint16 here, N with the number of images, then a list of N size_t offsets. Each is a subresource image. Then image 0 starts.
-						string textureAssetPath = AssetDatabase.GetAssetPath(sourceTexture);
-						string basisFile = geometrySource.GenerateCompressedFilePath(textureAssetPath, avs.TextureCompression.BASIS_COMPRESSED);
-						string dirPath = System.IO.Path.GetDirectoryName(basisFile);
-						if (!Directory.Exists(dirPath))
-						{
-							Directory.CreateDirectory(dirPath);
-						}
 						float valueScale = 1.0f;
 						/*	if (hdr)
 							{
@@ -1413,6 +1430,12 @@ namespace teleport
 					else
 					{
 						textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
+						// what does the texture look like as a png? for debugging.
+						string pngFile = basisFile.Replace(".basis", $"_mip{j}_slice{i}_DEBUG.png");
+						if (arraySize > 1)
+							pngFile = pngFile.Replace(".png", "_" + i.ToString() + ".png");
+						var bytes = readTexture.EncodeToPNG();
+						File.WriteAllBytes(pngFile, bytes);
 					}
 					n++;
 				}
@@ -1788,7 +1811,7 @@ namespace teleport
 				return false;
 			}
 			Mesh mesh = sceneReferenceManager.GetMeshFromGameObject(gameObject);
-			if((mesh.hideFlags&UnityEngine.HideFlags.DontSave)== UnityEngine.HideFlags.DontSave)
+			if(mesh&&(mesh.hideFlags&UnityEngine.HideFlags.DontSave)== UnityEngine.HideFlags.DontSave)
 			{
 				// This is ok, it just means we're extracting one of the standard meshes: sphere, cube, etc.
 				//Debug.Log("GeometrySource.ExtractNodeMeshData extracting "+gameObject.name+" with HideFlags!");

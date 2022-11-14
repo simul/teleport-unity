@@ -1749,14 +1749,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d77736cfc7b91ae46a6764bdea599cb6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  specularRenderTexture: {fileID: 0}
-  diffuseRenderTexture: {fileID: 0}
+  specularRenderTexture: {fileID: 8400000, guid: 4dab61d44269458499c75380b78d284d,
+    type: 2}
+  diffuseRenderTexture: {fileID: 8400000, guid: b01f0f65177e2b34eae464cdb3e834d3,
+    type: 2}
   dummyRenderTexture: {fileID: 1582784442}
   dummyCam: {fileID: 843734289}
   generateEnvMaps: 0
   defaultPlayerPrefab: {fileID: 0}
   audioCapture: {fileID: 119303608}
-  environmentCubemap: {fileID: 0}
+  environmentCubemap: {fileID: 8900000, guid: a4fd4337d5fd0f4439ef1e58ba205c6f, type: 3}
 --- !u!4 &843734288
 Transform:
   m_ObjectHideFlags: 0
@@ -2466,9 +2468,14 @@ MonoBehaviour:
   - {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   - {fileID: 8900000, guid: 799677c60dffa4e43a9c545781f3da0c, type: 3}
   - {fileID: 8900000, guid: 69f06136f5c8b264f9fe02ade03945c7, type: 3}
-  - {fileID: 8400000, guid: 4dab61d44269458499c75380b78d284d, type: 2}
   - {fileID: 8900000, guid: d6eb67f3071e62145a49773a9a113734, type: 3}
   - {fileID: 2800000, guid: 7872739ceb25a6e4ba142bbab0714637, type: 3}
+  - {fileID: 5060444177187149915, guid: 1453eb10af1b0e6489936191d3d20aa1, type: 3}
+  - {fileID: -7301279310005317288, guid: 1453eb10af1b0e6489936191d3d20aa1, type: 3}
+  - {fileID: -7540856775010145387, guid: 1453eb10af1b0e6489936191d3d20aa1, type: 3}
+  - {fileID: -3683653601302683008, guid: 1453eb10af1b0e6489936191d3d20aa1, type: 3}
+  - {fileID: 8400000, guid: b01f0f65177e2b34eae464cdb3e834d3, type: 2}
+  - {fileID: 8400000, guid: 4dab61d44269458499c75380b78d284d, type: 2}
   sceneResourcePaths_values:
   - Meshes/Owned/Cafe/CafeChairTest_02.FBX/HightPoly_02
   - Meshes/Owned/Cafe/ChairWood.mat/ChairWood
@@ -2536,9 +2543,14 @@ MonoBehaviour:
   - Library/unity%default%resources/Cube/Cube_10202
   - Licensed%Content/HQ%PBR/HQ%Retro%Office/Scene/HQPBR_Retro_Office/ReflectionProbe-0
   - Licensed%Content/HQ%PBR/HQ%Retro%Office/Scene/HQPBR_Retro_Office/ReflectionProbe-22.exr/ReflectionProbe-22
-  - Teleport/Scenes/TeleportVRAntechamber/specularRenderTexture.renderTexture/specularRenderTexture
   - Licensed%Content/HQ%PBR/HQ%Retro%Office/Scene/HQPBR_Retro_Office/ReflectionProbe-25.exr/ReflectionProbe-25
   - Teleport/Scenes/TeleportVRAntechamber/Lightmap-8_comp_light.exr/Lightmap-8_comp_light
+  - Meshes/Owned/Cafe/CafeSquareTable_01_test.FBX/Box001
+  - Meshes/Owned/Cafe/CafeSquareTable_01_test.FBX/Material%#47
+  - Meshes/Owned/Cafe/CafeSquareTable_01_test.FBX/Material%#48
+  - Meshes/Owned/Cafe/CafeSquareTable_01_test.FBX/Material%#73
+  - Teleport/Scenes/TeleportVRAntechamber/diffuseRenderTexture.renderTexture/diffuseRenderTexture
+  - Teleport/Scenes/TeleportVRAntechamber/specularRenderTexture.renderTexture/specularRenderTexture
 --- !u!4 &990844616
 Transform:
   m_ObjectHideFlags: 0
@@ -2896,6 +2908,7 @@ MonoBehaviour:
   - {fileID: 655579656}
   - {fileID: 1499709811}
   - {fileID: 427680964}
+  - {fileID: 1499783651}
   gameObjectReferences_values:
   - mesh: {fileID: -405809574481076220, guid: bdfeb49fef516744c85a1335e52082c8, type: 3}
   - mesh: {fileID: -7708389821861517950, guid: 28d31154e6a4c7549873ad082267879f, type: 3}
@@ -2940,6 +2953,7 @@ MonoBehaviour:
   - mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   - mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
   - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  - mesh: {fileID: 5060444177187149915, guid: 1453eb10af1b0e6489936191d3d20aa1, type: 3}
 --- !u!4 &1214658852
 Transform:
   m_ObjectHideFlags: 0
@@ -4994,17 +5008,17 @@ PrefabInstance:
     - target: {fileID: 1332186173640770814, guid: c7bd090313c3e8c4ca1c4c5470243103,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.605
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1332186173640770814, guid: c7bd090313c3e8c4ca1c4c5470243103,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.37
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1332186173640770814, guid: c7bd090313c3e8c4ca1c4c5470243103,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: -2.851
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1332186173640770814, guid: c7bd090313c3e8c4ca1c4c5470243103,
         type: 3}
@@ -5060,6 +5074,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_RenderingLayerMask
       value: 3221225471
+      objectReference: {fileID: 0}
+    - target: {fileID: 4439182914225332721, guid: c7bd090313c3e8c4ca1c4c5470243103,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -1.833
+      objectReference: {fileID: 0}
+    - target: {fileID: 4439182914225332721, guid: c7bd090313c3e8c4ca1c4c5470243103,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -3.017
       objectReference: {fileID: 0}
     - target: {fileID: 4472128270632149356, guid: c7bd090313c3e8c4ca1c4c5470243103,
         type: 3}

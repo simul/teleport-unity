@@ -23,7 +23,8 @@ SamplerState samplerSourceCube
 	AddressW = Mirror;
 };
 
-int Scale;
+int2 Scale;
+int2 Offset;
 int Face;
 int Mip;
 
@@ -31,7 +32,7 @@ int Mip;
 [numthreads(8, 8, 1)]
 void ExtractTextureLinear(uint3 id : SV_DispatchThreadID)
 {
-	float4 src = Source.Load(int3(id.xy * Scale,Mip));
+	float4 src = Source.Load(int3(Offset+id.xy * Scale,Mip));
 	Result[id.xy].rgba = saturate(src);
 }
 
@@ -39,7 +40,7 @@ void ExtractTextureLinear(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void ExtractTextureGamma(uint3 id : SV_DispatchThreadID)
 {
-	float4 src			= Source.Load(int3(id.xy * Scale,Mip));
+	float4 src			= Source.Load(int3(Offset+id.xy * Scale,Mip));
 	Result[id.xy].rgba	= GammaToLinearSpaceExact(src);
 }
 
