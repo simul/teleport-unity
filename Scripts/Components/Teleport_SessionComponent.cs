@@ -500,7 +500,8 @@ namespace teleport
 
 			if (head.movementEnabled)
 			{
-				head.transform.SetPositionAndRotation(newPosition, newRotation);
+				head.transform.localPosition = newPosition;
+				head.transform.localRotation = newRotation;
 			}
 			last_received_headPos = newPosition;
 		}

@@ -531,7 +531,7 @@ namespace teleport
 				}
 
 				GameObject player = Instantiate(Instance.defaultPlayerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
-				player.name = "TeleportVR_" + Teleport_SessionComponent.sessions.Count + 1;
+				player.name = "TeleportVR_" +Instance.defaultPlayerPrefab.name+"_"+ Teleport_SessionComponent.sessions.Count + 1;
 
 				session = player.GetComponentsInChildren<Teleport_SessionComponent>()[0];
 				session.Spawned = true;

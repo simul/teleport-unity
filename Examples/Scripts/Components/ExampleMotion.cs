@@ -87,7 +87,7 @@ public class ExampleMotion : MonoBehaviour
 	GameObject rightController;
 	public void DoTeleportation(teleport.Input input, InputID inputId)
 	{
-		if(targetIsValid)
+		if(targetIsValid&& CircleRadius>=0.9F* MaxCircleRadius)
 		{
 			transform.SetPositionAndRotation(circle.transform.position, transform.rotation);
 		}
@@ -114,8 +114,10 @@ public class ExampleMotion : MonoBehaviour
 		if (!pointingController)
 		{
 			pointingController= controllerObject;
+			CircleRadius=0.0F;
 		}
 	}
+	float MaxCircleRadius=1.0F;
 	float CircleRadius=0.0F;
 	float forward_backward = 0.0F;
 	bool targetIsValid=false;
@@ -180,7 +182,7 @@ public class ExampleMotion : MonoBehaviour
 				if (hit.normal.y <- 0.707F)
 				{
 					circle.transform.position=hit.point;
-					CircleRadius+=0.02F;
+					CircleRadius+=0.05F*MaxCircleRadius;
 					targetIsValid = true;
 					break;
 				}
@@ -192,7 +194,7 @@ public class ExampleMotion : MonoBehaviour
 				if (hit.normal.y > 0.707F)
 				{
 					circle.transform.position = hit.point;
-					CircleRadius += 0.02F;
+					CircleRadius += 0.05F * MaxCircleRadius;
 					targetIsValid = true;
 					break;
 				}
