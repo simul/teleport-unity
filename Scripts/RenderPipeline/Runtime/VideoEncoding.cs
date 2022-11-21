@@ -198,7 +198,9 @@ namespace teleport
 				if (light.type != LightType.Directional)
 					continue;
 				var clr = light.intensity * light.color.linear;
-				var dir = light.transform.forward;
+				// light.transform.forward gives the direction the light is pointing.
+				// We want the direction TO the light...
+				var dir = -light.transform.forward;
 				buffer.SetGlobalVector("Colour", new Vector4(clr.r, clr.g, clr.b, clr.a));
 				buffer.SetGlobalVector("Direction", new Vector4(dir.x,dir.y, dir.z, 0.0F));
 				buffer.DrawProcedural(Matrix4x4.identity, copyCubemapMaterial,CopyCubemap_directional_diffuse_frag, MeshTopology.Triangles, 6);

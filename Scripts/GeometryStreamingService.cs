@@ -342,6 +342,8 @@ namespace teleport
 				
 				foreach (Collider collider in gainedColliders)
 				{			
+					if(!collider.enabled)
+						continue;
 					//Skip game objects without the streaming tag.
 					var props= collider.GetComponent < StreamableProperties >();
 					if((teleportSettings.TagToStream.Length == 0 || collider.CompareTag(teleportSettings.TagToStream))
@@ -359,8 +361,11 @@ namespace teleport
 
 				foreach(Collider collider in lostColliders)
 				{
-					Teleport_Streamable streamable = collider.gameObject.GetComponent<Teleport_Streamable>();
-					StopStreaming(streamable, 1);
+					if (collider.enabled)
+					{
+						Teleport_Streamable streamable = collider.gameObject.GetComponent<Teleport_Streamable>();
+						StopStreaming(streamable, 1);
+					}
 				}
 			}
 			else

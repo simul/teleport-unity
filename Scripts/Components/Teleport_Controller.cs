@@ -10,8 +10,6 @@ namespace teleport
 	public class Teleport_Controller : MonoBehaviour
 	{
 		public const int MAX_CONTROLLERS = 2;
-		//VRTK appears to be performing some sort of lookup set, as if you change the name of this, or change it to a property, it stops being assigned a value.
-		public uint Index = 0;
 
 		[Tooltip("GameObject with the controller's mesh component.")]
 		public GameObject controllerModel = default;
@@ -39,20 +37,10 @@ namespace teleport
 
 		private void OnEnable()
 		{
-			controllers[Index] = this;
 		}
 
 		private void Update()
 		{
-		}
-
-		///STATIC FUNCTIONALITY
-
-		private static Teleport_Controller[] controllers = new Teleport_Controller[MAX_CONTROLLERS];
-
-		public static Teleport_Controller GetController(uint index)
-		{
-			return controllers[index];
 		}
 	}
 }

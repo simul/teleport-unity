@@ -294,6 +294,13 @@ namespace avs
 		public bool cubemap;
 	}
 
+
+	public enum MaterialMode : byte
+	{
+		UNKNOWN=0,
+		OPAQUE,
+		TRANSPARENT
+	};
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
 	public class Material
 	{
@@ -301,7 +308,8 @@ namespace avs
 		public IntPtr name;
 		[MarshalAs(UnmanagedType.BStr)]
 		public IntPtr path;
-
+		[MarshalAs(UnmanagedType.I8)]
+		public MaterialMode materialMode = MaterialMode.UNKNOWN;
 		public PBRMetallicRoughness pbrMetallicRoughness = new PBRMetallicRoughness();
 		public TextureAccessor normalTexture = new TextureAccessor();
 		public TextureAccessor occlusionTexture = new TextureAccessor();
@@ -947,6 +955,13 @@ namespace teleport
 			return meshID;
 		}
 
+		public enum UnityBlendMode
+		{
+			Opaque,
+			Cutout,
+			Fade,   // Old school alpha-blending mode, fresnel does not affect amount of transparency
+			Transparent // Physically plausible transparency mode, implemented as alpha pre-multiply
+		}
 		public uid AddMaterial(Material material, ForceExtractionMask forceMask)
 		{
 			if(!material)
@@ -981,6 +996,20 @@ namespace teleport
 			extractedMaterial.name = Marshal.StringToBSTR(material.name);
 
 			//Albedo/Diffuse
+			extractedMaterial.materialMode=avs.MaterialMode.OPAQUE;
+			if (material.HasProperty("_Mode"))
+			{
+				UnityBlendMode blendMode =(UnityBlendMode)material.GetFloat("_Mode");
+				switch (blendMode)
+				{
+					case UnityBlendMode.Fade:
+					case UnityBlendMode.Transparent:
+						extractedMaterial.materialMode=avs.MaterialMode.TRANSPARENT;
+						break;
+					default:
+						break;
+				}
+			}
 
 			extractedMaterial.pbrMetallicRoughness.baseColorTexture.index = AddTexture(material.mainTexture, forceMask);
 			extractedMaterial.pbrMetallicRoughness.baseColorTexture.tiling = material.mainTextureScale;

@@ -327,7 +327,7 @@ namespace teleport
 
 		private uid clientID = 0;
 
-		private Dictionary<int, Teleport_Controller> controllerLookup = new Dictionary<int, Teleport_Controller>();
+		private HashSet< Teleport_Controller> mappedNodes = new HashSet< Teleport_Controller>();
 
 		private bool resetOrigin = true;
 		private UInt64 originValidCounter = 1;
@@ -427,7 +427,7 @@ namespace teleport
 					geometryStreamingService.SendAnimationState();
 
 				//Send animation control updates for the grip animation of the controllers.
-				foreach (Teleport_Controller controller in controllerLookup.Values)
+				foreach (Teleport_Controller controller in mappedNodes)
 				{
 					if(!controller.controllerModel)
 						continue;
@@ -513,23 +513,25 @@ namespace teleport
 		public void SetControllerPose(uid id, Quaternion newRotation, Vector3 newPosition, Vector3 velocity, Vector3 angularVelocity)
 		{
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-			if (!geometrySource.GetSessionNodes().TryGetValue(id, out GameObject gameObject))
+			if (!geometrySource.GetSessionNodes().TryGetValue(id, out GameObject controlledGameObject))
 			{
 				return;
 			}
-			var streamable= gameObject.GetComponent<Teleport_Streamable>();
+			if(!controlledGameObject)
+				return;
+			var streamable= controlledGameObject.GetComponent<Teleport_Streamable>();
 			if (!streamable)
 			{
-				Debug.LogError("Trying to set pose of controlled object "+gameObject.name+" that has no Teleport_Streamable.");
+				Debug.LogError("Trying to set pose of controlled object "+ controlledGameObject.name+" that has no Teleport_Streamable.");
 				return;
 			}
 			if (streamable.OwnerClient != clientID)
 			{
-				Debug.LogError("Trying to set pose of controlled object " + gameObject.name + " whose owner client " + streamable.OwnerClient+" is not the client ID "+clientID.ToString()+".");
+				Debug.LogError("Trying to set pose of controlled object " + controlledGameObject.name + " whose owner client " + streamable.OwnerClient+" is not the client ID "+clientID.ToString()+".");
 				return;
 			}
-			gameObject.transform.localPosition=newPosition;
-			gameObject.transform.localRotation=newRotation;
+			controlledGameObject.transform.localPosition=newPosition;
+			controlledGameObject.transform.localRotation=newRotation;
 			streamable.stageSpaceVelocity=velocity;
 			streamable.stageSpaceAngularVelocity=angularVelocity;
 		}
@@ -593,9 +595,9 @@ namespace teleport
 			//Add a break for readability.
 			y += lineHeight;
 
-			foreach (Teleport_Controller controller in controllerLookup.Values)
+			foreach (Teleport_Controller controller in mappedNodes)
 			{
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Controller {0}, {1}", controller.Index, FormatVectorString(controller.transform.position)));
+				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Controller {0}",  FormatVectorString(controller.transform.position)));
 
 		
 			}
@@ -657,6 +659,8 @@ namespace teleport
 				_input = gameObject.AddComponent<Input>();
 			head = GetSingleComponentFromChildren<Teleport_Head>();
 			clientspaceRoot = GetSingleComponentFromChildren<Teleport_ClientspaceRoot>();
+			// We must have a root node for the player's client space.
+			geometryStreamingService.SetNodePosePath(clientspaceRoot.gameObject, "root");
 			collisionRoot = GetSingleComponentFromChildren<Teleport_CollisionRoot>();
 			sceneCaptureComponent = GetSingleComponentFromChildren<Teleport_SceneCaptureComponent>();
 			// Now we've initialized the session, we can initialize any subcomponents that depend on this component.
@@ -681,11 +685,7 @@ namespace teleport
 			foreach (Teleport_Controller controller in controllers)
 			{
 				controller.session = this;
-				if (controllerLookup.TryGetValue((int)controller.Index,out var value) )
-				{
-					Debug.LogError("Controllers have the same index");
-				}
-				controllerLookup[(int)controller.Index] = controller;
+				mappedNodes.Add(controller);
 			}
 		}
 
@@ -741,9 +741,7 @@ namespace teleport
 			{
 				geometryStreamingService.StreamGlobals();
 			}
-			// We must have a root node for the player's client space.
-			geometryStreamingService.SetNodePosePath(clientspaceRoot.gameObject, "root");
-			foreach (Teleport_Controller controller in controllerLookup.Values)
+			foreach (Teleport_Controller controller in mappedNodes)
 			{
 				if (controller.poseRegexPath.Length>0)
 				{
