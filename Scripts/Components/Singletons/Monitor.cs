@@ -186,6 +186,21 @@ namespace teleport
 
 		private void Awake()
 		{
+			var g = GeometrySource.GetGeometrySource();
+			if (g == null)
+				return;
+			if(!UnityEditor.EditorApplication.isPlaying)
+				return;
+			if (g.CheckForErrors() == false)
+			{
+				Debug.LogError("GeometrySource.CheckForErrors() failed. Run will not proceed.");
+#if UNITY_EDITOR
+				UnityEditor.EditorUtility.DisplayDialog("Warning", "This scene has errors.", "OK");
+				UnityEditor.EditorApplication.isPlaying = false;
+#endif
+				return;
+			}
+
 			overlayFont.normal.textColor = Color.yellow;
 			overlayFont.fontSize = 14;
 			clientFont.fontSize = 14;

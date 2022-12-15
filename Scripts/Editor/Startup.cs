@@ -15,7 +15,7 @@ namespace teleport
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 		static void OnBeforeSceneLoadRuntimeMethod()
 		{
-			Debug.Log("Before first Scene loaded");
+		//	Debug.Log("Before first Scene loaded");
 		}
 		// click command-0 to go to the prelaunch scene and then play
 		[MenuItem("Teleport VR/Start Scene %5")]
@@ -32,6 +32,7 @@ namespace teleport
 			if(g.CheckForErrors()==false)
 			{
 				Debug.LogError("GeometrySource.CheckForErrors() failed. Run will not proceed.");
+				EditorUtility.DisplayDialog("Warning","This scene has errors.","OK");
 				return;
 			}
 			//EditorApplication.SaveCurrentSceneIfUserWantsTo();
