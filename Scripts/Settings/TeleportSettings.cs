@@ -30,7 +30,7 @@ namespace teleport
 		public uint listenPort = 10500u;
 		public uint discoveryPort = 10600u;
 		public int connectionTimeout = 13000; //How many millseconds to wait before automatically disconnecting from the client.
-		public string clientIP = "127.0.0.1";
+		public string clientIP = "";
 
 		[Header("Security")]
 		public string certPath = "";
@@ -115,17 +115,23 @@ namespace teleport
 		{
 			if(teleportSettings == null)
 			{
+				string assetPath="Assets/Resources/" + k_TeleportSettingsPath + "/" + k_TeleportSettingsFilename + ".asset";
 				teleportSettings = Resources.Load<TeleportSettings>(k_TeleportSettingsPath + "/" + k_TeleportSettingsFilename);
-			}
 
 #if UNITY_EDITOR
-			if(teleportSettings == null)
-			{
-				teleportSettings = CreateInstance<TeleportSettings>();
-				teleportSettings.LayersToStream.value=LayerMask.NameToLayer("Default");
-				EnsureAssetPath("Assets/Resources/" + k_TeleportSettingsPath);
-				AssetDatabase.CreateAsset(teleportSettings, "Assets/Resources/" + k_TeleportSettingsPath + "/" + k_TeleportSettingsFilename + ".asset");
-				AssetDatabase.SaveAssets();
+				if(teleportSettings == null)
+				{
+					teleportSettings=AssetDatabase.LoadAssetAtPath<TeleportSettings>(assetPath);
+				}
+				if (teleportSettings == null)
+				{
+					teleportSettings = CreateInstance<TeleportSettings>();
+					teleportSettings.LayersToStream.value=LayerMask.NameToLayer("Default");
+					EnsureAssetPath("Assets/Resources/" + k_TeleportSettingsPath);
+
+					AssetDatabase.CreateAsset(teleportSettings, assetPath);
+					AssetDatabase.SaveAssets();
+				}
 			}
 			teleportSettings.colorSpace = PlayerSettings.colorSpace;
 			if(teleportSettings.cachePath=="" || !System.IO.File.Exists(teleportSettings.cachePath))

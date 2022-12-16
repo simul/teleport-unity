@@ -673,7 +673,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 3221225471
+  m_RenderingLayerMask: 2147483647
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 1d60d8e2a00caf943a55b85947b0c122, type: 2}
@@ -1344,7 +1344,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 944122907}
+  m_Father: {fileID: 1292961573}
   m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &812780443
@@ -1438,15 +1438,12 @@ MonoBehaviour:
   - {fileID: 3341325685863068083, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
   - {fileID: -4231716108970672535, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
   - {fileID: 2888647440349190436, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
-  - {fileID: 10207, guid: 0000000000000000e000000000000000, type: 3}
   - {fileID: -2124705421725058983, guid: 3f98616840f66d342b5c74947570167d, type: 3}
   - {fileID: 2100000, guid: 8eb3c88730d126642be77d95dc3b09db, type: 2}
   - {fileID: -2124705421725058983, guid: d8298ef2b89fbaf49bd44b50413043f6, type: 3}
-  - {fileID: 10202, guid: 0000000000000000e000000000000000, type: 3}
   - {fileID: 2100000, guid: 2f89dab3279c21b48b3c6fdae2d7171c, type: 2}
   - {fileID: 2100000, guid: cd75e73ca91c1a942a0b3a495a59848c, type: 2}
   - {fileID: 2534964839176971238, guid: c7f2f2e3bb573574a92960a18fa9e378, type: 3}
-  - {fileID: 10210, guid: 0000000000000000e000000000000000, type: 3}
   - {fileID: 2100000, guid: 98426873e66ffcb40b52424ef79fe505, type: 2}
   - {fileID: 2534964839176971238, guid: 16881fe7324fe6d498a711cd4ea7cc34, type: 3}
   - {fileID: -2124705421725058983, guid: 8e81a9c05f31c804fbb40f87ca8f5eb0, type: 3}
@@ -1471,50 +1468,47 @@ MonoBehaviour:
   - {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   - {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
   sceneResourcePaths_values:
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Library/Sphere
-  - Teleport/Meshes/CupolaWindow
-  - Teleport/Examples/Materials/Matt%Grey
-  - Teleport/Meshes/Disk
-  - Library/Cube
-  - Teleport/Examples/Materials/Matt%Purple
-  - Teleport/Examples/Materials/Matt%Orange
-  - Teleport/Meshes/HollowCylinder
-  - Library/Quad
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Button_X
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Button_Y
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Grip
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Loop
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Stick
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Oculus_L_Trigger
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Button_A
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Button_B
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Grip
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Main
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Stick
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Oculus_R_Trigger
+  - Teleport/Meshes/CupolaWindow.fbx/Circle
+  - Teleport/Examples/Materials/Matt%Grey.mat/Matt%Grey
+  - Teleport/Meshes/Disk.blend/Circle
+  - Teleport/Examples/Materials/Matt%Purple.mat/Matt%Purple
+  - Teleport/Examples/Materials/Matt%Orange.mat/Matt%Orange
+  - Teleport/Meshes/HollowCylinder.blend/Cylinder
   - Teleport/Examples/Materials/Gloss%Black%Plastic
-  - Teleport/Meshes/HollowCylinderWindowed
+  - Teleport/Meshes/HollowCylinderWindowed.blend/Cylinder
   - Teleport/Meshes/Circle
   - Teleport/Meshes/Cylinder
   - Teleport/Meshes/Cylinder
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Teleport/Scenes/TeleportVRDemo/Lightmap-0_comp_light
-  - Teleport/Examples/Meshes/Controllers/Black%Plastic%Gloss
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/QuestLeftController
-  - Teleport/Examples/Meshes/Controllers/Black%Plastic%Matt
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
-  - Teleport/Examples/Meshes/Controllers/QuestRightController
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/WhitePlasticGloss
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/WhiteMatt
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Black%Plastic%Gloss
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/WhitePlasticGloss
+  - Teleport/Scenes/TeleportVRDemo/Lightmap-0_comp_light.exr/Lightmap-0_comp_light
+  - Teleport/Examples/Meshes/Controllers/Black%Plastic%Gloss.mat/Black%Plastic%Gloss
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Black%Plastic%Matt
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx/Black%Plastic%Gloss
+  - Teleport/Examples/Meshes/Controllers/Black%Plastic%Matt.mat/Black%Plastic%Matt
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/Black%Plastic%Matt
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx/WhiteMatt
   - Teleport/Examples/Materials/Matt%Red
-  - Teleport/Examples/Materials/Strip%Light%Glow
-  - Teleport/Examples/Materials/Matt%Green
-  - Teleport/Examples/Materials/Matt%Blue
+  - Teleport/Examples/Materials/Strip%Light%Glow.mat/Strip%Light%Glow
+  - Teleport/Examples/Materials/Matt%Green.mat/Matt%Green
+  - Teleport/Examples/Materials/Matt%Blue.mat/Matt%Blue
   - Library/unity%default%resources/Sphere_10207
-  - Library/unity%default%resources/Cube_10202
-  - Library/unity%default%resources/Quad_10210
+  - Library/unity%default%resources/Cube/Cube_10202
+  - Library/unity%default%resources/Quad/Quad_10210
 --- !u!4 &828319270
 Transform:
   m_ObjectHideFlags: 0
@@ -1595,7 +1589,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 3221225471
+  m_RenderingLayerMask: 2147483647
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 98426873e66ffcb40b52424ef79fe505, type: 2}
@@ -1673,6 +1667,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   specularRenderTexture: {fileID: 0}
+  diffuseRenderTexture: {fileID: 0}
   dummyRenderTexture: {fileID: 0}
   dummyCam: {fileID: 0}
   generateEnvMaps: 0
@@ -1694,33 +1689,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &944122900 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 5984580423773437800, guid: c7bd090313c3e8c4ca1c4c5470243103,
-    type: 3}
-  m_PrefabInstance: {fileID: 1737190334}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &944122906
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 944122900}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  priority: 0
-  _renderingMask: 0
-  streamOnlyWithParent: 0
---- !u!4 &944122907 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 4439182914225332721, guid: c7bd090313c3e8c4ca1c4c5470243103,
-    type: 3}
-  m_PrefabInstance: {fileID: 1737190334}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1062200128 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3940529767981703912, guid: c7bd090313c3e8c4ca1c4c5470243103,
@@ -2028,6 +1996,33 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1292961569}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  priority: 0
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+--- !u!4 &1292961573 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1332186173640770814, guid: c7bd090313c3e8c4ca1c4c5470243103,
+    type: 3}
+  m_PrefabInstance: {fileID: 1737190334}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1378219440 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6548213070253477713, guid: c7bd090313c3e8c4ca1c4c5470243103,
+    type: 3}
+  m_PrefabInstance: {fileID: 1737190334}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1378219442
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1378219440}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -2621,7 +2616,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: 4439182914225332721, guid: c7bd090313c3e8c4ca1c4c5470243103,
+    - targetCorrespondingSourceObject: {fileID: 1332186173640770814, guid: c7bd090313c3e8c4ca1c4c5470243103,
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 812780442}
@@ -3082,6 +3077,27 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2021897482}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  priority: 0
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+--- !u!1 &2050002585 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1205670117018766125, guid: c7bd090313c3e8c4ca1c4c5470243103,
+    type: 3}
+  m_PrefabInstance: {fileID: 1737190334}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2050002587
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2050002585}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
