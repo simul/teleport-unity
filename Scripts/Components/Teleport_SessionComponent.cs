@@ -661,7 +661,8 @@ namespace teleport
 			head = GetSingleComponentFromChildren<Teleport_Head>();
 			clientspaceRoot = GetSingleComponentFromChildren<Teleport_ClientspaceRoot>();
 			// We must have a root node for the player's client space.
-			geometryStreamingService.SetNodePosePath(clientspaceRoot.gameObject, "root");
+			if(clientspaceRoot!=null)
+				geometryStreamingService.SetNodePosePath(clientspaceRoot.gameObject, "root");
 			collisionRoot = GetSingleComponentFromChildren<Teleport_CollisionRoot>();
 			sceneCaptureComponent = GetSingleComponentFromChildren<Teleport_SceneCaptureComponent>();
 			// Now we've initialized the session, we can initialize any subcomponents that depend on this component.
