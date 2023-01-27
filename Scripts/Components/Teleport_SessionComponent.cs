@@ -58,7 +58,7 @@ namespace teleport
 		private static extern void Client_SetClientInputDefinitions(uid clientID, int numControls, string[] controlPaths, avs.InputDefinitionInterop[] inputDefinitions);
 
 		[DllImport("TeleportServer")]
-		private static extern bool Client_SetOrigin(uid clientID, uid originNodeID, UInt64 validCounter, Vector3 pos, Quaternion orientation);
+		private static extern bool Client_SetOrigin(uid clientID, uid originNodeID, UInt64 validCounter);
 		[DllImport("TeleportServer")]
 		private static extern bool Client_HasOrigin(uid clientID);
 
@@ -893,9 +893,13 @@ namespace teleport
 			uid origin_uid =0;
 			if (clientspaceRoot != null)
 			{
-				Teleport_Streamable streamable =clientspaceRoot.gameObject.GetComponent<Teleport_Streamable> ();
+				Teleport_Streamable streamable =clientspaceRoot.gameObject.GetComponent<Teleport_Streamable>();
 				if(streamable!=null)
-					origin_uid=streamable.GetUid();
+				{
+					origin_uid = streamable.GetUid();
+					if(!streamable.sendMovementUpdates)
+						streamable.sendMovementUpdates=true;
+				}
 			}
 			if (teleportSettings.serverSettings.controlModel == teleport.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
 			{
@@ -904,7 +908,7 @@ namespace teleport
 					if (!Client_HasOrigin(clientID) || resetOrigin)
 					{
 						originValidCounter++;
-						if (Client_SetOrigin(clientID, originValidCounter, origin_uid, clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
+						if (Client_SetOrigin(clientID, originValidCounter, origin_uid))
 						{
 							last_sent_origin = clientspaceRoot.transform.position;
 							clientspaceRoot.transform.hasChanged = false;
@@ -913,13 +917,13 @@ namespace teleport
 					}
 					else if (clientspaceRoot.transform.hasChanged)
 					{
-						Vector3 diff = clientspaceRoot.transform.position - last_received_origin;
+						Vector3 diff = clientspaceRoot.transform.position-last_received_origin;
 						if (diff.magnitude > 5.0F)
 						{
 							originValidCounter++;
 						}
 						// Otherwise just a "suggestion" update. ValidCounter is not altered. The client will use the vertical only.
-						if (Client_SetOrigin(clientID, originValidCounter, origin_uid, clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
+						if (Client_SetOrigin(clientID, originValidCounter, origin_uid))
 						{
 							last_sent_origin = clientspaceRoot.transform.position;
 							clientspaceRoot.transform.hasChanged = false;
@@ -939,7 +943,7 @@ namespace teleport
 					if (!Client_HasOrigin(clientID) || resetOrigin || clientspaceRoot.transform.hasChanged)
 					{
 						originValidCounter++;
-						if (Client_SetOrigin(clientID, originValidCounter, origin_uid, clientspaceRoot.transform.position, clientspaceRoot.transform.rotation))
+						if (Client_SetOrigin(clientID, originValidCounter, origin_uid))
 						{
 							last_sent_origin = clientspaceRoot.transform.position;
 							clientspaceRoot.transform.hasChanged = false;
@@ -967,15 +971,17 @@ namespace teleport
 			return childComponents.Length != 0 ? childComponents[0] : default;
 		}
 
-		//Returns list of body part hierarchy root GameObjects. 
+		//Returns list of streamable GameObjects in this session's hierarchy that are controlled by
+		// the client: i.e. they have a Teleport_Controller.. 
 		public List<GameObject> GetPlayerBodyParts()
 		{
 			List<GameObject> bodyParts = new List<GameObject>();
 
-			var c=GetComponentsInChildren<Teleport_Streamable>();
+			var c=GetComponentsInChildren<Teleport_Controller>();
 			foreach (var o in c)
 			{
-				bodyParts.Add(o.gameObject);
+				if(o.gameObject.GetComponent<Teleport_Streamable>()!=null)
+					bodyParts.Add(o.gameObject);
 			}
 			return bodyParts;
 		}

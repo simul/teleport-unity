@@ -263,6 +263,8 @@ namespace teleport
 				streamable.OwnerClient=session.GetClientID();
 				StartStreaming(streamable, 2);
 			}
+			Teleport_Streamable session_streamable = session.GetComponent<Teleport_Streamable>();
+			StartStreaming(session_streamable, 2);
 		}
 
 		public void SendAnimationState()

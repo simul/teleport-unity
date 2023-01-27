@@ -19,16 +19,8 @@ namespace avs
 		None,
 		Mesh,
 		Light,
-		Bone
-	};
-
-	public enum NodeDataSubtype : byte
-	{
-		None,
-		Pose,
-		Body,
-		LeftHand,
-		RightHand
+		Bone,
+		TextCanvas
 	};
 
 	public enum PrimitiveMode
@@ -1024,7 +1016,7 @@ namespace teleport
 				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index = AddTexture(metallicRoughness, forceMask);
 				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling = material.mainTextureScale;
 			}
-			extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : (material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 1.0f); //Unity doesn't use the factor when the texture is set.
+			extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : (material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 0.0f); //Unity doesn't use the factor when the texture is set.
 
 			float glossMapScale = material.HasProperty("_GlossMapScale") ? glossMapScale = material.GetFloat("_GlossMapScale") : 1.0f;
 			float smoothness = metallicRoughness ? glossMapScale : (material.HasProperty("_Glossiness") ? material.GetFloat("_Glossiness") : 1.0f);
@@ -1251,7 +1243,7 @@ namespace teleport
 				string path = AssetDatabase.GetAssetPath(sourceTexture);
 				AssetImporter aa =AssetImporter.GetAtPath(path);
 				TextureImporter textureImporter=null;
-				if (aa.GetType()==typeof(TextureImporter))
+				if (aa&&aa.GetType()==typeof(TextureImporter))
 				{ 
 					textureImporter = (TextureImporter)aa;
 					if (textureImporter != null)
@@ -1261,11 +1253,15 @@ namespace teleport
 						isNormal = textureType == UnityEditor.TextureImporterType.NormalMap;
 					}
 				}
+				else
+				{
+					Debug.LogError("Texture "+sourceTexture.name+" has no importer.");
+				}
 				if (isNormal || textureImporter != null && textureImporter.GetDefaultPlatformTextureSettings().textureCompression == TextureImporterCompression.CompressedHQ)
 					highQualityUASTC = true;
 				if (highQualityUASTC)
 					writePng = true;
-				bool flipY= true;
+				bool flipY=true;
 				if(writePng||isCubemap)
 				{
 					flipY=false;

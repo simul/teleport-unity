@@ -18,6 +18,12 @@ namespace teleport
 				{
 					monitor.generateEnvMaps=true;
 				}
+				else
+				{
+					
+					 EditorUtility.DisplayDialog("No environement cubemap ",
+                "Make sure you select an environment cubmap.", "OK");
+				};
 			}
 
 			GUILayout.Space(10);
