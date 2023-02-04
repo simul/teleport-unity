@@ -20,7 +20,52 @@ namespace teleport
 		public const string k_TeleportSettingsPath = "TeleportVR";
 		public const string k_TeleportSettingsFilename = "TeleportSettings";
 		//! Objects with this tag will be streamed; leaving it blank will cause it to just use the layer mask.
-		public string TagToStream = "TeleportStreamable";
+		private string _TagToStream = "TeleportStreamable";
+		public string TagToStream
+		{
+			get
+			{
+#if UNITY_EDITOR
+				if(_TagToStream.Length>0)
+				{
+					// Open tag manager
+					Object[] objs=AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset");
+					if(objs.Length>0)
+					{
+						SerializedObject tagManager = new SerializedObject(objs[0]);
+						SerializedProperty tagsProp = tagManager.FindProperty("tags");
+						// Adding a Tag
+						string s = _TagToStream;
+						// First check if it is not already present
+						bool found = false;
+						for (int i = 0; i < tagsProp.arraySize; i++)
+						{
+							SerializedProperty t = tagsProp.GetArrayElementAtIndex(i);
+							if (t.stringValue.Equals(s))
+							{
+								found = true;
+								break;
+							}
+						}
+						// if not found, add it
+						if (!found)
+						{
+							tagsProp.InsertArrayElementAtIndex(0);
+							SerializedProperty n = tagsProp.GetArrayElementAtIndex(0);
+							n.stringValue = s;
+						}
+						// and to save the changes
+						tagManager.ApplyModifiedProperties();
+					}
+				}
+#endif
+				return _TagToStream;
+			}
+			set
+			{
+				_TagToStream = value;
+			}
+		}
 		public bool highlightStreamables=true;
 		public Color highlightStreamableColour=new Color(.5F, .2F, 1.0F, .1F);
 		public bool highlightNonStreamables = false;

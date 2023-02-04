@@ -106,6 +106,10 @@ namespace teleport
 		private static extern void Shutdown();
 		[DllImport("TeleportServer")]
 		private static extern uid GetUnlinkedClientID();
+
+		// Really basic "send it again" function. Sends to all relevant clients. Must improve!
+		[DllImport("TeleportServer")]
+		private static extern void ResendNode(uid id);
 		#endregion
 
 		// This will point to a saved asset texture.
@@ -500,7 +504,7 @@ namespace teleport
 
 			if (Teleport_SessionComponent.sessions.ContainsKey(id))
 			{
-				Debug.LogError($"Error setting up SessionComponent for Client_{id}. There is already a registered session for that client!");
+				Debug.LogError($"Error setting up SessionComponent for Client {id}. There is already a registered session for that client!");
 				return;
 			}
 
@@ -627,7 +631,6 @@ namespace teleport
 				Debug.LogWarning($"Failed to hide node! \"{gameObject}\" does not have a {nameof(Teleport_Streamable)} component!");
 				return false;
 				*/
-
 				return true;
 			}
 
@@ -750,6 +753,19 @@ namespace teleport
 			}
 			teleport_Streamable.stageSpaceVelocity=new Vector3(0,0,0);
 			teleport_Streamable.stageSpaceAngularVelocity = new Vector3(0, 0, 0);
+		}
+
+		public void ComponentChanged(MonoBehaviour component)
+		{
+			if (!Application.isPlaying)
+				return;
+			Teleport_Streamable streamable=component.gameObject.GetComponentInParent<Teleport_Streamable>();
+			if(streamable)
+			{
+				uid u=streamable.GetUid();
+				if(u!=0)
+					ResendNode(u);
+			}
 		}
 	}
 }

@@ -274,6 +274,8 @@ namespace avs
 
 		public TextureFormat format;
 		public TextureCompression compression;
+		[MarshalAs(UnmanagedType.I1)]
+		public bool compressed;
 
 		public uint dataSize;
 		public IntPtr data;
@@ -318,6 +320,42 @@ namespace avs
 
 namespace teleport
 {
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+	public struct Glyph
+	{
+	   public UInt16 x0,y0,x1,y1; // coordinates of bounding box in bitmap
+	   public float xOffset,yOffset,xAdvance;
+	   public float xOffset2,yOffset2;
+	}
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+	public struct InteropFontMap
+	{
+		public int size;
+		public int numGlyphs;
+		public Glyph [] fontGlyphs;
+	}
+	//! Struct to pass a font atlas back to the engine.
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+	public class InteropFontAtlas
+	{
+		[MarshalAs(UnmanagedType.BStr)]
+		public IntPtr font_path;
+		public int numMaps;
+		public InteropFontMap [] fontMaps;
+	};
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+	public class InteropTextCanvas
+	{
+		[MarshalAs(UnmanagedType.BStr)]
+		public IntPtr text;
+		[MarshalAs(UnmanagedType.BStr)]
+		public IntPtr font;
+		public int size;
+		public float lineHeight;
+		public float width;
+		public float height;
+		public Vector4 colour= new Vector4(0.0f,0.0f,0.0f,0.0f);
+	}
 	public struct TextureExtractionData
 	{
 		public uid id;
@@ -398,10 +436,16 @@ namespace teleport
 		[DllImport("TeleportServer")]
 		private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid,
 												[MarshalAs(UnmanagedType.BStr)] string path, Int64 lastModified, avs.Texture texture, string compressedFilePath
-			, [MarshalAs(UnmanagedType.I1)] bool genMips
-			, [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC
-			, [MarshalAs(UnmanagedType.I1)] bool forceOverwrite
-			);
+												, [MarshalAs(UnmanagedType.I1)] bool genMips
+												, [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC
+												, [MarshalAs(UnmanagedType.I1)] bool forceOverwrite
+												);
+		
+		[DllImport("TeleportServer")]
+		private static extern uid StoreFont(  [MarshalAs(UnmanagedType.BStr)] string  ttf_path,[MarshalAs(UnmanagedType.BStr)] string  relative_assetPath, Int64 lastModified, int size);
+		[DllImport("TeleportServer")]
+		private static extern uid StoreTextCanvas([MarshalAs(UnmanagedType.BStr)] string relative_assetPath,teleport.InteropTextCanvas interopTextCanvas);
+
 		[DllImport("TeleportServer")]
 		private static extern void StoreShadowMap(uid id, [MarshalAs(UnmanagedType.BStr)] string guid,
 												[MarshalAs(UnmanagedType.BStr)] string path, Int64 lastModified, avs.Texture shadowMap);
@@ -429,6 +473,9 @@ namespace teleport
 		private static extern void CompressNextTexture();
 		[DllImport("TeleportServer")]
 		private static extern void SetCompressionLevels(byte compressionStrength, byte compressionQuality);
+		
+		[DllImport("TeleportServer")]
+		public static extern bool GetFontAtlas( [MarshalAs(UnmanagedType.BStr)] string path, InteropFontAtlas interopFontAtlas);
 		#endregion
 
 		#region CustomSerialisation
@@ -884,6 +931,16 @@ namespace teleport
 			if(extractedNode.dataType == avs.NodeDataType.None)
 			{
 				ExtractNodeLightData(gameObject, ref extractedNode, forceMask);
+			}
+			var textCanvas=gameObject.GetComponent<teleport.TextCanvas>();
+			if (textCanvas)
+			{
+				uid text_canvas_uid=ExtractTextCanvas(textCanvas);
+				if(text_canvas_uid!=0)
+				{
+					extractedNode.dataType=avs.NodeDataType.TextCanvas;
+					extractedNode.dataID=text_canvas_uid;
+				}
 			}
 			//Store extracted node.
 			StoreNode(nodeID, extractedNode);
@@ -1446,15 +1503,23 @@ namespace teleport
 						{
 							LaunchBasisUExe(pngFile);
 							textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
+							// Intended for Basis compression. But passed uncompressed.
+							textureData.compressed=false;
 						}
 						else
+						{
 							textureData.compression = avs.TextureCompression.PNG;
+							// Already compressed as png
+							textureData.compressed=true;
+						}
 						textureData.valueScale = valueScale;
 						// copy the png into texture data.
 					}
 					else
 					{
 						textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
+						// Intended for Basis compression. But passed uncompressed.
+						textureData.compressed=false;
 						// what does the texture look like as a png? for debugging.
 						string pngFile = basisFile.Replace(".basis", $"_mip{j}_slice{i}_DEBUG.png");
 						if (arraySize > 1)
@@ -1796,7 +1861,37 @@ namespace teleport
 			extractTo.numMaterials = (ulong)materialIDs.Count;
 			extractTo.materialIDs = materialIDs.ToArray();
 		}
-
+		public uid ExtractTextCanvas(TextCanvas textCanvas)
+		{
+			if (!textCanvas.font)
+				return 0;
+			
+		#if UNITY_EDITOR
+			string fontAssetPath = AssetDatabase.GetAssetPath(textCanvas.font);
+			long lastModified = GetAssetWriteTimeUTC(fontAssetPath);
+			string font_ttf_path = System.IO.Directory.GetParent(Application.dataPath).ToString().Replace("\\","/") +"/"+ fontAssetPath;
+			string resourcePath=fontAssetPath.Replace("Assets/","");
+			uid font_uid=StoreFont(font_ttf_path,resourcePath,lastModified,128);
+		#else
+			GetResourcePath(textCanvas.font, out string resourcePath, false);
+			uid font_uid= GetOrGenerateUid(resourcePath);
+		#endif
+			string canvasAssetPath="Text/"+textCanvas.name;
+			teleport.InteropTextCanvas interopTextCanvas=new teleport.InteropTextCanvas();
+			interopTextCanvas.text=Marshal.StringToBSTR(textCanvas.text);
+			if(interopTextCanvas.text==null)
+				return 0;
+			interopTextCanvas.font=Marshal.StringToBSTR(resourcePath);
+			interopTextCanvas.size=textCanvas.size;
+			interopTextCanvas.width=textCanvas.width;
+			interopTextCanvas.height=textCanvas.height;
+			interopTextCanvas.lineHeight=textCanvas.lineHeight;
+			interopTextCanvas.colour=textCanvas.colour;
+			
+			// We store the canvas text. This is a pure text asset, treated as a mutable resource - i.e. it can be modified in real time.
+			uid u=StoreTextCanvas(canvasAssetPath,interopTextCanvas);
+			return u;
+		}
 		private bool ExtractNodeMeshData(GameObject gameObject, ref avs.Node extractTo, ForceExtractionMask forceMask, bool verify)
 		{
 			MeshFilter meshFilter = gameObject.GetComponent<MeshFilter>();
@@ -2768,6 +2863,11 @@ namespace teleport
 
 				//Marshal data to manaaged types.
 				LoadedResource metaResource = Marshal.PtrToStructure<LoadedResource>(resourcePtr);
+				if (metaResource.name == null)
+				{
+					Debug.LogError("metaResource.name is null");
+					continue;
+				}
 				string name = Marshal.PtrToStringBSTR(metaResource.name);
 				string guid = Marshal.PtrToStringBSTR(metaResource.guid);
 
@@ -2784,6 +2884,7 @@ namespace teleport
 				UnityEngine.Object[] assetsAtPath = AssetDatabase.LoadAllAssetsAtPath(assetPath);
 				foreach(UnityEngine.Object unityObject in assetsAtPath)
 				{ 
+					if(unityObject)
 					if((unityObject.GetType() == typeof(UnityAsset) || unityObject.GetType().IsSubclassOf(typeof(UnityAsset))) && unityObject.name == name)
 					{
 						asset = (UnityAsset)unityObject;
