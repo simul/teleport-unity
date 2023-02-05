@@ -47,15 +47,24 @@ namespace teleport
 								break;
 							}
 						}
-						// if not found, add it
+						// if not found, don't return it. We can't use a tag that hasn't been added in ProjectSettings.
 						if (!found)
 						{
-							tagsProp.InsertArrayElementAtIndex(0);
-							SerializedProperty n = tagsProp.GetArrayElementAtIndex(0);
-							n.stringValue = s;
+							// Add the default tag if that's what we're using. Otherwise, user should create a tag.
+							if (_TagToStream == "TeleportStreamable")
+							{
+								tagsProp.InsertArrayElementAtIndex(0);
+								SerializedProperty n = tagsProp.GetArrayElementAtIndex(0);
+								n.stringValue = s;
+								// and save the changes
+								tagManager.ApplyModifiedProperties();
+							}
+							else
+							{
+								Debug.LogWarning("Tag to stream: '"+_TagToStream+"' is not present, to use this please add it in Project Settings/Tags and Layers.");
+								return "";
+							}
 						}
-						// and to save the changes
-						tagManager.ApplyModifiedProperties();
 					}
 				}
 #endif

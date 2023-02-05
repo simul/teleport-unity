@@ -101,7 +101,7 @@ namespace teleport
 			teleportSettings.cachePath = EditorGUILayout.TextField("Cache path", teleportSettings.cachePath);
 			teleportSettings.defaultScene = EditorGUILayout.TextField("Default Scene", teleportSettings.defaultScene);
 			teleportSettings.additiveScene = EditorGUILayout.TextField("Additive Scene", teleportSettings.additiveScene);
-			teleportSettings.TagToStream = EditorGUILayout.TextField("Tag to Stream",teleportSettings.TagToStream);
+			teleportSettings.TagToStream = EditorGUILayout.TagField("Tag to Stream",teleportSettings.TagToStream);
 			teleportSettings.LayersToStream = LayerMaskField("Layers", teleportSettings.LayersToStream);
 			teleportSettings.highlightStreamables = EditorGUILayout.Toggle("Highlight Streamables", teleportSettings.highlightStreamables);
 			teleportSettings.highlightStreamableColour = EditorGUILayout.ColorField("Highlight Colour", teleportSettings.highlightStreamableColour);
