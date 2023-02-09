@@ -195,14 +195,27 @@ namespace teleport
 				return;
 			if(!UnityEditor.EditorApplication.isPlaying)
 				return;
+			// Make sure we have a Teleport Render Pipeline, or we won't get a video stream.
+			if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == null || UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline.GetType() != typeof(TeleportRenderPipelineAsset))
+			{
+#if UNITY_EDITOR
+				UnityEditor.EditorUtility.DisplayDialog("Warning", "Current rendering pipeline is not TeleportRenderPipeline.", "OK");
+				UnityEditor.EditorApplication.isPlaying = false;
+				return;
+#endif
+				title += ": Current rendering pipeline is not TeleportRenderPipeline!";
+				Debug.LogError(title);
+			}
 			if (g.CheckForErrors() == false)
 			{
-				Debug.LogError("GeometrySource.CheckForErrors() failed. Run will not proceed.");
 #if UNITY_EDITOR
+				Debug.LogError("GeometrySource.CheckForErrors() failed. Run will not proceed.");
 				UnityEditor.EditorUtility.DisplayDialog("Warning", "This scene has errors.", "OK");
 				UnityEditor.EditorApplication.isPlaying = false;
-#endif
 				return;
+#else
+				Debug.LogError("GeometrySource.CheckForErrors() failed. Please check the log.");
+#endif
 			}
 
 			overlayFont.normal.textColor = Color.yellow;
