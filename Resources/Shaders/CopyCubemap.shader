@@ -13,7 +13,10 @@ Shader "Teleport/CopyCubemap"
 	float4x4 TargetToSourceAxes;
 	sampler2D _SourceTexture;
 	samplerCUBE _SourceCubemapTexture;
-
+	samplerCUBE _DiffuseSourceCubemapTexture;
+// due to unfortunate failings in Unity's CommandBuffer API, we have to duplicate both the source inputs AND the shader.
+	samplerCUBE _EncodeSourceCubemapTexture0;
+	samplerCUBE _EncodeSourceCubemapTexture1;
 	#define CPP_GLSL
 
 	#include "UnityCG.cginc"
@@ -59,14 +62,27 @@ Shader "Teleport/CopyCubemap"
 		return o;
 	}
 
-	fixed4 encode_face_frag (v2f i) : SV_Target
+	// due to unfortunate failings in Unity's CommandBuffer API, we have to duplicate both the source inputs AND the shader.
+	fixed4 encode_face_frag0 (v2f i) : SV_Target
 	{
 		vec3 view   =CubeFaceAndTexCoordsToView(Face,i.uv);
 		vec4 res	=vec4(view,0);
 		//view		=view.zxy;
 		//view		=float3(-view.y,view.z,-view.x);
-		res			=CubeSampleLevel (_SourceCubemapTexture, view, (float)MipIndex) ;
+		res			=CubeSampleLevel (_EncodeSourceCubemapTexture0, view, (float)MipIndex) ;
 	//res.rgb+=saturate(view);
+		//res.r = 1.0;
+		return res;
+	}
+	fixed4 encode_face_frag1 (v2f i) : SV_Target
+	{
+		vec3 view   =CubeFaceAndTexCoordsToView(Face,i.uv);
+		vec4 res	=vec4(view,0);
+		//view		=view.zxy;
+		//view		=float3(-view.y,view.z,-view.x);
+		res			=CubeSampleLevel (_EncodeSourceCubemapTexture1, view, (float)MipIndex) ;
+	//res.rgb+=saturate(view);
+		//res.r = 1.0;
 		return res;
 	}
 	
@@ -79,6 +95,7 @@ Shader "Teleport/CopyCubemap"
 		//float roughness=GetroughnessFromMip(float(MipIndex),float(NumMips),1.2);
 		res			=RoughnessMip(_SourceCubemapTexture, view, NumMips, 1.0, Roughness,false);
 	//res.rgb+=saturate(view);
+		//res.g = 1.0;
 		return res;
 	}
 	fixed4 ambient_diffuse_frag (v2f i) : SV_Target
@@ -86,10 +103,9 @@ Shader "Teleport/CopyCubemap"
 		vec3 view   =CubeFaceAndTexCoordsToView(Face,i.uv);
 		vec4 res	=vec4(view,0);
 		view		=mul(TargetToSourceAxes,vec4(view.xyz,0)).xyz;
-		//view		=view.zxy;
-		//view.y		*=-1.0;
-		res			=Multiplier*AmbientDiffuse(_SourceCubemapTexture, view);
-	//res.rgb+=saturate(view);
+	
+		res			=Multiplier*AmbientDiffuse(_DiffuseSourceCubemapTexture, view);
+		//res.r = 1.0;
 		return res;
 	}
 	fixed4 directional_diffuse_frag (v2f i) : SV_Target
@@ -101,6 +117,7 @@ Shader "Teleport/CopyCubemap"
 		//view.y		*=-1.0;
 		res			=Multiplier*float4(Colour*max(0.0,dot(Direction,view)),1.0);
 	//res.rgb+=view;
+		//res.b = 1.0;
 		return res;
 	}
 		
@@ -133,7 +150,16 @@ Shader "Teleport/CopyCubemap"
 
 			CGPROGRAM
 			#pragma vertex vert_from_id
-			#pragma fragment encode_face_frag
+			#pragma fragment encode_face_frag0
+			ENDCG
+		}
+		Pass
+		{
+			ZWrite Off ZTest Always Cull Off
+
+			CGPROGRAM
+			#pragma vertex vert_from_id
+			#pragma fragment encode_face_frag1
 			ENDCG
 		}
 		Pass

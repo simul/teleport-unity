@@ -678,12 +678,10 @@ namespace teleport
 			path = UnityEditor.AssetDatabase.GetAssetPath(obj);
 			// Problem is, Unity can bundle a bunch of individual meshes/materials/etc in one asset file, but use them completely independently.
 			// We can't therefore just use the file name.
-			//if (obj.GetType() == typeof(UnityEngine.Mesh))
+			// For now at least, let's not do this for textures.
+			if (obj.GetType() != typeof(UnityEngine.Texture))
 			{
 				string filename = Path.GetFileName(path);
-				//int dot=filename.LastIndexOf(".");
-				//if(dot>0&&dot<filename.Length)
-				//	filename=filename.Substring(0,dot);
 				path = Path.GetDirectoryName(path);
 				path = Path.Combine(path, filename);
 				path = Path.Combine(path, obj.name);
@@ -700,7 +698,15 @@ namespace teleport
 				// we can't use these.
 				return false;
 			}
-			path= SceneResourcePathManager.StandardizePath(path, "Assets/");
+/*			if (obj.GetType() == typeof(UnityEngine.Mesh))
+			{
+				path+=".mesh";
+			}
+			if (obj.GetType() == typeof(UnityEngine.Material))
+			{
+				path += ".material";
+			}*/
+			path = SceneResourcePathManager.StandardizePath(path, "Assets/");
 			resourcePathManager.SetResourcePath(obj,path);
 			return true;
 #else

@@ -19,9 +19,10 @@ namespace teleport
 		public int encodeWebcamKernel = -1;
 		static int CopyCubemap_plain_copy=0;
 		static int CopyCubemap_mip_frag = 1;
-		static int CopyCubemap_encode_face_frag = 2;
-		static int CopyCubemap_ambient_diffuse_frag = 3;
-		static int CopyCubemap_directional_diffuse_frag = 4; 
+		static int CopyCubemap_encode_face_frag0 = 2;
+		static int CopyCubemap_encode_face_frag1 = 3;
+		static int CopyCubemap_ambient_diffuse_frag = 4;
+		static int CopyCubemap_directional_diffuse_frag = 5; 
 		//int downCopyFaceKernel = 0;
 		const int THREADGROUP_SIZE = 32;
 
@@ -187,7 +188,9 @@ namespace teleport
 			buffer.SetGlobalInt("NumMips", 1);
 			buffer.SetGlobalInt("Face", face);
 			buffer.SetGlobalFloat("Roughness", 1.0F);
-			buffer.SetGlobalTexture("_SourceCubemapTexture", SourceCubeTexture);
+			buffer.SetGlobalTexture("_DiffuseSourceCubemapTexture", SourceCubeTexture);
+			// But SetGlobalTexture() doesn't work - we must instead put it in the material, here:
+			copyCubemapMaterial.SetTexture("_DiffuseSourceCubemapTexture", SourceCubeTexture);
 			// We downscale the whole diffuse so that it peaks at the maximum colour value.
 			buffer.SetGlobalFloat("Multiplier", light_scale);
 			// Here we encode the contribution of the diffuse cubemap.
@@ -305,7 +308,7 @@ namespace teleport
 		/// <summary>
 		/// Write the specified cubemap to the video texture.
 		/// </summary>
-		void DecomposeCubemapTo2D(CommandBuffer buffer, RenderTexture cubeTexture, RenderTexture videoTexture, Vector2Int StartOffset, int face, int mips)
+		void DecomposeCubemapTo2D(CommandBuffer buffer, RenderTexture cubeTexture, RenderTexture videoTexture, Vector2Int StartOffset, int face, int mips,int shader_choice)
 		{
 			if (!computeShader)
 				InitShaders();
@@ -314,6 +317,23 @@ namespace teleport
 			Vector2Int Offset = StartOffset;
 			int w = cubeTexture.width;
 			Rect pixelRect = new Rect(0, 0, 0, 0);
+			int shaderIndex=0;
+			if (shader_choice == 0)
+			{
+				shaderIndex= CopyCubemap_encode_face_frag0;
+				buffer.SetGlobalTexture("_EncodeSourceCubemapTexture0", cubeTexture);
+				// But SetGlobalTexture() doesn't work - we must instead put it in the material, here:
+				copyCubemapMaterial.SetTexture("_EncodeSourceCubemapTexture0", cubeTexture);
+
+			}
+			if (shader_choice == 1)
+			{
+				shaderIndex = CopyCubemap_encode_face_frag1;
+				buffer.SetGlobalTexture("_EncodeSourceCubemapTexture1", cubeTexture);
+				// But SetGlobalTexture() doesn't work - we must instead put it in the material, here:
+				copyCubemapMaterial.SetTexture("_EncodeSourceCubemapTexture1", cubeTexture);
+
+			}
 			for (int m = 0; m < mips; m++)
 			{
 				buffer.SetRenderTarget(videoTexture);
@@ -321,10 +341,9 @@ namespace teleport
 				pixelRect.y= (float)Offset.y+ faceOffsets[face,1]*w;
 				pixelRect.width=pixelRect.height=w;
 				buffer.SetViewport(pixelRect);
-				buffer.SetGlobalTexture("_SourceCubemapTexture", cubeTexture);
 				buffer.SetGlobalInt("MipIndex", m);
 				buffer.SetGlobalInt("Face", face);
-				buffer.DrawProcedural(Matrix4x4.identity, copyCubemapMaterial, CopyCubemap_encode_face_frag, MeshTopology.Triangles,6);
+				buffer.DrawProcedural(Matrix4x4.identity, copyCubemapMaterial, shaderIndex, MeshTopology.Triangles,6);
 				Offset.x+=w*3;
 				w /= 2;
 			}
@@ -337,12 +356,12 @@ namespace teleport
 			buffer.name = "EncodeLightingCubemaps";
 
 			// 3 mips each of specular and rough-specular texture.
-			DecomposeCubemapTo2D(buffer, sceneCaptureComponent.SpecularCubeTexture, sceneCaptureComponent.videoTexture, session.clientDynamicLighting.specularPos, face,sceneCaptureComponent.SpecularCubeTexture.mipmapCount);
+			DecomposeCubemapTo2D(buffer, sceneCaptureComponent.SpecularCubeTexture, sceneCaptureComponent.videoTexture, session.clientDynamicLighting.specularPos, face,sceneCaptureComponent.SpecularCubeTexture.mipmapCount,0);
 
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 			buffer = new CommandBuffer();
-			DecomposeCubemapTo2D(buffer, sceneCaptureComponent.DiffuseCubeTexture, sceneCaptureComponent.videoTexture, session.clientDynamicLighting.diffusePos, face,1);
+			DecomposeCubemapTo2D(buffer, sceneCaptureComponent.DiffuseCubeTexture, sceneCaptureComponent.videoTexture, session.clientDynamicLighting.diffusePos, face,1,1);
 			//DecomposeCubemapTo2D(context, sceneCaptureComponent.LightingCubeTexture, sceneCaptureComponent.videoTexture, StartOffset + sceneCaptureComponent.lightOffset, face);
 
 			context.ExecuteCommandBuffer(buffer);

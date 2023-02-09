@@ -185,11 +185,12 @@ namespace teleport
 		}
 
 		static Material highlightMaterial=null;
-		void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera, CullingResults cullingResults, int layerMask, uint renderingMask, TeleportRenderPipeline.LightingOrder lightingOrder
+		void DrawOpaqueGeometry(ScriptableRenderContext context, Camera camera, bool flipCulling,CullingResults cullingResults, int layerMask, uint renderingMask, TeleportRenderPipeline.LightingOrder lightingOrder
 			,bool highlight, Color highlightColour, RenderTexture renderTarget = null, int face = -1)
 		{
 			// The generic textures accessible from all default shaders...
 			var buffer = new CommandBuffer();
+			buffer.SetInvertCulling(flipCulling);
 			buffer.SetGlobalTexture(_CameraColorTexture, Texture2D.whiteTexture);
 			buffer.SetGlobalTexture(_CameraDepthAttachment, Texture2D.whiteTexture);
 			//buffer.SetGlobalTexture(_CameraDepthTexture, Texture2D.whiteTexture);
@@ -258,8 +259,12 @@ namespace teleport
 			}
 			teleportLighting.Cleanup(context,buffer);
 		}
-		void DrawTransparentGeometry(ScriptableRenderContext context, Camera camera, CullingResults cullingResults, int layerMask, uint renderingMask)
+		void DrawTransparentGeometry(ScriptableRenderContext context, Camera camera,bool flipCulling, CullingResults cullingResults, int layerMask, uint renderingMask)
 		{
+			var buffer = new CommandBuffer();
+			buffer.SetInvertCulling(flipCulling);
+			context.ExecuteCommandBuffer(buffer);
+			buffer.Release();
 			var sortingSettings = new SortingSettings(camera)
 			{
 				criteria = SortingCriteria.CommonTransparent
@@ -331,8 +336,8 @@ namespace teleport
 			Clear(context, camera);
 			PrepareForSceneWindow(context, camera);
 			// We draw everything first:
-			DrawOpaqueGeometry(context, camera, cullingResultsAll,layerMask, renderingMask,lightingOrder,false, teleportSettings.highlightStreamableColour);
-			DrawTransparentGeometry(context, camera, cullingResultsAll,layerMask, renderingMask);
+			DrawOpaqueGeometry(context, camera, false,cullingResultsAll,layerMask, renderingMask,lightingOrder,false, teleportSettings.highlightStreamableColour);
+			DrawTransparentGeometry(context, camera, false,cullingResultsAll,layerMask, renderingMask);
 			// Now we highlight the streamed objects:
 			if (teleportSettings.highlightStreamables)
 			{
@@ -345,13 +350,13 @@ namespace teleport
 					SetStreamableHighlightMaskOnObjects();
 					renderingMask = (uint)1 << 31;   // When not playing, only streamables have this bit set.
 				}
-				DrawOpaqueGeometry(context, camera, cullingResultsAll,layerMask, renderingMask, lightingOrder, true,teleportSettings.highlightStreamableColour);
+				DrawOpaqueGeometry(context, camera, false,cullingResultsAll,layerMask, renderingMask, lightingOrder, true,teleportSettings.highlightStreamableColour);
 			}
 			if (teleportSettings.highlightNonStreamables)
 			{
 				SetStreamableHighlightMaskOnObjects();
 				renderingMask = (uint)1 << 30;   // When not playing, only non-streamables have this bit set.
-				DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder, true,teleportSettings.highlightNonStreamableColour);
+				DrawOpaqueGeometry(context, camera, false,cullingResultsAll, layerMask, renderingMask, lightingOrder, true,teleportSettings.highlightNonStreamableColour);
 			}
 #if UNITY_EDITOR
 			DrawUnsupportedShaders(context, camera);
@@ -535,8 +540,8 @@ namespace teleport
 				Clear(context, camera);
 				PrepareForSceneWindow(context, camera);
 
-				DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder, false, teleportSettings.highlightStreamableColour,sceneCapture.UnfilteredCubeTexture, face);
-				DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
+				DrawOpaqueGeometry(context, camera, false, cullingResultsAll, layerMask, renderingMask, lightingOrder, false, teleportSettings.highlightStreamableColour,sceneCapture.UnfilteredCubeTexture, face);
+				DrawTransparentGeometry(context, camera, false, cullingResultsAll, layerMask, renderingMask);
 		
 				VideoEncoding.GenerateSpecularMips(context, sceneCapture.UnfilteredCubeTexture, sceneCapture.SpecularCubeTexture, face, 0, avs.AxesStandard.EngineeringStyle);
 				VideoEncoding.GenerateDiffuseCubemap(context, sceneCapture.SpecularCubeTexture, SessionComponent.GeometryStreamingService.GetBakedLights(), sceneCapture.DiffuseCubeTexture, face,diffuseAmbientScale, avs.AxesStandard.GlStyle);
@@ -550,8 +555,8 @@ namespace teleport
 				Clear(context, camera);
 				PrepareForSceneWindow(context, camera);
 
-				DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder,false, teleportSettings.highlightStreamableColour);
-				DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
+				DrawOpaqueGeometry(context, camera, !GL,cullingResultsAll, layerMask, renderingMask, lightingOrder,false, teleportSettings.highlightStreamableColour);
+				DrawTransparentGeometry(context, camera, !GL,cullingResultsAll, layerMask, renderingMask);
 				
 				// The unfiltered (reflection cube) should render close objects (though maybe only static ones).
 				float oldNearClip		= camera.nearClipPlane;
@@ -607,8 +612,8 @@ namespace teleport
 				Clear(context, camera);
 				PrepareForSceneWindow(context, camera);
 
-				DrawOpaqueGeometry(context, camera, cullingResultsAll, layerMask, renderingMask, lightingOrder,false, teleportSettings.highlightStreamableColour);
-				DrawTransparentGeometry(context, camera, cullingResultsAll, layerMask, renderingMask);
+				DrawOpaqueGeometry(context, camera, false,cullingResultsAll, layerMask, renderingMask, lightingOrder,false, teleportSettings.highlightStreamableColour);
+				DrawTransparentGeometry(context, camera, false,cullingResultsAll, layerMask, renderingMask);
 				if ( teleportSettings.serverSettings.perspectiveWidth > 0)
 				{ 
 					videoEncoding.EncodeColor(context, camera, 0, sceneCapture);
