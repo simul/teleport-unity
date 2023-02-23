@@ -15,7 +15,7 @@ uint ReverseBits32(uint bits) {
 
 vec2 Hammersley(uint index, uint NumSamples, uint2 random)
 {
-	float E1 = frac((float)index / NumSamples + float(random.x & 0xffff) / (1 << 16));
+	float E1 = frac((float) index / float(NumSamples) + (float(random.x & 0xffff) / float(1 << 16)));
 	// Radical inverse:
 	float E2 = float(reversebits(index) ^ random.y) * 2.3283064365386963e-10;
 	return vec2(E1, E2);
@@ -157,7 +157,7 @@ vec4 AmbientDiffuse(samplerCUBE sourceCubemap,vec3 view)
 	float Weight = 0.0;
 	for (uint i = 0; i < NumSamples; i++)
 	{
-		vec2 E = Hammersley(i, NumSamples, uint2(253*i,i*5));
+		vec2 E = Hammersley(i, NumSamples, uint2(0,0));
 		vec3 L;
 		// roughness=1, GGX is constant. Use cosine distribution instead
 		L		= CosineSampleHemisphere(E).xyz;

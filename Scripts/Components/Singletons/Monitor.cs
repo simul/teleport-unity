@@ -120,6 +120,7 @@ namespace teleport
 		//! For generating static cubemaps in Editor.
 		public RenderTexture dummyRenderTexture;
 		public Camera dummyCam = null;
+		public int envMapSize=64;
 		public bool generateEnvMaps=false;
 #endif
 		//! Create a new session, e.g. when a client connects.
@@ -432,7 +433,7 @@ namespace teleport
 				dummyCam.enabled = true;
 			}
 			int mips = 21;
-			while (mips > 1 && ((1 << mips) > environmentCubemap.width))
+			while (mips > 1 && ((1 << mips) > envMapSize))
 			{
 				mips--;
 			}
@@ -444,10 +445,10 @@ namespace teleport
 					specularRenderTexture = null;
 			}
 			// If specular rendertexture is unassigned or not the same size as the env cubemap, recreate it as a saved asset.
-			if (specularRenderTexture == null || specularRenderTexture.width != environmentCubemap.width ||
+			if (specularRenderTexture == null || specularRenderTexture.width != envMapSize ||
 				specularRenderTexture.mipmapCount != mips)
 			{
-				specularRenderTexture = new RenderTexture(environmentCubemap.width, environmentCubemap.width
+				specularRenderTexture = new RenderTexture(envMapSize, envMapSize
 					, 24, UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_UNorm, mips);
 				specularRenderTexture.dimension = UnityEngine.Rendering.TextureDimension.Cube;
 				specularRenderTexture.useMipMap = true;
@@ -467,10 +468,10 @@ namespace teleport
 					diffuseRenderTexture = null;
 			}
 			// If diffuse rendertexture is unassigned or not the same size as the env cubemap, recreate it as a saved asset.
-			if (diffuseRenderTexture == null || diffuseRenderTexture.width != environmentCubemap.width ||
+			if (diffuseRenderTexture == null || diffuseRenderTexture.width != envMapSize ||
 				diffuseRenderTexture.mipmapCount != mips)
 			{
-				diffuseRenderTexture = new RenderTexture(environmentCubemap.width, environmentCubemap.width
+				diffuseRenderTexture = new RenderTexture(envMapSize, envMapSize
 					, 24, UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_UNorm, mips);
 				diffuseRenderTexture.dimension = UnityEngine.Rendering.TextureDimension.Cube;
 				diffuseRenderTexture.useMipMap = true;
