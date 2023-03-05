@@ -3,6 +3,17 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using uid = System.UInt64;
 
+namespace teleport
+{
+	public struct TeleportServerDll
+	{
+		#if WIN32
+		public const string name="TeleportServer";
+		#else
+		public const string name="TeleportServer.so";
+		#endif
+	}
+}
 namespace avs
 {
 	using InputID = UInt16;

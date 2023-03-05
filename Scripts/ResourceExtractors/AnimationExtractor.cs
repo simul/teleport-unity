@@ -70,10 +70,10 @@ namespace teleport
 		}
 
 		#region DLLImports
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern uid GenerateID();
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void StoreTransformAnimation(uid id, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(TransformAnimationMarshaler))] avs.TransformAnimation animation);
 		#endregion
 
@@ -283,7 +283,7 @@ namespace teleport
 
 					//Create a new TransformAnimation where we ignore the unfilled values of the interim one.
 					avs.TransformAnimation animation = new avs.TransformAnimation();
-					animation.name = Marshal.StringToBSTR(clip.name);
+					animation.name = Marshal.StringToCoTaskMemUTF8(clip.name);
 
 					animation.boneAmount = j;
 					animation.boneKeyframes = new avs.TransformKeyframeList[animation.boneAmount];
@@ -360,7 +360,7 @@ namespace teleport
 				}
 
 				avs.TransformAnimation animation = new avs.TransformAnimation();
-				animation.name = Marshal.StringToBSTR(clip.name);
+				animation.name = Marshal.StringToCoTaskMemUTF8(clip.name);
 
 				Dictionary<Transform, InterimAnimation> nodeCurves = new Dictionary<Transform, InterimAnimation>();
 				var curveBindings= AnimationUtility.GetCurveBindings(clip);

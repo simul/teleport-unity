@@ -23,48 +23,48 @@ namespace teleport
 	{
 		#region DLLImports
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern bool Client_IsConnected(uid clientID);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern bool Client_HasHost(uid clientID);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern bool Client_HasPeer(uid clientID);
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern void Client_StopSession(uid clientID);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern void Client_StopStreaming(uid clientID);
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern uint Client_GetClientIP(uid clientID, uint bufferLength, StringBuilder buffer);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern UInt16 Client_GetClientPort(uid clientID);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern UInt16 Client_GetServerPort(uid clientID);
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern bool Client_GetClientNetworkStats(uid clientID, ref avs.NetworkStats stats);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern bool Client_GetClientVideoEncoderStats(uid clientID, ref avs.VideoEncoderStats stats);
 
 		// Set the client-specific settings, e.g. video layout.
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_SetClientSettings(uid clientID, teleport.ClientSettings clientSettings);
 		// Set the client-specific lighting, e.g. video or texture lighting.
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_SetClientDynamicLighting(uid clientID, teleport.ClientDynamicLighting clientDynamicLighting);
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_SetClientInputDefinitions(uid clientID, int numControls, string[] controlPaths, avs.InputDefinitionInterop[] inputDefinitions);
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern bool Client_SetOrigin(uid clientID, uid originNodeID, UInt64 validCounter);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern bool Client_HasOrigin(uid clientID);
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_UpdateNodeAnimationControl(uid clientID, avs.NodeUpdateAnimationControl update);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_SetNodeAnimationSpeed(uid clientID, uid nodeID, uid animationID, float speed);
 
 		#endregion

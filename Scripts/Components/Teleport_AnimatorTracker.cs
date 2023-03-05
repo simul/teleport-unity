@@ -12,7 +12,7 @@ namespace teleport
 	{
 		#region DllImport
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_UpdateNodeAnimation(uid clientID, avs.ApplyAnimation update);
 
 		#endregion //DllImport

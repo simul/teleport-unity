@@ -182,7 +182,7 @@ namespace avs
 	[StructLayout(LayoutKind.Sequential)]
 	public struct Node
 	{
-		[MarshalAs(UnmanagedType.BStr)]
+		
 		public IntPtr name;
 
 		public Transform localTransform;
@@ -218,9 +218,9 @@ namespace avs
 
 	public class Mesh
 	{
-		[MarshalAs(UnmanagedType.BStr)]
+		
 		public IntPtr name;
-		[MarshalAs(UnmanagedType.BStr)]
+		
 		public IntPtr path;
 
 		public Int64 numPrimitiveArrays;
@@ -241,9 +241,9 @@ namespace avs
 
 	public struct Skin
 	{
-		[MarshalAs(UnmanagedType.BStr)]
+		
 		public IntPtr name;
-		[MarshalAs(UnmanagedType.BStr)]
+		
 		public IntPtr path;
 
 		public Int64 numInverseBindMatrices;
@@ -260,9 +260,9 @@ namespace avs
 
 	public struct Texture
 	{
-		[MarshalAs(UnmanagedType.BStr)]
+		
 		public IntPtr name;
-		[MarshalAs(UnmanagedType.BStr)]
+		
 		public IntPtr path;
 
 		public uint width;
@@ -298,9 +298,9 @@ namespace avs
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
 	public class Material
 	{
-		[MarshalAs(UnmanagedType.BStr)]
+		
 		public IntPtr name;
-		[MarshalAs(UnmanagedType.BStr)]
+		
 		public IntPtr path;
 		[MarshalAs(UnmanagedType.I8)]
 		public MaterialMode materialMode = MaterialMode.UNKNOWN;
@@ -338,7 +338,7 @@ namespace teleport
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
 	public class InteropFontAtlas
 	{
-		[MarshalAs(UnmanagedType.BStr)]
+		
 		public IntPtr font_path;
 		public int numMaps;
 		public InteropFontMap [] fontMaps;
@@ -346,9 +346,9 @@ namespace teleport
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
 	public class InteropTextCanvas
 	{
-		[MarshalAs(UnmanagedType.BStr)]
+		
 		public IntPtr text;
-		[MarshalAs(UnmanagedType.BStr)]
+		
 		public IntPtr font;
 		public int size;
 		public float lineHeight;
@@ -399,83 +399,83 @@ namespace teleport
 
 		#region DLLImports
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern bool SetCachePath(string name);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void DeleteUnmanagedArray(in IntPtr unmanagedArray);
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern uid GenerateUid();
-		[DllImport("TeleportServer")]
-		private static extern uid GetOrGenerateUid([MarshalAs(UnmanagedType.BStr)] string path);
+		[DllImport(TeleportServerDll.name)]
+		private static extern uid GetOrGenerateUid(string path);
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void SaveGeometryStore();
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 numMaterials, out IntPtr loadedMaterials);
 	
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void ClearGeometryStore();
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern bool CheckGeometryStoreForErrors();
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void StoreNode(uid id, avs.Node node);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void StoreSkin(uid id, avs.Skin skin);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void StoreMesh(uid id,
-												[MarshalAs(UnmanagedType.BStr)] string guid,
-												[MarshalAs(UnmanagedType.BStr)] string path,
+												string guid,
+												string path,
 												Int64 lastModified,
 												[MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(MeshMarshaler))] avs.Mesh mesh,
 												 [MarshalAs(UnmanagedType.I1)] avs.AxesStandard extractToStandard, [MarshalAs(UnmanagedType.I1)] bool compress, [MarshalAs(UnmanagedType.I1)] bool verify);
-		[DllImport("TeleportServer")]
-		private static extern void StoreMaterial(uid id, [MarshalAs(UnmanagedType.BStr)] string guid,
-												[MarshalAs(UnmanagedType.BStr)] string path, Int64 lastModified, avs.Material material);
-		[DllImport("TeleportServer")]
-		private static extern void StoreTexture(uid id, [MarshalAs(UnmanagedType.BStr)] string guid,
-												[MarshalAs(UnmanagedType.BStr)] string path, Int64 lastModified, avs.Texture texture, string compressedFilePath
+		[DllImport(TeleportServerDll.name)]
+		private static extern void StoreMaterial(uid id, string guid,
+												string path, Int64 lastModified, avs.Material material);
+		[DllImport(TeleportServerDll.name)]
+		private static extern void StoreTexture(uid id, string guid,
+												string path, Int64 lastModified, avs.Texture texture, string compressedFilePath
 												, [MarshalAs(UnmanagedType.I1)] bool genMips
 												, [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC
 												, [MarshalAs(UnmanagedType.I1)] bool forceOverwrite
 												);
 		
-		[DllImport("TeleportServer")]
-		private static extern uid StoreFont(  [MarshalAs(UnmanagedType.BStr)] string  ttf_path,[MarshalAs(UnmanagedType.BStr)] string  relative_assetPath, Int64 lastModified, int size);
-		[DllImport("TeleportServer")]
-		private static extern uid StoreTextCanvas([MarshalAs(UnmanagedType.BStr)] string relative_assetPath,teleport.InteropTextCanvas interopTextCanvas);
+		[DllImport(TeleportServerDll.name)]
+		private static extern uid StoreFont(  string  ttf_path,string  relative_assetPath, Int64 lastModified, int size);
+		[DllImport(TeleportServerDll.name)]
+		private static extern uid StoreTextCanvas(string relative_assetPath,teleport.InteropTextCanvas interopTextCanvas);
 
-		[DllImport("TeleportServer")]
-		private static extern void StoreShadowMap(uid id, [MarshalAs(UnmanagedType.BStr)] string guid,
-												[MarshalAs(UnmanagedType.BStr)] string path, Int64 lastModified, avs.Texture shadowMap);
+		[DllImport(TeleportServerDll.name)]
+		private static extern void StoreShadowMap(uid id, string guid,
+												string path, Int64 lastModified, avs.Texture shadowMap);
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern bool IsNodeStored(uid id);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern bool IsSkinStored(uid id);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern bool IsMeshStored(uid id);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern bool IsMaterialStored(uid id);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern bool IsTextureStored(uid id);
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void RemoveNode(uid id);
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern UInt64 GetNumberOfTexturesWaitingForCompression();
-		[DllImport("TeleportServer")]
-		[return: MarshalAs(UnmanagedType.BStr)]
-		private static extern string GetMessageForNextCompressedTexture(UInt64 textureIndex, UInt64 totalTextures);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
+		
+		private static extern void GetMessageForNextCompressedTexture(UInt64 textureIndex, UInt64 totalTexture,string str,UInt64 strlen);
+		[DllImport(TeleportServerDll.name)]
 		private static extern void CompressNextTexture();
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void SetCompressionLevels(byte compressionStrength, byte compressionQuality);
 		
-		[DllImport("TeleportServer")]
-		public static extern bool GetFontAtlas( [MarshalAs(UnmanagedType.BStr)] string path, InteropFontAtlas interopFontAtlas);
+		[DllImport(TeleportServerDll.name)]
+		public static extern bool GetFontAtlas( string path, InteropFontAtlas interopFontAtlas);
 		#endregion
 
 		#region CustomSerialisation
@@ -901,7 +901,7 @@ namespace teleport
 
 			avs.Node extractedNode = new avs.Node();
 			StreamableProperties streamableProperties=gameObject.GetComponent<StreamableProperties>();
-			extractedNode.name = Marshal.StringToBSTR(gameObject.name);
+			extractedNode.name = Marshal.StringToCoTaskMemUTF8(gameObject.name);
 #if UNITY_EDITOR
 			// if it's not stationary, it will need a StreamableProperties component to let us know, because isStatic is always false in builds for Unity.
 			if (!gameObject.isStatic)
@@ -1053,7 +1053,7 @@ namespace teleport
 			sessionResourceUids[material] = materialID;
 
 			avs.Material extractedMaterial = new avs.Material();
-			extractedMaterial.name = Marshal.StringToBSTR(material.name);
+			extractedMaterial.name = material.name;
 
 			//Albedo/Diffuse
 			extractedMaterial.materialMode=avs.MaterialMode.OPAQUE;
@@ -1137,7 +1137,7 @@ namespace teleport
 #if UNITY_EDITOR
 			//long fileId=0;
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(material, out string guid);
-			extractedMaterial.path = Marshal.StringToBSTR(resourcePath);
+			extractedMaterial.path = Marshal.StringToCoTaskMemUTF8(resourcePath);
 			
  			StoreMaterial(materialID, guid, resourcePath, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32))), extractedMaterial);
 #endif
@@ -1762,7 +1762,7 @@ namespace teleport
 
                 avs.Node boneNode = new avs.Node();
                 boneNode.priority = 0;
-                boneNode.name = Marshal.StringToBSTR(bone.name);
+                boneNode.name = Marshal.StringToCoTaskMemUTF8(bone.name);
                 boneNode.parentID = parentID;
                 boneNode.localTransform = avsTransform;
 
@@ -1792,7 +1792,7 @@ namespace teleport
 			avs.Transform avsTransform = avs.Transform.FromLocalUnityTransform(bone);
 			avs.Node boneNode = new avs.Node();
 			boneNode.priority = 0;
-			boneNode.name = Marshal.StringToBSTR(bone.name);
+			boneNode.name = Marshal.StringToCoTaskMemUTF8(bone.name);
 			boneNode.parentID = parentID;
 			boneNode.localTransform = avsTransform;
 			if(parentID==0)
@@ -1816,9 +1816,11 @@ namespace teleport
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 			SetCompressionLevels(teleportSettings.serverSettings.compressionLevel, teleportSettings.serverSettings.qualityLevel);
 #if UNITY_EDITOR
+			UInt64 strlen=32;
+			string compressionMessage=new string(strlen);
 			for (UInt64 i = 0; i < totalTexturesToCompress; i++)
 			{
-				string compressionMessage = GetMessageForNextCompressedTexture(i, totalTexturesToCompress);
+				GetMessageForNextCompressedTexture(i, totalTexturesToCompress,compressionMessage,strlen);
 
 				bool cancelled = EditorUtility.DisplayCancelableProgressBar("Compressing Textures", compressionMessage, (float)(i + 1) / totalTexturesToCompress);
 				if(cancelled)
@@ -1892,10 +1894,10 @@ namespace teleport
 		#endif
 			string canvasAssetPath="Text/"+textCanvas.name;
 			teleport.InteropTextCanvas interopTextCanvas=new teleport.InteropTextCanvas();
-			interopTextCanvas.text=Marshal.StringToBSTR(textCanvas.text);
+			interopTextCanvas.text=Marshal.StringToCoTaskMemUTF8(textCanvas.text);
 			if(interopTextCanvas.text==null)
 				return 0;
-			interopTextCanvas.font=Marshal.StringToBSTR(resourcePath);
+			interopTextCanvas.font=Marshal.StringToCoTaskMemUTF8(resourcePath);
 			interopTextCanvas.size=textCanvas.size;
 			interopTextCanvas.width=textCanvas.width;
 			interopTextCanvas.height=textCanvas.height;
@@ -2060,11 +2062,11 @@ namespace teleport
 			sessionResourceUids[skinnedMeshRenderer] = skinID;
 
 			avs.Skin skin = new avs.Skin();
-			skin.name = Marshal.StringToBSTR(skinnedMeshRenderer.name);
+			skin.name = Marshal.StringToCoTaskMemUTF8(skinnedMeshRenderer.name);
 
 			// In unity, this isn't really an asset, it has no location on disk.
 			string path= skinnedMeshRenderer.name;
-			skin.path = Marshal.StringToBSTR(path);
+			skin.path = Marshal.StringToCoTaskMemUTF8(path);
 
 			skin.inverseBindMatrices = ExtractInverseBindMatrices(skinnedMeshRenderer);
 			skin.numInverseBindMatrices = skin.inverseBindMatrices.Count();
@@ -2451,8 +2453,8 @@ namespace teleport
 			}
 			var avsMesh= new avs.Mesh
 			{
-				name = Marshal.StringToBSTR(mesh.name),
-				path = Marshal.StringToBSTR(resourcePath),
+				name = Marshal.StringToCoTaskMemUTF8(mesh.name),
+				path = Marshal.StringToCoTaskMemUTF8(resourcePath),
 				numPrimitiveArrays = primitives.Length,
 				primitiveArrays = primitives,
 
@@ -2794,8 +2796,8 @@ namespace teleport
 			}
 			avs.Texture extractedTexture = new avs.Texture()
 			{
-				name = Marshal.StringToBSTR(texture.name),
-				path = Marshal.StringToBSTR(resourcePath),
+				name = Marshal.StringToCoTaskMemUTF8(texture.name),
+				path = Marshal.StringToCoTaskMemUTF8(resourcePath),
 
 				width = (uint)texture.width,
 				height = (uint)texture.height,

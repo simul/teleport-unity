@@ -13,9 +13,9 @@ namespace teleport
     public class Teleport_AudioCaptureComponent : MonoBehaviour
     {
         #region DLLImports
-        [DllImport("TeleportServer")]
+        [DllImport(TeleportServerDll.name)]
         static extern void SetAudioSettings(ref AudioSettings audioSettings);
-        [DllImport("TeleportServer")]
+        [DllImport(TeleportServerDll.name)]
         static extern void SendAudio(IntPtr data, UInt64 dataSize);
         #endregion
 

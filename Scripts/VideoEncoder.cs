@@ -12,20 +12,20 @@ namespace teleport
 	public class VideoEncoder
 	{
 		#region DLLImports
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		static extern System.IntPtr GetRenderEventWithDataCallback();
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern bool GetVideoEncodeCapabilities(ref avs.VideoEncodeCapabilities capabilities);
 		#endregion
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern void ConvertTransform(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Transform transform);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern void ConvertRotation(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector4 rotation);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern void ConvertPosition(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector3 position);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern void ConvertScale(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector3 scale);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern byte ConvertAxis(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref byte axis);
 
 		[StructLayout(LayoutKind.Sequential)]

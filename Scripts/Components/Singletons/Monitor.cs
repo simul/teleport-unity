@@ -84,31 +84,31 @@ namespace teleport
 			public GetUnixTimestampFn getUnixTimestamp;
 		};
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		static extern void SetMessageHandlerDelegate(OnMessageHandler m);
 		
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern UInt64 SizeOf(string name);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern bool Teleport_Initialize(InitialiseState initialiseState);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void SetConnectionTimeout(Int32 timeout);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void UpdateServerSettings(teleport.ServerSettings newSettings);
 		
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void SetClientPosition(uid clientID, Vector3 pos);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Tick(float deltaTime);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void EditorTick();
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Shutdown();
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern uid GetUnlinkedClientID();
 
 		// Really basic "send it again" function. Sends to all relevant clients. Must improve!
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void ResendNode(uid id);
 		#endregion
 

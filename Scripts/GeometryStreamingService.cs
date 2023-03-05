@@ -11,36 +11,41 @@ namespace teleport
 	public class GeometryStreamingService
 	{
 		#region DLLImports
-		[DllImport("TeleportServer")]
+		#if WIN32
+		const string dllName="TeleportServer";
+		#else
+		const string dllName="TeleportServer.so";
+		#endif
+		[DllImport(TeleportServerDll.name)]
 		private static extern UInt64 Client_AddNode(uid clientID, uid nodeID);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_RemoveNodeByID(uid clientID, uid nodeID);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_AddGenericTexture(uid clientID, uid textureID);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern void Client_SetGlobalIlluminationTextures(uid clientID, UInt64 num, uid[] textureIDs);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern void Client_NodeEnteredBounds(uid clientID, uid nodeID);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern void Client_NodeLeftBounds(uid clientID, uid nodeID);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern bool Client_IsStreamingNodeID(uid clientID, uid nodeID);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern bool Client_IsClientRenderingNodeID(uid clientID, uid nodeID);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		public static extern bool Client_HasResource(uid clientID, uid resourceID);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_UpdateNodeMovement(uid clientID, avs.MovementUpdate[] updates, int updateAmount);
 
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_UpdateNodeEnabledState(uid clientID, avs.NodeUpdateEnabledState[] updates, int updateAmount);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_SetNodeHighlighted(uid clientID, uid nodeID, bool isHighlighted);
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_ReparentNode(uid clientID, uid nodeID, uid newParentNodeID,avs.Pose localPose);
 
-		[DllImport("TeleportServer")]
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_SetNodePosePath(uid clientID, uid nodeID,  string regexPosePath);
 
 		
