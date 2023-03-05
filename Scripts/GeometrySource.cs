@@ -1053,7 +1053,7 @@ namespace teleport
 			sessionResourceUids[material] = materialID;
 
 			avs.Material extractedMaterial = new avs.Material();
-			extractedMaterial.name = material.name;
+			extractedMaterial.name = Marshal.StringToCoTaskMemUTF8( material.name);
 
 			//Albedo/Diffuse
 			extractedMaterial.materialMode=avs.MaterialMode.OPAQUE;
@@ -1817,7 +1817,7 @@ namespace teleport
 			SetCompressionLevels(teleportSettings.serverSettings.compressionLevel, teleportSettings.serverSettings.qualityLevel);
 #if UNITY_EDITOR
 			UInt64 strlen=32;
-			string compressionMessage=new string(strlen);
+			string compressionMessage=new string(' ',(int)strlen);
 			for (UInt64 i = 0; i < totalTexturesToCompress; i++)
 			{
 				GetMessageForNextCompressedTexture(i, totalTexturesToCompress,compressionMessage,strlen);
