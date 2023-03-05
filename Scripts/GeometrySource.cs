@@ -682,22 +682,24 @@ namespace teleport
 			// Problem is, Unity can bundle a bunch of individual meshes/materials/etc in one asset file, but use them completely independently.
 			// We can't therefore just use the file name.
 			// For now at least, let's not do this for textures.
+
+			// The double # is used to separate the source file name from the subobject name.
 			if (obj.GetType() != typeof(UnityEngine.Texture))
 			{
 				string filename = Path.GetFileName(path);
 				path = Path.GetDirectoryName(path);
 				path = Path.Combine(path, filename);
-				path +="//"+obj.name;
+				path +="##"+obj.name;
 			}
 			// Need something unique. Within default and editor resources are thousands of assets, often with clashing names.
 			// So here, we do use the localId's to distinguish them.
 			if (path.Contains("unity default resources"))
 			{
-				path += "//" + obj.name + "_" + localId;
+				path += "##" + obj.name + "_" + localId;
 			}
 			if (path.Contains("unity editor resources"))
 			{
-				path += "//" + obj.name + "_" + localId;
+				path += "##" + obj.name + "_" + localId;
 				// we can't use these.
 				return false;
 			}
@@ -1687,7 +1689,7 @@ namespace teleport
 #if UNITY_EDITOR
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(texture, out string guid);
 
-			string textureAssetPath = AssetDatabase.GetAssetPath(texture);
+			string textureAssetPath = AssetDatabase.GetAssetPath(texture).Replace("Assets/","");
 			long lastModified = GetAssetWriteTimeUTC(textureAssetPath);
 
 			string compressedFilePath = "";
@@ -1879,7 +1881,7 @@ namespace teleport
 				return 0;
 			
 		#if UNITY_EDITOR
-			string fontAssetPath = AssetDatabase.GetAssetPath(textCanvas.font);
+			string fontAssetPath = AssetDatabase.GetAssetPath(textCanvas.font).Replace("Assets/", "");
 			long lastModified = GetAssetWriteTimeUTC(fontAssetPath);
 			string font_ttf_path = System.IO.Directory.GetParent(Application.dataPath).ToString().Replace("\\","/") +"/"+ fontAssetPath;
 			string resourcePath=fontAssetPath.Replace("Assets/","");
@@ -2445,7 +2447,7 @@ namespace teleport
 			// If it's one of the default resources, we must generate a prop
 			if (!guid.Contains("0000000000000000e000000000000000")|| resourcePath.Contains("unity default resources"))
 			{
-				last_modified = GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32)));
+				last_modified = GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32)).Replace("Assets/", ""));
 			}
 			var avsMesh= new avs.Mesh
 			{
@@ -2852,6 +2854,8 @@ namespace teleport
 		{
 			try
 			{
+				if (!File.Exists(filePath))
+					filePath = "Assets/" + filePath;
 				return File.GetLastWriteTimeUtc(filePath).ToFileTimeUtc();
 			}
 			catch(Exception)
@@ -2893,12 +2897,18 @@ namespace teleport
 					continue;
                 }
 				//Attempt to find asset.
-				string assetPath = AssetDatabase.GUIDToAssetPath(guid.Substring(0,32));
-				if(assetPath!=path)
+				string assetPath = AssetDatabase.GUIDToAssetPath(guid.Substring(0,32)).Replace("Assets/","");
+				string expectedAssetPath=path;
+				int hash= expectedAssetPath.IndexOf("##");
+				if ( hash>= 0)
                 {
-					Debug.LogWarning("Path mismatch for ("+typeof(UnityAsset).ToString()+")" + name+": "+path+" !="+assetPath);
+					expectedAssetPath = expectedAssetPath.Substring(0,hash);
                 }
-				UnityEngine.Object[] assetsAtPath = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+				if (assetPath!= expectedAssetPath)
+                {
+					Debug.LogWarning("Path mismatch for ("+typeof(UnityAsset).ToString()+")" + name+": "+ expectedAssetPath + " !="+assetPath);
+                }
+				UnityEngine.Object[] assetsAtPath = AssetDatabase.LoadAllAssetsAtPath("Assets/"+assetPath);
 				foreach(UnityEngine.Object unityObject in assetsAtPath)
 				{ 
 					if(unityObject)

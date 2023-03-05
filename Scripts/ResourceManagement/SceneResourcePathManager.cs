@@ -76,6 +76,8 @@ namespace teleport
 		public void Clear()
 		{
 			sceneResourcePaths.Clear();
+			sceneResourcePaths_keys = sceneResourcePaths.Keys.ToArray();
+			sceneResourcePaths_values = sceneResourcePaths.Values.ToArray();
 		}
 		public void CheckForDuplicates()
 		{

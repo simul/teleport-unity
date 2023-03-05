@@ -203,9 +203,10 @@ namespace teleport
 				UnityEditor.EditorUtility.DisplayDialog("Warning", "Current rendering pipeline is not TeleportRenderPipeline.", "OK");
 				UnityEditor.EditorApplication.isPlaying = false;
 				return;
-#endif
+#else
 				title += ": Current rendering pipeline is not TeleportRenderPipeline!";
 				Debug.LogError(title);
+#endif
 			}
 			if (g.CheckForErrors() == false)
 			{
