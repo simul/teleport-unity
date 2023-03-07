@@ -1885,7 +1885,7 @@ namespace teleport
 		#if UNITY_EDITOR
 			string fontAssetPath = AssetDatabase.GetAssetPath(textCanvas.font).Replace("Assets/", "");
 			long lastModified = GetAssetWriteTimeUTC(fontAssetPath);
-			string font_ttf_path = System.IO.Directory.GetParent(Application.dataPath).ToString().Replace("\\","/") +"/"+ fontAssetPath;
+			string font_ttf_path = System.IO.Directory.GetParent(Application.dataPath).ToString().Replace("\\","/") +"/Assets/"+ fontAssetPath;
 			string resourcePath=fontAssetPath.Replace("Assets/","");
 			uid font_uid=StoreFont(font_ttf_path,resourcePath,lastModified,textCanvas.size);
 		#else

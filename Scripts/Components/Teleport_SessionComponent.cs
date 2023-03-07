@@ -871,7 +871,8 @@ namespace teleport
 			{
 				Debug.LogError("The video encoder does not support the video texture dimensions.");
 			}
-
+			Debug.Log("ClientSettings.videoTextureSize: "+clientSettings.videoTextureSize.x+", "+clientSettings.videoTextureSize.y);
+			Debug.Log("ClientSettings.drawDistance: "+clientSettings.drawDistance);
 			Client_SetClientSettings(clientID, clientSettings);
 			Client_SetClientDynamicLighting(clientID, clientDynamicLighting); 
 			// Just use one set of input defs for now.

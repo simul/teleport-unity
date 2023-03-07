@@ -279,7 +279,7 @@ namespace teleport
 				privateKeyPath = teleportSettings.privateKeyPath
 			};
 
-				initialised = Teleport_Initialize(initialiseState);
+			initialised = Teleport_Initialize(initialiseState);
 			if(!initialised)
 			{
 				Debug.LogError($"Teleport_Initialize failed, so server cannot start.");

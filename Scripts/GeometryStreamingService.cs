@@ -339,8 +339,11 @@ namespace teleport
 				TeleportLog.LogErrorOnce("Client ID is zero.");
 				return;
 			}
+			var layersToStream=teleportSettings.LayersToStream;
+			//if(layersToStream==0)
+			//	layersToStream=0xFFFFFFFF;
 			//Detect changes in geometry that needs to be streamed to the client.
-			if(teleportSettings.LayersToStream != 0)
+			if(layersToStream!= 0)
 			{
 				List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.serverSettings.detectionSphereRadius, teleportSettings.LayersToStream));
 				List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(session.head.transform.position, teleportSettings.serverSettings.detectionSphereRadius + teleportSettings.serverSettings.detectionSphereBufferDistance, teleportSettings.LayersToStream));
