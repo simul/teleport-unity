@@ -17,16 +17,23 @@ namespace teleport
 		private Vector2 scrollPosition_client;
 		uid selected_client_uid=0;
 		int selGridInt = 0;
-		private GUIStyle scrollwindowStyle = new GUIStyle();
+		private GUIStyle scrollwindowStyle =null;
+		private GUIStyle titleStyle=null;
 		private void OnGUI()
-		{
-			scrollwindowStyle = GUI.skin.box;
-			EditorGUILayout.Separator();
-			EditorGUILayout.BeginFoldoutHeaderGroup(true,GUIContent.none);
-			EditorGUILayout.EndFoldoutHeaderGroup();
+        {
+            if (titleStyle == null) 
+			{
+				titleStyle = new GUIStyle(GUI.skin.label);
+				titleStyle.fontSize = (GUI.skin.label.fontSize * 5) / 4;
+				titleStyle.fontStyle = FontStyle.Bold;
+				scrollwindowStyle = new GUIStyle( GUI.skin.box);
+			}
+			//EditorGUILayout.Separator();
+			//EditorGUILayout.BeginFoldoutHeaderGroup(true,GUIContent.none);
+			//EditorGUILayout.EndFoldoutHeaderGroup();
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.BeginVertical();
-			EditorGUILayout.LabelField("Client Sessions");
+			EditorGUILayout.LabelField("Client Sessions", titleStyle);
 
 			List<string> sessionNames=new List<string>();
 			List<uid> sessionUids = new List<uid>();
@@ -55,6 +62,7 @@ namespace teleport
 			EditorGUILayout.BeginVertical();
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.BeginVertical();
+			EditorGUILayout.LabelField("Status", titleStyle);
 			EditorGUILayout.LabelField("Uid", clientID.ToString());
 			EditorGUILayout.LabelField("IP Address", session.GetClientIP());
 			var networkStats=session.GetNetworkStats();
@@ -64,17 +72,21 @@ namespace teleport
 			//session.ShowOverlay(0, 0, clientFont);
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
 			GeometryStreamingService geometryStreamingService =session.GeometryStreamingService;
-			int nodeCount = geometryStreamingService.GetStreamedObjectCount();
-			EditorGUILayout.LabelField("Nodes", string.Format("{0}", nodeCount));
-			EditorGUILayout.LabelField("Inputs");
+			EditorGUILayout.LabelField("Inputs", titleStyle);
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 			foreach (var id in session.input.GetFloatStateIDs())
 			{
 				var def = teleportSettings.inputDefinitions[id];
 				EditorGUILayout.LabelField(def.name + ": " + session.input.GetFloatState(id).ToString());
 			}
+			foreach (var id in session.input.GetBooleanStateIDs())
+			{
+				var def = teleportSettings.inputDefinitions[id];
+				EditorGUILayout.LabelField(def.name + ": " + session.input.GetBooleanState(id).ToString());
+			}
 			EditorGUILayout.EndVertical();
 			EditorGUILayout.BeginVertical();
+			EditorGUILayout.LabelField("Textures", titleStyle);
 			if (session.sceneCaptureComponent)
 			{
 				List<string> textureNames=new List<string>();
@@ -104,14 +116,18 @@ namespace teleport
 				{
 					selectTexture=sel;
 					UnityEditor.Selection.activeObject=textures[sel];
+					UnityEditor.EditorApplication.ExecuteMenuItem("Window/General/Inspector");
 				}
 				if (sel >= 0 && sel < textures.Count && UnityEditor.Selection.activeObject != textures[sel])
 					selectTexture = sel = -1;
 			}
 			EditorGUILayout.EndVertical();
 			//GUILayout.Box()
-			{ 
-				scrollPosition_streamed=EditorGUILayout.BeginScrollView(scrollPosition_streamed,false, true, GUI.skin.verticalScrollbar, GUI.skin.verticalScrollbar, GUI.skin.textField);
+			{
+				EditorGUILayout.BeginVertical();
+				int nodeCount = geometryStreamingService.GetStreamedObjectCount();
+				EditorGUILayout.LabelField(string.Format("{0} Nodes", nodeCount), titleStyle);
+				scrollPosition_streamed =EditorGUILayout.BeginScrollView(scrollPosition_streamed,false, true, GUI.skin.verticalScrollbar, GUI.skin.verticalScrollbar, GUI.skin.textField);
 
 				List<GameObject> streamedGameObjects = geometryStreamingService.GetStreamedObjects();
 				//List nodes to the maximum.
@@ -124,6 +140,7 @@ namespace teleport
 				}
 				EditorGUILayout.EndVertical();
 				EditorGUILayout.EndScrollView();
+				EditorGUILayout.EndVertical();
 			}
 			EditorGUILayout.EndHorizontal();
 			EditorGUILayout.EndVertical();

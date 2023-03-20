@@ -58,7 +58,7 @@ namespace teleport
 		private static extern void Client_SetClientInputDefinitions(uid clientID, int numControls, string[] controlPaths, avs.InputDefinitionInterop[] inputDefinitions);
 
 		[DllImport(TeleportServerDll.name)]
-		private static extern bool Client_SetOrigin(uid clientID, uid originNodeID, UInt64 validCounter);
+		private static extern bool Client_SetOrigin(uid clientID, uid originNodeID);
 		[DllImport(TeleportServerDll.name)]
 		private static extern bool Client_HasOrigin(uid clientID);
 
@@ -330,7 +330,6 @@ namespace teleport
 		private HashSet< Teleport_Controller> mappedNodes = new HashSet< Teleport_Controller>();
 
 		private bool resetOrigin = true;
-		private UInt64 originValidCounter = 1;
 
 		private Vector3 last_sent_origin = new Vector3(0, 0, 0);
 		private Vector3 last_received_origin = new Vector3(0, 0, 0);
@@ -796,8 +795,8 @@ namespace teleport
 			clientSettings.shadowmapSize = teleportSettings.serverSettings.defaultShadowmapSize;
 
 			clientSettings.captureCubeTextureSize=teleportSettings.serverSettings.defaultCaptureCubeTextureSize;
-			clientSettings.backgroundMode = teleportSettings.serverSettings.backgroundMode;
-			clientSettings.backgroundColour = teleportSettings.serverSettings.BackgroundColour;
+			clientSettings.backgroundMode = Monitor.Instance.backgroundMode;
+			clientSettings.backgroundColour = Monitor.Instance.BackgroundColour;
 			clientSettings.drawDistance=teleportSettings.serverSettings.detectionSphereRadius;
 			int faceSize = clientSettings.captureCubeTextureSize;
 			int doubleFaceSize = faceSize * 2;
@@ -871,8 +870,8 @@ namespace teleport
 			{
 				Debug.LogError("The video encoder does not support the video texture dimensions.");
 			}
-			Debug.Log("ClientSettings.videoTextureSize: "+clientSettings.videoTextureSize.x+", "+clientSettings.videoTextureSize.y);
-			Debug.Log("ClientSettings.drawDistance: "+clientSettings.drawDistance);
+			//Debug.Log("ClientSettings.videoTextureSize: "+clientSettings.videoTextureSize.x+", "+clientSettings.videoTextureSize.y);
+			//Debug.Log("ClientSettings.drawDistance: "+clientSettings.drawDistance);
 			Client_SetClientSettings(clientID, clientSettings);
 			Client_SetClientDynamicLighting(clientID, clientDynamicLighting); 
 			// Just use one set of input defs for now.
@@ -902,49 +901,13 @@ namespace teleport
 						streamable.sendMovementUpdates=true;
 				}
 			}
-			if (teleportSettings.serverSettings.controlModel == teleport.ControlModel.CLIENT_ORIGIN_SERVER_GRAVITY)
-			{
-				if (head != null && clientspaceRoot != null)
-				{
-					if (!Client_HasOrigin(clientID) || resetOrigin)
-					{
-						originValidCounter++;
-						if (Client_SetOrigin(clientID, originValidCounter, origin_uid))
-						{
-							last_sent_origin = clientspaceRoot.transform.position;
-							clientspaceRoot.transform.hasChanged = false;
-							resetOrigin = false;
-						}
-					}
-					else if (clientspaceRoot.transform.hasChanged)
-					{
-						Vector3 diff = clientspaceRoot.transform.position-last_received_origin;
-						if (diff.magnitude > 5.0F)
-						{
-							originValidCounter++;
-						}
-						// Otherwise just a "suggestion" update. ValidCounter is not altered. The client will use the vertical only.
-						if (Client_SetOrigin(clientID, originValidCounter, origin_uid))
-						{
-							last_sent_origin = clientspaceRoot.transform.position;
-							clientspaceRoot.transform.hasChanged = false;
-						}
-					}
-				}
-
-				if (collisionRoot != null && collisionRoot.transform.hasChanged)
-				{
-					collisionRoot.transform.hasChanged = false;
-				}
-			}
-			else if (teleportSettings.serverSettings.controlModel == teleport.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
+			if (teleportSettings.serverSettings.controlModel == teleport.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
 			{
 				if (head != null && clientspaceRoot != null)
 				{
 					if (!Client_HasOrigin(clientID) || resetOrigin || clientspaceRoot.transform.hasChanged)
 					{
-						originValidCounter++;
-						if (Client_SetOrigin(clientID, originValidCounter, origin_uid))
+						if (Client_SetOrigin(clientID,  origin_uid))
 						{
 							last_sent_origin = clientspaceRoot.transform.position;
 							clientspaceRoot.transform.hasChanged = false;
@@ -977,7 +940,8 @@ namespace teleport
 		public List<GameObject> GetPlayerBodyParts()
 		{
 			List<GameObject> bodyParts = new List<GameObject>();
-
+			if(clientspaceRoot)
+				bodyParts.Add(clientspaceRoot.gameObject);
 			var c=GetComponentsInChildren<Teleport_Controller>();
 			foreach (var o in c)
 			{

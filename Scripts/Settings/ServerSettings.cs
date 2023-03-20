@@ -30,11 +30,6 @@ namespace teleport
 		public Int32 detectionSphereBufferDistance = 5;
 		public Int64 throttleKpS = 0;
 
-		[Header("Background")]
-		public BackgroundMode backgroundMode = BackgroundMode.COLOUR;
-		[MarshalAs(UnmanagedType.ByValArray, ArraySubType =UnmanagedType.R4)]
-		public Color BackgroundColour;
-
 		[Header("Geometry")]
 		[MarshalAs(UnmanagedType.U1)] public bool isStreamingGeometry = true;
 		public UInt32 geometryTicksPerSecond = 2;

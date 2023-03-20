@@ -26,6 +26,11 @@ namespace teleport
 		string output="";
 		public void MessageHandler(avs.LogSeverity Severity, string Msg, in System.IntPtr userData)
 		{
+			if (output.Length > 6000)
+			{
+				int pos = output.IndexOf("\n<color");
+				output = output.Substring(pos + 1, output.Length - pos - 1);
+			}
 			switch (Severity)
 			{
 				case avs.LogSeverity.Warning:
@@ -59,6 +64,10 @@ namespace teleport
 				richText.richText = true;
 			}
 			scrollwindowStyle = GUI.skin.box;
+			if (GUILayout.Button("Clear"))
+            {
+				output="";
+            }
 			scroll = EditorGUILayout.BeginScrollView(scroll, false, true, GUIStyle.none, GUI.skin.verticalScrollbar, scrollwindowStyle);
 			EditorGUILayout.TextArea(output, richText, GUILayout.ExpandHeight(true));// GUILayout.Height(position.height - 30));
 			EditorGUILayout.EndScrollView();

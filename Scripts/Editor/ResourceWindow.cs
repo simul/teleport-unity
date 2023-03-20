@@ -24,7 +24,6 @@ namespace teleport
 		//List of data that was extracted in the last extraction operation.
 		private List<GameObject> lastExtractedGameObjects = new List<GameObject>(); //List of streamable GameObjects that were found during the last operation.
 		private RenderTexture[] renderTextures = new RenderTexture[0];
-		private bool compressGeometry = true;
 		private bool verifyGeometry = false;
 		private bool forceExtraction=false;
 
@@ -36,7 +35,7 @@ namespace teleport
 		private GUIStyle vScrollbarStyle;
 		private GUIStyle scrollwindowStyle;
 		private GUIStyle labelText ;
-		private GUIStyle titleStyle ; 
+		private GUIStyle titleStyle;
 
 		//GUI variables that control user-changeable properties.
 		private Vector2 scrollPosition_gameObjects;
@@ -90,9 +89,10 @@ namespace teleport
 				hScrollbarStyle = new GUIStyle(GUI.skin.horizontalScrollbar);
 				vScrollbarStyle = new GUIStyle(GUI.skin.verticalScrollbar);
 				labelText = new GUIStyle(GUI.skin.label);
-				titleStyle = new GUIStyle(GUI.skin.label);
 				scrollwindowStyle = new GUIStyle(GUI.skin.box);
-				titleStyle.fontSize = (GUI.skin.label.fontSize * 3) / 2;
+				titleStyle = new GUIStyle(GUI.skin.label);
+				titleStyle.fontSize = (GUI.skin.label.fontSize * 5) / 4;
+				titleStyle.fontStyle=FontStyle.Bold;
 				richText.normal.textColor = Color.white;
 				richText.richText = true;
 
@@ -190,7 +190,6 @@ namespace teleport
 
 
 			EditorGUILayout.BeginVertical();
-				compressGeometry = GUILayout.Toggle(compressGeometry, "Compress Geometry");
 				verifyGeometry = GUILayout.Toggle(verifyGeometry, "Verify Compressed Geometry");
 				forceExtraction = GUILayout.Toggle(forceExtraction, "Force Extraction");
 			EditorGUILayout.EndVertical();
@@ -496,8 +495,6 @@ namespace teleport
 
 		private bool ExtractGeometry(List<GameObject> extractionList, GeometrySource.ForceExtractionMask forceMask)
 		{
-			if (!compressGeometry)
-				forceMask = forceMask | GeometrySource.ForceExtractionMask.FORCE_UNCOMPRESSED;
 			for (int i = 0; i < extractionList.Count; i++)
 			{
 				GameObject gameObject = extractionList[i];

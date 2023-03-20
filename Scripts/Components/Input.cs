@@ -45,9 +45,12 @@ namespace teleport
 			return floatStateIDs.ToArray();
 		}
 		List<InputID> booleanStateIDs = new List<InputID>();
+		public InputID[] GetBooleanStateIDs()
+		{
+			return booleanStateIDs.ToArray();
+		}
 		public delegate void InputEventDelegate(Input input,InputID inputId);
 		public delegate void FloatEventDelegate(Input input, InputID inputId,float value);
-		//public InputEventDelegate triggerReleaseDelegates;
 		public Dictionary<InputID, InputEventDelegate> pressDelegates = new Dictionary<InputID, InputEventDelegate>();
 		public Dictionary<InputID, InputEventDelegate> releaseDelegates = new Dictionary<InputID, InputEventDelegate>();
 		public Dictionary<InputID, FloatEventDelegate> floatEventDelegates = new Dictionary<InputID, FloatEventDelegate>();

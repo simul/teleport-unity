@@ -78,6 +78,9 @@ namespace teleport
 			sceneResourcePaths.Clear();
 			sceneResourcePaths_keys = sceneResourcePaths.Keys.ToArray();
 			sceneResourcePaths_values = sceneResourcePaths.Values.ToArray();
+#if UNITY_EDITOR
+			UnityEditor.EditorUtility.SetDirty(this);
+#endif
 		}
 		public void CheckForDuplicates()
 		{
@@ -98,7 +101,7 @@ namespace teleport
 		static public string StandardizePath(string file_name,string path_root)
 		{
 			string p = file_name;
-			p=p.Replace(' ','%');
+			p=p.Replace(" ","___");
 			p=p.Replace('\\','/');
 			if(path_root.Length>0)
 				p=p.Replace(path_root, "" );

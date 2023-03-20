@@ -112,15 +112,29 @@ namespace teleport
 		private static extern void ResendNode(uid id);
 		#endregion
 
-		// This will point to a saved asset texture.
+
+		[Header("Background")]
+		public BackgroundMode backgroundMode = BackgroundMode.COLOUR;
+		[MarshalAs(UnmanagedType.ByValArray, ArraySubType = UnmanagedType.R4)]
+		public Color BackgroundColour;
+
+		public void onSpecularRenderTextureChange()
+        {
+			
+        }
+		[Tooltip("Choose a cubemap rendertarget. This will be generated from the 'Environment Cubemap' and used for lighting dynamic objects.")]
+		//! This will point to a saved asset texture.
 		public RenderTexture specularRenderTexture;
-		// This will point to a saved asset texture.
+		[Tooltip("Choose a cubemap rendertarget. This will be generated from the 'Environment Cubemap' and used for lighting dynamic objects.")]
+		//! This will point to a saved asset texture.
 		public RenderTexture diffuseRenderTexture;
 #if UNITY_EDITOR
-		//! For generating static cubemaps in Editor.
-		public RenderTexture dummyRenderTexture;
+		//! For generating static cubemaps in the Editor.
+		RenderTexture dummyRenderTexture;
+		[HideInInspector]
 		public Camera dummyCam = null;
 		public int envMapSize=64;
+		[HideInInspector]
 		public bool generateEnvMaps=false;
 #endif
 		//! Create a new session, e.g. when a client connects.
@@ -128,6 +142,7 @@ namespace teleport
 
 		public CreateSession createSessionCallback = DefaultCreateSession;
 
+		[Tooltip("Choose the prefab to be used when a player connects, to represent that player's position and shape.")]
 		public GameObject defaultPlayerPrefab;
 
 		private GUIStyle overlayFont = new GUIStyle();
@@ -135,6 +150,7 @@ namespace teleport
 
 		private string title = "Teleport";
 
+		[HideInInspector]
 		public Teleport_AudioCaptureComponent audioCapture = null;
 
 		public Cubemap environmentCubemap=null;
@@ -243,7 +259,9 @@ namespace teleport
 		
 			if (managedSize != unmanagedSize)
 			{
-				Debug.LogError($"teleport.Monitor failed to initialise! {nameof(teleport.ServerSettings)} struct size mismatch between unmanaged code({unmanagedSize}) and managed code({managedSize})!");
+				Debug.LogError($"teleport.Monitor failed to initialise! {nameof(teleport.ServerSettings)} struct size mismatch between unmanaged code({unmanagedSize}) and managed code({managedSize})!\n"
+					+$"This usually means that your TeleportServer.dll (or .so) is out of sync with the Unity plugin C# code.\n" +
+					$"One or both of these needs to be updated.");
 				return;
 			}
 			if (instance == null)
@@ -563,8 +581,19 @@ namespace teleport
 				{
 					return null;
 				}
-
-				GameObject player = Instantiate(Instance.defaultPlayerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
+				Vector3 SpawnPosition = new Vector3(0, 0, 0);
+				Quaternion SpawnRotation=Quaternion.identity;
+				var spawner=Instance.gameObject.GetComponent<teleport.Spawner>();
+				if(spawner)
+                {
+					// If the spawner fails, we can't initialize a session.
+					if(!spawner.Spawn(out SpawnPosition, out SpawnRotation))
+					{
+						Debug.LogError($"spawner.Spawn failed.");
+						return null;
+					}
+                }
+				GameObject player = Instantiate(Instance.defaultPlayerPrefab, SpawnPosition, SpawnRotation);
 				player.name = "TeleportVR_" +Instance.defaultPlayerPrefab.name+"_"+ Teleport_SessionComponent.sessions.Count + 1;
 
 				session = player.GetComponentsInChildren<Teleport_SessionComponent>()[0];

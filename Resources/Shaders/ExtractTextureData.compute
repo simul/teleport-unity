@@ -85,6 +85,7 @@ float4 FromCubemap(int2 pos)
 	//colour.rgb+=dir_g;//faceColour[ArrayIndex];
 	//colour.r+=float(pos.x)/float(InputW);
 	//colour.g+=float(pos.y)/float(InputH);
+	//colour.rgb = dir_g;
 	return colour;
 } 
  
@@ -94,7 +95,8 @@ void ExtractCubeFaceLinear(uint3 id : SV_DispatchThreadID)
 {
 	int2 pos=int2(id.xy);
 	float4 colour	= FromCubemap(pos);
-	Result[id.xy].rgba = saturate(colour);
+	float4 res = saturate(colour);
+	Result[id.xy] = res;
 }
 
 //Extract cubemap textures from gamma space.

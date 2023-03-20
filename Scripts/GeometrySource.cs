@@ -145,7 +145,8 @@ namespace avs
 	{
 		UNCOMPRESSED = 0,
 		BASIS_COMPRESSED,
-		PNG
+		PNG,
+		KTX
 	}
 	public enum RoughnessMode : byte
 	{
@@ -387,7 +388,7 @@ namespace teleport
 			FORCE_NODES = 1,
 			FORCE_HIERARCHIES = 2,
 			FORCE_SUBRESOURCES = 4,
-			FORCE_UNCOMPRESSED = 8,
+			
 			FORCE_TEXTURES = 16,
 
 			FORCE_EVERYTHING = -1,
@@ -521,14 +522,14 @@ namespace teleport
 			if (geometrySource == null)
 			{
 				TeleportSettings.EnsureAssetPath(RESOURCES_PATH + TELEPORT_VR_PATH);
-				string assetPath = RESOURCES_PATH + TELEPORT_VR_PATH + nameof(GeometrySource) + ".asset";
+				string unityAssetPath = RESOURCES_PATH + TELEPORT_VR_PATH + nameof(GeometrySource) + ".asset";
 
 				geometrySource = CreateInstance<GeometrySource>();
-				AssetDatabase.CreateAsset(geometrySource, assetPath);
+				AssetDatabase.CreateAsset(geometrySource, unityAssetPath);
 				AssetDatabase.SaveAssets();
 
 				ClearGeometryStore();
-				Debug.LogWarning($"Geometry Source asset created with path \"{assetPath}\"!");
+				Debug.LogWarning($"Geometry Source asset created with path \"{unityAssetPath}\"!");
 			}	
 #endif
 
@@ -598,7 +599,7 @@ namespace teleport
 			//Initialise static instance in GeometrySource when it is enabled after a hot-reload.
 			GetGeometrySource();
 			var teleportSettings= TeleportSettings.GetOrCreateSettings();
-			compressedTexturesFolderPath = teleportSettings.cachePath + "/basis_textures/";
+			compressedTexturesFolderPath = teleportSettings.cachePath;// + "/basis_textures/";
 
 			//Remove nodes that have been lost due to level change.
 			var pairsToDelete = sessionResourceUids.Where(pair => pair.Key == null).ToArray();
@@ -993,9 +994,8 @@ namespace teleport
 			// Actually, let's ONLY extract offline. 
 			if (!running)
 			{
-				bool enable_compression = (forceMask & ForceExtractionMask.FORCE_UNCOMPRESSED) != ForceExtractionMask.FORCE_UNCOMPRESSED;
-				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID, enable_compression && !running,verify);
-				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID, enable_compression && !running, verify);
+				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID,  !running,verify);
+				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID,  !running, verify);
 				return meshID;
 			}
 			else
@@ -1148,7 +1148,7 @@ namespace teleport
 		public string GenerateCompressedFilePath(string textureAssetPath,avs.TextureCompression textureCompression)
 		{
 			string compressedFilePath = textureAssetPath; //Use editor file location as unique name; this won't work out of the Unity Editor.
-			compressedFilePath = compressedFilePath.Replace("/", "#"); //Replace forward slashes with hashes.
+			//compressedFilePath = compressedFilePath.Replace("/", "#"); //Replace forward slashes with hashes.
 			int idx = compressedFilePath.LastIndexOf('.');
 			if (idx >= 0)
 				compressedFilePath = compressedFilePath.Remove(idx); //Remove file extension.
@@ -1158,11 +1158,13 @@ namespace teleport
 			{
 				Directory.CreateDirectory(folderPath);
 			}
-			compressedFilePath = folderPath + compressedFilePath;
+			compressedFilePath = folderPath +"/" +compressedFilePath;
 			if(textureCompression ==avs.TextureCompression.BASIS_COMPRESSED)
 				compressedFilePath+=".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
 			else if (textureCompression == avs.TextureCompression.PNG)
 				compressedFilePath += ".png";
+			else if (textureCompression == avs.TextureCompression.KTX)
+				compressedFilePath += ".ktx";
 			else return "";
 			return compressedFilePath;
 		}
@@ -1267,7 +1269,7 @@ namespace teleport
 						switch (textureFormat)
 						{
 							case TextureFormat.RGBAFloat:
-								rtFormat = RenderTextureFormat.ARGB32;
+								rtFormat = RenderTextureFormat.ARGBFloat;
 								highQualityUASTC = false;
 								break;
 							case TextureFormat.DXT5:
@@ -1279,9 +1281,11 @@ namespace teleport
 								writePng = true;
 								break;
 							case TextureFormat.RGBAHalf:
+								// Basis can't compress half format, so convert to 32-bit float.
 								rtFormat = RenderTextureFormat.ARGB32;
 								//rtFormat = RenderTextureFormat.ARGBHalf;
 								highQualityUASTC = true;
+								// No point in Png, can't support floats.
 								writePng = true;
 								break;
 							case TextureFormat.RGBA32:
@@ -1297,6 +1301,7 @@ namespace teleport
 						{
 							rt.Release();
 						}
+						rt.format= rtFormat;
 						rt.width = w;
 						rt.height = h;
 						rt.depth = 0;
@@ -1329,8 +1334,8 @@ namespace teleport
 				}
 				if (isNormal || textureImporter != null && textureImporter.GetDefaultPlatformTextureSettings().textureCompression == TextureImporterCompression.CompressedHQ)
 					highQualityUASTC = true;
-				if (highQualityUASTC)
-					writePng = true;
+				//if (highQualityUASTC)
+				//	writePng = true;
 				bool flipY=true;
 				if(writePng||isCubemap)
 				{
@@ -1448,6 +1453,7 @@ namespace teleport
 
 					textureData.width = (uint) targetWidth;
 					textureData.height = (uint) targetHeight;
+					bool pngCompatibleFormat=false;
 					if (readTexture.format == TextureFormat.RGBAFloat)
 					{
 						Color[] pixelData = readTexture.GetPixels();
@@ -1458,8 +1464,20 @@ namespace teleport
 						var srcBytes = MemoryMarshal.Cast<Color, byte>(pixelData);
 						subresourceImage.bytes=srcBytes.ToArray();
 					}
+					else if (readTexture.format == TextureFormat.RGBAHalf)
+					{
+						byte[] pixelData = readTexture.GetRawTextureData();
+
+						textureData.format = avs.TextureFormat.RGBA16F;
+						textureData.bytesPerPixel = 8;
+
+						int imageSize = pixelData.Length * (int)textureData.bytesPerPixel;
+						subresourceImage.bytes = new byte[imageSize];
+						subresourceImage.bytes = pixelData;
+					}
 					else
 					{
+						 pngCompatibleFormat = true;
 						Color32[] pixelData = readTexture.GetPixels32();
 
 						textureData.format = avs.TextureFormat.RGBA8;
@@ -1470,14 +1488,16 @@ namespace teleport
 						var srcBytes = MemoryMarshal.Cast<Color32, byte>(pixelData);
 						subresourceImage.bytes = srcBytes.ToArray();
 					}
-					string textureAssetPath = AssetDatabase.GetAssetPath(sourceTexture);
+					string textureAssetPath = AssetDatabase.GetAssetPath(sourceTexture).Replace("Assets/","");
 					string basisFile = geometrySource.GenerateCompressedFilePath(textureAssetPath, avs.TextureCompression.BASIS_COMPRESSED);
 					string dirPath = System.IO.Path.GetDirectoryName(basisFile);
 					if (!Directory.Exists(dirPath))
 					{
 						Directory.CreateDirectory(dirPath);
 					}
+					textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
 					// Test: write to png. Only for observation/debugging.
+					if (pngCompatibleFormat)
 					if (writePng || highQualityUASTC)
 					{
 						// If it's png, let's have a uint16 here, N with the number of images, then a list of N size_t offsets. Each is a subresource image. Then image 0 starts.
@@ -1516,7 +1536,6 @@ namespace teleport
 						if (!writePng)
 						{
 							LaunchBasisUExe(pngFile);
-							textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
 							// Intended for Basis compression. But passed uncompressed.
 							textureData.compressed=false;
 						}
@@ -1696,6 +1715,11 @@ namespace teleport
 			//Basis Universal compression won't be used if the file location is left empty.
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 			compressedFilePath = GenerateCompressedFilePath(textureAssetPath, textureData.compression);
+			if(compressedFilePath.Length==0)
+            {
+				Debug.LogError("Unable to compress texture "+texture.name);
+				return;
+            }
 			bool genMips=false;
 			StoreTexture(textureID, guid, resourcePath, lastModified, textureData, compressedFilePath,  genMips, highQualityUASTC, forceOverwrite);
 #endif
@@ -2891,26 +2915,45 @@ namespace teleport
 				string guid = Marshal.PtrToStringAnsi(metaResource.guid);
 
 #if UNITY_EDITOR
-				//Asset we found in the database.
-				UnityAsset asset = null;
-				if (guid.Length < 32)
-                {
-					Debug.LogError(name+": guid too short: " + guid);
-					continue;
-                }
-				//Attempt to find asset.
-				string assetPath = AssetDatabase.GUIDToAssetPath(guid.Substring(0,32)).Replace("Assets/","");
 				string expectedAssetPath=path;
 				int hash= expectedAssetPath.IndexOf("##");
 				if ( hash>= 0)
                 {
 					expectedAssetPath = expectedAssetPath.Substring(0,hash);
-                }
-				if (assetPath!= expectedAssetPath)
+				}
+				expectedAssetPath = expectedAssetPath.Replace("___", " ");
+				string unityAssetPath = expectedAssetPath;
+				//Asset we found in the database.
+				UnityAsset asset = null;
+				if (guid.Length >= 32)
+				{
+					//Attempt to find asset the from the guid.
+					unityAssetPath = AssetDatabase.GUIDToAssetPath(guid.Substring(0, 32)).Replace("Assets/", "");
+				}
+				if (unityAssetPath!= expectedAssetPath)
                 {
-					Debug.LogWarning("Path mismatch for ("+typeof(UnityAsset).ToString()+")" + name+": "+ expectedAssetPath + " !="+assetPath);
+					Debug.LogWarning("Path mismatch for ("+typeof(UnityAsset).ToString()+")" + name+": "+ expectedAssetPath + " !="+unityAssetPath);
                 }
-				UnityEngine.Object[] assetsAtPath = AssetDatabase.LoadAllAssetsAtPath("Assets/"+assetPath);
+				UnityEngine.Object[] assetsAtPath = AssetDatabase.LoadAllAssetsAtPath("Assets/"+unityAssetPath);
+				if (assetsAtPath.Length == 0)
+				{
+					// Library assets are not under "Assets/"
+					assetsAtPath = AssetDatabase.LoadAllAssetsAtPath(unityAssetPath);
+				}
+				if (assetsAtPath.Length == 0)
+                {
+					unityAssetPath= expectedAssetPath;
+					do
+                    {
+						assetsAtPath = AssetDatabase.LoadAllAssetsAtPath("Assets/" + unityAssetPath);
+						if (assetsAtPath.Length != 0)
+							break;
+						int slash= unityAssetPath.LastIndexOf('/');
+						if(slash<0)
+							break;
+						unityAssetPath= unityAssetPath.Substring(0,slash);
+					} while(unityAssetPath.Length>0);
+				}
 				foreach(UnityEngine.Object unityObject in assetsAtPath)
 				{ 
 					if(unityObject)
@@ -2920,10 +2963,23 @@ namespace teleport
 						break;
 					}
 				}
+				// Give up on matching the name, is the type correct?
+				if (asset == null)
+                {
+					foreach (UnityEngine.Object unityObject in assetsAtPath)
+					{
+						if (unityObject)
+							if ((unityObject.GetType() == typeof(UnityAsset) || unityObject.GetType().IsSubclassOf(typeof(UnityAsset))))
+							{
+								asset = (UnityAsset)unityObject;
+								break;
+							}
+					}
+				}
 
-				if(asset)
+				if (asset)
 				{
-					long lastModified = GetAssetWriteTimeUTC(assetPath);
+					long lastModified = GetAssetWriteTimeUTC(unityAssetPath);
 
 					//Use the asset as is, if it has not been modified since it was saved.
 					if(metaResource.lastModified >= lastModified)
