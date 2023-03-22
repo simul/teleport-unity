@@ -210,8 +210,10 @@ namespace teleport
 			var g = GeometrySource.GetGeometrySource();
 			if (g == null)
 				return;
-			if(!UnityEditor.EditorApplication.isPlaying)
+#if UNITY_EDITOR
+			if (!UnityEditor.EditorApplication.isPlaying)
 				return;
+#endif
 			// Make sure we have a Teleport Render Pipeline, or we won't get a video stream.
 			if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == null || UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline.GetType() != typeof(TeleportRenderPipelineAsset))
 			{

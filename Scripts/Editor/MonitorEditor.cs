@@ -23,8 +23,8 @@ namespace teleport
 					monitor.BackgroundColour = EditorGUILayout.ColorField("Colour", monitor.BackgroundColour);
 			}
 			EditorGUILayout.EndFoldoutHeaderGroup();
-			//	GUILayout.Space(10);
-			dynamic_lighting =EditorGUILayout.BeginFoldoutHeaderGroup(dynamic_lighting,"Lighting dynamic objects");
+			//	GUILayout.Space(10);= tag.coreData
+			dynamic_lighting = EditorGUILayout.BeginFoldoutHeaderGroup(dynamic_lighting,"Lighting dynamic objects");
 			if (dynamic_lighting)
             {
 				monitor.environmentCubemap = (Cubemap)EditorGUILayout.ObjectField(new GUIContent("Source Environment Cubemap", "The environment texture to use when generating specular and diffuse cubemaps below."), monitor.environmentCubemap, typeof(Cubemap), false);

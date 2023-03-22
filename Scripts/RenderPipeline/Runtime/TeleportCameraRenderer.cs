@@ -300,6 +300,7 @@ namespace teleport
 		{
 			EditorMask editorMask = EditorMask.GetInstance();
 		}
+#if UNITY_EDITOR
 		public void GenerateEnvMaps(ScriptableRenderContext context)
 		{
 			for (int face = 0; face < 6; face++)
@@ -318,6 +319,7 @@ namespace teleport
 				VideoEncoding.GenerateDiffuseCubemap(context, Monitor.Instance.environmentCubemap, bakedLights, Monitor.Instance.diffuseRenderTexture, face, 1.0F, avs.AxesStandard.EngineeringStyle);
 			}
 		}
+#endif
 		public void Render(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask)
 		{
 			CullingResults cullingResultsAll;

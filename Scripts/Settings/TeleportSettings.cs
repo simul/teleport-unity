@@ -169,11 +169,10 @@ namespace teleport
 		{
 			if(teleportSettings == null)
 			{
-				string assetPath="Assets/Resources/" + k_TeleportSettingsPath + "/" + k_TeleportSettingsFilename + ".asset";
 				teleportSettings = Resources.Load<TeleportSettings>(k_TeleportSettingsPath + "/" + k_TeleportSettingsFilename);
-
 #if UNITY_EDITOR
-				if(teleportSettings == null)
+				string assetPath = "Assets/Resources/" + k_TeleportSettingsPath + "/" + k_TeleportSettingsFilename + ".asset";
+				if (teleportSettings == null)
 				{
 					teleportSettings=AssetDatabase.LoadAssetAtPath<TeleportSettings>(assetPath);
 				}
@@ -186,17 +185,20 @@ namespace teleport
 					AssetDatabase.CreateAsset(teleportSettings, assetPath);
 					AssetDatabase.SaveAssets();
 				}
+				teleportSettings.colorSpace = PlayerSettings.colorSpace;
+#endif
 			}
-			teleportSettings.colorSpace = PlayerSettings.colorSpace;
-			if(teleportSettings.cachePath=="" || !System.IO.File.Exists(teleportSettings.cachePath))
-			{ 
+#if UNITY_EDITOR
+			// Editor can set the cache path anywhere. But for deployed builds, it's always in (Project)/teleport_cache.
+			if (teleportSettings.cachePath=="" || !System.IO.File.Exists(teleportSettings.cachePath))
+#endif
+			{
 				teleportSettings.cachePath = System.IO.Directory.GetParent(Application.dataPath).ToString().Replace("\\","/") + "/teleport_cache";
 			}
 			if (!System.IO.File.Exists(teleportSettings.cachePath))
 			{
 				System.IO.Directory.CreateDirectory(teleportSettings.cachePath);
 			}
-#endif
 			return teleportSettings;
 		}
 	}
