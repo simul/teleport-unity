@@ -181,6 +181,8 @@ namespace teleport
 			cubeTagDataWrapper.data.timestamp = teleport.Monitor.GetUnixTimestampNow();
 			cubeTagDataWrapper.data.id = tagDataID;
 			cubeTagDataWrapper.data.cameraTransform = new avs.Transform();
+			cubeTagDataWrapper.data.cameraTransform.position = camera.transform.position;
+			cubeTagDataWrapper.data.cameraTransform.rotation = camera.transform.rotation;
 			// TODO: Associate each tag with a specific revision of the origin? Or just use global pos/rot??
 			cubeTagDataWrapper.data.cameraTransform.position = camera.transform.localPosition;
 			cubeTagDataWrapper.data.cameraTransform.rotation = camera.transform.localRotation;
