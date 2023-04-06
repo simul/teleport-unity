@@ -65,6 +65,7 @@ namespace teleport
 			EditorGUILayout.LabelField("Status", titleStyle);
 			EditorGUILayout.LabelField("Uid", clientID.ToString());
 			EditorGUILayout.LabelField("IP Address", session.GetClientIP());
+			EditorGUILayout.LabelField("State", Teleport_SessionComponent.Client_GetConnectionState(clientID).ToString());
 			var networkStats=session.GetNetworkStats();
 			EditorGUILayout.LabelField("available bandwidth",string.Format("{0:F3} mb/s", networkStats.bandwidth));
 			EditorGUILayout.LabelField("avg bandwidth used" ,string.Format("{0:F3} mb/s", networkStats.avgBandwidthUsed));

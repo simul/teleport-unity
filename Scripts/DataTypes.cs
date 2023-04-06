@@ -487,6 +487,17 @@ namespace avs
 		}
 	}
 
+	public enum ConnectionState : byte
+	{
+		UNINITIALIZED = 0,
+		NEW_UNCONNECTED,
+		CONNECTING,
+		CONNECTED,
+		DISCONNECTED,
+		FAILED,
+		CLOSED,
+		ERROR_STATE
+	};
 	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
 	public struct Handshake
 	{

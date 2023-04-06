@@ -67,6 +67,8 @@ namespace teleport
 		}
 		static public void ClearAll()
 		{
+			// At least get the one in the current scene.
+			GetSceneResourcePathManager(SceneManager.GetActiveScene());
 			foreach (var s in sceneResourcePathManagers)
 			{
 				s.Value.Clear();

@@ -181,11 +181,20 @@ namespace teleport
 			cubeTagDataWrapper.data.timestamp = teleport.Monitor.GetUnixTimestampNow();
 			cubeTagDataWrapper.data.id = tagDataID;
 			cubeTagDataWrapper.data.cameraTransform = new avs.Transform();
-			cubeTagDataWrapper.data.cameraTransform.position = camera.transform.position;
-			cubeTagDataWrapper.data.cameraTransform.rotation = camera.transform.rotation;
 			// TODO: Associate each tag with a specific revision of the origin? Or just use global pos/rot??
-			cubeTagDataWrapper.data.cameraTransform.position = camera.transform.localPosition;
-			cubeTagDataWrapper.data.cameraTransform.rotation = camera.transform.localRotation;
+			// for now, we will encode them relative to the current session's clientspace (stage space) origin.
+			var session = Teleport_SessionComponent.sessions[clientID];
+			if (session&&session.clientspaceRoot)
+            {
+				cubeTagDataWrapper.data.cameraTransform.position = session.clientspaceRoot.transform.InverseTransformPoint(camera.transform.position);
+                cubeTagDataWrapper.data.cameraTransform.rotation = Quaternion.Inverse(session.clientspaceRoot.transform.rotation) * camera.transform.rotation;
+			}
+            else
+            {
+				cubeTagDataWrapper.data.cameraTransform.position = camera.transform.position;
+				cubeTagDataWrapper.data.cameraTransform.rotation = camera.transform.rotation;
+			}
+			// TODO: we have assumed here that there is no scaling anywhere in this hierarchy.
 			cubeTagDataWrapper.data.cameraTransform.scale = new avs.Vector3(1, 1, 1);
 			cubeTagDataWrapper.data.lightCount = (uint)lightDataList.Count;
 			cubeTagDataWrapper.data.diffuseAmbientScale = diffuseAmbientScale;
@@ -296,11 +305,6 @@ namespace teleport
 			{
 				commandBuffer.Release();
 			}
-		}
-
-		public void Shutdown()
-		{
-
 		}
 
 	}

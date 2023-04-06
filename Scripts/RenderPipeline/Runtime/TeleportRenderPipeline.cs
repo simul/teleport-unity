@@ -181,11 +181,11 @@ namespace teleport
 				// The Monitor's dummy camera is used only to generate static env maps.
 				if (camera.gameObject.TryGetComponent<teleport.Monitor>(out teleport.Monitor m))
 				{
-					if (m.generateEnvMaps)
+					//if (m.generateEnvMaps)
                     {
 						renderer.GenerateEnvMaps(context);
-					}
 						context.Submit();
+					}
 						m.generateEnvMaps=false;
 						if(m.dummyCam)
 							m.dummyCam.enabled=false;

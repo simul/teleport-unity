@@ -206,32 +206,34 @@ namespace teleport
 
 			return Vector2.zero;
 		}
-		public void ProcessInputEvents(byte[] booleanStates, float[] analogueStates,avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
+		public void ProcessInputStates(byte[] booleanStates, float[] analogueStates)
 		{
 			for (int i = 0; i < booleanStates.Length; i++)
 			{
-				var b= booleanStates[i] != 0;
-				if(i>= booleanStateIDs.Count)
+				var b = booleanStates[i] != 0;
+				if (i >= booleanStateIDs.Count)
 					break;
-				InputID inputID=booleanStateIDs[i];
+				InputID inputID = booleanStateIDs[i];
 				if (!buttonStates.ContainsKey(inputID))
 					buttonStates.Add(inputID, b);
-				buttonStates[inputID]=b;
+				buttonStates[inputID] = b;
 			}
 			for (int i = 0; i < analogueStates.Length; i++)
 			{
 				InputID inputID = floatStateIDs[i];
-				float f= analogueStates[i];
+				float f = analogueStates[i];
 				if (f < -1.0F || f > 1.0F)
 				{
-					Debug.LogError("Analogue state too large "+f.ToString());
+					Debug.LogError("Analogue state too large " + f.ToString());
 					continue;
 				}
 				if (!floatStates.ContainsKey(inputID))
 					floatStates.Add(inputID, f);
 				floatStates[inputID] = f;
 			}
-
+		}
+		public void ProcessInputEvents(avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
+		{
 			foreach (avs.InputEventBinary binaryEvent in binaryEvents)
 			{
 				//Debug.Log("binaryEvent " + binaryEvent.ToString());

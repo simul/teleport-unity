@@ -36,6 +36,8 @@ namespace teleport
 		public static extern void Client_StopStreaming(uid clientID);
 
 		[DllImport(TeleportServerDll.name)]
+		public static extern avs.ConnectionState Client_GetConnectionState(uid clientID);
+		[DllImport(TeleportServerDll.name)]
 		public static extern uint Client_GetClientIP(uid clientID, uint bufferLength, StringBuilder buffer);
 		[DllImport(TeleportServerDll.name)]
 		public static extern UInt16 Client_GetClientPort(uid clientID);
@@ -167,8 +169,7 @@ namespace teleport
 			sessionComponent.SetControllerPose(id, latestRotation, latestPosition, velocity, angularVelocity);
 		}
 
-		public static void StaticProcessInput(uid clientID, in avs.InputState inputState
-			, in IntPtr binaryStatesPtr, in IntPtr analogueStatesPtr, in IntPtr binaryEventsPtr, in IntPtr analogueEventsPtr, in IntPtr motionEventsPtr)
+		public static void StaticProcessInputState(uid clientID, in avs.InputState inputState, in IntPtr binaryStatesPtr, in IntPtr analogueStatesPtr)
 		{
 			Teleport_SessionComponent sessionComponent = GetSessionComponent(clientID);
 			if (!sessionComponent)
@@ -198,14 +199,26 @@ namespace teleport
 					positionPtr += binaryStateSize;
 				}
 			}
-			avs.InputEventBinary[] binaryEvents = new avs.InputEventBinary[inputState.numBinaryEvents];
-			if (inputState.numBinaryEvents != 0)
+			sessionComponent.ProcessInputState(boolStates, floatStates);
+		}
+
+		public static void StaticProcessInputEvents(uid clientID, UInt16 numBinaryEvents,UInt16 numAnalogueEvents, UInt16 numMotionEvents
+			,  in IntPtr binaryEventsPtr, in IntPtr analogueEventsPtr, in IntPtr motionEventsPtr)
+		{
+			Teleport_SessionComponent sessionComponent = GetSessionComponent(clientID);
+			if (!sessionComponent)
+			{
+				return;
+			}
+
+			avs.InputEventBinary[] binaryEvents = new avs.InputEventBinary[numBinaryEvents];
+			if (numBinaryEvents != 0)
 			{
 				int binaryEventSize = Marshal.SizeOf<avs.InputEventBinary>();
 
 				//Convert the pointer array into a struct array.
 				IntPtr positionPtr = binaryEventsPtr;
-				for (int i = 0; i < inputState.numBinaryEvents; i++)
+				for (int i = 0; i < numBinaryEvents; i++)
 				{
 					binaryEvents[i] = Marshal.PtrToStructure<avs.InputEventBinary>(positionPtr);
 					positionPtr += binaryEventSize;
@@ -213,14 +226,14 @@ namespace teleport
 				}
 			}
 
-			avs.InputEventAnalogue[] analogueEvents = new avs.InputEventAnalogue[inputState.numAnalogueEvents];
-			if (inputState.numAnalogueEvents != 0)
+			avs.InputEventAnalogue[] analogueEvents = new avs.InputEventAnalogue[numAnalogueEvents];
+			if (numAnalogueEvents != 0)
 			{
 				int analogueEventSize = Marshal.SizeOf<avs.InputEventAnalogue>();
 
 				//Convert the pointer array into a struct array.
 				IntPtr positionPtr = analogueEventsPtr;
-				for (int i = 0; i < inputState.numAnalogueEvents; i++)
+				for (int i = 0; i < numAnalogueEvents; i++)
 				{
 					analogueEvents[i] = Marshal.PtrToStructure<avs.InputEventAnalogue>(positionPtr);
 					positionPtr += analogueEventSize;
@@ -228,23 +241,22 @@ namespace teleport
 				}
 			}
 
-			avs.InputEventMotion[] motionEvents = new avs.InputEventMotion[inputState.numMotionEvents];
-			if (inputState.numMotionEvents != 0)
+			avs.InputEventMotion[] motionEvents = new avs.InputEventMotion[numMotionEvents];
+			if (numMotionEvents != 0)
 			{
 				int motionEventSize = Marshal.SizeOf<avs.InputEventMotion>();
 
 				//Convert the pointer array into a struct array.
 				IntPtr positionPtr = motionEventsPtr;
-				for (int i = 0; i < inputState.numMotionEvents; i++)
+				for (int i = 0; i < numMotionEvents; i++)
 				{
 					motionEvents[i] = Marshal.PtrToStructure<avs.InputEventMotion>(positionPtr);
 					positionPtr += motionEventSize;
 				}
 			}
 
-			sessionComponent.ProcessInput(boolStates, floatStates, binaryEvents, analogueEvents, motionEvents);
+			sessionComponent.ProcessInputEvents( binaryEvents, analogueEvents, motionEvents);
 		}
-
 		public static void StaticProcessAudioInput(uid clientID, in IntPtr dataPtr, UInt64 dataSize)
 		{
 			Teleport_SessionComponent sessionComponent = GetSessionComponent(clientID);
@@ -340,10 +352,23 @@ namespace teleport
 
 		private void Awake()
 		{
+			// Stream the clientspace root, but player does NOT own this:
+
+			if (clientspaceRoot)
+			{
+				Teleport_Streamable streamableComponent = clientspaceRoot.gameObject.GetComponent<Teleport_Streamable>();
+				if (!streamableComponent)
+				{
+					streamableComponent = clientspaceRoot.gameObject.AddComponent<Teleport_Streamable>();
+				}
+				streamableComponent.sendMovementUpdates = true;
+			}
 			//Add Teleport_Streamable component to all player body parts.
 			List<GameObject> playerBodyParts = GetPlayerBodyParts();
 			foreach (GameObject bodyPart in playerBodyParts)
 			{
+				if(clientspaceRoot!=null&&bodyPart == clientspaceRoot.gameObject)
+					continue;
 				Teleport_Streamable streamableComponent = bodyPart.GetComponent<Teleport_Streamable>();
 				if (!streamableComponent)
 				{
@@ -505,9 +530,14 @@ namespace teleport
 			last_received_headPos = newPosition;
 		}
 
-		public void ProcessInput(byte[] booleanStates,float[] floatStates, avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
+		public void ProcessInputState(byte[] booleanStates, float[] floatStates)
 		{
-			_input.ProcessInputEvents(booleanStates,floatStates,binaryEvents, analogueEvents, motionEvents);
+			_input.ProcessInputStates(booleanStates, floatStates);
+		}
+
+		public void ProcessInputEvents( avs.InputEventBinary[] binaryEvents, avs.InputEventAnalogue[] analogueEvents, avs.InputEventMotion[] motionEvents)
+		{
+			_input.ProcessInputEvents(binaryEvents, analogueEvents, motionEvents);
 		}
 
 		public void SetControllerPose(uid id, Quaternion newRotation, Vector3 newPosition, Vector3 velocity, Vector3 angularVelocity)
@@ -570,72 +600,8 @@ namespace teleport
 
 			int lineHeight = 14;
 			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Client uid {0} {1}", clientID, GetClientIP()), font);
-
-			//Add a break for readability.
-			y += lineHeight;
-
-			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("available bandwidth\t{0:F3} mb/s", networkStats.bandwidth), font);
-			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("avg bandwidth used\t{0:F3} mb/s", networkStats.avgBandwidthUsed), font);
-			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("max bandwidth used\t{0:F3} mb/s", networkStats.maxBandwidthUsed), font);
-
-			y += lineHeight;
-
-			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("video frames submitted per sec\t{0:F3}", videoEncoderStats.framesSubmittedPerSec), font);
-			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("video frames encoded per sec\t{0:F3}", videoEncoderStats.framesEncodedPerSec), font);
-
-			//Add a break for readability.
-			y += lineHeight;
-
-			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("origin pos\t{0}", FormatVectorString(originPosition)), font);
-			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("sent origin\t{0}", FormatVectorString(last_sent_origin)), font);
-			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("received origin\t{0}", FormatVectorString(last_received_origin)), font);
-			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("received head\t{0}", FormatVectorString(last_received_headPos)), font);
-			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("head position\t{0}", FormatVectorString(headPosition)), font);
-
-			//Add a break for readability.
-			y += lineHeight;
-
-			foreach (Teleport_Controller controller in mappedNodes)
-			{
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Controller {0}",  FormatVectorString(controller.transform.position)));
-
-		
-			}
-
-			if (geometryStreamingService != null)
-			{
-				GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-
-				//Add a break for readability.
-				y += lineHeight;
-
-				//Display Count of lights.
-				int lightCount = geometryStreamingService.GetStreamedLightCount();
-				GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Lights {0}", lightCount));
-
-				int validLightIndex = 0;
-				foreach (var lightPair in geometryStreamingService.GetStreamedLights())
-				{
-					Light light = lightPair.Value;
-					if (light != null)
-					{
-						GUI.Label(new Rect(x, y += lineHeight, 500, 20), string.Format("\t{0} {1}: ({2}, {3}, {4})", lightPair.Key, light.name, light.transform.forward.x, light.transform.forward.y, light.transform.forward.z));
-						if (sceneCaptureComponent.VideoEncoder != null && validLightIndex < sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lightCount)
-						{
-							avs.Vector3 shadowPosition = sceneCaptureComponent.VideoEncoder.cubeTagDataWrapper.data.lights[validLightIndex].position;
-							GUI.Label(new Rect(x, y += lineHeight, 500, 20), string.Format("\t\tshadow orig ({0}, {1}, {2})", shadowPosition.x, shadowPosition.y, shadowPosition.z));
-						}
-						validLightIndex++;
-					}
-
-					//Break if we have displayed the maximum Count of lights.
-					if (validLightIndex >= maxLightsOnOverlay)
-					{
-						GUI.Label(new Rect(x, y += lineHeight, 500, 20), "\t...");
-						break;
-					}
-				}
-			}
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("{0}", Client_GetConnectionState(clientID)), font);
+			
 		}
 
 		//UNITY MESSAGES
@@ -940,8 +906,6 @@ namespace teleport
 		public List<GameObject> GetPlayerBodyParts()
 		{
 			List<GameObject> bodyParts = new List<GameObject>();
-			if(clientspaceRoot)
-				bodyParts.Add(clientspaceRoot.gameObject);
 			var c=GetComponentsInChildren<Teleport_Controller>();
 			foreach (var o in c)
 			{

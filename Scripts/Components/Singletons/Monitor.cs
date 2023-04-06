@@ -42,7 +42,10 @@ namespace teleport
 		delegate void OnSetControllerPose(uid clientID, uid index, in avs.PoseDynamic newHeadPose);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		delegate void OnNewInput(uid clientID, in avs.InputState inputState, in IntPtr binaryStatesPtr, in IntPtr analogueStateasPtr, in IntPtr binaryEventsPtr, in IntPtr analogueEventsPtr, in IntPtr motionEventsPtr);
+		delegate void OnNewInputState(uid clientID, in avs.InputState inputState, in IntPtr binaryStatesPtr, in IntPtr analogueStateasPtr);
+
+		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+		delegate void OnNewInputEvents(uid clientID, UInt16 numbinaryEvents, UInt16 numAnalogueEvents, UInt16 numMotionEvents, in IntPtr binaryEventsPtr, in IntPtr analogueEventsPtr, in IntPtr motionEventsPtr);
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		delegate void OnDisconnect(uid clientID);
@@ -76,7 +79,8 @@ namespace teleport
 			public OnClientStartedRenderingNode clientStartedRenderingNode;
 			public OnSetHeadPose headPoseSetter;
 			public OnSetControllerPose controllerPoseSetter;
-			public OnNewInput newInputProcessing;
+			public OnNewInputState newInputStateProcessing;
+			public OnNewInputEvents newInputEventsProcessing;
 			public OnDisconnect disconnect;
 			public OnMessageHandler messageHandler;
 			public ReportHandshakeFn reportHandshake;
@@ -103,7 +107,7 @@ namespace teleport
 		[DllImport(TeleportServerDll.name)]
 		private static extern void EditorTick();
 		[DllImport(TeleportServerDll.name)]
-		private static extern void Shutdown();
+		private static extern void Teleport_Shutdown();
 		[DllImport(TeleportServerDll.name)]
 		private static extern uid GetUnlinkedClientID();
 
@@ -285,7 +289,8 @@ namespace teleport
 				clientStartedRenderingNode = ClientStartedRenderingNode,
 				headPoseSetter = Teleport_SessionComponent.StaticSetHeadPose,
 				controllerPoseSetter = Teleport_SessionComponent.StaticSetControllerPose,
-				newInputProcessing = Teleport_SessionComponent.StaticProcessInput,
+				newInputStateProcessing = Teleport_SessionComponent.StaticProcessInputState,
+				newInputEventsProcessing = Teleport_SessionComponent.StaticProcessInputEvents,
 				disconnect = Teleport_SessionComponent.StaticDisconnect,
 				messageHandler = teleportSettings.serverSettings.pipeDllOutputToUnity ? LogMessageHandler : (OnMessageHandler)null,
 				SERVICE_PORT = teleportSettings.listenPort,
@@ -341,7 +346,7 @@ namespace teleport
 			}
 #endif
 			SceneManager.sceneLoaded -= OnSceneLoaded;
-			Shutdown();
+			Teleport_Shutdown();
 		}
 		
 		static public void OverrideRenderingLayerMask(GameObject gameObject, uint mask,bool recursive=false)
