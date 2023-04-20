@@ -186,9 +186,10 @@ namespace teleport
 						renderer.GenerateEnvMaps(context);
 						context.Submit();
 					}
-						m.generateEnvMaps=false;
-						if(m.dummyCam)
-							m.dummyCam.enabled=false;
+					m.generateEnvMaps=false;
+					m.envMapsGenerated = true;
+					if(m.dummyCam)
+						m.dummyCam.enabled=false;
 				}
 				else
 #endif

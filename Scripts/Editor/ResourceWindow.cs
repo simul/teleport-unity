@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -180,11 +181,15 @@ namespace teleport
 				EditorGUILayout.EndHorizontal();
 				EditorGUILayout.BeginHorizontal();
 				GUILayout.Label("Dynamic Object Lighting Textures:", labelText, GUILayout.Width(300));
-				if (GUILayout.Button("Extract "))
+                bool wasEnabled2 = GUI.enabled;
+                GUI.enabled &=Monitor.Instance? Monitor.Instance.envMapsGenerated:false;
+
+                if (GUILayout.Button("Extract "))
 				{
 					ExtractDynamicObjectLightingTextures();
-				}
-				EditorGUILayout.EndHorizontal();
+                }
+                GUI.enabled = wasEnabled2;
+                EditorGUILayout.EndHorizontal();
 			}
 			EditorGUILayout.EndVertical();
 

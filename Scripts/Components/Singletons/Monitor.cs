@@ -138,11 +138,13 @@ namespace teleport
 		[HideInInspector]
 		public Camera dummyCam = null;
 		public int envMapSize=64;
-		[HideInInspector]
-		public bool generateEnvMaps=false;
+        [NonSerialized]
+        public bool generateEnvMaps=false;
+        [NonSerialized]
+        public bool envMapsGenerated = false;
 #endif
-		//! Create a new session, e.g. when a client connects.
-		public delegate Teleport_SessionComponent CreateSession();
+        //! Create a new session, e.g. when a client connects.
+        public delegate Teleport_SessionComponent CreateSession();
 
 		public CreateSession createSessionCallback = DefaultCreateSession;
 
@@ -441,10 +443,11 @@ namespace teleport
 #if UNITY_EDITOR
 		private void GenerateEnvMaps()
 		{
-			// we will render this source cubemap into a target that has mips for roughness, and also into a diffuse cubemap.
-			// We will save those two cubemaps to disk, and store them as the client dynamic lighting textures.
+			envMapsGenerated = false;
+            // we will render this source cubemap into a target that has mips for roughness, and also into a diffuse cubemap.
+            // We will save those two cubemaps to disk, and store them as the client dynamic lighting textures.
 
-			if (dummyRenderTexture == null)
+            if (dummyRenderTexture == null)
 			{
 				dummyRenderTexture = new RenderTexture(8, 8
 					, 24, UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_UNorm, 1);
