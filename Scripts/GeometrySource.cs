@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -409,8 +410,12 @@ namespace teleport
 		private static extern uid GenerateUid();
 		[DllImport(TeleportServerDll.name)]
 		private static extern uid GetOrGenerateUid(string path);
-
 		[DllImport(TeleportServerDll.name)]
+		private static extern uid PathToUid(string path);
+        [DllImport(TeleportServerDll.name)]
+        private static extern UInt64 UidToPath(uid u, StringBuilder path, UInt64 stringsize);
+
+        [DllImport(TeleportServerDll.name)]
 		private static extern void SaveGeometryStore();
 		[DllImport(TeleportServerDll.name)]
 		private static extern void LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 numMaterials, out IntPtr loadedMaterials);
@@ -562,15 +567,6 @@ namespace teleport
 
 		public void OnAfterDeserialize()
 		{
-			//Don't run during boot.
-		/*	if (isAwake)
-			{
-				for (int i = 0; i < sessionResourceUids_keys.Length; i++)
-				{
-					sessionResourceUids[sessionResourceUids_keys[i]] = sessionResourceUids_values[i];
-					//Debug.Log("Restoring resource " + sessionResourceUids_values[i]);// ;
-				}
-			}*/
 			EliminateDuplicates();
 		}
 
@@ -657,8 +653,20 @@ namespace teleport
 		{
 			sessionResourceUids.Clear();
 			texturesWaitingForExtraction.Clear();
-			SceneReferenceManager.ClearAll();
-			SceneResourcePathManager.ClearAll();
+			for (int i = 0; i < SceneManager.sceneCount; i++)
+			{
+				Scene s = SceneManager.GetSceneAt(i);
+				var g=s.GetRootGameObjects();
+				foreach(var gameObject in g)
+				{
+					var mt=gameObject.GetComponentsInChildren<teleport.MeshTracker>();
+					foreach(var t in mt)
+					{
+						UnityEngine.Object.Destroy(t);
+					}
+				}
+			}
+            SceneResourcePathManager.ClearAll();
 			ClearGeometryStore();
 		}
 		// The resource path is the path that will be used by remote clients to identify the resource object.
@@ -704,14 +712,6 @@ namespace teleport
 				// we can't use these.
 				return false;
 			}
-/*			if (obj.GetType() == typeof(UnityEngine.Mesh))
-			{
-				path+=".mesh";
-			}
-			if (obj.GetType() == typeof(UnityEngine.Material))
-			{
-				path += ".material";
-			}*/
 			path = SceneResourcePathManager.StandardizePath(path, "Assets/");
 			resourcePathManager.SetResourcePath(obj,path);
 			return true;
@@ -819,8 +819,20 @@ namespace teleport
 				return false;
 			}
 			return true;
-		}
+        }
 		public List<GameObject> GetStreamableObjects()
+		{
+			List<GameObject> streamableObjects = new List<GameObject>();
+			for (int i = 0; i < SceneManager.sceneCount; i++)
+			{
+				Scene scene = SceneManager.GetSceneAt(i);
+				var sceneStr = GetStreamableObjects(scene);
+				streamableObjects.AddRange(sceneStr);
+            }
+			return streamableObjects;
+
+        }
+        public List<GameObject> GetStreamableObjects(Scene scene)
 		{
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 
@@ -828,9 +840,7 @@ namespace teleport
 			List<GameObject> streamableObjects=new List<GameObject>();
 			if(SceneManager.sceneCount==0)
 				return streamableObjects;
-			for (int i = 0; i < SceneManager.sceneCount; i++)
 			{
-				Scene scene=SceneManager.GetSceneAt(i);
 				var objs = scene.GetRootGameObjects();
 				foreach (var o in objs)
 				{
@@ -1044,9 +1054,10 @@ namespace teleport
 			}
 			else
 			{
-				if (materialID != GetOrGenerateUid(resourcePath))
+				uid id_from_dll = GetOrGenerateUid(resourcePath);
+                if (materialID != id_from_dll)
 				{
-					Debug.LogError("Uid mismatch for object "+material.name+" at path "+resourcePath);
+					Debug.LogError("Uid mismatch for object "+material.name+" at path "+resourcePath+". Id from list was "+ materialID+", but Id from path "+resourcePath+" was "+id_from_dll);
 					sessionResourceUids.Remove(material);
 				}
 			}
@@ -2922,6 +2933,11 @@ namespace teleport
 					expectedAssetPath = expectedAssetPath.Substring(0,hash);
 				}
 				expectedAssetPath = expectedAssetPath.Replace("___", " ");
+				if(expectedAssetPath.StartsWith("Library/"))
+				{
+					expectedAssetPath = "Library/unity default resources";
+				}
+				// Paths in Library/
 				string unityAssetPath = expectedAssetPath;
 				//Asset we found in the database.
 				UnityAsset asset = null;
@@ -2933,6 +2949,7 @@ namespace teleport
 				if (unityAssetPath!= expectedAssetPath)
                 {
 					Debug.LogWarning("Path mismatch for ("+typeof(UnityAsset).ToString()+")" + name+": "+ expectedAssetPath + " !="+unityAssetPath);
+                   System.Threading.Thread.Sleep(10000);
                 }
 				UnityEngine.Object[] assetsAtPath = AssetDatabase.LoadAllAssetsAtPath("Assets/"+unityAssetPath);
 				if (assetsAtPath.Length == 0)
@@ -3010,5 +3027,17 @@ namespace teleport
 		{
 			return CheckGeometryStoreForErrors();
 		}
+		static public string GetPathFromUid(uid u)
+		{
+			StringBuilder path=new StringBuilder("", 20);
+            int len=(int)UidToPath(u,  path, 0);
+			if (len > 0)
+			{
+				path = new StringBuilder(len, len);
+				 UidToPath(u, path, (UInt64)len);
+            }
+
+			return path.ToString();
+        }
 	}
 }

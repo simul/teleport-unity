@@ -23,7 +23,6 @@ namespace teleport
 		private TeleportSettings teleportSettings;
 
 		//List of data that was extracted in the last extraction operation.
-		private List<GameObject> lastExtractedGameObjects = new List<GameObject>(); //List of streamable GameObjects that were found during the last operation.
 		private RenderTexture[] renderTextures = new RenderTexture[0];
 		private bool verifyGeometry = false;
 		private bool forceExtraction=false;
@@ -41,7 +40,7 @@ namespace teleport
 		//GUI variables that control user-changeable properties.
 		private Vector2 scrollPosition_gameObjects;
 		private Vector2 scrollPosition_textures;
-		private bool foldout_gameObjects = false;
+	//	private bool foldout_gameObjects = false;
 		private bool foldout_textures = false;
 		private Vector2 scrollPosition_meshTable;
 
@@ -176,7 +175,7 @@ namespace teleport
 				GUILayout.Label("Global Illumination Textures:", labelText, GUILayout.Width(300));
 				if (GUILayout.Button("Extract "))
 				{
-					ExtractGlobalIlluminationTextures();
+					ExtractGlobalIlluminationTextures(SceneManager.GetActiveScene());
 				}
 				EditorGUILayout.EndHorizontal();
 				EditorGUILayout.BeginHorizontal();
@@ -200,26 +199,6 @@ namespace teleport
 			EditorGUILayout.EndVertical();
 
 			EditorGUILayout.BeginVertical();
-			foldout_gameObjects = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_gameObjects, "Last Extracted GameObjects (" + lastExtractedGameObjects.Count + ")");
-			if (foldout_gameObjects)
-			{
-				scrollPosition_gameObjects = EditorGUILayout.BeginScrollView(scrollPosition_gameObjects);
-
-				foreach (GameObject gameObject in lastExtractedGameObjects)
-				{
-					EditorGUILayout.BeginHorizontal();
-
-					using (new EditorGUI.DisabledScope(true))
-					{
-						EditorGUILayout.ObjectField(gameObject, typeof(GameObject), true);
-					}
-
-					EditorGUILayout.EndHorizontal();
-				}
-
-				EditorGUILayout.EndScrollView();
-			}
-			EditorGUILayout.EndFoldoutHeaderGroup();
 
 			foldout_textures = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_textures, "Last Extracted Textures (" + renderTextures.Length + ")");
 			if (foldout_textures)
@@ -261,32 +240,31 @@ namespace teleport
 			SceneResourcePathManager.GetSceneResourcePathManager(SceneManager.GetActiveScene());
 			var sceneres = SceneResourcePathManager.GetSceneResourcePathManagers();
 			EditorGUILayout.BeginHorizontal();
-			EditorGUILayout.LabelField("Scene", GUILayout.Width(300));
-			EditorGUILayout.LabelField("Meshes");
-			EditorGUILayout.LabelField("Resource Paths");
-			EditorGUILayout.EndHorizontal();
+            EditorGUILayout.BeginVertical();
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Scene", GUILayout.Width(100));
+            EditorGUILayout.LabelField("Resource Paths", GUILayout.Width(50));
+            EditorGUILayout.EndHorizontal();
 
-			//GUI.skin.scrollView ;
-			//.normal.background = Color.white; 
-			scrollPosition_scenes = EditorGUILayout.BeginScrollView(scrollPosition_scenes,false,true,hScrollbarStyle,vScrollbarStyle,scrollwindowStyle);
-			foreach (var s in scenerefs)
-			{
-				SceneResourcePathManager p=null;
-				sceneres.TryGetValue(s.Key,out p);
-				EditorGUILayout.BeginHorizontal();
-				if (EditorGUILayout.LinkButton(s.Key.name, GUILayout.Width(300)))
-				{
-					selected_scene=s.Key;
-				}
-				EditorGUILayout.LabelField(s.Value.GetObjectMeshMap().Count.ToString());
-				EditorGUILayout.LabelField(p?p.GetResourcePathMap().Count.ToString():"0");
-				EditorGUILayout.EndHorizontal();
-			}
-			EditorGUILayout.EndScrollView();
-			EditorGUILayout.Separator();
-			EditorGUILayout.Space(10);
-			EditorGUILayout.BeginHorizontal();
-			EditorGUILayout.BeginVertical();
+            //GUI.skin.scrollView ;
+            //.normal.background = Color.white; 
+            scrollPosition_scenes = EditorGUILayout.BeginScrollView(scrollPosition_scenes, false, true, hScrollbarStyle, vScrollbarStyle, scrollwindowStyle);
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene s = SceneManager.GetSceneAt(i);
+                SceneResourcePathManager p = null;
+                sceneres.TryGetValue(s, out p);
+                EditorGUILayout.BeginHorizontal();
+                if (EditorGUILayout.LinkButton(s.name, GUILayout.Width(100)))
+                {
+                    selected_scene = s;
+                }
+                EditorGUILayout.LabelField(p ? p.GetResourcePathMap().Count.ToString() : "0", GUILayout.Width(50));
+                EditorGUILayout.EndHorizontal();
+            }
+            EditorGUILayout.EndScrollView();
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.BeginVertical();
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.LabelField("Game Object");
 			EditorGUILayout.LabelField("Mesh");
@@ -295,18 +273,19 @@ namespace teleport
 			var sceneReferenceManager= SceneReferenceManager.GetSceneReferenceManager(selected_scene);
 			if (sceneReferenceManager)
 			{
-				foreach (var s in sceneReferenceManager.GetObjectMeshMap())
+				foreach (var s in SceneReferenceManager.GetObjectMeshMap(selected_scene))
 				{
+					if(s.Key)
 					if (resourceSearchText.Length > 0)
 					{
-						if (!SearchStringMatch(s.Key.name,resourceSearchText) && !SearchStringMatch(s.Value.mesh.name,resourceSearchText))
+						if (!SearchStringMatch(s.Key.name,resourceSearchText) && !SearchStringMatch(s.Value.name,resourceSearchText))
 						{
 							continue;
 						}
 					} 
 					EditorGUILayout.BeginHorizontal();
-					EditorGUILayout.LabelField(s.Key.name);
-					EditorGUILayout.LabelField(s.Value.mesh.name);
+					EditorGUILayout.LabelField(s.Key?s.Key.name:"null");
+					EditorGUILayout.LabelField(s.Value?s.Value.name:"null");
 					EditorGUILayout.EndHorizontal();
 				}
 			}
@@ -325,6 +304,7 @@ namespace teleport
 			{
 				foreach (var s in sceneResourcePathManager.GetResourcePathMap())
 				{
+					if(s.Key)
 					if (resourceSearchText.Length > 0)
 					{
 						if (!(SearchStringMatch(s.Key.name,resourceSearchText)) && !SearchStringMatch(s.Key.GetType().ToString(),resourceSearchText) &&!SearchStringMatch(s.Value,resourceSearchText))
@@ -335,8 +315,8 @@ namespace teleport
 					EditorGUILayout.BeginHorizontal();
 					if (s.Key != null)
 					{
-						EditorGUILayout.LabelField(s.Key.name, GUILayout.Width(150));
-						EditorGUILayout.LabelField(s.Key.GetType().ToString(), GUILayout.Width(150));
+						EditorGUILayout.LabelField(s.Key?s.Key.name:"null", GUILayout.Width(150));
+						EditorGUILayout.LabelField(s.Key?s.Key.GetType().ToString().Replace("UnityEngine.",""):"", GUILayout.Width(150));
 						EditorGUILayout.LabelField(s.Value);
 					}
 					else
@@ -354,9 +334,11 @@ namespace teleport
 		void DrawResourcesLayout()
 		{
 			EditorGUILayout.BeginHorizontal();
-			EditorGUILayout.LabelField("Name");
-			EditorGUILayout.LabelField("Uid");
-			EditorGUILayout.EndHorizontal();
+			EditorGUILayout.LabelField("Name", GUILayout.Width(150));
+            EditorGUILayout.LabelField("Type", GUILayout.Width(80));
+            EditorGUILayout.LabelField("Uid", GUILayout.Width(80));
+            EditorGUILayout.LabelField("Path");
+            EditorGUILayout.EndHorizontal();
 			foreach (var u in GeometrySource.GetGeometrySource().GetSessionResourceUids())
 			{
 				if (resourceSearchText.Length > 0)
@@ -367,9 +349,11 @@ namespace teleport
 					}
 				}
 				EditorGUILayout.BeginHorizontal();
-				EditorGUILayout.LabelField(u.Key.name);
-				EditorGUILayout.LabelField(u.Value.ToString());
-				EditorGUILayout.EndHorizontal();
+				EditorGUILayout.LabelField(u.Key.name, GUILayout.Width(150));
+                EditorGUILayout.LabelField(u.Key.GetType().ToString().Replace("UnityEngine.",""), GUILayout.Width(80));
+                EditorGUILayout.LabelField(u.Value.ToString(), GUILayout.Width(80));
+                EditorGUILayout.LabelField(GeometrySource.GetPathFromUid(u.Value));
+                EditorGUILayout.EndHorizontal();
 			}
 		}
 		private void DrawSetupLayout()
@@ -464,7 +448,6 @@ namespace teleport
 			if(GUILayout.Button("Clear Cached Data"))
 			{
 				geometrySource.ClearData();
-				lastExtractedGameObjects = new List<GameObject>();
 
 				foreach(RenderTexture texture in renderTextures)
 				{
@@ -517,15 +500,16 @@ namespace teleport
 
 		private void ExtractSelectedGeometry(GeometrySource.ForceExtractionMask forceMask)
 		{
-			lastExtractedGameObjects = new List<GameObject>(Selection.gameObjects);
-			ExtractGeometry(lastExtractedGameObjects, forceMask);
+            List<GameObject> objectsToExtract = new List<GameObject>(Selection.gameObjects);
+			ExtractGeometry(objectsToExtract, forceMask);
 		}
 
 		private bool ExtractSceneGeometry(GeometrySource.ForceExtractionMask forceMask)
 		{
-			lastExtractedGameObjects = geometrySource.GetStreamableObjects();
-			ExtractGlobalIlluminationTextures();
-			return ExtractGeometry(lastExtractedGameObjects, forceMask);
+			var scene = SceneManager.GetActiveScene();
+            List<GameObject> objectsToExtract = geometrySource.GetStreamableObjects(scene);
+			ExtractGlobalIlluminationTextures(scene);
+			return ExtractGeometry(objectsToExtract, forceMask);
 		}
 
 		private void ExtractProjectGeometry(GeometrySource.ForceExtractionMask forceMask)
@@ -569,7 +553,7 @@ namespace teleport
 				}
 			}
 		}
-		private void ExtractGlobalIlluminationTextures()
+		private void ExtractGlobalIlluminationTextures(Scene scene)
 		{
 			Texture[] giTextures =teleport.GlobalIlluminationExtractor.GetTextures();
 			if(giTextures==null)

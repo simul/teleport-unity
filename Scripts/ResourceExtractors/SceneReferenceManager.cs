@@ -11,23 +11,8 @@ namespace teleport
 	/// <summary>
 	/// A class to store the connection between GameObjects and Meshes, which is lost when meshes are merged at the start of play.
 	/// </summary>
-	public class SceneReferenceManager : MonoBehaviour, ISerializationCallbackReceiver
+	public class SceneReferenceManager : MonoBehaviour
 	{
-		//Used to serialise dictionary, so it can be refilled when the object is deserialised.
-
-		[SerializeField] UnityEngine.GameObject[] gameObjectReferences_keys=new UnityEngine.GameObject[0];
-		[SerializeField] MeshReference[] gameObjectReferences_values = new MeshReference[0];
-
-
-		[Serializable]
-		//References a GameObject has to resources it uses.
-		public struct MeshReference
-		{
-			public Mesh mesh;
-		}
-		[NonSerialized]
-		private Dictionary<UnityEngine.GameObject, MeshReference> meshReferences = new Dictionary<UnityEngine.GameObject, MeshReference>(); 
-
 		private static Dictionary<Scene,SceneReferenceManager> sceneReferenceManagers=new Dictionary<Scene, SceneReferenceManager>();
 
 		//STATIC FUNCTIONS
@@ -35,8 +20,18 @@ namespace teleport
 		{
 			return sceneReferenceManagers;
 		}
-
-		public static SceneReferenceManager GetSceneReferenceManager(Scene scene)
+        public static Dictionary<GameObject, Mesh> GetObjectMeshMap(Scene scene)
+		{
+            Dictionary<GameObject, Mesh > mp= new Dictionary<GameObject, Mesh>();
+			foreach (var g in scene.GetRootGameObjects())
+			{
+				var mt = g.GetComponentsInChildren<MeshTracker>();
+				foreach(var m in mt)
+					mp[m.gameObject] = m.mesh;
+			}
+			return mp;
+        }
+        public static SceneReferenceManager GetSceneReferenceManager(Scene scene)
 		{
 			if(scene==null||scene.path==null)
 				return null;
@@ -78,33 +73,40 @@ namespace teleport
 		///PUBLIC FUNCTIONS
 
 		//Add GameObject to SceneReferenceManager; extracting references to resources it uses.
-		public MeshReference AddGameObject(GameObject gameObject, string gameObjectPath = null)
+		public MeshTracker AddGameObject(GameObject gameObject, string gameObjectPath = null)
 		{
 			if(!gameObject)
 			{
 				Debug.LogError("Passed null GameObject to SceneReferenceManager!");
-			}
+            }
 
-			//Retrieve path of GameObject, if gameObjectPath is null.
-			gameObjectPath = gameObjectPath ?? GetGameObjectPath(gameObject);
-			//Only return what we have in the dictionary, if we are in play-mode; we want to re-extract if we are in the editor to update to any changes made.
-			if(Application.isPlaying && meshReferences.TryGetValue(gameObject, out MeshReference references))
+            //Retrieve path of GameObject, if gameObjectPath is null.
+            gameObjectPath = gameObjectPath ?? GetGameObjectPath(gameObject);
+			MeshTracker meshTracker= gameObject.GetComponent<MeshTracker>();
+            //Only return what we have in the dictionary, if we are in play-mode; we want to re-extract if we are in the editor to update to any changes made.
+            if (Application.isPlaying && meshTracker)
 			{
-				return references;
-			}
-
-			references.mesh = GetMesh(gameObject);
-			//Don't edit the lookup table when we are playing, as the data may be incorrect; i.e. statically-combined meshes will give you null.
-			if(Application.isPlaying)
+				return meshTracker;
+            }
+            List<MeshTracker> meshTrackers = gameObject.GetComponents<MeshTracker>().ToList();
+            MeshFilter[] meshFilters = gameObject.GetComponents<MeshFilter>();
+			while(meshFilters.Length< meshTrackers.Count)
 			{
-				return references;
-			}
-
-			meshReferences[gameObject] = references;
+				UnityEngine.Object.DestroyImmediate(meshTrackers[meshTrackers.Count-1]);
+				meshTrackers.RemoveAt(meshTrackers.Count - 1);
+            }
+            while (meshTrackers.Count < meshFilters.Length)
+            {
+                gameObject.AddComponent<MeshTracker>();
+                meshTrackers = gameObject.GetComponents<MeshTracker>().ToList();
+            }
+			if (meshTracker == null)
+				meshTracker = meshTrackers[0];
+            meshTracker.mesh = GetMesh(gameObject);
 #if UNITY_EDITOR
 			UnityEditor.EditorUtility.SetDirty(this);
 #endif
-			return references;
+			return meshTracker;
 		}
 
 		//Get references to mesh used by GameObject. Will add the GameObject to the SceneReferenceManager, if it has not already been added.
@@ -112,66 +114,15 @@ namespace teleport
 		public Mesh GetMeshFromGameObject(GameObject gameObject)
 		{
 			string gameObjectPath = GetGameObjectPath(gameObject);
-			// We want to re-extract the references if we are not in play-mode; i.e. we want to update to changes made in the editor.
-			if(!Application.isPlaying || !meshReferences.TryGetValue(gameObject, out MeshReference references))
+            MeshTracker meshTracker = gameObject.GetComponent<MeshTracker>();
+            // We want to re-extract the references if we are not in play-mode; i.e. we want to update to changes made in the editor.
+            if (!Application.isPlaying || !meshTracker)
 			{
-				references = AddGameObject(gameObject, gameObjectPath);
-			}
-
-			return references.mesh;
+                AddGameObject(gameObject, gameObjectPath);
+            }
+            meshTracker = gameObject.GetComponent<MeshTracker>();
+            return meshTracker.mesh;
 		}
-		public Dictionary<GameObject, MeshReference> GetObjectMeshMap()
-		{
-			return meshReferences;
-		}
-		static public void ClearAll()
-		{
-			foreach (var s in sceneReferenceManagers)
-			{ 
-				s.Value.Clear();
-			}
-		}
-
-		public void Clear()
-		{
-			meshReferences.Clear();
-		}
-		///INHERITED FUNCTIONS
-
-		public void OnBeforeSerialize()
-		{
-			//Save everything to serialisable arrays, before the dictionary is discarded by Unity.
-			gameObjectReferences_keys = meshReferences.Keys.ToArray();
-			gameObjectReferences_values = meshReferences.Values.ToArray();
-		
-		}
-
-		public void OnAfterDeserialize()
-		{
-			if(gameObjectReferences_keys!=null)
-			for(int i = 0; i < gameObjectReferences_keys.Length; i++)
-			{
-				if(gameObjectReferences_keys[i]!=null)
-					meshReferences[gameObjectReferences_keys[i]] = gameObjectReferences_values[i];
-			}
-		}
-
-		///REFLECTION FUNCTIONS
-
-		private void Awake()
-		{
-		}
-
-		private void OnEnable()
-		{
-		}
-
-		private void OnDisable()
-		{
-		}
-
-		///PRIVATE FUNCTIONS
-
 		//Returns path of GameObject in scene hierarchy.
 		private string GetGameObjectPath(GameObject gameObject)
 		{

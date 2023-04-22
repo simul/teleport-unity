@@ -552,12 +552,12 @@ namespace teleport
 			var streamable= controlledGameObject.GetComponent<Teleport_Streamable>();
 			if (!streamable)
 			{
-				Debug.LogError("Trying to set pose of controlled object "+ controlledGameObject.name+" that has no Teleport_Streamable.");
+				Debug.LogError("Trying to set pose of controlled object "+id+", "+ controlledGameObject.name+" that has no Teleport_Streamable.");
 				return;
 			}
 			if (streamable.OwnerClient != clientID)
 			{
-				Debug.LogError("Trying to set pose of controlled object " + controlledGameObject.name + " whose owner client " + streamable.OwnerClient+" is not the client ID "+clientID.ToString()+".");
+				Debug.LogError("Trying to set pose of controlled object " + id + ", " + controlledGameObject.name + " whose owner client " + streamable.OwnerClient+" is not the client ID "+clientID.ToString()+".");
 				return;
 			}
 			controlledGameObject.transform.localPosition=newPosition;

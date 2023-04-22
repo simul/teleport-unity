@@ -11,9 +11,9 @@ namespace teleport
 	/// Class for storing state and cached components of a node that is streamed in a Teleport_Streamable's hierarchy.
 	public class StreamedNode
 	{
-		public GameObject gameObject; //GameObject that is being streamed.
-		public uid nodeID; //ID of the node.
-		public bool enabled; //Whether the node is enabled on the server.
+		public GameObject gameObject;	//GameObject that is being streamed.
+		public uid nodeID;				//ID of the node.
+		public bool enabled;			//Whether the node is enabled on the server.
 
 		//Cached references to components.
 		public MeshRenderer meshRenderer;

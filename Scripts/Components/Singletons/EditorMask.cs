@@ -117,7 +117,7 @@ namespace teleport
 			}
 
 			//Set the mask on all streamable objects.
-			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects();
+			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects(scene);
 			foreach (GameObject o in teleportStreamableObjects)
 			{
 				teleport.Monitor.SetRenderingLayerMask(o, streamable_mask);
