@@ -19,7 +19,8 @@ namespace teleport
 		int selGridInt = 0;
 		private GUIStyle scrollwindowStyle =null;
 		private GUIStyle titleStyle=null;
-		private void OnGUI()
+        private GUIStyle verticalScrollbarStyle = null; 
+        private void OnGUI()
         {
             if (titleStyle == null) 
 			{
@@ -27,7 +28,9 @@ namespace teleport
 				titleStyle.fontSize = (GUI.skin.label.fontSize * 5) / 4;
 				titleStyle.fontStyle = FontStyle.Bold;
 				scrollwindowStyle = new GUIStyle( GUI.skin.box);
-			}
+				verticalScrollbarStyle = new GUIStyle(GUI.skin.verticalScrollbar);
+
+            }
 			//EditorGUILayout.Separator();
 			//EditorGUILayout.BeginFoldoutHeaderGroup(true,GUIContent.none);
 			//EditorGUILayout.EndFoldoutHeaderGroup();
@@ -42,7 +45,7 @@ namespace teleport
 				sessionNames.Add(s.Key.ToString());
 				sessionUids.Add(s.Key);
 			}
-			scrollPosition_client =EditorGUILayout.BeginScrollView(scrollPosition_client, false, true, GUIStyle.none, GUI.skin.verticalScrollbar, scrollwindowStyle, GUILayout.Width(200));
+			scrollPosition_client =EditorGUILayout.BeginScrollView(scrollPosition_client, false, true, GUIStyle.none, verticalScrollbarStyle, scrollwindowStyle, GUILayout.Width(200));
 
 			selGridInt = GUILayout.SelectionGrid(selGridInt, sessionNames.ToArray(), sessionNames.Count);
 			if (selGridInt >= 0 && selGridInt < sessionUids.Count)
@@ -128,7 +131,7 @@ namespace teleport
 				EditorGUILayout.BeginVertical();
 				int nodeCount = geometryStreamingService.GetStreamedObjectCount();
 				EditorGUILayout.LabelField(string.Format("{0} Nodes", nodeCount), titleStyle);
-				scrollPosition_streamed =EditorGUILayout.BeginScrollView(scrollPosition_streamed,false, true, GUI.skin.verticalScrollbar, GUI.skin.verticalScrollbar, GUI.skin.textField);
+				scrollPosition_streamed = EditorGUILayout.BeginScrollView(scrollPosition_streamed);//,false, true, verticalScrollbarStyle, verticalScrollbarStyle, GUI.skin.textField);
 
 				List<GameObject> streamedGameObjects = geometryStreamingService.GetStreamedObjects();
 				//List nodes to the maximum.
