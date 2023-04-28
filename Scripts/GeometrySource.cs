@@ -1536,7 +1536,7 @@ namespace teleport
 						if(arraySize>1)
 							pngFile=pngFile.Replace(".png","_"+i.ToString()+".png");
 						subresourceImage.bytes = readTexture.EncodeToPNG();
-						File.WriteAllBytes(pngFile, subresourceImage.bytes);
+						//File.WriteAllBytes(pngFile, subresourceImage.bytes);
 						/*
 						 * exr is way too big.
 						string exrFile = basisFile.Replace(".basis", ".exr");

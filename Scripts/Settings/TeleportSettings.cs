@@ -81,7 +81,6 @@ namespace teleport
 		public Color highlightNonStreamableColour = new Color(0.5F, 1.0F, 1.0F, .1F);
 
 		[Header("Connections")]
-		public uint listenPort = 10500u;
 		public uint discoveryPort = 10600u;
 		public int connectionTimeout = 13000; //How many millseconds to wait before automatically disconnecting from the client.
 		public string clientIP = "";

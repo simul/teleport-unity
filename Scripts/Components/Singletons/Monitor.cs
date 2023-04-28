@@ -73,7 +73,6 @@ namespace teleport
 			public string certPath;
 			public string privateKeyPath;
 			public uint DISCOVERY_PORT;
-			public uint SERVICE_PORT;
 
 			public OnClientStoppedRenderingNode clientStoppedRenderingNode;
 			public OnClientStartedRenderingNode clientStartedRenderingNode;
@@ -295,7 +294,6 @@ namespace teleport
 				newInputEventsProcessing = Teleport_SessionComponent.StaticProcessInputEvents,
 				disconnect = Teleport_SessionComponent.StaticDisconnect,
 				messageHandler = teleportSettings.serverSettings.pipeDllOutputToUnity ? LogMessageHandler : (OnMessageHandler)null,
-				SERVICE_PORT = teleportSettings.listenPort,
 				DISCOVERY_PORT = teleportSettings.discoveryPort,
 				reportHandshake = ReportHandshake,
 				audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput,

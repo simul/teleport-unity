@@ -487,7 +487,15 @@ namespace avs
 		}
 	}
 
-	public enum ConnectionState : byte
+    public enum SignalingState : byte
+    {
+        START,			// Received a WebSocket connection.
+		REQUESTED,		// Got an initial connection request message
+		ACCEPTED,		// Accepted the connection request. Create a ClientData for this client if not already extant.
+		STREAMING,		// Completed signaling, now use streaming state. 
+		INVALID
+    };
+    public enum StreamingState : byte
 	{
 		UNINITIALIZED = 0,
 		NEW_UNCONNECTED,

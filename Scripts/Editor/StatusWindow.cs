@@ -22,7 +22,7 @@ namespace teleport
         private GUIStyle verticalScrollbarStyle = null; 
         private void OnGUI()
         {
-            if (titleStyle == null) 
+            if (titleStyle == null|| titleStyle.fontStyle!=FontStyle.Bold) 
 			{
 				titleStyle = new GUIStyle(GUI.skin.label);
 				titleStyle.fontSize = (GUI.skin.label.fontSize * 5) / 4;
@@ -45,7 +45,7 @@ namespace teleport
 				sessionNames.Add(s.Key.ToString());
 				sessionUids.Add(s.Key);
 			}
-			scrollPosition_client =EditorGUILayout.BeginScrollView(scrollPosition_client, false, true, GUIStyle.none, verticalScrollbarStyle, scrollwindowStyle, GUILayout.Width(200));
+			scrollPosition_client =EditorGUILayout.BeginScrollView(scrollPosition_client, false, true, GUIStyle.none, GUIStyle.none, GUIStyle.none, GUILayout.Width(200));
 
 			selGridInt = GUILayout.SelectionGrid(selGridInt, sessionNames.ToArray(), sessionNames.Count);
 			if (selGridInt >= 0 && selGridInt < sessionUids.Count)
@@ -62,20 +62,23 @@ namespace teleport
 			Teleport_SessionComponent session = Teleport_SessionComponent.GetSessionComponent(clientID);
 			if(session==null)
 				return;
-			EditorGUILayout.BeginVertical();
+            GeometryStreamingService geometryStreamingService = session.GeometryStreamingService;
+            if (geometryStreamingService == null)
+                return;
+            EditorGUILayout.BeginVertical();
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.BeginVertical();
 			EditorGUILayout.LabelField("Status", titleStyle);
 			EditorGUILayout.LabelField("Uid", clientID.ToString());
 			EditorGUILayout.LabelField("IP Address", session.GetClientIP());
-			EditorGUILayout.LabelField("State", Teleport_SessionComponent.Client_GetConnectionState(clientID).ToString());
-			var networkStats=session.GetNetworkStats();
+			EditorGUILayout.LabelField("Signal", Teleport_SessionComponent.Client_GetSignalingState(clientID).ToString());
+            EditorGUILayout.LabelField("Stream", Teleport_SessionComponent.Client_GetStreamingState(clientID).ToString());
+            var networkStats=session.GetNetworkStats();
 			EditorGUILayout.LabelField("available bandwidth",string.Format("{0:F3} mb/s", networkStats.bandwidth));
 			EditorGUILayout.LabelField("avg bandwidth used" ,string.Format("{0:F3} mb/s", networkStats.avgBandwidthUsed));
 			EditorGUILayout.LabelField("max bandwidth used" ,string.Format("{0:F3} mb/s", networkStats.maxBandwidthUsed));
 			//session.ShowOverlay(0, 0, clientFont);
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-			GeometryStreamingService geometryStreamingService =session.GeometryStreamingService;
 			EditorGUILayout.LabelField("Inputs", titleStyle);
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 			foreach (var id in session.input.GetFloatStateIDs())

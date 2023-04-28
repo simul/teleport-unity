@@ -36,13 +36,12 @@ namespace teleport
 		public static extern void Client_StopStreaming(uid clientID);
 
 		[DllImport(TeleportServerDll.name)]
-		public static extern avs.ConnectionState Client_GetConnectionState(uid clientID);
-		[DllImport(TeleportServerDll.name)]
+		public static extern avs.SignalingState Client_GetSignalingState(uid clientID);
+
+        [DllImport(TeleportServerDll.name)]
+        public static extern avs.StreamingState Client_GetStreamingState(uid clientID);
+        [DllImport(TeleportServerDll.name)]
 		public static extern uint Client_GetClientIP(uid clientID, uint bufferLength, StringBuilder buffer);
-		[DllImport(TeleportServerDll.name)]
-		public static extern UInt16 Client_GetClientPort(uid clientID);
-		[DllImport(TeleportServerDll.name)]
-		public static extern UInt16 Client_GetServerPort(uid clientID);
 
 		[DllImport(TeleportServerDll.name)]
 		public static extern bool Client_GetClientNetworkStats(uid clientID, ref avs.NetworkStats stats);
@@ -600,9 +599,10 @@ namespace teleport
 
 			int lineHeight = 14;
 			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Client uid {0} {1}", clientID, GetClientIP()), font);
-			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("{0}", Client_GetConnectionState(clientID)), font);
-			
-		}
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Signal: {0}", Client_GetSignalingState(clientID)), font);
+            GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Stream: {0}", Client_GetStreamingState(clientID)), font);
+
+        }
 
 		//UNITY MESSAGES
 

@@ -108,7 +108,6 @@ namespace teleport
 			teleportSettings.highlightNonStreamableColour = EditorGUILayout.ColorField("Highlight Non-Streamable Colour", teleportSettings.highlightNonStreamableColour);
 			teleportSettings.moveUpdatesPerSecond = (uint)EditorGUILayout.IntField("Move Updates Per Second", (int)teleportSettings.moveUpdatesPerSecond);
 			teleportSettings.discoveryPort = (uint)EditorGUILayout.IntField("Discovery Port", (int)teleportSettings.discoveryPort);
-			teleportSettings.listenPort = (uint)EditorGUILayout.IntField("Listen Port", (int)teleportSettings.listenPort);
 			teleportSettings.connectionTimeout = EditorGUILayout.IntField("Timeout", teleportSettings.connectionTimeout);
 			teleportSettings.clientIP = EditorGUILayout.TextField("Client IP", teleportSettings.clientIP);
 			teleportSettings.webcam = WebcamField("Webcam", teleportSettings.webcam);
