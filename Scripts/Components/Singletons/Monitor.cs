@@ -72,7 +72,7 @@ namespace teleport
 			public string httpMountDirectory;
 			public string certPath;
 			public string privateKeyPath;
-			public uint DISCOVERY_PORT;
+			public string signalingPorts;
 
 			public OnClientStoppedRenderingNode clientStoppedRenderingNode;
 			public OnClientStartedRenderingNode clientStartedRenderingNode;
@@ -223,7 +223,8 @@ namespace teleport
 			if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == null || UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline.GetType() != typeof(TeleportRenderPipelineAsset))
 			{
 #if UNITY_EDITOR
-				UnityEditor.EditorUtility.DisplayDialog("Warning", "Current rendering pipeline is not TeleportRenderPipeline.", "OK");
+				//if(UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline!=null)	
+				UnityEditor.EditorUtility.DisplayDialog("Warning", "Current rendering pipeline is "+ (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline?UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline.GetType().ToString():"null") + ", not TeleportRenderPipeline.", "OK");
 				UnityEditor.EditorApplication.isPlaying = false;
 				return;
 #else
@@ -294,7 +295,7 @@ namespace teleport
 				newInputEventsProcessing = Teleport_SessionComponent.StaticProcessInputEvents,
 				disconnect = Teleport_SessionComponent.StaticDisconnect,
 				messageHandler = teleportSettings.serverSettings.pipeDllOutputToUnity ? LogMessageHandler : (OnMessageHandler)null,
-				DISCOVERY_PORT = teleportSettings.discoveryPort,
+				signalingPorts = teleportSettings.signalingPorts,
 				reportHandshake = ReportHandshake,
 				audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput,
 				getUnixTimestamp = GetUnixTimestampNow,
@@ -518,7 +519,7 @@ namespace teleport
 				int y = 0;
 				GUI.Label(new Rect(x, y, 100, 20), title, overlayFont);
 		
-				GUI.Label(new Rect(x,y+=14, 100, 20), string.Format("Discovering on port {0}", TeleportSettings.GetOrCreateSettings().discoveryPort), overlayFont);
+				GUI.Label(new Rect(x,y+=14, 100, 20), string.Format("Accepting signals on ports: {0}", TeleportSettings.GetOrCreateSettings().signalingPorts), overlayFont);
 				foreach(var s in Teleport_SessionComponent.sessions)
 				{
 					s.Value.ShowOverlay(x,y, clientFont);
