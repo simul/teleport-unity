@@ -15,8 +15,6 @@ namespace teleport
 		bool useDynamicBatching = false;
 		bool useGPUInstancing = false;
 
-		public const string CUBEMAP_CAM_PREFIX = "TeleportCubemapCam";
-
 		Dictionary<Camera,TeleportCameraRenderer> renderers = new Dictionary<Camera, TeleportCameraRenderer>();
 		TeleportRenderSettings renderSettings = null;
 		public TeleportRenderPipeline(TeleportRenderSettings renderSettings, bool useDynamicBatching = true, bool useGPUInstancing = true, bool useSRPBatcher = true)

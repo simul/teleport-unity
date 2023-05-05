@@ -268,7 +268,7 @@ namespace teleport
 		void RenderToTexture()
 		{
 			// Update name in case client ID changed
-			cam.name = TeleportRenderPipeline.CUBEMAP_CAM_PREFIX + clientID;
+			cam.name = "SceneCapture-" + clientID;
 			cam.Render();
 
 			CurrentTagID = (CurrentTagID + 1) % 32;
