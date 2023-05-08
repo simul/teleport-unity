@@ -491,13 +491,17 @@ namespace teleport
 
 		private void StopStreamingUntaggedStreamables()
 		{
-			for(int i = streamedHierarchies.Count - 1; i >= 0; i--)
+			var geometrySource=GeometrySource.GetGeometrySource();
+			for (int i = streamedHierarchies.Count - 1; i >= 0; i--)
 			{
 				Teleport_Streamable streamable = streamedHierarchies[i];
-				ClientStreamableTracking tracking = GetTracking(streamable);
-				if (!GeometrySource.GetGeometrySource().IsGameObjectMarkedForStreaming(streamable.gameObject) && (tracking.streaming_reason & 1) != 0)
+				if (!geometrySource.IsGameObjectMarkedForStreaming(streamable.gameObject))
 				{
-					StopStreaming(streamable, 1);
+					ClientStreamableTracking tracking = GetTracking(streamable);
+					if ((tracking.streaming_reason & 1) != 0)
+					{
+						StopStreaming(streamable, 1);
+					}
 				}
 			}
 		}

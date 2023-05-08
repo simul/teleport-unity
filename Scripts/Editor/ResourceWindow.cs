@@ -181,7 +181,7 @@ namespace teleport
 				EditorGUILayout.BeginHorizontal();
 				GUILayout.Label("Dynamic Object Lighting Textures:", labelText, GUILayout.Width(300));
                 bool wasEnabled2 = GUI.enabled;
-                GUI.enabled &=Monitor.Instance? Monitor.Instance.envMapsGenerated:false;
+                GUI.enabled &= forceExtraction||(Monitor.Instance?Monitor.Instance.envMapsGenerated:false);
 
                 if (GUILayout.Button("Extract "))
 				{
@@ -343,6 +343,7 @@ namespace teleport
 			{
 				if (resourceSearchText.Length > 0)
 				{
+					if(u.Key!=null)
 					if (!(SearchStringMatch(u.Key.name,resourceSearchText)) && !SearchStringMatch(u.Value.ToString(),resourceSearchText))
 					{
 						continue;
