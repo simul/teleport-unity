@@ -146,6 +146,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &12524465
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 12524457}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 8717285299447145127, guid: 846cfee221095204ea421daaf47eca96, type: 3}
 --- !u!1 &65144403
 GameObject:
   m_ObjectHideFlags: 0
@@ -278,6 +291,7 @@ GameObject:
   - component: {fileID: 126385759}
   - component: {fileID: 126385758}
   - component: {fileID: 126385757}
+  - component: {fileID: 126385761}
   m_Layer: 0
   m_Name: Sphere (1)
   m_TagString: TeleportStreamable
@@ -363,6 +377,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 16
   m_LocalEulerAnglesHint: {x: 0.086, y: -0.188, z: 0.255}
+--- !u!114 &126385761
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 126385756}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1001 &131459360
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -512,6 +539,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &131459369
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 131459361}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: -3216758059836361224, guid: be18a8fa393433942bb11f64a8389aed, type: 3}
 --- !u!1 &131690992
 GameObject:
   m_ObjectHideFlags: 0
@@ -524,6 +564,7 @@ GameObject:
   - component: {fileID: 131690995}
   - component: {fileID: 131690994}
   - component: {fileID: 131690993}
+  - component: {fileID: 131690997}
   m_Layer: 0
   m_Name: Sphere (2)
   m_TagString: TeleportStreamable
@@ -609,6 +650,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 17
   m_LocalEulerAnglesHint: {x: 0.086, y: -0.188, z: 0.255}
+--- !u!114 &131690997
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 131690992}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &205381503
 GameObject:
   m_ObjectHideFlags: 0
@@ -621,6 +675,7 @@ GameObject:
   - component: {fileID: 205381507}
   - component: {fileID: 205381506}
   - component: {fileID: 205381505}
+  - component: {fileID: 205381508}
   m_Layer: 0
   m_Name: Strip Light 1
   m_TagString: TeleportStreamable
@@ -706,6 +761,19 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 205381503}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &205381508
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 205381503}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1001 &268523053
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -918,6 +986,7 @@ GameObject:
   - component: {fileID: 427680966}
   - component: {fileID: 427680965}
   - component: {fileID: 427680969}
+  - component: {fileID: 427680970}
   m_Layer: 0
   m_Name: WalnutCube
   m_TagString: TeleportStreamable
@@ -1018,6 +1087,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &427680970
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 427680964}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &455755986 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1975341374849381839, guid: c7bd090313c3e8c4ca1c4c5470243103,
@@ -1039,6 +1121,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &455755994
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 455755986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: -8882322082198371496, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
 --- !u!1 &472957603 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 130264154230364087, guid: c7bd090313c3e8c4ca1c4c5470243103,
@@ -1060,6 +1155,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &472957611
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 472957603}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 3341325685863068083, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
 --- !u!1 &564378970 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6775397436875306071, guid: c7bd090313c3e8c4ca1c4c5470243103,
@@ -1081,6 +1189,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &564378978
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 564378970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: -4121599681479280667, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
 --- !u!1 &590165027
 GameObject:
   m_ObjectHideFlags: 0
@@ -1093,6 +1214,7 @@ GameObject:
   - component: {fileID: 590165030}
   - component: {fileID: 590165029}
   - component: {fileID: 590165028}
+  - component: {fileID: 590165032}
   m_Layer: 0
   m_Name: Sphere (3)
   m_TagString: TeleportStreamable
@@ -1178,6 +1300,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 18
   m_LocalEulerAnglesHint: {x: 0.088, y: -0.192, z: 0.261}
+--- !u!114 &590165032
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 590165027}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &593528172 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5615111451119953396, guid: c7bd090313c3e8c4ca1c4c5470243103,
@@ -1220,6 +1355,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &602292660
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 602292652}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: -1258100815225046197, guid: 846cfee221095204ea421daaf47eca96, type: 3}
 --- !u!1 &602978596
 GameObject:
   m_ObjectHideFlags: 0
@@ -1232,6 +1380,7 @@ GameObject:
   - component: {fileID: 602978599}
   - component: {fileID: 602978598}
   - component: {fileID: 602978597}
+  - component: {fileID: 602978601}
   m_Layer: 0
   m_Name: Red Cube
   m_TagString: TeleportStreamable
@@ -1317,6 +1466,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 12
   m_LocalEulerAnglesHint: {x: 0, y: 45, z: 0}
+--- !u!114 &602978601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 602978596}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1001 &616026433
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1447,6 +1609,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &616026443
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 616026434}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: -7708389821861517950, guid: 28d31154e6a4c7549873ad082267879f, type: 3}
 --- !u!1 &630112721
 GameObject:
   m_ObjectHideFlags: 0
@@ -1459,6 +1634,7 @@ GameObject:
   - component: {fileID: 630112724}
   - component: {fileID: 630112723}
   - component: {fileID: 630112722}
+  - component: {fileID: 630112726}
   m_Layer: 0
   m_Name: Sphere (4)
   m_TagString: TeleportStreamable
@@ -1544,6 +1720,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 19
   m_LocalEulerAnglesHint: {x: 0.088, y: -0.192, z: 0.261}
+--- !u!114 &630112726
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 630112721}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &674530867 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2405591392692788875, guid: c7bd090313c3e8c4ca1c4c5470243103,
@@ -1565,6 +1754,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &674530875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 674530867}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: -7892432015762708264, guid: 846cfee221095204ea421daaf47eca96, type: 3}
 --- !u!1 &731113965
 GameObject:
   m_ObjectHideFlags: 0
@@ -1577,6 +1779,7 @@ GameObject:
   - component: {fileID: 731113968}
   - component: {fileID: 731113967}
   - component: {fileID: 731113966}
+  - component: {fileID: 731113970}
   m_Layer: 0
   m_Name: Plane
   m_TagString: TeleportStreamable
@@ -1663,6 +1866,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 9
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &731113970
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 731113965}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &790040768 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7186663055245243583, guid: c7bd090313c3e8c4ca1c4c5470243103,
@@ -1684,6 +1900,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &790040776
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 790040768}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 7252456297032893678, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
 --- !u!1 &829391559
 GameObject:
   m_ObjectHideFlags: 0
@@ -1859,7 +2088,6 @@ MonoBehaviour:
     type: 2}
   dummyCam: {fileID: 843734289}
   envMapSize: 64
-  generateEnvMaps: 0
   defaultPlayerPrefab: {fileID: 0}
   audioCapture: {fileID: 119303608}
   environmentCubemap: {fileID: 8900000, guid: a4fd4337d5fd0f4439ef1e58ba205c6f, type: 3}
@@ -1933,6 +2161,7 @@ GameObject:
   - component: {fileID: 908411846}
   - component: {fileID: 908411845}
   - component: {fileID: 908411844}
+  - component: {fileID: 908411848}
   m_Layer: 0
   m_Name: Plinth 2
   m_TagString: TeleportStreamable
@@ -2019,6 +2248,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 23
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &908411848
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 908411843}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &937613827
 GameObject:
   m_ObjectHideFlags: 0
@@ -2031,6 +2273,7 @@ GameObject:
   - component: {fileID: 937613830}
   - component: {fileID: 937613829}
   - component: {fileID: 937613828}
+  - component: {fileID: 937613832}
   m_Layer: 0
   m_Name: Plane (3)
   m_TagString: TeleportStreamable
@@ -2117,6 +2360,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 270, z: -90}
+--- !u!114 &937613832
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 937613827}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &963194225
 GameObject:
   m_ObjectHideFlags: 0
@@ -2244,6 +2500,7 @@ GameObject:
   - component: {fileID: 986364674}
   - component: {fileID: 986364673}
   - component: {fileID: 986364672}
+  - component: {fileID: 986364676}
   m_Layer: 0
   m_Name: Cylinder
   m_TagString: TeleportStreamable
@@ -2331,6 +2588,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 10
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &986364676
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 986364671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &990844614
 GameObject:
   m_ObjectHideFlags: 0
@@ -2365,11 +2635,79 @@ MonoBehaviour:
   - {fileID: 2100000, guid: 3dfdfbd382851ba4bbe9c2b888c48ba1, type: 2}
   - {fileID: 2800000, guid: 07bee290597f5b5489933333b6b919f2, type: 3}
   - {fileID: -3216758059836361224, guid: be18a8fa393433942bb11f64a8389aed, type: 3}
+  - {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  - {fileID: 2100000, guid: ac17c4921b7928541b04760195625272, type: 2}
+  - {fileID: 2800000, guid: db59113975b99614cb02359fb35f5749, type: 3}
+  - {fileID: 2800000, guid: 24976b43c1fd252418252e1c085896b0, type: 3}
+  - {fileID: 2800000, guid: ccdd86793ff7d414d8c3d500e8821985, type: 3}
+  - {fileID: 2800000, guid: 4e84cd7f28e8cce4ea4eb3ff40857722, type: 3}
+  - {fileID: 2800000, guid: d187e42d45fef44489a9e3c81c6b2732, type: 3}
+  - {fileID: 2800000, guid: 72f19ba12fc9c244db88e168857abcdc, type: 3}
+  - {fileID: 2800000, guid: 624e6de1fbe88d442839de0bac6a4244, type: 3}
+  - {fileID: 2800000, guid: 590b0d5ed6e88f34c971e4c2c3daaa76, type: 3}
+  - {fileID: 2800000, guid: 7872739ceb25a6e4ba142bbab0714637, type: 3}
+  - {fileID: 5060444177187149915, guid: 1453eb10af1b0e6489936191d3d20aa1, type: 3}
+  - {fileID: -7708389821861517950, guid: 28d31154e6a4c7549873ad082267879f, type: 3}
+  - {fileID: -7892432015762708264, guid: 846cfee221095204ea421daaf47eca96, type: 3}
+  - {fileID: -1258100815225046197, guid: 846cfee221095204ea421daaf47eca96, type: 3}
+  - {fileID: -1015699770599192987, guid: 846cfee221095204ea421daaf47eca96, type: 3}
+  - {fileID: 8717285299447145127, guid: 846cfee221095204ea421daaf47eca96, type: 3}
+  - {fileID: 5969004303824751651, guid: 846cfee221095204ea421daaf47eca96, type: 3}
+  - {fileID: 2592335857007103259, guid: 846cfee221095204ea421daaf47eca96, type: 3}
+  - {fileID: -4121599681479280667, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
+  - {fileID: 7252456297032893678, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
+  - {fileID: -8882322082198371496, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
+  - {fileID: 3341325685863068083, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
+  - {fileID: -4231716108970672535, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
+  - {fileID: 2888647440349190436, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
+  - {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+  - {fileID: 2210965410299338194, guid: 1483b735ce3212443884f65eb77566ec, type: 3}
+  - {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  - {fileID: 2100000, guid: f8afb7c8ebb8fe94ab8d7c31f376042d, type: 2}
+  - {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  - {fileID: 2100000, guid: 2f8e806f46268b54e9f4e22b92360967, type: 2}
+  - {fileID: 2100000, guid: 1d60d8e2a00caf943a55b85947b0c122, type: 2}
+  - {fileID: 2100000, guid: bf6ace881f041fb4490d6f8608c19287, type: 2}
+  - {fileID: 2100000, guid: 3bfab201348ef1642a1f5ce094d7d493, type: 2}
   sceneResourcePaths_values:
   - Meshes/Owned/Cafe/Cafe_ChinaSet_Teapot_lid.FBX##Object005
   - Meshes/Owned/Cafe/Materials/Teapot.mat##Teapot
   - Meshes/Owned/Cafe/BaseColor.png##BaseColor
   - Meshes/Owned/Cafe/Cafe_ChinaSet_Teapot.FBX##Cylinder020
+  - Library/unity___default___resources##Cube##Cube_10202
+  - Teleport/Examples/Materials/Strip___Light___Glow.mat##Strip___Light___Glow
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-0_comp_light.exr##Lightmap-0_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-1_comp_light.exr##Lightmap-1_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-2_comp_light.exr##Lightmap-2_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-3_comp_light.exr##Lightmap-3_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-4_comp_light.exr##Lightmap-4_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-5_comp_light.exr##Lightmap-5_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-6_comp_light.exr##Lightmap-6_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-7_comp_light.exr##Lightmap-7_comp_light
+  - Teleport/Scenes/TeleportVRAntechamber/Lightmap-8_comp_light.exr##Lightmap-8_comp_light
+  - Meshes/Owned/Cafe/CafeSquareTable_01_test.FBX##Box001
+  - Meshes/Owned/Cafe/CafeChairTest_02.FBX##HightPoly_02
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx##Oculus_L_Button_X
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx##Oculus_L_Button_Y
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx##Oculus_L_Grip
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx##Oculus_L_Loop
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx##Oculus_L_Stick
+  - Teleport/Examples/Meshes/Controllers/QuestLeftController.fbx##Oculus_L_Trigger
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx##Oculus_R_Button_A
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx##Oculus_R_Button_B
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx##Oculus_R_Grip
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx##Oculus_R_Main
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx##Oculus_R_Stick
+  - Teleport/Examples/Meshes/Controllers/QuestRightController.fbx##Oculus_R_Trigger
+  - Library/unity___default___resources##Plane##Plane_10209
+  - Teleport/Examples/Meshes/TeleportVRLogo.fbx##Text.002
+  - Library/unity___default___resources##Sphere##Sphere_10207
+  - Teleport/Scenes/Standard.mat##Standard
+  - Library/unity___default___resources##Cylinder##Cylinder_10206
+  - Teleport/Examples/Materials/Matt___Blue.mat##Matt___Blue
+  - Teleport/Examples/Materials/Matt___Red.mat##Matt___Red
+  - Teleport/Examples/Materials/Gloss.mat##Gloss
+  - Teleport/Examples/Materials/Chrome.mat##Chrome
 --- !u!4 &990844616
 Transform:
   m_ObjectHideFlags: 0
@@ -2406,6 +2744,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &1024461917
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1024461909}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: -1015699770599192987, guid: 846cfee221095204ea421daaf47eca96, type: 3}
 --- !u!1 &1104405597 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6334136638645548303, guid: c7bd090313c3e8c4ca1c4c5470243103,
@@ -2441,6 +2792,7 @@ GameObject:
   - component: {fileID: 1148993462}
   - component: {fileID: 1148993461}
   - component: {fileID: 1148993466}
+  - component: {fileID: 1148993467}
   m_Layer: 0
   m_Name: Cylinder (4
   m_TagString: TeleportStreamable
@@ -2556,6 +2908,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &1148993467
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148993460}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &1164066786
 GameObject:
   m_ObjectHideFlags: 0
@@ -2568,6 +2933,7 @@ GameObject:
   - component: {fileID: 1164066789}
   - component: {fileID: 1164066788}
   - component: {fileID: 1164066787}
+  - component: {fileID: 1164066791}
   m_Layer: 0
   m_Name: Plane (5)
   m_TagString: TeleportStreamable
@@ -2654,6 +3020,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 35
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 90}
+--- !u!114 &1164066791
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1164066786}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &1214658850
 GameObject:
   m_ObjectHideFlags: 0
@@ -2683,92 +3062,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7561f734cd5e2614b9ecc67842d399dc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gameObjectReferences_keys:
-  - {fileID: 1688495896}
-  - {fileID: 131459361}
-  - {fileID: 1499783651}
-  - {fileID: 616026434}
-  - {fileID: 674530867}
-  - {fileID: 602292652}
-  - {fileID: 1024461909}
-  - {fileID: 12524457}
-  - {fileID: 1506431609}
-  - {fileID: 1707043577}
-  - {fileID: 564378970}
-  - {fileID: 790040768}
-  - {fileID: 455755986}
-  - {fileID: 472957603}
-  - {fileID: 1689080570}
-  - {fileID: 1935206965}
-  - {fileID: 1910277555}
-  - {fileID: 1396765336}
-  - {fileID: 937613827}
-  - {fileID: 731113965}
-  - {fileID: 1622920830}
-  - {fileID: 986364671}
-  - {fileID: 1538613708}
-  - {fileID: 602978596}
-  - {fileID: 1368928274}
-  - {fileID: 1661123511}
-  - {fileID: 126385756}
-  - {fileID: 131690992}
-  - {fileID: 590165027}
-  - {fileID: 630112721}
-  - {fileID: 1965334201}
-  - {fileID: 2097608094}
-  - {fileID: 1370980060}
-  - {fileID: 205381503}
-  - {fileID: 1766568376}
-  - {fileID: 908411843}
-  - {fileID: 2089464951}
-  - {fileID: 1148993460}
-  - {fileID: 1709764593}
-  - {fileID: 1499709811}
-  - {fileID: 427680964}
-  - {fileID: 1164066786}
-  gameObjectReferences_values:
-  - mesh: {fileID: 9186633843763367028, guid: 8a8c7adf20bee9040979f335f4ee97d5, type: 3}
-  - mesh: {fileID: -3216758059836361224, guid: be18a8fa393433942bb11f64a8389aed, type: 3}
-  - mesh: {fileID: 5060444177187149915, guid: 1453eb10af1b0e6489936191d3d20aa1, type: 3}
-  - mesh: {fileID: -7708389821861517950, guid: 28d31154e6a4c7549873ad082267879f, type: 3}
-  - mesh: {fileID: -7892432015762708264, guid: 846cfee221095204ea421daaf47eca96, type: 3}
-  - mesh: {fileID: -1258100815225046197, guid: 846cfee221095204ea421daaf47eca96, type: 3}
-  - mesh: {fileID: -1015699770599192987, guid: 846cfee221095204ea421daaf47eca96, type: 3}
-  - mesh: {fileID: 8717285299447145127, guid: 846cfee221095204ea421daaf47eca96, type: 3}
-  - mesh: {fileID: 5969004303824751651, guid: 846cfee221095204ea421daaf47eca96, type: 3}
-  - mesh: {fileID: 2592335857007103259, guid: 846cfee221095204ea421daaf47eca96, type: 3}
-  - mesh: {fileID: -4121599681479280667, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
-  - mesh: {fileID: 7252456297032893678, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
-  - mesh: {fileID: -8882322082198371496, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
-  - mesh: {fileID: 3341325685863068083, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
-  - mesh: {fileID: -4231716108970672535, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
-  - mesh: {fileID: 2888647440349190436, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
-  - mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 2210965410299338194, guid: 1483b735ce3212443884f65eb77566ec, type: 3}
-  - mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  - mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!4 &1214658852
 Transform:
   m_ObjectHideFlags: 0
@@ -3051,6 +3344,7 @@ GameObject:
   - component: {fileID: 1368928277}
   - component: {fileID: 1368928276}
   - component: {fileID: 1368928275}
+  - component: {fileID: 1368928279}
   m_Layer: 0
   m_Name: Cylinder (1)
   m_TagString: TeleportStreamable
@@ -3137,6 +3431,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 14
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1368928279
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1368928274}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &1370980060
 GameObject:
   m_ObjectHideFlags: 0
@@ -3149,6 +3456,7 @@ GameObject:
   - component: {fileID: 1370980063}
   - component: {fileID: 1370980062}
   - component: {fileID: 1370980061}
+  - component: {fileID: 1370980065}
   m_Layer: 0
   m_Name: Strip Light Surround 1
   m_TagString: TeleportStreamable
@@ -3235,6 +3543,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 21
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1370980065
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1370980060}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &1396765336 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 1483b735ce3212443884f65eb77566ec,
@@ -3254,6 +3575,19 @@ BoxCollider:
   serializedVersion: 2
   m_Size: {x: 0.04386633, y: 0.0019999999, z: 0.006192893}
   m_Center: {x: -0.0017417055, y: -0.0003333338, z: 0.0000018187566}
+--- !u!114 &1396765341
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1396765336}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 2210965410299338194, guid: 1483b735ce3212443884f65eb77566ec, type: 3}
 --- !u!1 &1420475499
 GameObject:
   m_ObjectHideFlags: 0
@@ -3332,6 +3666,7 @@ GameObject:
   - component: {fileID: 1499709813}
   - component: {fileID: 1499709812}
   - component: {fileID: 1499709816}
+  - component: {fileID: 1499709817}
   m_Layer: 0
   m_Name: DynamicSphere
   m_TagString: TeleportStreamable
@@ -3432,6 +3767,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &1499709817
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1499709811}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &1499783651 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 1453eb10af1b0e6489936191d3d20aa1,
@@ -3451,6 +3799,19 @@ BoxCollider:
   serializedVersion: 2
   m_Size: {x: 1.2879105, y: 1.2879055, z: 0.9329316}
   m_Center: {x: -0.00078961265, y: -0.0000028908275, z: 0.46288988}
+--- !u!114 &1499783659
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1499783651}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 5060444177187149915, guid: 1453eb10af1b0e6489936191d3d20aa1, type: 3}
 --- !u!1 &1506431609 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3940529767981703912, guid: c7bd090313c3e8c4ca1c4c5470243103,
@@ -3472,6 +3833,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &1506431617
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1506431609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 5969004303824751651, guid: 846cfee221095204ea421daaf47eca96, type: 3}
 --- !u!1 &1538613708
 GameObject:
   m_ObjectHideFlags: 0
@@ -3484,6 +3858,7 @@ GameObject:
   - component: {fileID: 1538613711}
   - component: {fileID: 1538613710}
   - component: {fileID: 1538613709}
+  - component: {fileID: 1538613713}
   m_Layer: 0
   m_Name: Cube
   m_TagString: TeleportStreamable
@@ -3569,6 +3944,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 11
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1538613713
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1538613708}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!84 &1582784442
 RenderTexture:
   m_ObjectHideFlags: 0
@@ -3618,6 +4006,7 @@ GameObject:
   - component: {fileID: 1622920833}
   - component: {fileID: 1622920832}
   - component: {fileID: 1622920831}
+  - component: {fileID: 1622920835}
   m_Layer: 0
   m_Name: Sphere
   m_TagString: TeleportStreamable
@@ -3703,6 +4092,19 @@ Transform:
   m_Father: {fileID: 986364675}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1622920835
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1622920830}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &1629517640
 GameObject:
   m_ObjectHideFlags: 0
@@ -3798,6 +4200,7 @@ GameObject:
   - component: {fileID: 1661123514}
   - component: {fileID: 1661123513}
   - component: {fileID: 1661123512}
+  - component: {fileID: 1661123516}
   m_Layer: 0
   m_Name: Cube (6)
   m_TagString: TeleportStreamable
@@ -3883,6 +4286,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 15
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1661123516
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1661123511}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1001 &1688495894
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4011,6 +4427,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &1688495900
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1688495896}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 9186633843763367028, guid: 8a8c7adf20bee9040979f335f4ee97d5, type: 3}
 --- !u!1 &1689080570 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1240532557695021201, guid: c7bd090313c3e8c4ca1c4c5470243103,
@@ -4032,6 +4461,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &1689080578
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1689080570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: -4231716108970672535, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
 --- !u!1 &1707043577 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2236209759635489722, guid: c7bd090313c3e8c4ca1c4c5470243103,
@@ -4053,6 +4495,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &1707043585
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1707043577}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 2592335857007103259, guid: 846cfee221095204ea421daaf47eca96, type: 3}
 --- !u!1 &1709764593
 GameObject:
   m_ObjectHideFlags: 0
@@ -4065,6 +4520,7 @@ GameObject:
   - component: {fileID: 1709764596}
   - component: {fileID: 1709764595}
   - component: {fileID: 1709764594}
+  - component: {fileID: 1709764598}
   m_Layer: 0
   m_Name: Plinth
   m_TagString: TeleportStreamable
@@ -4151,6 +4607,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 28
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1709764598
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1709764593}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &1766568376
 GameObject:
   m_ObjectHideFlags: 0
@@ -4163,6 +4632,7 @@ GameObject:
   - component: {fileID: 1766568379}
   - component: {fileID: 1766568378}
   - component: {fileID: 1766568377}
+  - component: {fileID: 1766568381}
   m_Layer: 0
   m_Name: Strip Light Surround 2
   m_TagString: TeleportStreamable
@@ -4249,6 +4719,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 22
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1766568381
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1766568376}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &1902636595
 GameObject:
   m_ObjectHideFlags: 0
@@ -4305,6 +4788,7 @@ GameObject:
   - component: {fileID: 1910277558}
   - component: {fileID: 1910277557}
   - component: {fileID: 1910277556}
+  - component: {fileID: 1910277560}
   m_Layer: 0
   m_Name: Plane (2)
   m_TagString: TeleportStreamable
@@ -4391,6 +4875,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0.14, y: -0.995, z: -89.007}
+--- !u!114 &1910277560
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1910277555}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &1935206965 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4088384801315021047, guid: c7bd090313c3e8c4ca1c4c5470243103,
@@ -4412,6 +4909,19 @@ MonoBehaviour:
   priority: 0
   _renderingMask: 0
   streamOnlyWithParent: 0
+--- !u!114 &1935206973
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1935206965}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 2888647440349190436, guid: d0c344579ae47a24594c33ae955cf7f4, type: 3}
 --- !u!1 &1965334201
 GameObject:
   m_ObjectHideFlags: 0
@@ -4424,6 +4934,7 @@ GameObject:
   - component: {fileID: 1965334204}
   - component: {fileID: 1965334203}
   - component: {fileID: 1965334202}
+  - component: {fileID: 1965334206}
   m_Layer: 0
   m_Name: Plane (1)
   m_TagString: TeleportStreamable
@@ -4510,6 +5021,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 20
   m_LocalEulerAnglesHint: {x: 180, y: 0, z: 0}
+--- !u!114 &1965334206
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1965334201}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1001 &1990738936
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4827,6 +5351,7 @@ GameObject:
   - component: {fileID: 2089464954}
   - component: {fileID: 2089464953}
   - component: {fileID: 2089464952}
+  - component: {fileID: 2089464956}
   m_Layer: 0
   m_Name: Plinth 1
   m_TagString: TeleportStreamable
@@ -4913,6 +5438,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 24
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2089464956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2089464951}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &2097608094
 GameObject:
   m_ObjectHideFlags: 0
@@ -4925,6 +5463,7 @@ GameObject:
   - component: {fileID: 2097608097}
   - component: {fileID: 2097608096}
   - component: {fileID: 2097608095}
+  - component: {fileID: 2097608099}
   m_Layer: 0
   m_Name: Strip Light 1
   m_TagString: TeleportStreamable
@@ -5010,6 +5549,19 @@ Transform:
   m_Father: {fileID: 1370980064}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2097608099
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2097608094}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &2098470738
 GameObject:
   m_ObjectHideFlags: 0

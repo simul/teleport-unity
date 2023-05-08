@@ -409,7 +409,10 @@ namespace teleport
 				}
 			}
 			clientID = 0;
-			sceneCaptureComponent.SetClientID(clientID);
+			if (sceneCaptureComponent != null)
+            {
+				sceneCaptureComponent.SetClientID(0);
+			}
 		}
 
 		public bool IsConnected()
@@ -630,6 +633,8 @@ namespace teleport
 				geometryStreamingService.SetNodePosePath(clientspaceRoot.gameObject, "root");
 			collisionRoot = GetSingleComponentFromChildren<Teleport_CollisionRoot>();
 			sceneCaptureComponent = GetSingleComponentFromChildren<Teleport_SceneCaptureComponent>();
+			if(!teleportSettings.serverSettings.StreamVideo)
+				sceneCaptureComponent.enabled=false;
 			// Now we've initialized the session, we can initialize any subcomponents that depend on this component.
 			var subComponents=GetComponentsInChildren<SessionSubcomponent> ();
 			foreach(var s in subComponents)
@@ -720,7 +725,8 @@ namespace teleport
 					streamable.sendMovementUpdates = false;
 				}
 			}
-			sceneCaptureComponent.SetClientID(clientID);
+			if (sceneCaptureComponent != null)
+				sceneCaptureComponent.SetClientID(clientID);
 		}
 		private void UpdateClientDynamicLighting(Vector2Int cubeMapsOffset)
 		{

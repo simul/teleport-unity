@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEditor;
-using System.IO;
 using UnityEngine;
-using UnityEngine.UIElements;
+using System.Text.RegularExpressions;
 
 namespace teleport
 {
@@ -107,9 +104,17 @@ namespace teleport
 			teleportSettings.highlightNonStreamables = EditorGUILayout.Toggle("Highlight Non-Streamables", teleportSettings.highlightNonStreamables);
 			teleportSettings.highlightNonStreamableColour = EditorGUILayout.ColorField("Highlight Non-Streamable Colour", teleportSettings.highlightNonStreamableColour);
 			teleportSettings.moveUpdatesPerSecond = (uint)EditorGUILayout.IntField("Move Updates Per Second", (int)teleportSettings.moveUpdatesPerSecond);
-			teleportSettings.discoveryPort = (uint)EditorGUILayout.IntField("Discovery Port", (int)teleportSettings.discoveryPort);
+			
+			string tempPorts= EditorGUILayout.TextField("Signaling Port/s", teleportSettings.signalingPorts);
+
+			// does this validate?
+			string pattern = @"^(\d+)(,\d+)*$";
+			Match m = Regex.Match(tempPorts, pattern, RegexOptions.IgnoreCase);
+			if (m.Success)
+				teleportSettings.signalingPorts= tempPorts;
+
 			teleportSettings.connectionTimeout = EditorGUILayout.IntField("Timeout", teleportSettings.connectionTimeout);
-			teleportSettings.clientIP = EditorGUILayout.TextField("Client IP", teleportSettings.clientIP);
+			teleportSettings.clientIP = EditorGUILayout.TextField("Restrict Client IP", teleportSettings.clientIP);
 			teleportSettings.webcam = WebcamField("Webcam", teleportSettings.webcam);
 			teleportSettings.renderMainCamera = EditorGUILayout.Toggle("Render Main Camera", teleportSettings.renderMainCamera);
 			teleportSettings.certPath = EditorGUILayout.TextField("SSL Cert Path", teleportSettings.certPath);
