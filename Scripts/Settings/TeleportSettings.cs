@@ -21,12 +21,14 @@ namespace teleport
 		public const string k_TeleportSettingsFilename = "TeleportSettings";
 		//! Objects with this tag will be streamed; leaving it blank will cause it to just use the layer mask.
 		private string _TagToStream = "TeleportStreamable";
+		[System.NonSerialized]
+		private bool tagInitialized=false;
 		public string TagToStream
 		{
 			get
 			{
 #if UNITY_EDITOR
-				if(_TagToStream.Length>0)
+				if(!tagInitialized&&_TagToStream.Length>0)
 				{
 					// Open tag manager
 					Object[] objs=AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset");
@@ -66,6 +68,7 @@ namespace teleport
 							}
 						}
 					}
+					tagInitialized=true;
 				}
 #endif
 				return _TagToStream;
@@ -186,17 +189,17 @@ namespace teleport
 				}
 				teleportSettings.colorSpace = PlayerSettings.colorSpace;
 #endif
-			}
 #if UNITY_EDITOR
 			// Editor can set the cache path anywhere. But for deployed builds, it's always in (Project)/teleport_cache.
-			if (teleportSettings.cachePath=="" || !System.IO.File.Exists(teleportSettings.cachePath))
+				if (teleportSettings.cachePath=="" || !System.IO.File.Exists(teleportSettings.cachePath))
 #endif
-			{
-				teleportSettings.cachePath = System.IO.Directory.GetParent(Application.dataPath).ToString().Replace("\\","/") + "/teleport_cache";
-			}
-			if (!System.IO.File.Exists(teleportSettings.cachePath))
-			{
-				System.IO.Directory.CreateDirectory(teleportSettings.cachePath);
+				{
+					teleportSettings.cachePath = System.IO.Directory.GetParent(Application.dataPath).ToString().Replace("\\","/") + "/teleport_cache";
+				}
+				if (!System.IO.File.Exists(teleportSettings.cachePath))
+				{
+					System.IO.Directory.CreateDirectory(teleportSettings.cachePath);
+				}
 			}
 			return teleportSettings;
 		}

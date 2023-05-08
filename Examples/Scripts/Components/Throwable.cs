@@ -132,7 +132,7 @@ namespace teleport
 				session.input.AddDelegate(RightGrabInputIds, Grab, InputEventType.Press);
 				session.input.AddDelegate(LeftMouseClickInputIds, Grab, InputEventType.Release); //InputEventType.Press);
 			}
-			 nearController =controller;
+			nearController =controller;
 		}
 		void OnTriggerStay(Collider other)
 		{

@@ -67,12 +67,11 @@ float4 FromCubemap(int2 pos)
 	float4x4 cubeInvViewProj[6] = {
 		{ {0,0,-1,0}	,{0,-1,0,0}	,{1,0,0,0}	,{0,0,0,1}	}
 		, { {0,0,1,0}	,{0,-1,0,0}	,{-1,0,0,0}	,{0,0,0,1} }
-		,{ {-1,0,0,0}	,{0,0,-1,0}	,{0,1,0,0}	,{0,0,0,1}	}
 		,{ {-1,0,0,0}	,{0,0,1,0}	,{0,-1,0,0},{0,0,0,1}	}
+		,{ {-1,0,0,0}	,{0,0,-1,0}	,{0,1,0,0}	,{0,0,0,1}	}
 		,{ {-1,0,0,0}	,{0,-1,0,0}	,{0,0,-1,0}	,{0,0,0,1}	}
 		,{ {1,0,0,0}	,{0,-1,0,0}	,{0,0,1,0}	,{0,0,0,1}	}
 	};
-	float4x4 cubeInvViewProj0	= { { 0, 0, -1, 0 }, { 0, -1, 0, 0 }, { 1, 0, 0, 0 }, { 0, 0, 0, 1 } };
 
 	uint FaceWidth, FaceHeight, numFaces;
 	Result.GetDimensions(FaceWidth, FaceHeight);
@@ -81,8 +80,8 @@ float4 FromCubemap(int2 pos)
 	float3 dir		=float3(float2(ipos.xy)/float2(sz)*2.0-float2(1.0,1.0),1.0);
 	float3 dir_g	=(mul(cubeInvViewProj[Face],float4(dir,1.0))).xyz;
 	float4 colour	= SourceCube.SampleLevel(samplerSourceCube,normalize(dir_g),Mip);
-	//float3 faceColour[6]={{1.0,0,0},{0.2,0,0},{0,1.0,0},{0,0.2,0},{0,0,1.0},{0,0,0.4}};
-	//colour.rgb+=dir_g;//faceColour[ArrayIndex];
+//float3 faceColour[6]={{1.0,0,0},{0.2,0,0},{0,1.0,0},{0,0.2,0},{0,0,1.0},{0,0,0.4}};
+	//colour.rgb += 0.5*faceColour[Face];
 	//colour.r+=float(pos.x)/float(InputW);
 	//colour.g+=float(pos.y)/float(InputH);
 	//colour.rgb = dir_g;

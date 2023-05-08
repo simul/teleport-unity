@@ -2669,6 +2669,8 @@ MonoBehaviour:
   - {fileID: 2100000, guid: 1d60d8e2a00caf943a55b85947b0c122, type: 2}
   - {fileID: 2100000, guid: bf6ace881f041fb4490d6f8608c19287, type: 2}
   - {fileID: 2100000, guid: 3bfab201348ef1642a1f5ce094d7d493, type: 2}
+  - {fileID: 8400000, guid: b01f0f65177e2b34eae464cdb3e834d3, type: 2}
+  - {fileID: 8400000, guid: 4dab61d44269458499c75380b78d284d, type: 2}
   sceneResourcePaths_values:
   - Meshes/Owned/Cafe/Cafe_ChinaSet_Teapot_lid.FBX##Object005
   - Meshes/Owned/Cafe/Materials/Teapot.mat##Teapot
@@ -2708,6 +2710,8 @@ MonoBehaviour:
   - Teleport/Examples/Materials/Matt___Red.mat##Matt___Red
   - Teleport/Examples/Materials/Gloss.mat##Gloss
   - Teleport/Examples/Materials/Chrome.mat##Chrome
+  - Teleport/Scenes/TeleportVRAntechamber/diffuseRenderTexture.renderTexture##diffuseRenderTexture
+  - Teleport/Scenes/TeleportVRAntechamber/specularRenderTexture.renderTexture##specularRenderTexture
 --- !u!4 &990844616
 Transform:
   m_ObjectHideFlags: 0
@@ -3130,9 +3134,9 @@ ReflectionProbe:
   m_TimeSlicingMode: 0
   m_Resolution: 128
   m_UpdateFrequency: 0
-  m_BoxSize: {x: 5, y: 3, z: 5}
+  m_BoxSize: {x: 5, y: 1, z: 1}
   m_BoxOffset: {x: 0, y: 0, z: 0}
-  m_NearClip: 0.3
+  m_NearClip: 0.1
   m_FarClip: 1000
   m_ShadowDistance: 100
   m_ClearFlags: 1
@@ -3141,7 +3145,7 @@ ReflectionProbe:
     serializedVersion: 2
     m_Bits: 4294967295
   m_IntensityMultiplier: 1
-  m_BlendDistance: 1
+  m_BlendDistance: 0.1
   m_HDR: 1
   m_BoxProjection: 1
   m_RenderDynamicObjects: 0
@@ -3620,10 +3624,10 @@ ReflectionProbe:
   m_TimeSlicingMode: 0
   m_Resolution: 64
   m_UpdateFrequency: 0
-  m_BoxSize: {x: 10, y: 10, z: 10}
+  m_BoxSize: {x: 1, y: 1, z: 1}
   m_BoxOffset: {x: 0, y: 0, z: 0}
-  m_NearClip: 0.3
-  m_FarClip: 1000
+  m_NearClip: 0.1
+  m_FarClip: 10
   m_ShadowDistance: 100
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
@@ -3646,7 +3650,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1420475499}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.56, y: 0.78, z: -2.96}
+  m_LocalPosition: {x: -1.56, y: 1.09, z: -2.96}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4940,7 +4944,7 @@ GameObject:
   m_TagString: TeleportStreamable
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 1
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!64 &1965334202
 MeshCollider:

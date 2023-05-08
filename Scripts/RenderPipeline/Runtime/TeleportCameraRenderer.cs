@@ -322,6 +322,7 @@ namespace teleport
 #endif
 		public void Render(ScriptableRenderContext context, Camera camera, int layerMask, uint renderingMask)
 		{
+			bool is_reflection=(camera.cameraType==CameraType.Reflection);
 			CullingResults cullingResultsAll;
 			if (!Cull(context, camera, out cullingResultsAll))
 			{
@@ -338,8 +339,8 @@ namespace teleport
 			Clear(context, camera);
 			PrepareForSceneWindow(context, camera);
 			// We draw everything first:
-			DrawOpaqueGeometry(context, camera, false,cullingResultsAll,layerMask, renderingMask,lightingOrder,false, teleportSettings.highlightStreamableColour);
-			DrawTransparentGeometry(context, camera, false,cullingResultsAll,layerMask, renderingMask);
+			DrawOpaqueGeometry(context, camera, is_reflection, cullingResultsAll,layerMask, renderingMask,lightingOrder,false, teleportSettings.highlightStreamableColour);
+			DrawTransparentGeometry(context, camera, is_reflection, cullingResultsAll,layerMask, renderingMask);
 			// Now we highlight the streamed objects:
 			if (teleportSettings.highlightStreamables)
 			{
@@ -352,13 +353,13 @@ namespace teleport
 					SetStreamableHighlightMaskOnObjects();
 					renderingMask = (uint)1 << 31;   // When not playing, only streamables have this bit set.
 				}
-				DrawOpaqueGeometry(context, camera, false,cullingResultsAll,layerMask, renderingMask, lightingOrder, true,teleportSettings.highlightStreamableColour);
+				DrawOpaqueGeometry(context, camera, is_reflection, cullingResultsAll,layerMask, renderingMask, lightingOrder, true,teleportSettings.highlightStreamableColour);
 			}
 			if (teleportSettings.highlightNonStreamables)
 			{
 				SetStreamableHighlightMaskOnObjects();
 				renderingMask = (uint)1 << 30;   // When not playing, only non-streamables have this bit set.
-				DrawOpaqueGeometry(context, camera, false,cullingResultsAll, layerMask, renderingMask, lightingOrder, true,teleportSettings.highlightNonStreamableColour);
+				DrawOpaqueGeometry(context, camera, is_reflection, cullingResultsAll, layerMask, renderingMask, lightingOrder, true,teleportSettings.highlightNonStreamableColour);
 			}
 #if UNITY_EDITOR
 			DrawUnsupportedShaders(context, camera);

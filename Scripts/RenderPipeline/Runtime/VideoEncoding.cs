@@ -41,8 +41,6 @@ namespace teleport
 			encodeTagIdKernel = computeShader.FindKernel("EncodeTagDataIdCS");
 			encodeColorKernel = computeShader.FindKernel("EncodeColorCS");
 			encodeWebcamKernel = computeShader.FindKernel("EncodeWebcamCS");
-
-		//downCopyFaceKernel = computeShader.FindKernel("DownCopyFaceCS");
 		}
 
 		static private void InitDepthShader()
