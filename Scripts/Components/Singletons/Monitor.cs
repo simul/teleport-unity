@@ -85,6 +85,7 @@ namespace teleport
 			public ReportHandshakeFn reportHandshake;
 			public OnAudioInputReceived audioInputReceived;
 			public GetUnixTimestampFn getUnixTimestamp;
+			public Int64 startUnixTimeNs;
 		};
 
 		[DllImport(TeleportServerDll.name)]
@@ -203,11 +204,31 @@ namespace teleport
 			}
 		}
 
-		public static Int64 GetUnixTimestampNow()
+		static Int64 startUnixTimeNs = 0;
+		public static Int64 GetUnixTimestampNowMs()
 		{
 			return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		}
+		public static Int64 GetUnixTimestampNowNs()
+        {
+			return GetUnixTimestampNowMs()*1000000;
 
+		}
+		static float lastFixedTime=0.0f;
+		public static Int64 GetServerTimeNs()
+        {
+			if (lastFixedTime != Time.fixedTime)
+            {
+				server_unix_time_ns = GetUnixTimestampNowNs() - startUnixTimeNs;
+				lastFixedTime = Time.fixedTime;
+			}
+			return server_unix_time_ns;
+		}
+		static Int64 server_unix_time_ns=0;
+		void FixedUpdate()
+        {
+			
+		}
 		///MONOBEHAVIOUR FUNCTIONS
 
 		private void Awake()
@@ -259,9 +280,9 @@ namespace teleport
 			//We need to add the animation events on play, so we can detect when an animation starts.
 			GeometrySource.GetGeometrySource().AddAnimationEventHooks();
 		}
-
 		private void OnEnable()
 		{
+			startUnixTimeNs= GetUnixTimestampNowNs();
 			ulong unmanagedSize = SizeOf("ServerSettings");
 			ulong managedSize = (ulong)Marshal.SizeOf(typeof(teleport.ServerSettings));
 		
@@ -298,11 +319,12 @@ namespace teleport
 				signalingPorts = teleportSettings.signalingPorts,
 				reportHandshake = ReportHandshake,
 				audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput,
-				getUnixTimestamp = GetUnixTimestampNow,
+				getUnixTimestamp = GetUnixTimestampNowNs,
 				httpMountDirectory = teleportSettings.cachePath,
 				clientIP = teleportSettings.clientIP,
 				certPath = teleportSettings.certPath,
-				privateKeyPath = teleportSettings.privateKeyPath
+				privateKeyPath = teleportSettings.privateKeyPath,
+				startUnixTimeNs= startUnixTimeNs
 			};
 
 			initialised = Teleport_Initialize(initialiseState);

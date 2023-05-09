@@ -217,7 +217,9 @@ namespace teleport
 					Debug.LogWarning($"Failed to update movement of node! Null node in {nameof(Teleport_Streamable)}.childHierarchy of \"{name}\"!");
 					continue;
 				}
-				updates.Add(GetNodeMovementUpdate(node, clientID));
+				var update=GetNodeMovementUpdate(node, clientID);
+				if(update.nodeID!=0)
+					updates.Add(update);
 			}
 
 			return updates;
@@ -417,7 +419,7 @@ namespace teleport
 			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node);
 
 			avs.MovementUpdate update = new avs.MovementUpdate();
-			update.timestamp = teleport.Monitor.GetUnixTimestampNow();
+			update.time_since_server_start_ns = teleport.Monitor.GetServerTimeNs();
 			update.nodeID = nodeID;
 
 			if (GeometryStreamingService.IsClientRenderingParent(clientID, node))
@@ -452,18 +454,49 @@ namespace teleport
 					position = node.transform.localPosition;
 					rotation = node.transform.localRotation;
 				}
+				Int64 delta_time_ns = update.time_since_server_start_ns - previousMovement.time_since_server_start_ns;
+				if(delta_time_ns==0)
+				{ 
+					update.nodeID=0;
+					return update;
+				}
+				if (delta_time_ns != 0)
+                {
+					double delta_time_s = delta_time_ns * 0.000000001;
 
-				//We cast to the unity engine types to take advantage of the existing vector subtraction operators.
-				//We multiply by the amount of move updates per second to get the movement per second, rather than per update.
-				update.velocity = (position - previousMovement.position) * teleportSettings.moveUpdatesPerSecond;
+					//We cast to the unity engine types to take advantage of the existing vector subtraction operators.
+					//We multiply by the amount of move updates per second to get the movement per second, rather than per update.
+					Rigidbody r=GetComponent<Rigidbody>();
+                    if (r && !r.isKinematic)
+                    {
+                        update.velocity = r.velocity;
+                        if (r.angularVelocity.sqrMagnitude > 0.000001)
+                        {
+                            update.angularVelocityAxis = r.angularVelocity.normalized;
+                            update.angularVelocityAngle = r.angularVelocity.magnitude;
+                        }
+                        else
+                        {
+                            update.angularVelocityAxis = Vector3.zero;
+                            update.angularVelocityAngle = 0;
+                        }
+                    }
+                    else
+                    {
+                        update.velocity = (position - previousMovement.position) / (float)delta_time_s;
+                        (rotation * Quaternion.Inverse(previousMovement.rotation)).ToAngleAxis(out update.angularVelocityAngle, out Vector3 angularVelocityAxis);
+                        update.angularVelocityAxis = angularVelocityAxis;
+                        if (update.angularVelocityAngle != 0)
+                        {
+                            //Angle needs to be inverted, for some reason.
+                            update.angularVelocityAngle /= (float)delta_time_s;
+                            update.angularVelocityAngle *= -Mathf.Deg2Rad;
+                        }
+                    }
+				}
+            }
 
-				(rotation * Quaternion.Inverse(previousMovement.rotation)).ToAngleAxis(out update.angularVelocityAngle, out Vector3 angularVelocityAxis);
-				update.angularVelocityAxis = angularVelocityAxis;
-				//Angle needs to be inverted, for some reason.
-				update.angularVelocityAngle *= teleportSettings.moveUpdatesPerSecond * -Mathf.Deg2Rad;
-			}
-
-			previousMovements[nodeID] = update;
+            previousMovements[nodeID] = update;
 			return update;
 		}
 

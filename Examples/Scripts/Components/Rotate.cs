@@ -13,8 +13,13 @@ public class Rotate : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
-        transform.Rotate(axis, speedDegreesPerSecond * Time.deltaTime, Space.World);
+        transform.Rotate(axis, speedDegreesPerSecond * Time.fixedDeltaTime, Space.World);
+        var r=GetComponent<Rigidbody>();
+        if (r)
+        {
+           // r.angularVelocity=axis*speedDegreesPerSecond*(3.1415926536F/180.0F);
+        }
     }
 }
