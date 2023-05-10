@@ -412,17 +412,26 @@ namespace teleport
 				}
 			}
 		}
-
+		avs.MovementUpdate localUpdate=new avs.MovementUpdate();
+		avs.MovementUpdate globalUpdate = new avs.MovementUpdate();
 		private avs.MovementUpdate GetNodeMovementUpdate(GameObject node, uid clientID)
 		{
 			//Node should already have been added; but AddNode(...) will do the equivalent of FindResourceID(...), but with a fallback.
 			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node);
-
-			avs.MovementUpdate update = new avs.MovementUpdate();
+			uid prevID=nodeID;
+			ref avs.MovementUpdate update= ref localUpdate;
+			bool has_parent= GeometryStreamingService.IsClientRenderingParent(clientID, node);
+			if (!has_parent)
+			{
+				update=ref globalUpdate;
+				prevID=nodeID+1000000000;
+			}
+			if(update.time_since_server_start_ns == teleport.Monitor.GetServerTimeNs())
+				return update;
 			update.time_since_server_start_ns = teleport.Monitor.GetServerTimeNs();
 			update.nodeID = nodeID;
 
-			if (GeometryStreamingService.IsClientRenderingParent(clientID, node))
+			if (has_parent)
 			{
 				update.isGlobal = false;
 				update.position = node.transform.localPosition;
@@ -437,7 +446,7 @@ namespace teleport
 				update.scale	= node.transform.lossyScale;
 			}
 			
-			if(previousMovements.TryGetValue(nodeID, out avs.MovementUpdate previousMovement))
+			if(previousMovements.TryGetValue(prevID, out avs.MovementUpdate previousMovement))
 			{
 				TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 				Vector3 position;
@@ -496,7 +505,7 @@ namespace teleport
 				}
             }
 
-            previousMovements[nodeID] = update;
+            previousMovements[prevID] = update;
 			return update;
 		}
 
