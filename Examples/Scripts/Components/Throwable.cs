@@ -22,7 +22,8 @@ namespace teleport
 			TeleportSettings settings=TeleportSettings.GetOrCreateSettings();
 			LeftGrabInputIds = settings.FindInputsByName("Left Grip Click");
 			RightGrabInputIds = settings.FindInputsByName("Right Grip Click");
-			LeftMouseClickInputIds = settings.FindInputsByName("Left Mouse Click"); 
+			LeftMouseClickInputIds = settings.FindInputsByName("Left Mouse Click");  
+			RightMouseClickInputIds = settings.FindInputsByName("Right Mouse Click"); 
 		}
 
 		// Update is called once per frame
@@ -34,6 +35,7 @@ namespace teleport
 		System.UInt16 [] LeftGrabInputIds ={ };
 		System.UInt16 [] RightGrabInputIds = { };
 		System.UInt16 [] LeftMouseClickInputIds = { };
+		System.UInt16[] RightMouseClickInputIds = { };
 		GameObject formerParent=null;
 		Vector3 oldRelativePosition=new Vector3();
 		Quaternion oldRelativeRotation=new Quaternion();
@@ -125,12 +127,12 @@ namespace teleport
 			if(controller.poseRegexPath.Contains("left"))
 			{
 				session.input.AddDelegate(LeftGrabInputIds, Grab, InputEventType.Press);
-				session.input.AddDelegate(LeftMouseClickInputIds, Grab, InputEventType.Release); //InputEventType.Press);
+				session.input.AddDelegate(RightMouseClickInputIds, Grab, InputEventType.Release); //InputEventType.Press);
 			}
 			if (controller.poseRegexPath.Contains("right"))
 			{ 
 				session.input.AddDelegate(RightGrabInputIds, Grab, InputEventType.Press);
-				session.input.AddDelegate(LeftMouseClickInputIds, Grab, InputEventType.Release); //InputEventType.Press);
+				session.input.AddDelegate(RightMouseClickInputIds, Grab, InputEventType.Release); //InputEventType.Press);
 			}
 			nearController =controller;
 		}
@@ -154,12 +156,12 @@ namespace teleport
 			if (controller.poseRegexPath.Contains("left"))
 			{ 
 				session.input.RemoveDelegate(LeftGrabInputIds, Grab, InputEventType.Press);
-				session.input.RemoveDelegate(LeftMouseClickInputIds, Grab, InputEventType.Release); //InputEventType.Press);
+				session.input.RemoveDelegate(RightMouseClickInputIds, Grab, InputEventType.Release); //InputEventType.Press);
 			}
 			if (controller.poseRegexPath.Contains("right"))
 			{
 				session.input.RemoveDelegate(RightGrabInputIds, Grab, InputEventType.Press);
-				session.input.RemoveDelegate(LeftMouseClickInputIds, Grab, InputEventType.Release); //InputEventType.Press);
+				session.input.RemoveDelegate(RightMouseClickInputIds, Grab, InputEventType.Release); //InputEventType.Press);
 			}
 		}
 

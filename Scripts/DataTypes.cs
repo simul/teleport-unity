@@ -583,7 +583,7 @@ namespace avs
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct MovementUpdate
 	{
-		public Int64 timestamp;
+		public Int64 time_since_server_start_ns;
 		[MarshalAs(UnmanagedType.U1)] public bool isGlobal;
 
 		public uid nodeID;

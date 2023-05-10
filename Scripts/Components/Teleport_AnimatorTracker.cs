@@ -96,7 +96,7 @@ namespace teleport
 
 			lastAnimationUpdate = new avs.ApplyAnimation()
 			{
-				startTimestampUnixUTC = teleport.Monitor.GetUnixTimestampNow() - timestampOffset,
+				startTimestampUnixUTC = teleport.Monitor.GetUnixTimestampNowMs() - timestampOffset,
 				nodeID = GeometrySource.GetGeometrySource().FindResourceID(skinnedMeshRenderer.gameObject),
 				animationID = animationID,
 			};

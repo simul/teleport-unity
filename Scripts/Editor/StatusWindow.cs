@@ -47,7 +47,7 @@ namespace teleport
 			}
 			scrollPosition_client =EditorGUILayout.BeginScrollView(scrollPosition_client, false, true, GUIStyle.none, GUIStyle.none, GUIStyle.none, GUILayout.Width(200));
 
-			selGridInt = GUILayout.SelectionGrid(selGridInt, sessionNames.ToArray(), sessionNames.Count);
+			selGridInt = GUILayout.SelectionGrid(selGridInt, sessionNames.ToArray(), 1);
 			if (selGridInt >= 0 && selGridInt < sessionUids.Count)
 				selected_client_uid = sessionUids[selGridInt];
 			EditorGUILayout.EndScrollView();
@@ -91,8 +91,6 @@ namespace teleport
 				var def = teleportSettings.inputDefinitions[id];
 				EditorGUILayout.LabelField(def.name + ": " + session.input.GetBooleanState(id).ToString());
 			}
-			EditorGUILayout.EndVertical();
-			EditorGUILayout.BeginVertical();
 			EditorGUILayout.LabelField("Textures", titleStyle);
 			if (session.sceneCaptureComponent)
 			{
