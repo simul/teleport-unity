@@ -8,6 +8,10 @@ using UnityEngine.SceneManagement;
 
 namespace teleport
 {
+	public struct SessionState
+    {
+		public UInt64 sessionId;
+    };
 #if UNITY_EDITOR
 	[UnityEditor.InitializeOnLoad]
 	[HelpURL("https://docs.teleportvr.io/unity.html")]
@@ -65,7 +69,6 @@ namespace teleport
 		#endregion
 		public static OnMessageHandler editorMessageHandler=null;
 		#region DLLImport
-
 		struct InitialiseState
 		{
 			public string clientIP;
@@ -95,6 +98,8 @@ namespace teleport
 		public static extern UInt64 SizeOf(string name);
 		[DllImport(TeleportServerDll.name)]
 		private static extern bool Teleport_Initialize(InitialiseState initialiseState);
+		[DllImport(TeleportServerDll.name)]
+		public static extern bool Teleport_GetSessionState( ref teleport.SessionState sessionState);
 		[DllImport(TeleportServerDll.name)]
 		private static extern void SetConnectionTimeout(Int32 timeout);
 		[DllImport(TeleportServerDll.name)]
@@ -625,6 +630,8 @@ namespace teleport
 					}
                 }
 				GameObject player = Instantiate(Instance.defaultPlayerPrefab, SpawnPosition, SpawnRotation);
+				Teleport_Streamable rootStreamable=player.GetComponent<Teleport_Streamable>();
+				rootStreamable.ForceInit();
 				player.name = "TeleportVR_" +Instance.defaultPlayerPrefab.name+"_"+ Teleport_SessionComponent.sessions.Count + 1;
 
 				session = player.GetComponentsInChildren<Teleport_SessionComponent>()[0];

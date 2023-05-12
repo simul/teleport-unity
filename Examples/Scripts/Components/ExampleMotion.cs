@@ -91,6 +91,11 @@ public class ExampleMotion : MonoBehaviour
 		{
 			transform.SetPositionAndRotation(circle.transform.position, transform.rotation);
 		}
+		teleport.Teleport_Streamable streamable = GetComponent<teleport.Teleport_Streamable>();
+		if (streamable)
+        {
+			streamable.ResetVelocityTracking();
+        }
 		pointingController=null;
 		arc.transform.localScale = new Vector3(0,0,0);
 		circle.transform.localScale = new Vector3(0, 0, 0);

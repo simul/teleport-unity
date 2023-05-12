@@ -405,9 +405,24 @@ namespace avs
 		public double minBandwidthUsed;
 		/*! Maximum bandwidth used */
 		public double maxBandwidthUsed;
+    };
+
+    public struct ClientNetworkState
+    {
+		public float server_to_client_latency_ms;
+		public float client_to_server_latency_ms;
+		public avs.SignalingState signalingState;
+		public avs.StreamingState streamingState;
 	};
 
-	public struct VideoEncoderStats
+	public struct DisplayInfo
+    {
+		public Int32 width;
+		public Int32 height;
+		public float framerate;
+    };
+
+    public struct VideoEncoderStats
 	{
 		/*! Total video frames submitted to the encoder. */
 		public UInt64 framesSubmitted;

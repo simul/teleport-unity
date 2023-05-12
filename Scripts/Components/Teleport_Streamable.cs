@@ -261,9 +261,19 @@ namespace teleport
 		private void OnEnable()
 		{
 			uid = GeometrySource.GetGeometrySource().AddNode(gameObject, GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
-			CreateStreamedHierarchy();
+			Teleport_SessionComponent sess=GetComponent< Teleport_SessionComponent >();
+			if(sess)
+			{ 
+				CreateStreamedHierarchy();
+			}
+			else
+				CreateStreamedHierarchy();
 		}
+		public void ForceInit()
+        {
+            OnEnable();
 
+		}
 		private void OnDisable()
 		{
 			//Remove GameObject from sessions.
@@ -411,6 +421,18 @@ namespace teleport
 					}
 				}
 			}
+		}
+		//! Make sure apparent motion is zero when sending the next movement update.
+		public void ResetVelocityTracking(GameObject node)
+		{
+			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node);
+			previousMovements.Remove(nodeID);
+			previousMovements.Remove(nodeID + 1000000000);
+		}
+		//! Make sure apparent motion is zero for the whole hierarchyu.
+		public void ResetVelocityTracking()
+		{
+			previousMovements.Clear();
 		}
 		avs.MovementUpdate localUpdate=new avs.MovementUpdate();
 		avs.MovementUpdate globalUpdate = new avs.MovementUpdate();

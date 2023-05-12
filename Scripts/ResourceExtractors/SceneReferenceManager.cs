@@ -101,8 +101,21 @@ namespace teleport
                 meshTrackers = gameObject.GetComponents<MeshTracker>().ToList();
             }
 			if (meshTracker == null)
-				meshTracker = meshTrackers[0];
-            meshTracker.mesh = GetMesh(gameObject);
+			{
+				if (meshTrackers.Count > 0)
+					meshTracker = meshTrackers[0];
+			}
+			if (meshTracker == null)
+            {
+				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
+				if(skinnedMeshRenderer)
+				{
+					meshTracker = gameObject.AddComponent<MeshTracker>();
+				}
+			}
+			if (meshTracker == null)
+				return null;
+			meshTracker.mesh = GetMesh(gameObject);
 #if UNITY_EDITOR
 			UnityEditor.EditorUtility.SetDirty(this);
 #endif
@@ -121,6 +134,8 @@ namespace teleport
                 AddGameObject(gameObject, gameObjectPath);
             }
             meshTracker = gameObject.GetComponent<MeshTracker>();
+			if(!meshTracker)
+				return null;
             return meshTracker.mesh;
 		}
 		//Returns path of GameObject in scene hierarchy.

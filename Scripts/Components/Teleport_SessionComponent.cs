@@ -35,16 +35,18 @@ namespace teleport
 		[DllImport(TeleportServerDll.name)]
 		public static extern void Client_StopStreaming(uid clientID);
 
-		[DllImport(TeleportServerDll.name)]
-		public static extern avs.SignalingState Client_GetSignalingState(uid clientID);
 
-        [DllImport(TeleportServerDll.name)]
-        public static extern avs.StreamingState Client_GetStreamingState(uid clientID);
-        [DllImport(TeleportServerDll.name)]
+		[DllImport(TeleportServerDll.name)]
+		public static extern bool Client_GetNetworkState(uid clientID, ref avs.ClientNetworkState st);
+
+		[DllImport(TeleportServerDll.name)]
 		public static extern uint Client_GetClientIP(uid clientID, uint bufferLength, StringBuilder buffer);
 
 		[DllImport(TeleportServerDll.name)]
 		public static extern bool Client_GetClientNetworkStats(uid clientID, ref avs.NetworkStats stats);
+
+		[DllImport(TeleportServerDll.name)]
+		public static extern bool Client_GetClientDisplayInfo(uid clientID, ref avs.DisplayInfo displayInfo);
 		[DllImport(TeleportServerDll.name)]
 		public static extern bool Client_GetClientVideoEncoderStats(uid clientID, ref avs.VideoEncoderStats stats);
 
@@ -594,16 +596,25 @@ namespace teleport
 			}
 			return ipAddress.ToString();
 		}
-
+		avs.DisplayInfo displayInfo;
+		public avs.DisplayInfo GetDisplayInfo()
+		{
+			if(Client_GetClientDisplayInfo(clientID, ref displayInfo))
+				return displayInfo;
+			displayInfo.framerate=0;
+			return displayInfo;
+		}
 		public void ShowOverlay(int x, int y, GUIStyle font)
 		{
 			Vector3 headPosition = head ? head.transform.position : default;
 			Vector3 originPosition = clientspaceRoot ? clientspaceRoot.transform.position : default;
 
 			int lineHeight = 14;
+			avs.ClientNetworkState clientNetworkState = new avs.ClientNetworkState();
+			Teleport_SessionComponent.Client_GetNetworkState(clientID, ref clientNetworkState);
 			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Client uid {0} {1}", clientID, GetClientIP()), font);
-			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Signal: {0}", Client_GetSignalingState(clientID)), font);
-            GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Stream: {0}", Client_GetStreamingState(clientID)), font);
+			GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Signal: {0}", clientNetworkState.signalingState), font);
+            GUI.Label(new Rect(x, y += lineHeight, 300, 20), string.Format("Stream: {0}", clientNetworkState.streamingState), font);
 
         }
 
@@ -649,11 +660,8 @@ namespace teleport
 			{
 				sessions[clientID] = this;
 			}
-
 			//Place controllers at their assigned index in the lookup.
-
 			Teleport_Controller[] controllers = GetComponentsInChildren<Teleport_Controller>();
-		
 			foreach (Teleport_Controller controller in controllers)
 			{
 				controller.session = this;

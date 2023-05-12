@@ -30,7 +30,11 @@ namespace teleport
 				scrollwindowStyle = new GUIStyle( GUI.skin.box);
 				verticalScrollbarStyle = new GUIStyle(GUI.skin.verticalScrollbar);
 
-            }
+			}
+			EditorGUILayout.BeginVertical();
+			teleport.SessionState sessionState=new teleport.SessionState();
+			teleport.Monitor.Teleport_GetSessionState(ref sessionState);
+			EditorGUILayout.LabelField("Session Id", sessionState.sessionId.ToString());
 			//EditorGUILayout.Separator();
 			//EditorGUILayout.BeginFoldoutHeaderGroup(true,GUIContent.none);
 			//EditorGUILayout.EndFoldoutHeaderGroup();
@@ -54,6 +58,7 @@ namespace teleport
 			EditorGUILayout.EndVertical();
 			ClientPanel(selected_client_uid);
 			EditorGUILayout.EndHorizontal();
+			EditorGUILayout.EndVertical();
 		}
 		private Vector2 scrollPosition_streamed;
 		int selectTexture=-1;
@@ -71,9 +76,15 @@ namespace teleport
 			EditorGUILayout.LabelField("Status", titleStyle);
 			EditorGUILayout.LabelField("Uid", clientID.ToString());
 			EditorGUILayout.LabelField("IP Address", session.GetClientIP());
-			EditorGUILayout.LabelField("Signal", Teleport_SessionComponent.Client_GetSignalingState(clientID).ToString());
-            EditorGUILayout.LabelField("Stream", Teleport_SessionComponent.Client_GetStreamingState(clientID).ToString());
-            var networkStats=session.GetNetworkStats();
+			avs.ClientNetworkState clientNetworkState=new avs.ClientNetworkState();
+			Teleport_SessionComponent.Client_GetNetworkState(clientID,ref clientNetworkState);
+			EditorGUILayout.LabelField("Latency out", string.Format("{0:F3}",clientNetworkState.server_to_client_latency_ms.ToString()));
+			EditorGUILayout.LabelField("Latency back", string.Format("{0:F3}", clientNetworkState.client_to_server_latency_ms.ToString()));
+			EditorGUILayout.LabelField("Signal",clientNetworkState.signalingState.ToString());
+            EditorGUILayout.LabelField("Stream",clientNetworkState.streamingState.ToString());
+			var displayInfo = session.GetDisplayInfo();
+			EditorGUILayout.LabelField("Framerate", string.Format("{0:F3} fps", displayInfo.framerate));
+			var networkStats=session.GetNetworkStats();
 			EditorGUILayout.LabelField("available bandwidth",string.Format("{0:F3} mb/s", networkStats.bandwidth));
 			EditorGUILayout.LabelField("avg bandwidth used" ,string.Format("{0:F3} mb/s", networkStats.avgBandwidthUsed));
 			EditorGUILayout.LabelField("max bandwidth used" ,string.Format("{0:F3} mb/s", networkStats.maxBandwidthUsed));
