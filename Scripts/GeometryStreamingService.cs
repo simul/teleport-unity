@@ -578,14 +578,24 @@ namespace teleport
 					}
 				}
 			}
-		}
+        }
+        HashSet<uid> got_uids=new HashSet<uid>();
 
-		private void SendPositionUpdates()
+        private void SendPositionUpdates()
 		{
 			List<avs.MovementUpdate> updates = new List<avs.MovementUpdate>();
-			foreach(Teleport_Streamable streamable in streamedHierarchies)
+			got_uids.Clear();
+
+            foreach (Teleport_Streamable streamable in streamedHierarchies)
 			{
-				updates.AddRange(streamable.GetMovementUpdates(session.GetClientID()));
+				var add_list = streamable.GetMovementUpdates(session.GetClientID());
+				foreach (var add in add_list)
+				{
+					if (got_uids.Contains(add.nodeID))
+						continue;
+					updates.Add(add);
+					got_uids.Add(add.nodeID);
+				}
 			}
 
 			Client_UpdateNodeMovement(session.GetClientID(), updates.ToArray(), updates.Count);
