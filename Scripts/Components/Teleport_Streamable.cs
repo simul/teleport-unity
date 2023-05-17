@@ -19,6 +19,8 @@ namespace teleport
 		public MeshRenderer meshRenderer;
 		public SkinnedMeshRenderer skinnedMeshRenderer;
 		public Light light;
+		public avs.MovementUpdate localUpdate = new avs.MovementUpdate();
+		public avs.MovementUpdate globalUpdate = new avs.MovementUpdate();
 		public StreamedNode(GameObject node)
 		{
 			gameObject = node;
@@ -210,14 +212,14 @@ namespace teleport
 			List<avs.MovementUpdate> updates = new List<avs.MovementUpdate>();
 			
 			//Add movement updates for GameObjects in streamed hierarchy to the list.
-			foreach(GameObject node in streamedHierarchy)
+			foreach(StreamedNode streamedNode in streamedHierarchy)
 			{
-				if(!node)
+				if(!streamedNode.gameObject)
 				{
 					Debug.LogWarning($"Failed to update movement of node! Null node in {nameof(Teleport_Streamable)}.childHierarchy of \"{name}\"!");
 					continue;
 				}
-				var update=GetNodeMovementUpdate(node, clientID);
+				var update=GetNodeMovementUpdate(streamedNode, clientID);
 				if(update.nodeID!=0)
 					updates.Add(update);
 			}
@@ -292,17 +294,23 @@ namespace teleport
 		{
 			OnDisable();
 		}
-
+	
+		HashSet<GameObject> exploredGameObjects = new HashSet<GameObject>();
 		private void CreateStreamedHierarchy()
 		{
 			streamedHierarchy.Clear();
 			priority=0;
-			List<GameObject> exploredGameObjects = new List<GameObject>();
+			exploredGameObjects.Clear();
 			//We need to stop once we reach this node, so we add it to the explored list, but that means we now have to explicitly add it to the streamed hierarchy.
 			exploredGameObjects.Add(gameObject);
 			streamedHierarchy.Add(new StreamedNode(gameObject));
+			UpdateHierarchy();
+		}
+		//! This will look in the children to see if any newly added objects should be in the streamed hierarchy.
+		public void UpdateHierarchy()
+		{
 			// Check for nonstatic:
-			#if UNITY_EDITOR
+#if UNITY_EDITOR
 			List<Transform> children = new List<Transform>(GetComponentsInChildren<Transform>());
 			foreach (Transform t in children)
 			{
@@ -314,7 +322,7 @@ namespace teleport
 					streamableProperties.isStationary = gameObject.isStatic;
 				}
 			}
-			#endif
+#endif
 			sendMovementUpdates=false;
 			// Get all the StreamableProperties instances in the hierarchy, and use them to find the maximum "priority" value.
 			List<StreamableProperties> streamablePropertiesList = new List<StreamableProperties>(GetComponentsInChildren<StreamableProperties>());
@@ -324,18 +332,18 @@ namespace teleport
 				sendMovementUpdates|= !streamableProperties.isStationary;
 			}
 			//Mark all children that will be streamed separately as explored; i.e. marked for streaming.
-			List<Collider> childColliders = new List<Collider>(GetComponentsInChildren<Collider>());
-			foreach(Collider childCollider in childColliders)
+			List<Teleport_Streamable> childRoots = new List<Teleport_Streamable>(GetComponentsInChildren<Teleport_Streamable>());
+			foreach(Teleport_Streamable childRoot in childRoots)
 			{
-				StreamableProperties props= childCollider.GetComponent<StreamableProperties>();
+				StreamableProperties props= childRoot.GetComponent<StreamableProperties>();
 				// Don't ignore if streamOnlyWithParent is set:
 				if (props &&props.streamOnlyWithParent)
 					continue;
 				//GetComponentsInChildren(...) also grabs components from node we are on, but we don't want to exclude the children of the node we are on.
-				if (childCollider.gameObject != gameObject && GeometrySource.GetGeometrySource().IsGameObjectMarkedForStreaming(childCollider.gameObject))
+				if (childRoot.gameObject != gameObject && GeometrySource.GetGeometrySource().IsGameObjectMarkedForStreaming(childRoot.gameObject))
 				{
 					//Mark child's children as explored, as they are part of a different streaming hierarchy.
-					Transform[] childTransforms = childCollider.GetComponentsInChildren<Transform>();
+					Transform[] childTransforms = childRoot.GetComponentsInChildren<Transform>();
 					foreach(Transform transform in childTransforms)
 					{
 						exploredGameObjects.Add(transform.gameObject);
@@ -345,12 +353,12 @@ namespace teleport
 			// If this object has an Animator, grab the whole hierarchy.
 			if(GetComponent<UnityEngine.Animator>()!=null)
 			{
-				AddComponentTypeToHierarchy<Transform>(exploredGameObjects);
+				AddComponentTypeToHierarchy<Transform>();
 			}
 			//Add components to hierarchy.
-			AddComponentTypeToHierarchy<MeshRenderer>(exploredGameObjects);
-			AddComponentTypeToHierarchy<SkinnedMeshRenderer>(exploredGameObjects);
-			AddComponentTypeToHierarchy<Light>(exploredGameObjects);
+			AddComponentTypeToHierarchy<MeshRenderer>();
+			AddComponentTypeToHierarchy<SkinnedMeshRenderer>();
+			AddComponentTypeToHierarchy<Light>();
 
 			//Add animator trackers to nodes in streamed hierarchy with animator components.
 			//We use streamedHierarchy, rather than GetComponentInChildren(...),
@@ -359,12 +367,16 @@ namespace teleport
 			{
 				AddAnimatorTracker(gameObject);
 			}
+			foreach (var s in sessions)
+            {
+				s.GeometryStreamingService.StreamableHasChanged(this);
+            }
 		}
 
 		//Adds the GameObject of the passed transform to the hierarchy, if it has not already been explored in a depth-first search.
 		//	transform : Transform of the GameObject we will add the the hierarchy, if unexplored.
 		//	exploredGameObjects : GameObjects that have already been explored by the depth-first search, or we just don't want added to the hierarchy.
-		private void AddToHierarchy(Transform transform, List<GameObject> exploredGameObjects)
+		private void AddToHierarchy(Transform transform)
 		{
 			if(transform)
 			{
@@ -374,7 +386,7 @@ namespace teleport
 					exploredGameObjects.Add(gameObject);
 					streamedHierarchy.Add(new StreamedNode(gameObject));
 
-					AddToHierarchy(transform.parent, exploredGameObjects);
+					AddToHierarchy(transform.parent);
 				}
 			}
 		}
@@ -382,13 +394,13 @@ namespace teleport
 		//Adds the GameObjects with a component of the generic type belonging to the Teleport_Streamable's Transform hierarchy to the streamable hierarchy,
 		//if they do not appear in the explored list and are not already a part of the streamable hierarchy.
 		//	exploredGameObjects : GameObjects that have already been explored by the depth-first search, or we just don't want added to the hierarchy.
-		private void AddComponentTypeToHierarchy<T>(List<GameObject> exploredGameObjects) where T : Component
+		private void AddComponentTypeToHierarchy<T>() where T : Component
 		{
 			T[] components = GetComponentsInChildren<T>();
 
 			foreach(T component in components)
 			{
-				AddToHierarchy(component.transform, exploredGameObjects);
+				AddToHierarchy(component.transform);
 
 				//Cache the reference on the node in the streamed hierarchy.
 				foreach(StreamedNode streamedNode in streamedHierarchy)
@@ -403,7 +415,7 @@ namespace teleport
 		}
 
 		//Adds the Teleport_AnimatorTracker component to the passed node, if it has an Animator component and its Transform hierarchy has a SkinnedMeshRenderer.
-		//	node : Node in the hierarchy we will attempt to add the Teleport_AnimatorTracker to.
+		//	node : Node in the hierarchy we will attempt to add the Teleport_AnimatorTracker too.
 		private void AddAnimatorTracker(GameObject node)
 		{
 			if(node.TryGetComponent(out Animator _))
@@ -434,18 +446,17 @@ namespace teleport
 		{
 			previousMovements.Clear();
 		}
-		avs.MovementUpdate localUpdate=new avs.MovementUpdate();
-		avs.MovementUpdate globalUpdate = new avs.MovementUpdate();
-		private avs.MovementUpdate GetNodeMovementUpdate(GameObject node, uid clientID)
+		private avs.MovementUpdate GetNodeMovementUpdate(StreamedNode streamedNode, uid clientID)
 		{
+			GameObject node= streamedNode.gameObject;
 			//Node should already have been added; but AddNode(...) will do the equivalent of FindResourceID(...), but with a fallback.
 			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node);
 			uid prevID=nodeID;
-			ref avs.MovementUpdate update= ref localUpdate;
+			ref avs.MovementUpdate update= ref streamedNode.localUpdate;
 			bool has_parent= GeometryStreamingService.IsClientRenderingParent(clientID, node);
 			if (!has_parent)
 			{
-				update=ref globalUpdate;
+				update=ref streamedNode.globalUpdate;
 				prevID=nodeID+1000000000;
 			}
 			if(update.time_since_server_start_ns == teleport.Monitor.GetServerTimeNs())
@@ -467,8 +478,11 @@ namespace teleport
 				update.rotation = node.transform.rotation;
 				update.scale	= node.transform.lossyScale;
 			}
-			
-			if(previousMovements.TryGetValue(prevID, out avs.MovementUpdate previousMovement))
+			bool do_smoothing=true;
+			StreamableProperties streamableProperties=node.GetComponent<StreamableProperties>();
+			if(streamableProperties)
+				do_smoothing= streamableProperties.smoothMotionAtClient;
+			if (do_smoothing&&previousMovements.TryGetValue(prevID, out avs.MovementUpdate previousMovement))
 			{
 				TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 				Vector3 position;
@@ -525,6 +539,11 @@ namespace teleport
                         }
                     }
 				}
+            }
+			else
+            {
+				update.velocity=Vector3.zero;
+				update.angularVelocityAngle=0.0F;
             }
 
             previousMovements[prevID] = update;

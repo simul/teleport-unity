@@ -15,12 +15,13 @@ namespace teleport
        //     base.OnInspectorGUI();
 			teleport.Monitor monitor = (teleport.Monitor)target;
 
-			background = EditorGUILayout.BeginFoldoutHeaderGroup(background, "Background");
+			background = EditorGUILayout.BeginFoldoutHeaderGroup(background, "Options");
 			if (background)
             {
                 monitor.backgroundMode=(BackgroundMode)EditorGUILayout.EnumPopup("Background Mode",monitor.backgroundMode);
 				if(monitor.backgroundMode==BackgroundMode.COLOUR)
 					monitor.BackgroundColour = EditorGUILayout.ColorField("Colour", monitor.BackgroundColour);
+				monitor.lightingMode = (LightingMode)EditorGUILayout.EnumPopup("Dynamic Lighting", monitor.lightingMode);
 			}
 			EditorGUILayout.EndFoldoutHeaderGroup();
 			//	GUILayout.Space(10);= tag.coreData
@@ -32,6 +33,7 @@ namespace teleport
 																										"this texture will be used for specular lighting of movable objects."), monitor.specularRenderTexture, typeof(RenderTexture),false);
 				monitor.diffuseRenderTexture = (RenderTexture)EditorGUILayout.ObjectField(new GUIContent("Diffuse Cubemap RenderTexture", "A rendertexture that will be generated from the Source Environment Cubemap above, " +
 																										"this texture will be used for diffuse lighting of movable objects."), monitor.diffuseRenderTexture, typeof(RenderTexture), false);
+				monitor.specularMultiplier=EditorGUILayout.FloatField("Multiplier", monitor.specularMultiplier);
 				monitor.envMapSize = EditorGUILayout.IntField("Generate Cubemap Size", monitor.envMapSize);
 				if (GUILayout.Button("Generate Env Maps"))
 				{

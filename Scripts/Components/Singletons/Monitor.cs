@@ -124,6 +124,7 @@ namespace teleport
 
 		[Header("Background")]
 		public BackgroundMode backgroundMode = BackgroundMode.COLOUR;
+		public LightingMode lightingMode=LightingMode.TEXTURE;
 		[MarshalAs(UnmanagedType.ByValArray, ArraySubType = UnmanagedType.R4)]
 		public Color BackgroundColour;
 
@@ -137,6 +138,8 @@ namespace teleport
 		[Tooltip("Choose a cubemap rendertarget. This will be generated from the 'Environment Cubemap' and used for lighting dynamic objects.")]
 		//! This will point to a saved asset texture.
 		public RenderTexture diffuseRenderTexture;
+		[Tooltip("Multiplier for generating the specular render texture from the environment cubemap.")]
+		public float specularMultiplier=1.0F;
 #if UNITY_EDITOR
 		//! For generating static cubemaps in the Editor.
 		RenderTexture dummyRenderTexture;
@@ -797,6 +800,10 @@ namespace teleport
 				child.transform.localRotation= relativeRot;
 			}
 			Teleport_Streamable teleport_Streamable = child.GetComponent<Teleport_Streamable>();
+			if(!teleport_Streamable)
+            {
+				Debug.LogError("Reparenting a child that has no teleport_Streamable");
+            }
 			// Is the new parent owned by a client? If so inform clients of this change:
 			Teleport_SessionComponent oldSession=null;
 			Teleport_SessionComponent newSession = null;
@@ -811,7 +818,7 @@ namespace teleport
 					newSession = Teleport_SessionComponent.GetSessionComponent(newParentStreamable.OwnerClient);
 				}
 			}
-			if (newSession)
+			if (newSession!=null)
 			{
 				teleport_Streamable.OwnerClient = newSession.GetClientID();
 			}

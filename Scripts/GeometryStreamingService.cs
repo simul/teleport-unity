@@ -279,7 +279,7 @@ namespace teleport
 				streamable.SendAnimationState(session.GetClientID());
 			}
 		}
-		/// <summary>
+		/// <summary>sss
 		/// Tell this client to highlight the specified node.
 		/// </summary>
 		/// <param name="gameObject">The object to highlight</param>
@@ -289,6 +289,7 @@ namespace teleport
 			uid nodeID = GeometrySource.GetGeometrySource().FindResourceID(gameObject);
 			if(nodeID != 0)
 			{
+			//	Debug.Log("Highlight " + gameObject.name + " " + isHighlighted);
 				Client_SetNodeHighlighted(session.GetClientID(), nodeID, isHighlighted);
 			}
 		}
@@ -304,7 +305,8 @@ namespace teleport
 			{
 				var clID= session.GetClientID();
 				// for now we assume that these types have no parent.
-				Client_SetNodePosePath(clID, nodeID, regexPosePath);
+				if (clID>0)
+					Client_SetNodePosePath(clID, nodeID, regexPosePath);
 			}
 		}
 		public void ReparentNode(GameObject child, GameObject newParent, Vector3 relativePos, Quaternion relativeRot)
@@ -359,16 +361,16 @@ namespace teleport
 				float R0= teleportSettings.serverSettings.detectionSphereRadius;
 				float R1= R0+teleportSettings.serverSettings.detectionSphereBufferDistance;
 				inner_overlap_count= Physics.OverlapSphereNonAlloc( position,  R0, innerOverlappingColliders, teleportSettings.LayersToStream);
-				if(inner_overlap_count> innerOverlappingColliders.Length)
+				if(inner_overlap_count>=innerOverlappingColliders.Length)
                 {
 					innerOverlappingColliders = new Collider[inner_overlap_count*2];
-					Physics.OverlapSphereNonAlloc(position, R0, innerOverlappingColliders, teleportSettings.LayersToStream);
+					inner_overlap_count = Physics.OverlapSphereNonAlloc(position, R0, innerOverlappingColliders, teleportSettings.LayersToStream);
 				}
-				outer_overlap_count = Physics.OverlapSphereNonAlloc(position, R0, outerOverlappingColliders, teleportSettings.LayersToStream);
-				if (outer_overlap_count > outerOverlappingColliders.Length)
+				outer_overlap_count = Physics.OverlapSphereNonAlloc(position, R1, outerOverlappingColliders, teleportSettings.LayersToStream);
+				if (outer_overlap_count >= outerOverlappingColliders.Length)
 				{
 					outerOverlappingColliders = new Collider[outer_overlap_count * 2];
-					Physics.OverlapSphereNonAlloc(position, R0, outerOverlappingColliders, teleportSettings.LayersToStream);
+					outer_overlap_count = Physics.OverlapSphereNonAlloc(position, R0, outerOverlappingColliders, teleportSettings.LayersToStream);
 				}
 				List<Teleport_Streamable> gainedStreamables=new List<Teleport_Streamable>();
 				for (int i = 0; i < inner_overlap_count; i++)
@@ -476,27 +478,36 @@ namespace teleport
 		}
 
 		Dictionary<Teleport_Streamable,ClientStreamableTracking> clientStreamableTracking=new Dictionary<Teleport_Streamable, ClientStreamableTracking>();
-		// Start streaming the given streamable gameObject and its hierarchy.
-		private bool StartStreaming(Teleport_Streamable streamable, UInt32 streaming_reason)
+		public void StreamableHasChanged(Teleport_Streamable streamable)
 		{
-			GameObject gameObject = streamable.gameObject;
-			ClientStreamableTracking tracking= GetTracking(streamable);
-			if (streamedGameObjects.Contains(gameObject))
-			{
-				if((tracking.streaming_reason & streaming_reason) != 0)
-				{
-					Debug.LogWarning($"StartStreaming called on {gameObject.name} for reason {streaming_reason}, but this was already known.");
-				}
-				else
-				{
-					tracking.streaming_reason |= streaming_reason;
-				}
-				return false;
-			}
-			tracking.streaming_reason |= streaming_reason;
-			streamable.AddStreamingClient(session);
-			streamedHierarchies.Add(streamable);
-
+			if (!streamedGameObjects.Contains(streamable.gameObject))
+				return;
+			SendHierarchyToClient(streamable);
+		}
+        // Start streaming the given streamable gameObject and its hierarchy.
+        private bool StartStreaming(Teleport_Streamable streamable, UInt32 streaming_reason)
+        {
+            GameObject gameObject = streamable.gameObject;
+            ClientStreamableTracking tracking = GetTracking(streamable);
+            if (streamedGameObjects.Contains(gameObject))
+            {
+                if ((tracking.streaming_reason & streaming_reason) != 0)
+                {
+                    Debug.LogWarning($"StartStreaming called on {gameObject.name} for reason {streaming_reason}, but this was already known.");
+                }
+                else
+                {
+                    tracking.streaming_reason |= streaming_reason;
+                }
+                return false;
+            }
+            tracking.streaming_reason |= streaming_reason;
+            streamable.AddStreamingClient(session);
+            streamedHierarchies.Add(streamable);
+            return SendHierarchyToClient(streamable);
+		}
+		bool SendHierarchyToClient(Teleport_Streamable streamable)
+		{
 			//Stream Teleport_Streamable's hierarchy.
 			foreach(StreamedNode streamedNode in streamable.streamedHierarchy)
 			{
@@ -504,7 +515,6 @@ namespace teleport
 				{
 					continue;
 				}
-
 				int num_nodes_streamed=(int)Client_AddNode(session.GetClientID(), streamedNode.nodeID);
 
 				Client_NodeEnteredBounds(session.GetClientID(), streamedNode.nodeID);
@@ -516,7 +526,7 @@ namespace teleport
 				streamedGameObjects.Add(streamedNode);
 			}
 
-			Collider[] colliders = gameObject.GetComponents<Collider>();
+			Collider[] colliders = streamable.gameObject.GetComponents<Collider>();
 			foreach(Collider collider in colliders)
 			{
 				streamedColliders.Add(collider);

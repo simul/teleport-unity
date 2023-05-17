@@ -883,7 +883,6 @@ namespace teleport
 		}
 
 		///GEOMETRY EXTRACTION
-
 		public uid AddNode(GameObject gameObject, ForceExtractionMask forceMask = ForceExtractionMask.FORCE_NOTHING, bool isChildExtraction = false,bool verify=false)
 		{
 			if(!gameObject)
@@ -894,14 +893,12 @@ namespace teleport
 
 			//Just return the ID; if we have already processed the GameObject, the node can be found on the unmanaged side,
 			//we are not forcing an extraction of nodes, and we are not forcing an extraction on the hierarchy of a node.
-			if
-			(
-				sessionResourceUids.TryGetValue(gameObject, out uid nodeID) && IsNodeStored(nodeID) &&
-				(
-					!isChildExtraction && (forceMask & ForceExtractionMask.FORCE_NODES) == ForceExtractionMask.FORCE_NOTHING ||
-					(isChildExtraction && (forceMask & ForceExtractionMask.FORCE_HIERARCHIES) == ForceExtractionMask.FORCE_NOTHING)
+			if(	sessionResourceUids.TryGetValue(gameObject, out uid nodeID) && IsNodeStored(nodeID) &&
+					(
+						!isChildExtraction && (forceMask & ForceExtractionMask.FORCE_NODES) == ForceExtractionMask.FORCE_NOTHING ||
+						(isChildExtraction && (forceMask & ForceExtractionMask.FORCE_HIERARCHIES) == ForceExtractionMask.FORCE_NOTHING)
+					)
 				)
-			)
 			{
 				return nodeID;
 			}

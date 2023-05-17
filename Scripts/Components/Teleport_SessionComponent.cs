@@ -65,8 +65,8 @@ namespace teleport
 		[DllImport(TeleportServerDll.name)]
 		private static extern bool Client_HasOrigin(uid clientID);
 
-		[DllImport(TeleportServerDll.name)]
-		private static extern void Client_UpdateNodeAnimationControl(uid clientID, avs.NodeUpdateAnimationControl update);
+	//	[DllImport(TeleportServerDll.name)]
+	//	private static extern void Client_UpdateNodeAnimationControl(uid clientID, avs.NodeUpdateAnimationControl update);
 		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_SetNodeAnimationSpeed(uid clientID, uid nodeID, uid animationID, float speed);
 
@@ -469,14 +469,14 @@ namespace teleport
 					uid animatedNodeID = geometrySource.FindResourceID(skinnedMeshRenderer.gameObject);
 
 					//Set time override for controller press animation.
-					avs.NodeUpdateAnimationControl animationControlUpdate = new avs.NodeUpdateAnimationControl
+				/*	avs.NodeUpdateAnimationControl animationControlUpdate = new avs.NodeUpdateAnimationControl
 					{
 						nodeID = animatedNodeID,
 						animationID = geometrySource.FindResourceID(controller.triggerPressAnimation),
 						timeControl = controller.pressAnimationTimeOverride
-					};
+					};*/
 
-					Client_UpdateNodeAnimationControl(clientID, animationControlUpdate);
+					//Client_UpdateNodeAnimationControl(clientID, animationControlUpdate);
 
 					//Set speed of controller animations.
 					Animator animator = controller.controllerModel.GetComponentInChildren<Animator>();
@@ -622,6 +622,7 @@ namespace teleport
 
 		private void Start()
 		{
+			Debug.Log("Session Start(): clientID="+GetClientID());
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
 			if(geometryStreamingService==null)
 				geometryStreamingService = new GeometryStreamingService(this);
@@ -712,6 +713,7 @@ namespace teleport
 				return;
             }
 			clientID = connectedID;
+			Debug.Log("Started session: clientID="+ clientID);
 			sessions[clientID] = this;
 
 			UpdateClientSettings();
@@ -766,7 +768,7 @@ namespace teleport
 			{
 				clientDynamicLighting.specularCubemapTexture = GeometrySource.GetGeometrySource().AddTexture(Monitor.Instance.specularRenderTexture);
 			}
-			clientDynamicLighting.lightingMode=LightingMode.TEXTURE;
+			clientDynamicLighting.lightingMode=Monitor.Instance.lightingMode;
 		}
 		private void UpdateClientSettings()
 		{

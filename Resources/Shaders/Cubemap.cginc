@@ -111,7 +111,7 @@ vec4 RoughnessMip(samplerCUBE sourceCubemap,vec3 view,int numMips,float alpha,fl
 			if( NoL > 0 )
 			{
 				L			=mul( L, TangentToWorld );
-				vec4 lookup	=100.0*saturate(0.01*CubeSampleLevel(sourceCubemap, L, 0));
+				vec4 lookup	=10.0*saturate(0.1*CubeSampleLevel(sourceCubemap, L, 0));
 				result		+= NoL*lookup;
 				Weight		+= NoL;
 			}
@@ -136,7 +136,7 @@ vec4 RoughnessMip(samplerCUBE sourceCubemap,vec3 view,int numMips,float alpha,fl
 				//#ifdef CPP_GLSL
 				//	vec4 lookup=100.0*saturate(0.01*CubeSampleLevel(sourceCubemap,vec3(-L.x, -L.y, L.z), 0));
 				//#else
-					vec4 lookup=100.0*saturate(0.01*CubeSampleLevel(sourceCubemap, L, 0));
+					vec4 lookup=10.0*saturate(0.1*CubeSampleLevel(sourceCubemap, L, 0));
 				//a#endif
 				result	+= NoL*lookup;
 			

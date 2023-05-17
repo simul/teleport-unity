@@ -133,7 +133,7 @@ namespace teleport
 		/// But Unity is missing the necessary API functions to render with one mip of input and one as output of the same texture.
 		/// So instead we will render directly to the video texture.
 		/// </summary>
-		static public void SpecularRoughnessMip(CommandBuffer buffer, Texture SourceCubeTexture, RenderTexture SpecularCubeTexture, int face, int MipIndex, int mipOffset,avs.AxesStandard targetAxesStandard)
+		static public void SpecularRoughnessMip(CommandBuffer buffer, Texture SourceCubeTexture, RenderTexture SpecularCubeTexture, float exposure_multiplier,int face, int MipIndex, int mipOffset,avs.AxesStandard targetAxesStandard)
 		{
 			float roughness =  RoughnessFromMip((float)( MipIndex+ mipOffset), (float)( SpecularCubeTexture.mipmapCount));
 			int w = SpecularCubeTexture.width << MipIndex;
@@ -147,6 +147,7 @@ namespace teleport
 			// Instead we must use buffer.SetGlobalFloat etc.
 			buffer.SetGlobalMatrix("TargetToSourceAxes", GetTargetToSourceTransform(targetAxesStandard));
 			buffer.SetGlobalFloat("Roughness", roughness);
+			buffer.SetGlobalFloat("Multiplier", exposure_multiplier); 
 			buffer.SetGlobalInt("MipIndex", MipIndex);
 			buffer.SetGlobalInt("NumMips", SpecularCubeTexture.mipmapCount);
 			buffer.SetGlobalInt("Face", face);
@@ -157,7 +158,7 @@ namespace teleport
 		}
 		//! Generate mipmaps into a target cubemap rendertexture. The source is considered to be in the Unity/OpenGL layout.
 		//! The target layout is specified by avs.AxesStandard axesStandard.
-		static public void GenerateSpecularMips(ScriptableRenderContext context, Texture SourceCubeTexture, RenderTexture SpecularCubeTexture, int face,int mip_offset, avs.AxesStandard axesStandard)
+		static public void GenerateSpecularMips(ScriptableRenderContext context, Texture SourceCubeTexture, RenderTexture SpecularCubeTexture, float exposure_multiplier,int face,int mip_offset, avs.AxesStandard axesStandard)
 		{
 			var buffer = new CommandBuffer();
 			buffer.name = "Generate Specular Mips";
@@ -167,7 +168,7 @@ namespace teleport
 
 			for (int i = 0; i < SpecularCubeTexture.mipmapCount; i++)
 			{
-				SpecularRoughnessMip(buffer, SourceCubeTexture, SpecularCubeTexture, face,i,mip_offset, axesStandard);
+				SpecularRoughnessMip(buffer, SourceCubeTexture, SpecularCubeTexture, exposure_multiplier,face, i,mip_offset, axesStandard);
 			}
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();

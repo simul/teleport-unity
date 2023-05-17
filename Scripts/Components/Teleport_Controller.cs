@@ -15,8 +15,8 @@ namespace teleport
 		public GameObject controllerModel = default;
 		[Tooltip("Animation played when the trigger is pressed.")]
 		public AnimationClip triggerPressAnimation = default;
-		[Tooltip("Override for the animation's current time.")]
-		public avs.AnimationTimeControl pressAnimationTimeOverride = avs.AnimationTimeControl.ANIMATION_TIME;
+	//	[Tooltip("Override for the animation's current time.")]
+	//	public avs.AnimationTimeControl pressAnimationTimeOverride = avs.AnimationTimeControl.ANIMATION_TIME;
 
 		[Tooltip("A full or partial OpenXR path expressed as a Regular Expression.\nThe client should try to match this path with one of its available pose inputs.")]
 		/// <summary>

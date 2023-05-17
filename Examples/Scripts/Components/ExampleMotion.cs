@@ -115,6 +115,16 @@ public class ExampleMotion : MonoBehaviour
 		// make visible the arc and target circle.
 			arc = Instantiate<GameObject>(arcPrefab, gameObject.transform);
 			circle = Instantiate<GameObject>(targetCirclePrefab);
+			teleport.GeometrySource.GetGeometrySource().AddNode(arc);
+			teleport.GeometrySource.GetGeometrySource().AddNode(circle);
+			circle.AddComponent<teleport.Teleport_Streamable>();
+			// having created new objects, they won't actually be streamed unless we notify the Teleport_Streamable
+			// that manages the hierarchy they're in. Therefore:
+			var streamable=GetComponent<teleport.Teleport_Streamable>();
+			if(streamable)
+            {
+				streamable.UpdateHierarchy();
+            }
 		}
 		if (!pointingController)
 		{

@@ -94,7 +94,8 @@ Shader "Teleport/CopyCubemap"
 		//view.y		*=-1.0;
 		//float roughness=GetroughnessFromMip(float(MipIndex),float(NumMips),1.2);
 		res			=RoughnessMip(_SourceCubemapTexture, view, NumMips, 1.0, Roughness,false);
-	//res.rgb+=saturate(view);
+		float3 faceColour[6]={{1.0,0,0},{0.2,0,0},{0,1.0,0},{0,0.2,0},{0,0,1.0},{0,0,0.4}};
+		res.rgb *= Multiplier;// += faceColour[Face];
 		//res.g = 1.0;
 		return res;
 	}
