@@ -71,7 +71,7 @@ namespace teleport
 
 		#region DLLImports
 		[DllImport(TeleportServerDll.name)]
-		private static extern uid GenerateID();
+		private static extern uid GenerateUid();
 
 		[DllImport(TeleportServerDll.name)]
 		private static extern void StoreTransformAnimation(uid id, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(TransformAnimationMarshaler))] avs.TransformAnimation animation);
