@@ -188,7 +188,7 @@ namespace avs
 		public IntPtr name;
 
 		public Transform localTransform;
-		public Transform globalTransform;
+		//public Transform globalTransform;
 
 		[MarshalAs(UnmanagedType.I1)]
 		public bool stationary;
@@ -311,7 +311,8 @@ namespace avs
 		public TextureAccessor occlusionTexture = new TextureAccessor();
 		public TextureAccessor emissiveTexture = new TextureAccessor();
 		public Vector3 emissiveFactor = new Vector3(0.0f,0.0f,0.0f);
-
+		[MarshalAs(UnmanagedType.I1)]
+		public bool doubleSided=false;
 		public UInt64 extensionAmount;
 		[MarshalAs(UnmanagedType.ByValArray)]
 		public MaterialExtensionIdentifier[] extensionIDs;
@@ -936,7 +937,7 @@ namespace teleport
 			extractedNode.ownerClientId = teleport_Streamable!=null? teleport_Streamable.OwnerClient:0;
 			ExtractNodeHierarchy(gameObject, ref extractedNode, forceMask, verify);
 			extractedNode.localTransform = avs.Transform.FromLocalUnityTransform(gameObject.transform);
-			extractedNode.globalTransform=avs.Transform.FromGlobalUnityTransform(gameObject.transform);
+		//	extractedNode.globalTransform=avs.Transform.FromGlobalUnityTransform(gameObject.transform);
 
 			extractedNode.dataType = avs.NodeDataType.None;
 			if(extractedNode.dataType == avs.NodeDataType.None)
@@ -1827,8 +1828,8 @@ namespace teleport
 			boneNode.name = Marshal.StringToCoTaskMemUTF8(bone.name);
 			boneNode.parentID = parentID;
 			boneNode.localTransform = avsTransform;
-			if(parentID==0)
-				boneNode.globalTransform=avsTransform;
+			//if(parentID==0)
+			//	boneNode.globalTransform=avsTransform;
 			boneNode.dataType = avs.NodeDataType.Bone;
 
 			boneNode.numChildren = (ulong)bone.childCount;

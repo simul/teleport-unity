@@ -295,7 +295,7 @@ namespace teleport
 					//Generate an ID, if we don't have one.
 					if(animationID == 0)
 					{
-						animationID = GenerateID();
+						animationID = GenerateUid();
 					}
 					animationIDs[i] = animationID;
 
@@ -521,7 +521,7 @@ namespace teleport
 				//Generate an ID, if we don't have one.
 				if(animationID == 0)
 				{
-					animationID = GenerateID();
+					animationID = GenerateUid();
 				}
 				animationIDs[i] = animationID;
 
