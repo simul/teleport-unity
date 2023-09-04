@@ -21,15 +21,15 @@ namespace teleport
 		public void ThrowSnowball(Input input, InputID inputId)
 		{
 			GameObject currentParent= gameObject.transform.parent.gameObject;
-			Teleport_Streamable currentParentStreamable = currentParent.GetComponent<Teleport_Streamable>();
+			Teleport_Streamable currentParentStreamable = currentParent.GetComponentInParent<Teleport_Streamable>();
 			Debug.Log("Threw " + gameObject);
 			Teleport_SessionComponent session = input.gameObject.GetComponent<Teleport_SessionComponent>();
 			session.input.RemoveDelegate(inputId, ThrowSnowball, InputEventType.Release);
 			Teleport_Streamable streamable = gameObject.GetComponent<Teleport_Streamable>();
-
+			StreamedNode streamedNode=currentParentStreamable.GetStreamedNode(currentParent);
 			// We receive velocities in stage space, i.e. in the space relative to the clientspace Root.
-			var v = currentParentStreamable.stageSpaceVelocity;
-			var a = currentParentStreamable.stageSpaceAngularVelocity;
+			var v = streamedNode.stageSpaceVelocity;
+			var a = streamedNode.stageSpaceAngularVelocity;
 			Teleport_ClientspaceRoot stageSpace=input.gameObject.GetComponentInParent<Teleport_ClientspaceRoot>();
 			if (stageSpace)
 			{

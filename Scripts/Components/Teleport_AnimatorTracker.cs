@@ -21,7 +21,7 @@ namespace teleport
 		public Teleport_Streamable hierarchyRoot;
 
 		private Animator animator;
-		private SkinnedMeshRenderer skinnedMeshRenderer;
+		private Transform skeletonRootTransform;
 
 		//Animation update that last occurred.
 		private avs.ApplyAnimation lastAnimationUpdate;
@@ -54,12 +54,14 @@ namespace teleport
 				Destroy(this);
 			}
 
-			skinnedMeshRenderer = GetComponentInChildren<SkinnedMeshRenderer>();
+			var skinnedMeshRenderer = GetComponentInChildren<SkinnedMeshRenderer>();
 			if(!skinnedMeshRenderer)
 			{
 				Debug.LogWarning($"{nameof(Teleport_AnimatorTracker)} was added to GameObject \"{name}\", but there was no SkinnedMeshRenderer in the hierarchy of this GameObject. Deleting.");
 				Destroy(this);
 			}
+
+			skeletonRootTransform = GeometrySource.GetTopmostSkeletonRoot(skinnedMeshRenderer);
 		}
 
 		private void Update()
@@ -97,7 +99,7 @@ namespace teleport
 			lastAnimationUpdate = new avs.ApplyAnimation()
 			{
 				startTimestampUnixUTC = teleport.Monitor.GetUnixTimestampNowMs() - timestampOffset,
-				nodeID = GeometrySource.GetGeometrySource().FindResourceID(skinnedMeshRenderer.gameObject),
+				nodeID = GeometrySource.GetGeometrySource().FindResourceID(skeletonRootTransform.gameObject),
 				animationID = animationID,
 			};
 

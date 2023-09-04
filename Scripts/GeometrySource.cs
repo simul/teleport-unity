@@ -1,6 +1,7 @@
 ﻿//Standard Shader Inspector Code:
 //https://github.com/Unity-Technologies/UnityCsReference/blob/master/Editor/Mono/Inspector/StandardShaderGUI.cs
 
+using avs;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,7 +10,10 @@ using System.Runtime.InteropServices;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
+using static RootMotion.BipedNaming;
+using static teleport.GeometrySource;
 using uid = System.UInt64;
 
 namespace avs
@@ -21,7 +25,9 @@ namespace avs
 		Mesh,
 		Light,
 		Bone,
-		TextCanvas
+		TextCanvas,
+		SubScene,
+		Skeleton
 	};
 
 	public enum PrimitiveMode
@@ -84,7 +90,8 @@ namespace avs
 			SCALAR=1,
 			VEC2,
 			VEC3,
-			VEC4
+			VEC4,
+			MAT4
 		};
 		public enum ComponentType
 		{
@@ -184,7 +191,6 @@ namespace avs
 	[StructLayout(LayoutKind.Sequential)]
 	public struct Node
 	{
-		
 		public IntPtr name;
 
 		public Transform localTransform;
@@ -196,13 +202,16 @@ namespace avs
 		public NodeDataType dataType;
 		public uid parentID;
 		public uid dataID;
-		public uid skinID;
+		public uid skeletonNodeID;	// The node whose dataID is the skeleton asset.
 
 		public Vector4 lightColour;
 		public Vector3 lightDirection;
 		public float lightRadius;
 		public float lightRange;
 		public byte lightType;
+
+		public UInt64 numJoints;
+		public Int32[] jointIndices;
 
 		public UInt64 numAnimations;
 		public uid[] animationIDs;
@@ -212,15 +221,11 @@ namespace avs
 
 		public NodeRenderState renderState;
 
-		public UInt64 numChildren;
-		public uid[] childIDs;
-
 		public int priority;
 	}
 
 	public class Mesh
 	{
-		
 		public IntPtr name;
 		
 		public IntPtr path;
@@ -239,25 +244,21 @@ namespace avs
 		public Int64 numBuffers;
 		public uid[] bufferIDs;
 		public GeometryBuffer[] buffers;
+
+		//The number of inverseBindMatrices MUST be greater than or equal to the number of joints referenced in the vertices.
+		public uid inverseBindMatricesAccessor;
 	}
 
-	public struct Skin
+	public struct Skeleton
 	{
-		
 		public IntPtr name;
 		
 		public IntPtr path;
 
-		public Int64 numInverseBindMatrices;
-		public avs.Mat4x4[] inverseBindMatrices;
-
 		public Int64 numBones;
 		public uid[] boneIDs;
 
-		public Int64 numJoints;
-		public uid[] jointIDs;
-
-		public Transform rootTransform;
+		public avs.Transform rootTransform;
 	}
 
 	public struct Texture
@@ -300,7 +301,6 @@ namespace avs
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
 	public class Material
 	{
-		
 		public IntPtr name;
 		
 		public IntPtr path;
@@ -313,6 +313,8 @@ namespace avs
 		public Vector3 emissiveFactor = new Vector3(0.0f,0.0f,0.0f);
 		[MarshalAs(UnmanagedType.I1)]
 		public bool doubleSided=false;
+		[MarshalAs(UnmanagedType.I1)]
+		public byte lightmapTexCoordIndex = 0; 
 		public UInt64 extensionAmount;
 		[MarshalAs(UnmanagedType.ByValArray)]
 		public MaterialExtensionIdentifier[] extensionIDs;
@@ -349,7 +351,6 @@ namespace teleport
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
 	public class InteropTextCanvas
 	{
-		
 		public IntPtr text;
 		
 		public IntPtr font;
@@ -357,15 +358,19 @@ namespace teleport
 		public float lineHeight;
 		public float width;
 		public float height;
-		public Vector4 colour= new Vector4(0.0f,0.0f,0.0f,0.0f);
+		public avs.Vector4 colour= new avs.Vector4(0.0f,0.0f,0.0f,0.0f);
 	}
 	public struct TextureExtractionData
 	{
 		public uid id;
-		public Texture unityTexture;
+		public UnityEngine.Texture unityTexture;
 		public avs.Texture textureData;
+		public TextureConversion textureConversion;
 	}
+}
 
+namespace teleport
+{
 	/// <summary>
 	/// A singleton class obtained with GeometrySource.GetGeometrySource();
 	/// </summary>
@@ -399,6 +404,13 @@ namespace teleport
 			FORCE_NODES_AND_HIERARCHIES = FORCE_NODES | FORCE_HIERARCHIES,
 			FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES = FORCE_NODES | FORCE_HIERARCHIES | FORCE_SUBRESOURCES | FORCE_TEXTURES
 		}
+		[Flags]
+		public enum TextureConversion
+		{
+			CONVERT_NOTHING = 0,
+			CONVERT_TO_METALLICROUGHNESS_BLUEGREEN = 1
+		}
+
 
 		#region DLLImports
 
@@ -429,7 +441,7 @@ namespace teleport
 		[DllImport(TeleportServerDll.name)]
 		private static extern void StoreNode(uid id, avs.Node node);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void StoreSkin(uid id, avs.Skin skin);
+		private static extern void StoreSkeleton(uid id, avs.Skeleton skeleton);
 		[DllImport(TeleportServerDll.name)]
 		private static extern void StoreMesh(uid id,
 												string guid,
@@ -460,7 +472,7 @@ namespace teleport
 		[DllImport(TeleportServerDll.name)]
 		private static extern bool IsNodeStored(uid id);
 		[DllImport(TeleportServerDll.name)]
-		private static extern bool IsSkinStored(uid id);
+		private static extern bool IsSkeletonStored(uid id);
 		[DllImport(TeleportServerDll.name)]
 		private static extern bool IsMeshStored(uid id);
 		[DllImport(TeleportServerDll.name)]
@@ -499,7 +511,8 @@ namespace teleport
 		private const string TELEPORT_VR_PATH = "TeleportVR/";
 
 		private readonly Dictionary<UnityEngine.Object, uid> sessionResourceUids = new Dictionary<UnityEngine.Object, uid>(); //<Resource, ResourceID>
-		private readonly Dictionary< uid, UnityEngine.GameObject> sessionNodes = new Dictionary<uid, UnityEngine.GameObject>(); //<Resource, ResourceID>
+		private readonly Dictionary<string, uid> skeletonUids = new Dictionary<string, uid>(); //<path, ResourceID>
+		private readonly Dictionary<uid, UnityEngine.GameObject> sessionNodes = new Dictionary<uid, UnityEngine.GameObject>(); //<Resource, ResourceID>
 		public Dictionary<uid, UnityEngine.GameObject> GetSessionNodes()
 		{
 			return sessionNodes;
@@ -640,9 +653,9 @@ namespace teleport
 			LoadGeometryStore(out UInt64 numMeshes, out IntPtr loadedMeshes, out UInt64 numTextures, out IntPtr loadedTextures, out UInt64 numMaterials, out IntPtr loadedMaterials);
 	
 			// Assign new IDs to the loaded resources.
-			AddToProcessedResources<Mesh>((int)numMeshes, loadedMeshes);
-			AddToProcessedResources<Texture>((int)numTextures, loadedTextures);
-			AddToProcessedResources<Material>((int)numMaterials, loadedMaterials);
+			AddToProcessedResources<UnityEngine.Mesh>((int)numMeshes, loadedMeshes);
+			AddToProcessedResources<UnityEngine.Texture>((int)numTextures, loadedTextures);
+			AddToProcessedResources<UnityEngine.Material>((int)numMaterials, loadedMaterials);
 
 			//Delete unmanaged memory.
 			DeleteUnmanagedArray(loadedMeshes);
@@ -845,7 +858,7 @@ namespace teleport
 				var objs = scene.GetRootGameObjects();
 				foreach (var o in objs)
 				{
-					Transform[] transforms = o.GetComponentsInChildren<Transform>();
+					UnityEngine.Transform[] transforms = o.GetComponentsInChildren<UnityEngine.Transform>();
 					foreach (var t in transforms)
 					{
 						if (teleportSettings.TagToStream.Length > 0)
@@ -882,7 +895,24 @@ namespace teleport
 				clip.AddEvent(teleportAnimationHook);
 			}
 		}
-
+		public static UnityEngine.Transform GetTopmostSkeletonRoot(SkinnedMeshRenderer skinnedMeshRenderer)
+		{
+			if(!skinnedMeshRenderer.rootBone)
+				return null;
+			UnityEngine.Transform t = skinnedMeshRenderer.rootBone.transform;
+			teleport.SkeletonRoot r=t.GetComponentInParent<teleport.SkeletonRoot>();
+			if(r)
+				return r.gameObject.transform;
+			UnityEngine.Transform meshParent =skinnedMeshRenderer.transform.parent;
+			var p= t;
+			while (p != null)
+			{
+				if(p.parent==meshParent)
+					return p;
+				p=p.parent;
+			}
+			return t;
+		}
 		///GEOMETRY EXTRACTION
 		public uid AddNode(GameObject gameObject, ForceExtractionMask forceMask = ForceExtractionMask.FORCE_NOTHING, bool isChildExtraction = false,bool verify=false)
 		{
@@ -904,11 +934,11 @@ namespace teleport
 				return nodeID;
 			}
 
-			nodeID = nodeID == 0 ? GenerateUid() : nodeID;
-			sessionResourceUids[gameObject] = nodeID;
-			sessionNodes[nodeID]=gameObject;
-
 			avs.Node extractedNode = new avs.Node();
+			if (gameObject.transform.parent)
+			{
+				extractedNode.parentID = FindResourceID(gameObject.transform.parent.gameObject);
+			}
 			StreamableProperties streamableProperties=gameObject.GetComponent<StreamableProperties>();
 			extractedNode.name = Marshal.StringToCoTaskMemUTF8(gameObject.name);
 #if UNITY_EDITOR
@@ -920,33 +950,62 @@ namespace teleport
 					streamableProperties=gameObject.AddComponent<StreamableProperties>();
 				}
 			}
-			if(streamableProperties!=null&&streamableProperties.isStationary != gameObject.isStatic)
+			Teleport_Streamable teleport_Streamable = gameObject.GetComponent<Teleport_Streamable>();
+			if (streamableProperties!=null&&streamableProperties.isStationary != gameObject.isStatic)
 				streamableProperties.isStationary = gameObject.isStatic;
 #endif
 			if (streamableProperties != null)
 			{
 				extractedNode.priority = streamableProperties.priority;
 			}
-			else
-			{
-				extractedNode.priority = 0;
-			}
-			Teleport_Streamable teleport_Streamable = gameObject.GetComponent<Teleport_Streamable>();
-			extractedNode.stationary = streamableProperties? streamableProperties.isStationary:true;
-			
-			extractedNode.ownerClientId = teleport_Streamable!=null? teleport_Streamable.OwnerClient:0;
-			ExtractNodeHierarchy(gameObject, ref extractedNode, forceMask, verify);
+			extractedNode.stationary = streamableProperties ? streamableProperties.isStationary : true;
+			extractedNode.ownerClientId = teleport_Streamable != null ? teleport_Streamable.OwnerClient : 0;
 			extractedNode.localTransform = avs.Transform.FromLocalUnityTransform(gameObject.transform);
-		//	extractedNode.globalTransform=avs.Transform.FromGlobalUnityTransform(gameObject.transform);
-
 			extractedNode.dataType = avs.NodeDataType.None;
-			if(extractedNode.dataType == avs.NodeDataType.None)
+			teleport.SkeletonRoot skeletonRoot = gameObject.GetComponent<teleport.SkeletonRoot>();
+			if (skeletonRoot)
+			{
+				nodeID =AddSkeleton(gameObject.transform, null, forceMask);
+				extractedNode.dataType=avs.NodeDataType.Skeleton;
+				skeletonUids.TryGetValue(skeletonRoot.assetPath, out extractedNode.dataID);
+
+				Animator animator =gameObject.GetComponentInParent<Animator>();
+				//Animator component usually appears on the parent GameObject, so we need to use that instead for searching the children.
+#if UNITY_EDITOR
+				if (animator)
+				{
+					extractedNode.priority = 0;
+				}
+				extractedNode.animationIDs = AnimationExtractor.AddAnimations(animator, forceMask);
+				extractedNode.numAnimations = (ulong)extractedNode.animationIDs.Length;
+#endif
+			}
+
+			nodeID = nodeID == 0 ? GenerateUid() : nodeID;
+			sessionResourceUids[gameObject] = nodeID;
+			sessionNodes[nodeID] = gameObject;
+			if (extractedNode.dataType == avs.NodeDataType.None)
 			{
 				ExtractNodeMeshData(gameObject, ref extractedNode, forceMask, verify);
 			}
 			if (extractedNode.dataType == avs.NodeDataType.None)
 			{
-				ExtractNodeSkinnedMeshData(gameObject, ref extractedNode, forceMask,verify);
+				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
+				if (skinnedMeshRenderer&&skinnedMeshRenderer.enabled&&skinnedMeshRenderer.rootBone)
+				{
+					ExtractNodeSkinnedMeshData(gameObject, ref extractedNode, forceMask, verify);
+					// Map from bones to joints, i.e. which of the skeleton's bones does 
+					// this particular skinned mesh use as joints?
+					var skeletonRootTransform = GetTopmostSkeletonRoot(skinnedMeshRenderer);
+					List<UnityEngine.Transform> bones = new List<UnityEngine.Transform>();
+					GetBones(skeletonRootTransform, bones);
+					extractedNode.numJoints=(UInt64)skinnedMeshRenderer.bones.Length;
+					extractedNode.jointIndices=new int[extractedNode.numJoints];
+					for (int i = 0; i < skinnedMeshRenderer.bones.Length; i++)
+					{
+						extractedNode.jointIndices[i] = bones.IndexOf(skinnedMeshRenderer.bones[i]);
+					}
+				}
 			}
 			if(extractedNode.dataType == avs.NodeDataType.None)
 			{
@@ -964,10 +1023,11 @@ namespace teleport
 			}
 			//Store extracted node.
 			StoreNode(nodeID, extractedNode);
+			ExtractNodeHierarchy(gameObject, ref extractedNode, forceMask, verify);
 			return nodeID;
 		}
 
-		public uid AddMesh(Mesh mesh, ForceExtractionMask forceMask,bool verify)
+		public uid AddMesh(UnityEngine.Mesh mesh, ForceExtractionMask forceMask,bool verify)
 		{
 			if(!mesh)
 			{
@@ -1030,7 +1090,7 @@ namespace teleport
 			Fade,   // Old school alpha-blending mode, fresnel does not affect amount of transparency
 			Transparent // Physically plausible transparency mode, implemented as alpha pre-multiply
 		}
-		public uid AddMaterial(Material material, ForceExtractionMask forceMask)
+		public uid AddMaterial(UnityEngine.Material material, ForceExtractionMask forceMask)
 		{
 			if(!material)
 			{
@@ -1086,25 +1146,39 @@ namespace teleport
 
 			//Metallic-Roughness
 
-			Texture metallicRoughness = null;
+			UnityEngine.Texture metallicRoughness = null;
 			if(material.HasProperty("_MetallicGlossMap"))
 			{
 				metallicRoughness = material.GetTexture("_MetallicGlossMap");
-				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index = AddTexture(metallicRoughness, forceMask);
+				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index = AddTexture(metallicRoughness, forceMask, TextureConversion.CONVERT_TO_METALLICROUGHNESS_BLUEGREEN);
 				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling = material.mainTextureScale;
 			}
-			extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : (material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 0.0f); //Unity doesn't use the factor when the texture is set.
+			if (metallicRoughness)
+			{
+				// We convert the smoothness texture to a roughness texture. So we have no need to offset roughness.
+				extractedMaterial.pbrMetallicRoughness.metallicFactor = metallicRoughness ? 1.0f : (material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 0.0f); //Unity doesn't use the factor when the texture is set.
 
-			float glossMapScale = material.HasProperty("_GlossMapScale") ? glossMapScale = material.GetFloat("_GlossMapScale") : 1.0f;
-			float smoothness = metallicRoughness ? glossMapScale : (material.HasProperty("_Glossiness") ? material.GetFloat("_Glossiness") : 1.0f);
-			extractedMaterial.pbrMetallicRoughness.roughOrSmoothMultiplier = -smoothness;
-			extractedMaterial.pbrMetallicRoughness.roughOffset = 1.0f;
+				float glossMapScale = material.HasProperty("_GlossMapScale") ? glossMapScale = material.GetFloat("_GlossMapScale") : 1.0f;
+				// unity has smoothness=glossMapScale*lookup.smoothness;
+				// we want roughness= 1.0-smoothness
+				//					= 1.0-glossMapScale*(1.0-lookup.roughness)
+				//					= (1.0-glossMapScale)+glossMapScale*lookup.roughness.
+				extractedMaterial.pbrMetallicRoughness.roughOrSmoothMultiplier = glossMapScale;
+				extractedMaterial.pbrMetallicRoughness.roughOffset = 1.0F - glossMapScale;
+			}
+			else
+			{
+				extractedMaterial.pbrMetallicRoughness.metallicFactor = material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 0.0f; //Unity doesn't use this factor when the texture is set.
+				float smoothness = material.HasProperty("_Glossiness") ? material.GetFloat("_Glossiness") : 1.0f;
+				extractedMaterial.pbrMetallicRoughness.roughOrSmoothMultiplier = 0;
+				extractedMaterial.pbrMetallicRoughness.roughOffset = 1.0f-smoothness;
+			}
 			
 			//Normal
 
 			if(material.HasProperty("_BumpMap"))
 			{
-				Texture normal = material.GetTexture("_BumpMap");
+				UnityEngine.Texture normal = material.GetTexture("_BumpMap");
 				extractedMaterial.normalTexture.index = AddTexture(normal, forceMask);
 				extractedMaterial.normalTexture.tiling = material.mainTextureScale;
 			}
@@ -1114,7 +1188,7 @@ namespace teleport
 
 			if(material.HasProperty("_OcclusionMap"))
 			{
-				Texture occlusion = material.GetTexture("_OcclusionMap");
+				UnityEngine.Texture occlusion = material.GetTexture("_OcclusionMap");
 				extractedMaterial.occlusionTexture.index = AddTexture(occlusion, forceMask);
 				extractedMaterial.occlusionTexture.tiling = material.mainTextureScale;
 			}
@@ -1127,7 +1201,7 @@ namespace teleport
 			{
 				if(material.HasProperty("_EmissionMap"))
 				{
-					Texture emission = material.GetTexture("_EmissionMap");
+					UnityEngine.Texture emission = material.GetTexture("_EmissionMap");
 					if(emission!=null)
 					{ 
 						extractedMaterial.emissiveTexture.index = AddTexture(emission, forceMask);
@@ -1136,9 +1210,14 @@ namespace teleport
 				}
 				extractedMaterial.emissiveFactor = material.HasProperty("_BumpScale") ? (avs.Vector3)material.GetColor("_EmissionColor").linear : new avs.Vector3(0.0f, 0.0f, 0.0f);
 			}
+			// UNITY: For baked lightmaps, you must place lightmap UVs in the Mesh.uv2. This channel is also called “UV1”.
+			extractedMaterial.lightmapTexCoordIndex=1;
+			int rq= material.renderQueue;
+			if(rq<0&& material.shader!=null)
+				rq=(int)material.shader.renderQueue;
+			extractedMaterial.doubleSided=(rq==(int)RenderQueue.Transparent);
 
 			//Extensions
-
 			extractedMaterial.extensionAmount = 0;
 			extractedMaterial.extensionIDs = null;
 			extractedMaterial.extensions = null;
@@ -1190,7 +1269,7 @@ namespace teleport
 			{
 				TextureExtractionData textureExtractionData= geometrySource.texturesWaitingForExtraction[i];
 				bool highQualityUASTC = false;
-				Texture sourceTexture = textureExtractionData.unityTexture;
+				UnityEngine.Texture sourceTexture = textureExtractionData.unityTexture;
 
 				if (EditorUtility.DisplayCancelableProgressBar($"Extracting Textures ({i + 1} / {geometrySource.texturesWaitingForExtraction.Count})", $"Processing \"{sourceTexture.name}\".", (float)(i + 1) / geometrySource.texturesWaitingForExtraction.Count))
 				{
@@ -1198,7 +1277,7 @@ namespace teleport
 					return false;
 				}
 				bool writePng = false;
-				TextureFormat textureFormat = TextureFormat.RGBA32;
+				UnityEngine.TextureFormat textureFormat = UnityEngine.TextureFormat.RGBA32;
 				bool isCubemap = false;
 				int arraySize = 1;
 				int numImages=1;
@@ -1277,19 +1356,19 @@ namespace teleport
 						RenderTextureFormat rtFormat = RenderTextureFormat.ARGB32;
 						switch (textureFormat)
 						{
-							case TextureFormat.RGBAFloat:
+							case UnityEngine.TextureFormat.RGBAFloat:
 								rtFormat = RenderTextureFormat.ARGBFloat;
 								highQualityUASTC = false;
 								break;
-							case TextureFormat.DXT5:
+							case UnityEngine.TextureFormat.DXT5:
 								writePng = true;
 								break;
-							case TextureFormat.BC6H:
+							case UnityEngine.TextureFormat.BC6H:
 								rtFormat = RenderTextureFormat.ARGB32;
 								highQualityUASTC = true;
 								writePng = true;
 								break;
-							case TextureFormat.RGBAHalf:
+							case UnityEngine.TextureFormat.RGBAHalf:
 								// Basis can't compress half format, so convert to 32-bit float.
 								rtFormat = RenderTextureFormat.ARGB32;
 								//rtFormat = RenderTextureFormat.ARGBHalf;
@@ -1297,10 +1376,10 @@ namespace teleport
 								// No point in Png, can't support floats.
 								writePng = true;
 								break;
-							case TextureFormat.RGBA32:
+							case UnityEngine.TextureFormat.RGBA32:
 								rtFormat = RenderTextureFormat.ARGBInt;
 								break;
-							case TextureFormat.ARGB32:
+							case UnityEngine.TextureFormat.ARGB32:
 								rtFormat = RenderTextureFormat.ARGB32;
 								break;
 							default:
@@ -1356,13 +1435,23 @@ namespace teleport
 					scale[1] *= -1;
 				}
 				string shaderName = isCubemap?"ExtractCubeFace":isNormal ? "ExtractNormalMap" : "ExtractTexture";
+				if(textureExtractionData.textureConversion == TextureConversion.CONVERT_TO_METALLICROUGHNESS_BLUEGREEN)
+					shaderName= "ConvertRoughnessMetallicGreenBlue";
 				shaderName += UnityEditor.PlayerSettings.colorSpace == ColorSpace.Gamma ? "Gamma" : "Linear";
 				// make as many copies of textureShader as we have images!!!
 				List<ComputeShader> textureShaders=new List<ComputeShader>();
 				List<RenderTexture> textureArray = new List<RenderTexture>();
 				n = 0;
 				string shaderGUID = AssetDatabase.FindAssets($"ExtractTextureData t:ComputeShader")[0];
-				ComputeShader shader = AssetDatabase.LoadAssetAtPath<ComputeShader>(UnityEditor.AssetDatabase.GUIDToAssetPath(shaderGUID));
+				var assetpath= UnityEditor.AssetDatabase.GUIDToAssetPath(shaderGUID);
+				ComputeShader shader = AssetDatabase.LoadAssetAtPath<ComputeShader>(assetpath);
+
+				int kernelHandle = shader.FindKernel(shaderName);
+				if(kernelHandle<0)
+				{
+					UnityEngine.Debug.LogError("shader " + shaderName + " not found.");
+					continue;
+				}
 
 				// Here we will use a shader to extract from the source texture into the target which is readable.
 				// Unity stores all textures FLIPPED in the y direction. So the shader must handle re-flipping the images back to normal.
@@ -1373,7 +1462,6 @@ namespace teleport
 					for (int m = 0; m < mipCount; m++)
 					{
 						textureShaders.Add(shader);
-						int kernelHandle = shader.FindKernel(shaderName);
 						shader.SetInts("Scale", scale);
 						shader.SetInts("Offset", offsets);
 						shader.SetTexture(kernelHandle, "Source", sourceTexture);
@@ -1421,7 +1509,7 @@ namespace teleport
 			public byte[] bytes;
 		}
 
-		void ExtractAndStoreTexture(Texture sourceTexture, List<RenderTexture> renderTextures, avs.Texture textureData,int targetWidth, int targetHeight,bool writePng, bool highQualityUASTC,  bool forceOverwrite)
+		void ExtractAndStoreTexture(UnityEngine.Texture sourceTexture, List<RenderTexture> renderTextures, avs.Texture textureData,int targetWidth, int targetHeight,bool writePng, bool highQualityUASTC,  bool forceOverwrite)
 		{
 			int arraySize=1;
 			if(sourceTexture.GetType()==typeof(Cubemap)|| sourceTexture.GetType() == typeof(RenderTexture)&&
@@ -1463,7 +1551,7 @@ namespace teleport
 					textureData.width = (uint) targetWidth;
 					textureData.height = (uint) targetHeight;
 					bool pngCompatibleFormat=false;
-					if (readTexture.format == TextureFormat.RGBAFloat)
+					if (readTexture.format == UnityEngine.TextureFormat.RGBAFloat)
 					{
 						Color[] pixelData = readTexture.GetPixels();
 						textureData.format = avs.TextureFormat.RGBAFloat;
@@ -1473,7 +1561,7 @@ namespace teleport
 						var srcBytes = MemoryMarshal.Cast<Color, byte>(pixelData);
 						subresourceImage.bytes=srcBytes.ToArray();
 					}
-					else if (readTexture.format == TextureFormat.RGBAHalf)
+					else if (readTexture.format == UnityEngine.TextureFormat.RGBAHalf)
 					{
 						byte[] pixelData = readTexture.GetRawTextureData();
 
@@ -1705,7 +1793,7 @@ namespace teleport
 #endif
 		}
 #endif
-		public void AddTextureData(Texture texture, avs.Texture textureData, bool highQualityUASTC, bool forceOverwrite )
+		public void AddTextureData(UnityEngine.Texture texture, avs.Texture textureData, bool highQualityUASTC, bool forceOverwrite )
 		{
 			if(!sessionResourceUids.TryGetValue(texture, out uid textureID))
 			{
@@ -1737,7 +1825,7 @@ namespace teleport
 		//Extract bone and add to processed resources; will also add parent and child bones.
 		//	bone : The bone we are extracting.
 		//	boneList : Array of bones; usually taken from skinned mesh renderer.
-		public void CreateBone(Transform bone, ForceExtractionMask forceMask, Dictionary<Transform,uid> boneIDs, List<uid> jointIDs,List<avs.Node> avsNodes)
+		public void CreateBone(UnityEngine.Transform bone, ForceExtractionMask forceMask, Dictionary<UnityEngine.Transform,uid> boneIDs, List<uid> jointIDs,List<avs.Node> avsNodes)
 		{
 			uid boneID=0;
 			sessionResourceUids.TryGetValue(bone, out boneID);
@@ -1775,7 +1863,7 @@ namespace teleport
 
 				if (bone != boneIDs.First().Key)
                 {
-                    Transform parent = bone.parent;
+					UnityEngine.Transform parent = bone.parent;
                     while (parent.parent != null && parent.parent != boneIDs.First().Key && !boneIDs.ContainsKey(parent))
 					{
 						// We want the transform of the bone relative to its skeleton parent, not its Unity GameObject parent.
@@ -1801,45 +1889,50 @@ namespace teleport
 
                 boneNode.dataType = avs.NodeDataType.Bone;
 
-                boneNode.numChildren = (ulong)bone.childCount;
-                boneNode.childIDs = new uid[boneNode.numChildren];
                 // don't fill the children yet. We probably don't have their id's.
 				avsNodes.Add(boneNode);
-                //StoreNode(boneID, boneNode);
+            
                 sessionResourceUids[bone] = boneID;
                 jointIDs.Add(boneID);
             }
 			return;
 		}
-		public void BuildBoneNodeList(Transform bone, Dictionary<Transform, uid> boneIDs,List<avs.Node> avsNodes)
+		static public void GetBones(UnityEngine.Transform rootBone, List<UnityEngine.Transform> bones)
 		{
-			sessionResourceUids.TryGetValue(bone.parent,out uid parentID);
-			sessionResourceUids.TryGetValue(bone, out uid boneID);
+			bones.Add(rootBone);
+			for (int i = 0; i < rootBone.childCount; i++)
+			{
+				var child = rootBone.GetChild(i);
+				GetBones(child, bones);
+			}
+		}
+		public void BuildBoneNodeList(UnityEngine.Transform rootBone, Dictionary<UnityEngine.Transform, uid> boneIDs,List<avs.Node> avsNodes)
+		{
+			sessionResourceUids.TryGetValue(rootBone.parent.gameObject,out uid parentID);
+			sessionResourceUids.TryGetValue(rootBone.gameObject, out uid boneID);
             if (boneID == 0)
             {
 				boneID=GenerateUid();
-                sessionResourceUids[bone] = boneID;
+                sessionResourceUids[rootBone.gameObject] = boneID;
             }
-			boneIDs[bone]=boneID;
+			boneIDs[rootBone] =boneID;
 
-			avs.Transform avsTransform = avs.Transform.FromLocalUnityTransform(bone);
+			avs.Transform avsTransform = avs.Transform.FromLocalUnityTransform(rootBone);
 			avs.Node boneNode = new avs.Node();
 			boneNode.priority = 0;
-			boneNode.name = Marshal.StringToCoTaskMemUTF8(bone.name);
+			boneNode.name = Marshal.StringToCoTaskMemUTF8(rootBone.name);
 			boneNode.parentID = parentID;
 			boneNode.localTransform = avsTransform;
 			//if(parentID==0)
 			//	boneNode.globalTransform=avsTransform;
 			boneNode.dataType = avs.NodeDataType.Bone;
 
-			boneNode.numChildren = (ulong)bone.childCount;
-			boneNode.childIDs = new uid[boneNode.numChildren];
+			ulong numChildren = (ulong)rootBone.childCount;
 			avsNodes.Add(boneNode);
-			for (uint i = 0; i < boneNode.numChildren; i++)
+			for (uint i =0; i < numChildren; i++)
             {
-				var child= bone.GetChild((int)i);
+				var child= rootBone.GetChild((int)i);
 				BuildBoneNodeList(child, boneIDs,avsNodes);
-				boneNode.childIDs[i]=boneIDs[child];
 			}
 		}
 		public void CompressTextures()
@@ -1867,28 +1960,26 @@ namespace teleport
 
 		private void ExtractNodeHierarchy(GameObject gameObject, ref avs.Node extractTo, ForceExtractionMask forceMask,bool verify)
 		{
-			if(gameObject.transform.parent)
-			{
-				extractTo.parentID = FindResourceID(gameObject.transform.parent.gameObject);
-			}
-
 			//Extract children of node, through transform hierarchy.
-			uid[] childIDs = new uid[gameObject.transform.childCount];
+			// Cheating, but to help with skeletons, extract skinned mesh children first.
 			for(int i = 0; i < gameObject.transform.childCount; i++)
 			{
 				GameObject child = gameObject.transform.GetChild(i).gameObject;
-				uid childID = AddNode(child, forceMask, true, verify);
-
-				childIDs[i] = childID;
+				if(child.GetComponent<SkinnedMeshRenderer>()!=null)
+					 AddNode(child, forceMask, true, verify);
 			}
-			extractTo.numChildren = (UInt64)gameObject.transform.childCount;
-			extractTo.childIDs = childIDs.ToArray();
+			for (int i = 0; i < gameObject.transform.childCount; i++)
+			{
+				GameObject child = gameObject.transform.GetChild(i).gameObject;
+				if (child.GetComponent<SkinnedMeshRenderer>() == null)
+					AddNode(child, forceMask, true, verify);
+			}
 		}
 
-		private void ExtractNodeMaterials(Material[] sourceMaterials, ref avs.Node extractTo, ForceExtractionMask forceMask)
+		private void ExtractNodeMaterials(UnityEngine.Material[] sourceMaterials, ref avs.Node extractTo, ForceExtractionMask forceMask)
 		{
 			List<uid> materialIDs = new List<uid>();
-			foreach(Material material in sourceMaterials)
+			foreach(UnityEngine.Material material in sourceMaterials)
 			{
 				uid materialID = AddMaterial(material, forceMask);
 
@@ -1950,7 +2041,7 @@ namespace teleport
 				return false;
 			}
 			extractTo.renderState.lightmapScaleOffset=meshRenderer.lightmapScaleOffset;
-			Texture[] giTextures = GlobalIlluminationExtractor.GetTextures();
+			UnityEngine.Texture[] giTextures = GlobalIlluminationExtractor.GetTextures();
 			if(meshRenderer.lightmapIndex>=0)
 			{
 				// If this index not found? These errors are not fatal, but should not occur.
@@ -1979,7 +2070,7 @@ namespace teleport
 				Debug.LogError($"Failed to get SceneReferenceManager for GameObject \"{gameObject.name}\"!");
 				return false;
 			}
-			Mesh mesh = sceneReferenceManager.GetMeshFromGameObject(gameObject);
+			UnityEngine.Mesh mesh = sceneReferenceManager.GetMeshFromGameObject(gameObject);
 			if(mesh&&(mesh.hideFlags&UnityEngine.HideFlags.DontSave)== UnityEngine.HideFlags.DontSave)
 			{
 				// This is ok, it just means we're extracting one of the standard meshes: sphere, cube, etc.
@@ -2008,10 +2099,6 @@ namespace teleport
 		private bool ExtractNodeSkinnedMeshData(GameObject gameObject, ref avs.Node extractTo, ForceExtractionMask forceMask, bool verify)
 		{
 			SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
-			if(!skinnedMeshRenderer || !skinnedMeshRenderer.enabled || !skinnedMeshRenderer.rootBone)
-			{
-				return false;
-			}
 			extractTo.renderState.lightmapScaleOffset = skinnedMeshRenderer.lightmapScaleOffset;
 			var giTextures = GlobalIlluminationExtractor.GetTextures();
 			if (skinnedMeshRenderer.lightmapIndex >= 0 && skinnedMeshRenderer.lightmapIndex < giTextures.Length)
@@ -2023,7 +2110,12 @@ namespace teleport
 				Debug.LogError($"Failed to get SceneReferenceManager for GameObject: {gameObject.name}");
 				return false;
 			}
-			Mesh mesh = sceneReferenceManager.GetMeshFromGameObject(gameObject);
+			extractTo.dataType = avs.NodeDataType.Mesh;
+			// Add the skeleton. If it's shared between multiple meshes, it may be already there.
+			var skeletonRootTransform = GetTopmostSkeletonRoot(skinnedMeshRenderer);
+			extractTo.skeletonNodeID = AddSkeleton(skeletonRootTransform, skinnedMeshRenderer, forceMask);
+
+			UnityEngine.Mesh mesh = sceneReferenceManager.GetMeshFromGameObject(gameObject);
 			extractTo.dataID = AddMesh(mesh, forceMask,verify);
 
 			//Can't create a node with no data.
@@ -2032,25 +2124,6 @@ namespace teleport
 				Debug.LogError($"Failed to extract skinned mesh data from GameObject: {gameObject.name}");
 				return false;
 			}
-			extractTo.dataType = avs.NodeDataType.Mesh;
-
-			extractTo.skinID = AddSkin(skinnedMeshRenderer, forceMask);
-
-			//Animator component usually appears on the parent GameObject, so we need to use that instead for searching the children.
-			GameObject animatorSource = (gameObject.transform.parent) ? gameObject.transform.parent.gameObject : gameObject.transform.gameObject;
-			Animator animator = animatorSource.GetComponentInChildren<Animator>();
-			#if UNITY_EDITOR
-			if(animator)
-			{
-				extractTo.animationIDs = AnimationExtractor.AddAnimations(animator, forceMask);
-				extractTo.numAnimations = (ulong)extractTo.animationIDs.Length;
-			}
-			else
-			{
-				extractTo.animationIDs = null;
-				extractTo.numAnimations = 0;
-			}
-			#endif
 			ExtractNodeMaterials(skinnedMeshRenderer.sharedMaterials, ref extractTo, forceMask);
 
 			return true;
@@ -2082,72 +2155,85 @@ namespace teleport
 
 			return true;
 		}
-
-		private uid AddSkin(SkinnedMeshRenderer skinnedMeshRenderer, ForceExtractionMask forceMask)
+		//! Add the skeleton associated with the specified SkinnedMeshRenderer.
+		//! Multiple Skinned Meshes can share the same skeleton, and we only need to add each one once.
+		//! This fn returns the id of the skeleton Node. The skeleton asset has its own id.
+		private uid AddSkeleton(UnityEngine.Transform skeletonRootTransform,SkinnedMeshRenderer skinnedMeshRenderer, ForceExtractionMask forceMask)
 		{
-			//Just return the ID; if we have already processed the skin and the skin can be found on the unmanaged side.
-			if(sessionResourceUids.TryGetValue(skinnedMeshRenderer, out uid skinID) && IsSkinStored(skinID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
-			{
-				return skinID;
-			}
-
-			skinID = skinID == 0 ? GenerateUid() : skinID;
-			sessionResourceUids[skinnedMeshRenderer] = skinID;
-
-			avs.Skin skin = new avs.Skin();
-			skin.name = Marshal.StringToCoTaskMemUTF8(skinnedMeshRenderer.name);
-
 			// In unity, this isn't really an asset, it has no location on disk.
-			string path= skinnedMeshRenderer.name;
-			skin.path = Marshal.StringToCoTaskMemUTF8(path);
+			uid skeletonRootNodeID = 0;
+			uid skeletonAssetID=0;
+			teleport.SkeletonRoot skeletonRoot= skeletonRootTransform.gameObject.GetComponent<teleport.SkeletonRoot>();
+			if (skeletonRoot == null|| forceMask!= ForceExtractionMask.FORCE_NOTHING)
+			{
+				if(skeletonRoot == null)
+					skeletonRoot=skeletonRootTransform.gameObject.AddComponent<teleport.SkeletonRoot>();
+				skeletonRoot.assetPath="";
+				if (skeletonRootTransform.gameObject.scene!=null)
+					skeletonRoot.assetPath+= skeletonRootTransform.gameObject.scene.name+".";
+				skeletonRoot.assetPath+= skeletonRootTransform.name;
+			}
+			//Just return the ID; if we have already processed the skeleton and the skeleton can be found on the unmanaged side.
+			if (sessionResourceUids.TryGetValue(skeletonRootTransform.gameObject, out skeletonRootNodeID) )
+			{
+				if(IsNodeStored(skeletonRootNodeID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
+				{
+					return skeletonRootNodeID;
+				}
+			}
+			skeletonUids.TryGetValue(skeletonRoot.assetPath, out skeletonAssetID);
+			skeletonAssetID = skeletonAssetID == 0 ? GenerateUid() : skeletonAssetID;
+			skeletonUids[skeletonRoot.assetPath] = skeletonAssetID;
 
-			skin.inverseBindMatrices = ExtractInverseBindMatrices(skinnedMeshRenderer);
-			skin.numInverseBindMatrices = skin.inverseBindMatrices.Count();
+			avs.Skeleton skeleton = new avs.Skeleton();
+			skeleton.name = Marshal.StringToCoTaskMemUTF8(skeletonRootTransform.name);
+			skeleton.path = Marshal.StringToCoTaskMemUTF8(skeletonRoot.assetPath);
 
 			List<uid> jointIDs = new List<uid>();
-			HashSet<Transform> done=new HashSet<Transform>();
-			Dictionary<Transform,uid> boneIDs=new Dictionary<Transform, uid>();
+			HashSet<UnityEngine.Transform> done=new HashSet<UnityEngine.Transform>();
+			Dictionary<UnityEngine.Transform,uid> boneIDs=new Dictionary<UnityEngine.Transform, uid>();
 			// First, make sure every bone has a uid.
 			List<avs.Node> avsNodes=new List<avs.Node>();
 			// Note: we can end up here with MORE joint ID's than there are "bones" in the Skinned Mesh Renderer, because
 			// Unity is allowed to skip over non-animated nodes. We must obtain the full hierarchy.
-			//foreach (Transform bone in skinnedMeshRenderer.bones)
-			{
-				//CreateBone(bone, forceMask, boneIDs,jointIDs, avsNodes);
-			}
-			BuildBoneNodeList(skinnedMeshRenderer.rootBone, boneIDs,avsNodes);
+			BuildBoneNodeList(skeletonRootTransform, boneIDs,avsNodes);
+			if(boneIDs.Count==0)
+				return 0;
+			skeletonRootNodeID = boneIDs[skeletonRootTransform];
 			for (int i = 0; i < avsNodes.Count; i++)
 			{
 				avs.Node avsNode = avsNodes[i];
+				// The root is stored as a Skeleton, not a bone.
+				if(i==0)
+				{
+					avsNode.dataType = avs.NodeDataType.Skeleton;
+					avsNode.dataID=skeletonAssetID;
+				}
 				uid boneID = boneIDs.Values.ElementAt(i);
 				StoreNode(boneID, avsNode);
 			}
 
 			// Now, we've stored all the nodes in the object hierarchy. This may be more nodes than the actual skeleton has:
-
-			foreach (Transform bone in skinnedMeshRenderer.bones)
+			/*
+			foreach (UnityEngine.Transform bone in skinnedMeshRenderer.bones)
 			{
 				// For now, IK nodes are not in the boneIDs list, although they ARE in the skinned mesh renderer's bones list...
 				if(!boneIDs.TryGetValue(bone,out uid id))
 					continue;
 				jointIDs.Add(id);
-			}
+			}*/
 			// TODO: uid's may be a bad way to do this because it only applies to one skeleton...
-			skin.boneIDs = boneIDs.Values.ToArray();
-			skin.numBones = boneIDs.Count;
-			skin.jointIDs = jointIDs.ToArray();
-			skin.numJoints = jointIDs.Count;
+			skeleton.boneIDs = boneIDs.Values.ToArray();
+			skeleton.numBones = boneIDs.Count;
 
-			skin.rootTransform = avs.Transform.FromLocalUnityTransform(skinnedMeshRenderer.rootBone.parent);
+			skeleton.rootTransform = avs.Transform.FromLocalUnityTransform(skeletonRootTransform.parent);
 
-			StoreSkin(skinID, skin);
-			return skinID;
+			StoreSkeleton(skeletonAssetID, skeleton);
+			return skeletonRootNodeID;
 		}
 
-		private avs.Mat4x4[] ExtractInverseBindMatrices(SkinnedMeshRenderer skinnedMeshRenderer)
+		private avs.Mat4x4[] ExtractInverseBindMatrices(UnityEngine.Mesh mesh)
 		{
-			Mesh mesh = skinnedMeshRenderer.sharedMesh;
-
 			avs.Mat4x4[] bindMatrices = new avs.Mat4x4[mesh.bindposes.Length];
 
 			for(int i = 0; i < mesh.bindposes.Length; i++)
@@ -2158,9 +2244,9 @@ namespace teleport
 			return bindMatrices;
 		}
 
-		private void ExtractMeshData(avs.AxesStandard extractToBasis, Mesh mesh, uid meshID,bool compress,bool verify)
+		private void ExtractMeshData(avs.AxesStandard extractToBasis, UnityEngine.Mesh mesh, uid meshID,bool compress,bool verify)
 		{
-			UInt64 localId=0;
+			UInt64 localId=1;
 			avs.PrimitiveArray[] primitives = new avs.PrimitiveArray[mesh.subMeshCount];
 			Dictionary<UInt64, avs.Accessor> accessors = new Dictionary<UInt64, avs.Accessor>(6);
 			Dictionary<UInt64, avs.BufferView> bufferViews = new Dictionary<UInt64, avs.BufferView>(6);
@@ -2180,6 +2266,11 @@ namespace teleport
 			{
 				jointAccessorID = localId++;
 				weightAccessorID = localId++;
+			}
+			UInt64 inverseBindMatricesID =0;
+			if (mesh.bindposeCount > 0)
+			{
+				inverseBindMatricesID = localId++;
 			}
 
 			//Position Buffer:
@@ -2361,11 +2452,19 @@ namespace teleport
 				avs.GeometryBuffer weightBuffer = new avs.GeometryBuffer();
 				weightBuffer.byteLength = (ulong)(mesh.boneWeights.Length * weightStride);
 				weightBuffer.data = new byte[weightBuffer.byteLength];
-
+				int minBoneIndex=0xFFFFFF;
+				int maxBoneIndex=0;
 				for(int i = 0; i < mesh.boneWeights.Length; i++)
 				{
 					BoneWeight boneWeight = mesh.boneWeights[i];
-
+					maxBoneIndex=Math.Max(maxBoneIndex, boneWeight.boneIndex0);
+					maxBoneIndex = Math.Max(maxBoneIndex, boneWeight.boneIndex1);
+					maxBoneIndex = Math.Max(maxBoneIndex, boneWeight.boneIndex2);
+					maxBoneIndex = Math.Max(maxBoneIndex, boneWeight.boneIndex3);
+					minBoneIndex = Math.Min(minBoneIndex, boneWeight.boneIndex0);
+					minBoneIndex = Math.Min(minBoneIndex, boneWeight.boneIndex1);
+					minBoneIndex = Math.Min(minBoneIndex, boneWeight.boneIndex2);
+					minBoneIndex = Math.Min(minBoneIndex, boneWeight.boneIndex3);
 					BitConverter.GetBytes((int)boneWeight.boneIndex0).CopyTo(jointBuffer.data, i * jointStride + 00 * 4);
 					BitConverter.GetBytes((int)boneWeight.boneIndex1).CopyTo(jointBuffer.data, i * jointStride + 01 * 4);
 					BitConverter.GetBytes((int)boneWeight.boneIndex2).CopyTo(jointBuffer.data, i * jointStride + 02 * 4);
@@ -2427,6 +2526,23 @@ namespace teleport
 				accessors.Add(weightAccessorID, weightAccessor);
 			}
 
+			if(mesh.bindposeCount > 0)
+			{
+				CreateMeshBufferAndView(extractToBasis, mesh.bindposes, buffers, bufferViews, ref localId, out UInt64 invBindViewID);
+
+				accessors.Add
+				(
+					inverseBindMatricesID,
+					new avs.Accessor
+					{
+						type = avs.Accessor.DataType.MAT4,
+						componentType = avs.Accessor.ComponentType.FLOAT,
+						count = (ulong)mesh.bindposes.Length,
+						bufferView = invBindViewID,
+						byteOffset = 0
+					}
+				);
+			}
 			//Oculus Quest OVR rendering uses USHORTs for non-instanced meshes.
 			int indexBufferStride = (extractToBasis == avs.AxesStandard.GlStyle || mesh.indexFormat == UnityEngine.Rendering.IndexFormat.UInt16) ? 2 : 4;
 
@@ -2484,10 +2600,11 @@ namespace teleport
 			{
 				last_modified = GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32)).Replace("Assets/", ""));
 			}
-			var avsMesh= new avs.Mesh
+			var avsMesh= new avs.Mesh()
 			{
 				name = Marshal.StringToCoTaskMemUTF8(mesh.name),
 				path = Marshal.StringToCoTaskMemUTF8(resourcePath),
+
 				numPrimitiveArrays = primitives.Length,
 				primitiveArrays = primitives,
 
@@ -2501,8 +2618,9 @@ namespace teleport
 
 				numBuffers = buffers.Count,
 				bufferIDs = buffers.Keys.ToArray(),
-				buffers = buffers.Values.ToArray()
-			};
+				buffers = buffers.Values.ToArray(),
+				inverseBindMatricesAccessor = inverseBindMatricesID
+		};
 			StoreMesh
 			(
 				meshID,
@@ -2560,7 +2678,7 @@ namespace teleport
 			);
 		}
 
-		private void CreateMeshBufferAndView(avs.AxesStandard extractToBasis, in Vector3[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, ref UInt64 localId, out UInt64 bufferViewID)
+		private void CreateMeshBufferAndView(avs.AxesStandard extractToBasis, in UnityEngine.Vector3[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, ref UInt64 localId, out UInt64 bufferViewID)
 		{
 			//Three floats per Vector3 * four bytes per float.
 			int stride = 3 * 4;
@@ -2612,7 +2730,7 @@ namespace teleport
 			);
 		}
 
-		private void CreateMeshBufferAndView(avs.AxesStandard extractToBasis, in Vector4[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, ref UInt64 localId, out UInt64 bufferViewID)
+		private void CreateMeshBufferAndView(avs.AxesStandard extractToBasis, in UnityEngine.Vector4[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, ref UInt64 localId, out UInt64 bufferViewID)
 		{
 			//Four floats per Vector4 * four bytes per float.
 			int stride = 4 * 4;
@@ -2665,48 +2783,131 @@ namespace teleport
 				}
 			);
 		}
+		private void CreateMeshBufferAndView(avs.AxesStandard extractToBasis, in Matrix4x4[] data, in Dictionary<uid, avs.GeometryBuffer> buffers, in Dictionary<uid, avs.BufferView> bufferViews, ref UInt64 localId, out UInt64 bufferViewID)
+		{
+			//16 floats per Matrix4x4 * four bytes per float.
+			int stride = 16 * 4;
 
-		private static uint GetBytesPerPixel(TextureFormat format)
+			avs.GeometryBuffer newBuffer = new avs.GeometryBuffer();
+			newBuffer.byteLength = (ulong)(data.Length * stride);
+			newBuffer.data = new byte[newBuffer.byteLength];
+
+			//Get byte data from each Vector4, and copy into buffer.
+			switch (extractToBasis)
+			{
+				case avs.AxesStandard.GlStyle:
+					for (int i = 0; i < data.Length; i++)
+					{
+						BitConverter.GetBytes( data[i].m00).CopyTo(newBuffer.data, i * stride + 0);
+						BitConverter.GetBytes( data[i].m01).CopyTo(newBuffer.data, i * stride + 4);
+						BitConverter.GetBytes(-data[i].m02).CopyTo(newBuffer.data, i * stride + 8);
+						BitConverter.GetBytes( data[i].m03).CopyTo(newBuffer.data, i * stride + 12);
+
+						BitConverter.GetBytes( data[i].m10).CopyTo(newBuffer.data, i * stride + 16);
+						BitConverter.GetBytes( data[i].m11).CopyTo(newBuffer.data, i * stride + 20);
+						BitConverter.GetBytes(-data[i].m12).CopyTo(newBuffer.data, i * stride + 24);
+						BitConverter.GetBytes( data[i].m13).CopyTo(newBuffer.data, i * stride + 28);
+
+						BitConverter.GetBytes(-data[i].m20).CopyTo(newBuffer.data, i * stride + 32);
+						BitConverter.GetBytes(-data[i].m21).CopyTo(newBuffer.data, i * stride + 36);
+						BitConverter.GetBytes( data[i].m22).CopyTo(newBuffer.data, i * stride + 40);
+						BitConverter.GetBytes(-data[i].m23).CopyTo(newBuffer.data, i * stride + 44);
+
+						BitConverter.GetBytes( data[i].m30).CopyTo(newBuffer.data, i * stride + 48);
+						BitConverter.GetBytes( data[i].m31).CopyTo(newBuffer.data, i * stride + 52);
+						BitConverter.GetBytes(-data[i].m32).CopyTo(newBuffer.data, i * stride + 56);
+						BitConverter.GetBytes( data[i].m33).CopyTo(newBuffer.data, i * stride + 60);
+					}
+
+					break;
+				case avs.AxesStandard.EngineeringStyle:
+					for (int i = 0; i < data.Length; i++)
+					{
+						BitConverter.GetBytes(data[i].m00).CopyTo(newBuffer.data, i * stride + 0);
+						BitConverter.GetBytes(data[i].m02).CopyTo(newBuffer.data, i * stride + 4);
+						BitConverter.GetBytes(data[i].m01).CopyTo(newBuffer.data, i * stride + 8);
+						BitConverter.GetBytes(data[i].m03).CopyTo(newBuffer.data, i * stride + 12);
+
+						BitConverter.GetBytes(data[i].m20).CopyTo(newBuffer.data, i * stride + 16);
+						BitConverter.GetBytes(data[i].m22).CopyTo(newBuffer.data, i * stride + 20);
+						BitConverter.GetBytes(data[i].m21).CopyTo(newBuffer.data, i * stride + 24);
+						BitConverter.GetBytes(data[i].m23).CopyTo(newBuffer.data, i * stride + 28);
+
+						BitConverter.GetBytes(data[i].m10).CopyTo(newBuffer.data, i * stride + 32);
+						BitConverter.GetBytes(data[i].m12).CopyTo(newBuffer.data, i * stride + 36);
+						BitConverter.GetBytes(data[i].m11).CopyTo(newBuffer.data, i * stride + 40);
+						BitConverter.GetBytes(data[i].m13).CopyTo(newBuffer.data, i * stride + 44);
+
+						BitConverter.GetBytes(data[i].m30).CopyTo(newBuffer.data, i * stride + 48);
+						BitConverter.GetBytes(data[i].m32).CopyTo(newBuffer.data, i * stride + 52);
+						BitConverter.GetBytes(data[i].m31).CopyTo(newBuffer.data, i * stride + 56);
+						BitConverter.GetBytes(data[i].m33).CopyTo(newBuffer.data, i * stride + 60);
+					}
+
+					break;
+				default:
+					Debug.LogError("Attempted to extract mesh buffer data with unsupported axes standard of:" + extractToBasis);
+					break;
+			}
+
+			UInt64 bufferID = localId++;
+			bufferViewID = localId++;
+
+			buffers.Add(bufferID, newBuffer);
+			bufferViews.Add
+			(
+				bufferViewID,
+				new avs.BufferView
+				{
+					buffer = bufferID,
+					byteOffset = 0,
+					byteLength = newBuffer.byteLength,
+					byteStride = (ulong)stride
+				}
+			);
+		}
+
+		private static uint GetBytesPerPixel(UnityEngine.TextureFormat format)
 		{
 			switch (format)
 			{
-				case TextureFormat.Alpha8: return 1;
-				case TextureFormat.ARGB4444: return 2;
-				case TextureFormat.RGB24: return 3;
-				case TextureFormat.RGBA32: return 4;
-				case TextureFormat.ARGB32: return 4;
-				case TextureFormat.RGB565: return 2;
-				case TextureFormat.R16: return 2;
-				case TextureFormat.DXT1: return 1; //0.5 = 4bits
-				case TextureFormat.DXT5: return 1;
-				case TextureFormat.RGBA4444: return 2;
-				case TextureFormat.BGRA32: return 4;
-				case TextureFormat.RHalf: return 2;
-				case TextureFormat.RGHalf: return 4;
-				case TextureFormat.RGBAHalf: return 8;
-				case TextureFormat.RFloat: return 4;
-				case TextureFormat.RGFloat: return 8;
-				case TextureFormat.RGBAFloat: return 16;
-				case TextureFormat.YUY2: return 2;
-				case TextureFormat.RGB9e5Float: return 4;
-				case TextureFormat.BC4: return 1; //0.5 = 4bits
-				case TextureFormat.BC5: return 1;
-				case TextureFormat.BC6H: return 1;
-				case TextureFormat.BC7: return 1;
-				case TextureFormat.DXT1Crunched: return 1; //0.5 = 4bits
-				case TextureFormat.DXT5Crunched: return 1;
-				case TextureFormat.PVRTC_RGB2: return 1; //0.25 = 2bits
-				case TextureFormat.PVRTC_RGBA2: return 1; //0.25 = 2bits
-				case TextureFormat.PVRTC_RGB4: return 1; //0.5 = 4bits
-				case TextureFormat.PVRTC_RGBA4: return 1; //0.5 = 4bits
-				case TextureFormat.ETC_RGB4: return 1; //0.5 = 4bits
-				case TextureFormat.EAC_R: return 1; //0.5 = 4bits
-				case TextureFormat.EAC_R_SIGNED: return 1; //0.5 = 4bits
-				case TextureFormat.EAC_RG: return 1;
-				case TextureFormat.EAC_RG_SIGNED: return 1;
-				case TextureFormat.ETC2_RGB: return 1; //0.5 = 4bits
-				case TextureFormat.ETC2_RGBA1: return 1; //0.5 = 4bits
-				case TextureFormat.ETC2_RGBA8: return 1;
+				case UnityEngine.TextureFormat.Alpha8: return 1;
+				case UnityEngine.TextureFormat.ARGB4444: return 2;
+				case UnityEngine.TextureFormat.RGB24: return 3;
+				case UnityEngine.TextureFormat.RGBA32: return 4;
+				case UnityEngine.TextureFormat.ARGB32: return 4;
+				case UnityEngine.TextureFormat.RGB565: return 2;
+				case UnityEngine.TextureFormat.R16: return 2;
+				case UnityEngine.TextureFormat.DXT1: return 1; //0.5 = 4bits
+				case UnityEngine.TextureFormat.DXT5: return 1;
+				case UnityEngine.TextureFormat.RGBA4444: return 2;
+				case UnityEngine.TextureFormat.BGRA32: return 4;
+				case UnityEngine.TextureFormat.RHalf: return 2;
+				case UnityEngine.TextureFormat.RGHalf: return 4;
+				case UnityEngine.TextureFormat.RGBAHalf: return 8;
+				case UnityEngine.TextureFormat.RFloat: return 4;
+				case UnityEngine.TextureFormat.RGFloat: return 8;
+				case UnityEngine.TextureFormat.RGBAFloat: return 16;
+				case UnityEngine.TextureFormat.YUY2: return 2;
+				case UnityEngine.TextureFormat.RGB9e5Float: return 4;
+				case UnityEngine.TextureFormat.BC4: return 1; //0.5 = 4bits
+				case UnityEngine.TextureFormat.BC5: return 1;
+				case UnityEngine.TextureFormat.BC6H: return 1;
+				case UnityEngine.TextureFormat.BC7: return 1;
+				case UnityEngine.TextureFormat.DXT1Crunched: return 1; //0.5 = 4bits
+				case UnityEngine.TextureFormat.DXT5Crunched: return 1;
+				case UnityEngine.TextureFormat.PVRTC_RGB2: return 1; //0.25 = 2bits
+				case UnityEngine.TextureFormat.PVRTC_RGBA2: return 1; //0.25 = 2bits
+				case UnityEngine.TextureFormat.PVRTC_RGB4: return 1; //0.5 = 4bits
+				case UnityEngine.TextureFormat.PVRTC_RGBA4: return 1; //0.5 = 4bits
+				case UnityEngine.TextureFormat.ETC_RGB4: return 1; //0.5 = 4bits
+				case UnityEngine.TextureFormat.EAC_R: return 1; //0.5 = 4bits
+				case UnityEngine.TextureFormat.EAC_R_SIGNED: return 1; //0.5 = 4bits
+				case UnityEngine.TextureFormat.EAC_RG: return 1;
+				case UnityEngine.TextureFormat.EAC_RG_SIGNED: return 1;
+				case UnityEngine.TextureFormat.ETC2_RGB: return 1; //0.5 = 4bits
+				case UnityEngine.TextureFormat.ETC2_RGBA1: return 1; //0.5 = 4bits
+				case UnityEngine.TextureFormat.ETC2_RGBA8: return 1;
 				//These are duplicates of ASTC_RGB_0x0, and not implemented in Unity 2018:
 				//case TextureFormat.ASTC_4x4: return 8;
 				//case TextureFormat.ASTC_5x5: return 8;
@@ -2714,45 +2915,45 @@ namespace teleport
 				//case TextureFormat.ASTC_8x8: return 8;
 				//case TextureFormat.ASTC_10x10: return 8;
 				//case TextureFormat.ASTC_12x12: return 8;
-				case TextureFormat.RG16: return 2;
-				case TextureFormat.R8: return 1;
-				case TextureFormat.ETC_RGB4Crunched: return 1; //0.5 = 4bits
-				case TextureFormat.ETC2_RGBA8Crunched: return 1;
+				case UnityEngine.TextureFormat.RG16: return 2;
+				case UnityEngine.TextureFormat.R8: return 1;
+				case UnityEngine.TextureFormat.ETC_RGB4Crunched: return 1; //0.5 = 4bits
+				case UnityEngine.TextureFormat.ETC2_RGBA8Crunched: return 1;
 #if UNITY_2019_0_OR_NEWER
 			//These are not implemented in Unity 2018:
-			case TextureFormat.ASTC_HDR_4x4: return 8;
-			case TextureFormat.ASTC_HDR_5x5: return 8;
-			case TextureFormat.ASTC_HDR_6x6: return 8;
-			case TextureFormat.ASTC_HDR_8x8: return 8;
-			case TextureFormat.ASTC_HDR_10x10: return 8;
-			case TextureFormat.ASTC_HDR_12x12: return 8;
+			case UnityEngine.TextureFormat.ASTC_HDR_4x4: return 8;
+			case UnityEngine.TextureFormat.ASTC_HDR_5x5: return 8;
+			case UnityEngine.TextureFormat.ASTC_HDR_6x6: return 8;
+			case UnityEngine.TextureFormat.ASTC_HDR_8x8: return 8;
+			case UnityEngine.TextureFormat.ASTC_HDR_10x10: return 8;
+			case UnityEngine.TextureFormat.ASTC_HDR_12x12: return 8;
 #endif
-				case TextureFormat.ASTC_4x4: return 8;
-				case TextureFormat.ASTC_5x5: return 8;
-				case TextureFormat.ASTC_6x6: return 8;
-				case TextureFormat.ASTC_8x8: return 8;
-				case TextureFormat.ASTC_10x10: return 8;
-				case TextureFormat.ASTC_12x12: return 8;
+				case UnityEngine.TextureFormat.ASTC_4x4: return 8;
+				case UnityEngine.TextureFormat.ASTC_5x5: return 8;
+				case UnityEngine.TextureFormat.ASTC_6x6: return 8;
+				case UnityEngine.TextureFormat.ASTC_8x8: return 8;
+				case UnityEngine.TextureFormat.ASTC_10x10: return 8;
+				case UnityEngine.TextureFormat.ASTC_12x12: return 8;
 #if UNITY_2019_3_OR_OLDER
-				case TextureFormat.ASTC_4x4: return 8;
-				case TextureFormat.ASTC_5x5: return 8;
-				case TextureFormat.ASTC_6x6: return 8;
-				case TextureFormat.ASTC_8x8: return 8;
-				case TextureFormat.ASTC_10x10: return 8;
-				case TextureFormat.ASTC_12x12: return 8;
+				case UnityEngine.TextureFormat.ASTC_4x4: return 8;
+				case UnityEngine.TextureFormat.ASTC_5x5: return 8;
+				case UnityEngine.TextureFormat.ASTC_6x6: return 8;
+				case UnityEngine.TextureFormat.ASTC_8x8: return 8;
+				case UnityEngine.TextureFormat.ASTC_10x10: return 8;
+				case UnityEngine.TextureFormat.ASTC_12x12: return 8;
 #endif
 				default:
 					Debug.LogWarning("Defaulting to <color=red>8</color> bytes per pixel as format is unsupported: " + format);
 					return 8;
 			}
 		}
-		private static TextureFormat ConvertRenderTextureFormatToTextureFormat(RenderTextureFormat rtf)
+		private static UnityEngine.TextureFormat ConvertRenderTextureFormatToTextureFormat(RenderTextureFormat rtf)
 		{
 			string formatName = Enum.GetName(typeof(RenderTextureFormat), rtf);
-			TextureFormat texFormat = TextureFormat.RGBA32;
-			foreach (TextureFormat f in Enum.GetValues(typeof(TextureFormat)))
+			UnityEngine.TextureFormat texFormat = UnityEngine.TextureFormat.RGBA32;
+			foreach (UnityEngine.TextureFormat f in Enum.GetValues(typeof(UnityEngine.TextureFormat)))
 			{
-				string fName = Enum.GetName(typeof(TextureFormat), f);
+				string fName = Enum.GetName(typeof(UnityEngine.TextureFormat), f);
 				if (fName.Equals(formatName, StringComparison.Ordinal))
 				{
 					texFormat = f;
@@ -2762,7 +2963,7 @@ namespace teleport
 			switch (rtf)
 			{
 				case RenderTextureFormat.ARGB64:
-					return TextureFormat.RGBAHalf;
+					return UnityEngine.TextureFormat.RGBAHalf;
 				default:
 					break;
 			}
@@ -2777,13 +2978,13 @@ namespace teleport
 				case RenderTextureFormat.ARGB32: return 4;
 				case RenderTextureFormat.ARGB64: return 8;
 				default:
-					TextureFormat f= ConvertRenderTextureFormatToTextureFormat(format);
+					UnityEngine.TextureFormat f= ConvertRenderTextureFormatToTextureFormat(format);
 					return GetBytesPerPixel(f);
 					//Debug.LogWarning("Defaulting to <color=red>8</color> bytes per pixel as format is unsupported: " + format);
 					//return 8;
 			}
 		}
-		public uid AddTexture(Texture texture, ForceExtractionMask forceMask= ForceExtractionMask.FORCE_NOTHING)
+		public uid AddTexture(UnityEngine.Texture texture, ForceExtractionMask forceMask= ForceExtractionMask.FORCE_NOTHING, TextureConversion textureConversion= TextureConversion.CONVERT_NOTHING)
 		{
 			if(!texture)
 			{
@@ -2827,9 +3028,12 @@ namespace teleport
 					return 0;
 				}
 			}
+			string name=texture.name;
+			if(textureConversion!= TextureConversion.CONVERT_NOTHING)
+				name+="_"+textureConversion;
 			avs.Texture extractedTexture = new avs.Texture()
 			{
-				name = Marshal.StringToCoTaskMemUTF8(texture.name),
+				name = Marshal.StringToCoTaskMemUTF8(name),
 				path = Marshal.StringToCoTaskMemUTF8(resourcePath),
 
 				width = (uint)texture.width,
@@ -2881,7 +3085,7 @@ namespace teleport
 					return 0;
 			}
 
-			texturesWaitingForExtraction.Add(new TextureExtractionData { id = textureID, unityTexture = texture, textureData = extractedTexture });
+			texturesWaitingForExtraction.Add(new TextureExtractionData { id = textureID, unityTexture = texture, textureData = extractedTexture , textureConversion=textureConversion });
 			return textureID;
 		}
 

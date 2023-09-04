@@ -65,8 +65,6 @@ namespace teleport
 		[DllImport(TeleportServerDll.name)]
 		private static extern bool Client_HasOrigin(uid clientID);
 
-	//	[DllImport(TeleportServerDll.name)]
-	//	private static extern void Client_UpdateNodeAnimationControl(uid clientID, avs.NodeUpdateAnimationControl update);
 		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_SetNodeAnimationSpeed(uid clientID, uid nodeID, uid animationID, float speed);
 
@@ -130,9 +128,9 @@ namespace teleport
 				{
 					// Nest main camera in any other session.
 					session = sessions.First().Value;
-					if (session.head != null)
+					if (session._head != null)
 					{
-						Camera.main.transform.parent = session.head.transform;
+						Camera.main.transform.parent = session._head.transform;
 					}
 				}
 			}
@@ -308,15 +306,31 @@ namespace teleport
 		// Was the gameobject the session belongs placed in the level or spawned at runtime.
 		public bool Spawned { get; set; } = false;
 
-		public int maxNodesOnOverlay = 10; // Number of nodes to show on the overlay before breaking.
-		public int maxLightsOnOverlay = 5; // Number of lights to show on the overlay before breaking.
-
-		public Teleport_Head head = null;
-		public Teleport_ClientspaceRoot clientspaceRoot = null;
-		public Teleport_CollisionRoot collisionRoot = null;
-		public Teleport_SceneCaptureComponent sceneCaptureComponent = null;
+		Teleport_Head _head = null;
+		public Teleport_Head head
+		{
+			get
+			{
+				return _head;
+			}
+		}
+		Teleport_ClientspaceRoot _clientspaceRoot = null;
+		public Teleport_ClientspaceRoot clientspaceRoot
+		{
+			get
+			{
+				return _clientspaceRoot;
+			}
+		}
+		Teleport_SceneCaptureComponent _sceneCaptureComponent = null;
+		public Teleport_SceneCaptureComponent sceneCaptureComponent
+		{
+			get
+			{
+				return _sceneCaptureComponent;
+			}
+		}
 		public AudioSource inputAudioSource = null;
-		public Vector3 bodyOffsetFromHead = default;
 
 		public teleport.ClientSettings clientSettings = new teleport.ClientSettings();
 		public teleport.ClientDynamicLighting clientDynamicLighting =new teleport.ClientDynamicLighting();
@@ -355,12 +369,12 @@ namespace teleport
 		{
 			// Stream the clientspace root, but player does NOT own this:
 
-			if (clientspaceRoot)
+			if (_clientspaceRoot)
 			{
-				Teleport_Streamable streamableComponent = clientspaceRoot.gameObject.GetComponent<Teleport_Streamable>();
+				Teleport_Streamable streamableComponent = _clientspaceRoot.gameObject.GetComponent<Teleport_Streamable>();
 				if (!streamableComponent)
 				{
-					streamableComponent = clientspaceRoot.gameObject.AddComponent<Teleport_Streamable>();
+					streamableComponent = _clientspaceRoot.gameObject.AddComponent<Teleport_Streamable>();
 				}
 				streamableComponent.sendMovementUpdates = true;
 			}
@@ -368,7 +382,7 @@ namespace teleport
 			List<GameObject> playerBodyParts = GetPlayerBodyParts();
 			foreach (GameObject bodyPart in playerBodyParts)
 			{
-				if(clientspaceRoot!=null&&bodyPart == clientspaceRoot.gameObject)
+				if(_clientspaceRoot!=null&&bodyPart == _clientspaceRoot.gameObject)
 					continue;
 				Teleport_Streamable streamableComponent = bodyPart.GetComponent<Teleport_Streamable>();
 				if (!streamableComponent)
@@ -411,9 +425,9 @@ namespace teleport
 				}
 			}
 			clientID = 0;
-			if (sceneCaptureComponent != null)
+			if (_sceneCaptureComponent != null)
             {
-				sceneCaptureComponent.SetClientID(0);
+				_sceneCaptureComponent.SetClientID(0);
 			}
 		}
 
@@ -453,83 +467,20 @@ namespace teleport
 				//Send initial animation state on receiving the handshake, as the connection is now ready for commands.
 				if(geometryStreamingService!=null)
 					geometryStreamingService.SendAnimationState();
-
-				//Send animation control updates for the grip animation of the controllers.
-				foreach (Teleport_Controller controller in mappedNodes)
-				{
-					if(!controller.controllerModel)
-						continue;
-					SkinnedMeshRenderer skinnedMeshRenderer = controller.controllerModel.GetComponentInChildren<SkinnedMeshRenderer>();
-					if (!skinnedMeshRenderer)
-					{
-						continue;
-					}
-
-					//We need the ID of the node the animations actually occur on.
-					uid animatedNodeID = geometrySource.FindResourceID(skinnedMeshRenderer.gameObject);
-
-					//Set time override for controller press animation.
-				/*	avs.NodeUpdateAnimationControl animationControlUpdate = new avs.NodeUpdateAnimationControl
-					{
-						nodeID = animatedNodeID,
-						animationID = geometrySource.FindResourceID(controller.triggerPressAnimation),
-						timeControl = controller.pressAnimationTimeOverride
-					};*/
-
-					//Client_UpdateNodeAnimationControl(clientID, animationControlUpdate);
-
-					//Set speed of controller animations.
-					Animator animator = controller.controllerModel.GetComponentInChildren<Animator>();
-					if(animator)
-					{
-					// TODO: Convert the following to work outside of editor.
-					#if UNITY_EDITOR
-						UnityEditor.Animations.AnimatorController animatorController = animator.runtimeAnimatorController as UnityEditor.Animations.AnimatorController;
-						UnityEditor.Animations.AnimatorStateMachine stateMachine = animatorController.layers[0].stateMachine;
-
-						foreach(UnityEditor.Animations.ChildAnimatorState stateWrapper in stateMachine.states)
-						{
-							UnityEditor.Animations.AnimatorState state = stateWrapper.state;
-
-							switch(state.motion)
-							{
-								case AnimationClip clip:
-									uid animationID = geometrySource.FindResourceID(clip);
-									if(animationID != 0)
-									{
-										Client_SetNodeAnimationSpeed(clientID, animatedNodeID, animationID, state.speed);
-									}
-									else
-									{
-										Debug.LogWarning($"Animation \"{clip.name}\" not extracted! Can't set speed of animation for {controller.controllerModel.name}.");
-									}
-
-									break;
-								case UnityEditor.Animations.BlendTree blendTree:
-									Debug.LogWarning($"Teleport currently does not support BlendTrees in AnimatorControllers. BlendTree \"{blendTree.name}\" from AnimatorState \"{state.name}\" on GameObject \"{animator.name}\".");
-									break;
-								default:
-									Debug.LogWarning($"Unrecognised Motion \"{state.motion.name}\" from AnimatorState \"{state.name}\" on GameObject \"{animator.name}\".");
-									break;
-							}
-						}
-						#endif
-					}
-				}
 			}
 		}
 
 		public void SetHeadPose(Quaternion newRotation, Vector3 newPosition)
 		{
-			if (!head)
+			if (!_head)
 			{
 				return;
 			}
 
-			if (head.movementEnabled)
+			if (_head.movementEnabled)
 			{
-				head.transform.localPosition = newPosition;
-				head.transform.localRotation = newRotation;
+				_head.transform.localPosition = newPosition;
+				_head.transform.localRotation = newRotation;
 			}
 			last_received_headPos = newPosition;
 		}
@@ -553,7 +504,7 @@ namespace teleport
 			}
 			if(!controlledGameObject)
 				return;
-			var streamable= controlledGameObject.GetComponent<Teleport_Streamable>();
+			var streamable= controlledGameObject.GetComponentInParent<Teleport_Streamable>();
 			if (!streamable)
 			{
 				Debug.LogError("Trying to set pose of controlled object "+id+", "+ controlledGameObject.name+" that has no Teleport_Streamable.");
@@ -566,8 +517,9 @@ namespace teleport
 			}
 			controlledGameObject.transform.localPosition=newPosition;
 			controlledGameObject.transform.localRotation=newRotation;
-			streamable.stageSpaceVelocity=velocity;
-			streamable.stageSpaceAngularVelocity=angularVelocity;
+			StreamedNode node=streamable.GetStreamedNode(controlledGameObject);
+			node.stageSpaceVelocity=velocity;
+			node.stageSpaceAngularVelocity=angularVelocity;
 		}
 
 		public void ProcessAudioInput(float[] data)
@@ -606,8 +558,8 @@ namespace teleport
 		}
 		public void ShowOverlay(int x, int y, GUIStyle font)
 		{
-			Vector3 headPosition = head ? head.transform.position : default;
-			Vector3 originPosition = clientspaceRoot ? clientspaceRoot.transform.position : default;
+			Vector3 headPosition = _head ? _head.transform.position : default;
+			Vector3 originPosition = _clientspaceRoot ? _clientspaceRoot.transform.position : default;
 
 			int lineHeight = 14;
 			avs.ClientNetworkState clientNetworkState = new avs.ClientNetworkState();
@@ -638,15 +590,14 @@ namespace teleport
 			_input = GetComponent<Input>();
 			if(_input == null)
 				_input = gameObject.AddComponent<Input>();
-			head = GetSingleComponentFromChildren<Teleport_Head>();
-			clientspaceRoot = GetSingleComponentFromChildren<Teleport_ClientspaceRoot>();
+			_head = GetSingleComponentFromChildren<Teleport_Head>();
+			_clientspaceRoot = GetSingleComponentFromChildren<Teleport_ClientspaceRoot>();
 			// We must have a root node for the player's client space.
-			if(clientspaceRoot!=null)
-				geometryStreamingService.SetNodePosePath(clientspaceRoot.gameObject, "root");
-			collisionRoot = GetSingleComponentFromChildren<Teleport_CollisionRoot>();
-			sceneCaptureComponent = GetSingleComponentFromChildren<Teleport_SceneCaptureComponent>();
+			if(_clientspaceRoot!=null)
+				geometryStreamingService.SetNodePosePath(_clientspaceRoot.gameObject, "root");
+			_sceneCaptureComponent = GetSingleComponentFromChildren<Teleport_SceneCaptureComponent>();
 			if(!teleportSettings.serverSettings.StreamVideo)
-				sceneCaptureComponent.enabled=false;
+				_sceneCaptureComponent.enabled=false;
 			// Now we've initialized the session, we can initialize any subcomponents that depend on this component.
 			var subComponents=GetComponentsInChildren<SessionSubcomponent> ();
 			foreach(var s in subComponents)
@@ -665,7 +616,7 @@ namespace teleport
 			Teleport_Controller[] controllers = GetComponentsInChildren<Teleport_Controller>();
 			foreach (Teleport_Controller controller in controllers)
 			{
-				controller.session = this;
+				controller.SetSession( this);
 				mappedNodes.Add(controller);
 			}
 		}
@@ -735,8 +686,8 @@ namespace teleport
 					streamable.sendMovementUpdates = false;
 				}
 			}
-			if (sceneCaptureComponent != null)
-				sceneCaptureComponent.SetClientID(clientID);
+			if (_sceneCaptureComponent != null)
+				_sceneCaptureComponent.SetClientID(clientID);
 		}
 		private void UpdateClientDynamicLighting(Vector2Int cubeMapsOffset)
 		{
@@ -844,7 +795,6 @@ namespace teleport
 				clientSettings.videoTextureSize.x = Math.Max(clientSettings.videoTextureSize.x, clientSettings.webcamPos.x + clientSettings.webcamSize.x);
 				clientSettings.videoTextureSize.y = Math.Max(clientSettings.videoTextureSize.y, clientSettings.webcamPos.y + clientSettings.webcamSize.y);
 			}
-			clientSettings.bodyOffsetFromHead= bodyOffsetFromHead;
 
 			avs.VideoEncodeCapabilities videoEncodeCapabilities = VideoEncoder.GetEncodeCapabilities();
 			if (clientSettings.videoTextureSize.x < videoEncodeCapabilities.minWidth || clientSettings.videoTextureSize.x > videoEncodeCapabilities.maxWidth
@@ -873,9 +823,9 @@ namespace teleport
 		private void SendOriginUpdates()
 		{
 			uid origin_uid =0;
-			if (clientspaceRoot != null)
+			if (_clientspaceRoot != null)
 			{
-				Teleport_Streamable streamable =clientspaceRoot.gameObject.GetComponent<Teleport_Streamable>();
+				Teleport_Streamable streamable =_clientspaceRoot.gameObject.GetComponent<Teleport_Streamable>();
 				if(streamable!=null)
 				{
 					origin_uid = streamable.GetUid();
@@ -885,14 +835,14 @@ namespace teleport
 			}
 			if (teleportSettings.serverSettings.controlModel == teleport.ControlModel.SERVER_ORIGIN_CLIENT_LOCAL)
 			{
-				if (head != null && clientspaceRoot != null)
+				if (_head != null && _clientspaceRoot != null)
 				{
-					if (!Client_HasOrigin(clientID) || resetOrigin || clientspaceRoot.transform.hasChanged)
+					if (!Client_HasOrigin(clientID) || resetOrigin || _clientspaceRoot.transform.hasChanged)
 					{
 						if (Client_SetOrigin(clientID,  origin_uid))
 						{
-							last_sent_origin = clientspaceRoot.transform.position;
-							clientspaceRoot.transform.hasChanged = false;
+							last_sent_origin = _clientspaceRoot.transform.position;
+							_clientspaceRoot.transform.hasChanged = false;
 							resetOrigin = false;
 						}
 					}

@@ -121,7 +121,6 @@ namespace teleport
 		public Int32 shadowmapSize;
 		public Vector2Int webcamPos;
 		public Vector2Int webcamSize; 
-		public Vector3 bodyOffsetFromHead;
 		public Int32 captureCubeTextureSize;
 		public BackgroundMode backgroundMode;
 		public Vector4 backgroundColour;

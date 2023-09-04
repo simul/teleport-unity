@@ -4,6 +4,8 @@
 #pragma kernel ExtractNormalMapGamma
 #pragma kernel ExtractCubeFaceLinear
 #pragma kernel ExtractCubeFaceGamma
+#pragma kernel ConvertRoughnessMetallicGreenBlueLinear
+#pragma kernel ConvertRoughnessMetallicGreenBlueGamma
 
 #include "UnityCG.cginc"
 
@@ -105,4 +107,28 @@ void ExtractCubeFaceGamma(uint3 id : SV_DispatchThreadID)
 	float4 colour	= FromCubemap(int2(id.xy));
 	//float4 src = SourceArray[int3(id.xy * Scale,ArrayIndex)];
 	Result[id.xy].rgba = GammaToLinearSpaceExact(colour);
+}
+ 
+//Extract textures from linear space.
+[numthreads(8, 8, 1)]
+void ConvertRoughnessMetallicGreenBlueLinear(uint3 id : SV_DispatchThreadID)
+{
+	float4 src = Source.Load(int3(Offset+id.xy * Scale,Mip));
+	// smoothness alpha -> roughness green
+	// metallic red -> metallic blue
+	float4 clr=float4(0,0,0,0);
+	clr.g=1.0-src.a;
+	clr.b=src.r;
+	Result[id.xy].rgba = clr;
+}
+
+//Extract textures from gamma space.
+[numthreads(8, 8, 1)]
+void ConvertRoughnessMetallicGreenBlueGamma(uint3 id : SV_DispatchThreadID)
+{
+	float4 src			= Source.Load(int3(Offset+id.xy * Scale,Mip));
+	float4 clr=float4(0,0,0,0);
+	clr.g=1.0-src.a;
+	clr.b=src.r;
+	Result[id.xy].rgba	= GammaToLinearSpaceExact(clr);
 }

@@ -79,15 +79,16 @@ namespace teleport
 			if (holderClient == 0)
 				return;
 			GameObject currentParent= topParent.transform.parent.gameObject;
-			Teleport_Streamable currentParentStreamable = currentParent.GetComponent<Teleport_Streamable>();
+			Teleport_Streamable currentParentStreamable = currentParent.GetComponentInParent<Teleport_Streamable>();
 			Debug.Log("Dropped " + topParent);
 			Teleport_SessionComponent session = input.gameObject.GetComponent<Teleport_SessionComponent>();
 			session.input.RemoveDelegate(inputId, Drop, InputEventType.Release);
 			Teleport_Streamable streamable = topParent.GetComponent<Teleport_Streamable>();
 
+			StreamedNode streamedNode = currentParentStreamable.GetStreamedNode(currentParent);
 			// We receive velocities in stage space, i.e. in the space relative to the clientspace Root.
-			var v = currentParentStreamable.stageSpaceVelocity;
-			var a = currentParentStreamable.stageSpaceAngularVelocity;
+			var v = streamedNode.stageSpaceVelocity;
+			var a = streamedNode.stageSpaceAngularVelocity;
 			Teleport_ClientspaceRoot stageSpace=input.gameObject.GetComponentInParent<Teleport_ClientspaceRoot>();
 			if (stageSpace)
 			{
@@ -121,7 +122,7 @@ namespace teleport
 			if (nearController!=null)
 				return;
 			Debug.Log("Detected collision between " + gameObject.name + " and " + other.name);
-			Teleport_SessionComponent session= controller.session;
+			Teleport_SessionComponent session= controller.GetComponentInParent<Teleport_SessionComponent>();
 			if (session!=null&&session.GeometryStreamingService!=null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, true);
 			if(controller.poseRegexPath.Contains("left"))
@@ -150,7 +151,7 @@ namespace teleport
 			if (holderClient != 0)
 				return;
 			Debug.Log(gameObject.name + " and " + other.name + " are no longer colliding");
-			Teleport_SessionComponent session = controller.session;
+			Teleport_SessionComponent session = controller.GetComponentInParent<Teleport_SessionComponent>();
 			if (session != null && session.GeometryStreamingService != null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
 			if (controller.poseRegexPath.Contains("left"))

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEngine;
-
 using uid = System.UInt64;
 
 namespace avs
@@ -100,8 +99,9 @@ namespace teleport
 		public static uid[] ExtractHumanAnimationData(Animator animator, GeometrySource.ForceExtractionMask forceMask)
 		{
 			SkinnedMeshRenderer skinnedMeshRenderer = animator.gameObject.GetComponentInChildren<SkinnedMeshRenderer>();
-			GameObject rootObject = skinnedMeshRenderer.rootBone.gameObject;
-
+			GameObject rootObject = GeometrySource.GetTopmostSkeletonRoot(skinnedMeshRenderer).gameObject;
+			List<UnityEngine.Transform> bones=new List<UnityEngine.Transform> ();
+			GeometrySource.GetBones(rootObject.transform, bones);
 			//Store transform components, so they can be reset at the end.
 			Transform[] transforms = animator.gameObject.GetComponentsInChildren<Transform>();
 			Vector3[] storedPositions = new Vector3[transforms.Length];
@@ -225,12 +225,17 @@ namespace teleport
 							continue;
 						}
 
-						if(!geometrySource.HasResource(boneObject.transform))
+						if(!geometrySource.HasResource(boneObject))
 						{
+							Debug.LogWarning($"Couldn't find  {boneObject.name}");
 							continue;
 						}
-						newAnimation.boneKeyframes[j].boneIndex = (ulong)Array.FindIndex(skinnedMeshRenderer.bones, x => x.transform == boneObject.transform);
-
+						newAnimation.boneKeyframes[j].boneIndex = (ulong)Array.FindIndex(bones.ToArray(), x => x.transform == boneObject.transform);
+						if (newAnimation.boneKeyframes[j].boneIndex >= (UInt64)bones.Count)
+						{
+							Debug.LogWarning($"Couldn't find bone index for: {boneObject.name}");
+							continue;
+						}
 						int num_k= curves.positionX.keys.Length;
 						float end_t =  curves.positionX.keys.Last().time;
 						newAnimation.boneKeyframes[j].positionAmount=num_k;

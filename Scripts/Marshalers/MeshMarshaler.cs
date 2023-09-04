@@ -52,7 +52,7 @@ namespace teleport
         public int GetNativeDataSize()
         {
             //4 64-bit ints(8), and 9 pointers(8).
-            return (4*8+9*8);// 96;
+            return (4*8+9*8+8);// 96;
         }
 
         public IntPtr MarshalManagedToNative(object ManagedObj)
@@ -208,13 +208,15 @@ namespace teleport
                 }
                 Marshal.WriteIntPtr(ptr, byteOffset, arrayPtr);
                 byteOffset += Marshal.SizeOf<IntPtr>();
-            }
+			}
+			Marshal.WriteInt64(ptr, byteOffset, (Int64)mesh.inverseBindMatricesAccessor);
+			byteOffset += Marshal.SizeOf<Int64>();
 			if (byteOffset != GetNativeDataSize())
 			{
 				UnityEngine.Debug.LogError("byteOffset!=GetNativeDataSize.");
 				throw new Exception("Incorrect data size.");
 			}
-            return ptr;
+			return ptr;
         }
 
         public object MarshalNativeToManaged(IntPtr pNativeData)

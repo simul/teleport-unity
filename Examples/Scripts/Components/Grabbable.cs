@@ -96,7 +96,7 @@ namespace teleport
 			if (dropGrabbable==null)
 				return;
 			//Debug.Log("Detected collision between " + gameObject.name + " and " + other.name);
-			Teleport_SessionComponent session = nearController.session;
+			Teleport_SessionComponent session = nearController.GetComponentInParent<Teleport_SessionComponent>();
 			if (session != null && session.GeometryStreamingService != null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, true);
 			var ids = GetAppropriateInputs(nearController);
@@ -110,7 +110,7 @@ namespace teleport
 			var dropGrabbable = other.GetComponent<DropGrabbable>();
 			if (dropGrabbable != dropGrabbableHere)
 				return;
-			Teleport_SessionComponent session = nearController.session;
+			Teleport_SessionComponent session = nearController.GetComponentInParent<Teleport_SessionComponent>();
 			if (session != null && session.GeometryStreamingService != null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
 			dropGrabbableHere =null;
@@ -141,7 +141,7 @@ namespace teleport
 			if (nearController!=null)
 				return;
 			//Debug.Log("Detected collision between " + gameObject.name + " and " + other.name);
-			Teleport_SessionComponent session= controller.session;
+			Teleport_SessionComponent session= controller.GetComponentInParent<Teleport_SessionComponent>();
 			if (session!=null&&session.GeometryStreamingService!=null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, true);
 			var ids= GetAppropriateInputs(controller);
@@ -167,7 +167,7 @@ namespace teleport
 				return;
 			nearController=null;
             //Debug.Log(gameObject.name + " and " + other.name + " are no longer colliding");
-			Teleport_SessionComponent session = controller.session;
+			Teleport_SessionComponent session = controller.GetComponentInParent<Teleport_SessionComponent>();
 			if (session != null && session.GeometryStreamingService != null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
 			var ids = GetAppropriateInputs(controller);

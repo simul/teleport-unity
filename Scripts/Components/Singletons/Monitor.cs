@@ -5,6 +5,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using uid = System.UInt64;
 using UnityEngine.SceneManagement;
+using UnityEditor;
 
 namespace teleport
 {
@@ -589,10 +590,19 @@ namespace teleport
 
 		public static Teleport_SessionComponent DefaultCreateSession()
 		{
+			var currentSessions = GameObject.FindObjectsByType<Teleport_SessionComponent>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
 			// We want to use an existing session in the scene if it doesn't have a client.
 			// This is useful if the session is placed in the scene instead of spawned.
-			var currentSessions = FindObjectsOfType<Teleport_SessionComponent>();
-			foreach(var s in currentSessions)
+			if (Instance.defaultPlayerPrefab!=null)
+			{
+				var prefabs = PrefabUtility.FindAllInstancesOfPrefab(Instance.defaultPlayerPrefab);
+				currentSessions=new Teleport_SessionComponent[prefabs.Length];
+				for(int i=0;i<prefabs.Length;i++)
+				{
+					currentSessions[i] = prefabs[i].GetComponentInChildren<Teleport_SessionComponent>();
+				}
+			}
+			foreach (var s in currentSessions)
 			{
 				if (!s.Spawned && s.GetClientID() == 0)
 				{
@@ -634,6 +644,8 @@ namespace teleport
                 }
 				GameObject player = Instantiate(Instance.defaultPlayerPrefab, SpawnPosition, SpawnRotation);
 				Teleport_Streamable rootStreamable=player.GetComponent<Teleport_Streamable>();
+				if(rootStreamable==null)
+					rootStreamable=player.AddComponent<Teleport_Streamable>();
 				rootStreamable.ForceInit();
 				player.name = "TeleportVR_" +Instance.defaultPlayerPrefab.name+"_"+ Teleport_SessionComponent.sessions.Count + 1;
 
@@ -840,8 +852,8 @@ namespace teleport
 			{
 				newSession.GeometryStreamingService.ReparentNode(child, newParent, relativePos, relativeRot);
 			}
-			teleport_Streamable.stageSpaceVelocity=new Vector3(0,0,0);
-			teleport_Streamable.stageSpaceAngularVelocity = new Vector3(0, 0, 0);
+			//teleport_Streamable.stageSpaceVelocity=new Vector3(0,0,0);
+			//teleport_Streamable.stageSpaceAngularVelocity = new Vector3(0, 0, 0);
 		}
 
 		public void ComponentChanged(MonoBehaviour component)

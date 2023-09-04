@@ -20,7 +20,7 @@ namespace teleport
 		{
 			teleport.TeleportSettings settings = teleport.TeleportSettings.GetOrCreateSettings();
 			controller =GetComponent<Teleport_Controller>();
-			session = controller.session;
+			session = controller.GetComponentInParent< Teleport_SessionComponent>();
 			controls.Clear();
 			BindButton(ButtonA, ButtonAPath1, ButtonAPath2);
 			BindButton(ButtonB, ButtonBPath1, ButtonBPath2);

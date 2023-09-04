@@ -72,7 +72,7 @@ namespace teleport
 				return;
 			if (nearController!=null)
 				return;
-			Teleport_SessionComponent session= controller.session;
+			Teleport_SessionComponent session= controller.GetComponentInParent<Teleport_SessionComponent>();
 			if (session!=null&&session.GeometryStreamingService!=null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, true);
 			if(controller.poseRegexPath.Contains("left"))
@@ -98,7 +98,7 @@ namespace teleport
 			if (!controller||controller!=nearController)
 				return;
 			nearController=null;
-			Teleport_SessionComponent session = controller.session;
+			Teleport_SessionComponent session = controller.GetComponentInParent<Teleport_SessionComponent>();
 			if (session != null && session.GeometryStreamingService != null)
 				session.GeometryStreamingService.SetNodeHighlighted(topParent, false);
 			if (controller.poseRegexPath.Contains("left"))

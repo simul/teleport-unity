@@ -21,6 +21,9 @@ namespace teleport
 		public Light light;
 		public avs.MovementUpdate localUpdate = new avs.MovementUpdate();
 		public avs.MovementUpdate globalUpdate = new avs.MovementUpdate();
+		// These can be received from 
+		public Vector3 stageSpaceVelocity = new Vector3(0, 0, 0);
+		public Vector3 stageSpaceAngularVelocity = new Vector3(0, 0, 0);
 		public StreamedNode(GameObject node)
 		{
 			gameObject = node;
@@ -144,10 +147,6 @@ namespace teleport
 				}
 			}
 		}
-
-		// These can be received from 
-		public Vector3 stageSpaceVelocity			=new Vector3(0,0,0);
-		public Vector3 stageSpaceAngularVelocity	= new Vector3(0, 0, 0);
 
 		private HashSet<Teleport_SessionComponent> sessions = new HashSet<Teleport_SessionComponent>();
 
@@ -305,6 +304,15 @@ namespace teleport
 			exploredGameObjects.Add(gameObject);
 			streamedHierarchy.Add(new StreamedNode(gameObject));
 			UpdateHierarchy();
+		}
+		public StreamedNode GetStreamedNode(GameObject go)
+		{
+			foreach(var n in streamedHierarchy)
+			{
+				if (n.gameObject==go)
+					return n;
+			}
+			return null;
 		}
 		//! This will look in the children to see if any newly added objects should be in the streamed hierarchy.
 		public void UpdateHierarchy()
