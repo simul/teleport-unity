@@ -12,7 +12,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
-using static RootMotion.BipedNaming;
+//using static RootMotion.BipedNaming;
 using static teleport.GeometrySource;
 using uid = System.UInt64;
 
@@ -1621,7 +1621,6 @@ namespace teleport
 						string pngFile = basisFile.Replace(".basis", $"_mip{j}_slice{i}.png");
 						if(arraySize>1)
 							pngFile=pngFile.Replace(".png","_"+i.ToString()+".png");
-						subresourceImage.bytes = readTexture.EncodeToPNG();
 						//File.WriteAllBytes(pngFile, subresourceImage.bytes);
 						/*
 						 * exr is way too big.
@@ -1638,6 +1637,7 @@ namespace teleport
 						}
 						else
 						{
+							subresourceImage.bytes = readTexture.EncodeToPNG();
 							textureData.compression = avs.TextureCompression.PNG;
 							// Already compressed as png
 							textureData.compressed=true;
@@ -2042,7 +2042,7 @@ namespace teleport
 			}
 			extractTo.renderState.lightmapScaleOffset=meshRenderer.lightmapScaleOffset;
 			UnityEngine.Texture[] giTextures = GlobalIlluminationExtractor.GetTextures();
-			if(meshRenderer.lightmapIndex>=0)
+			if(meshRenderer.lightmapIndex>=0&&meshRenderer.lightmapIndex<0xFFFE)
 			{
 				// If this index not found? These errors are not fatal, but should not occur.
 				if(meshRenderer.lightmapIndex>=giTextures.Length)
@@ -2101,7 +2101,7 @@ namespace teleport
 			SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
 			extractTo.renderState.lightmapScaleOffset = skinnedMeshRenderer.lightmapScaleOffset;
 			var giTextures = GlobalIlluminationExtractor.GetTextures();
-			if (skinnedMeshRenderer.lightmapIndex >= 0 && skinnedMeshRenderer.lightmapIndex < giTextures.Length)
+			if (skinnedMeshRenderer.lightmapIndex >= 0 && skinnedMeshRenderer.lightmapIndex < 0xFFFE && skinnedMeshRenderer.lightmapIndex < giTextures.Length)
 				extractTo.renderState.globalIlluminationTextureUid = FindResourceID(giTextures[skinnedMeshRenderer.lightmapIndex]);
 			//Extract mesh used on node.
 			SceneReferenceManager sceneReferenceManager = SceneReferenceManager.GetSceneReferenceManager(gameObject.scene);
@@ -2268,7 +2268,7 @@ namespace teleport
 				weightAccessorID = localId++;
 			}
 			UInt64 inverseBindMatricesID =0;
-			if (mesh.bindposeCount > 0)
+			if (mesh.bindposes.Length > 0)
 			{
 				inverseBindMatricesID = localId++;
 			}
@@ -2526,7 +2526,7 @@ namespace teleport
 				accessors.Add(weightAccessorID, weightAccessor);
 			}
 
-			if(mesh.bindposeCount > 0)
+			if(mesh.bindposes.Length > 0)
 			{
 				CreateMeshBufferAndView(extractToBasis, mesh.bindposes, buffers, bufferViews, ref localId, out UInt64 invBindViewID);
 

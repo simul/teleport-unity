@@ -614,7 +614,11 @@ namespace teleport
 			Teleport_SessionComponent session = null;
 			if (Instance.defaultPlayerPrefab == null)
 			{
-				Instance.defaultPlayerPrefab = Resources.Load("Prefabs/TeleportVR") as GameObject;
+				Instance.defaultPlayerPrefab = Resources.Load("Prefabs/DefaultUser") as GameObject;
+			}
+			if (Instance.defaultPlayerPrefab == null)
+			{
+				Debug.LogError("No player prefab available, set Monitor's Default Player Prefab.");
 			}
 			if (Instance.defaultPlayerPrefab != null)
 			{

@@ -1,0 +1,268 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &214161142901073668
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8718089245447279965}
+  - component: {fileID: 3991960492684180549}
+  - component: {fileID: 8762821749113986603}
+  m_Layer: 0
+  m_Name: SceneCapture
+  m_TagString: TeleportStreamable
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8718089245447279965
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 214161142901073668}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8805389478987335667}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3991960492684180549
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 214161142901073668}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b82ff6ccf03c824398e1fd89c7764d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  videoTexture: {fileID: 0}
+  rendererTexture: {fileID: 0}
+  DiffuseCubeTexture: {fileID: 0}
+  UnfilteredCubeTexture: {fileID: 0}
+  SpecularCubeTexture: {fileID: 0}
+  cam: {fileID: 0}
+  webcamTexture: {fileID: 0}
+--- !u!114 &8762821749113986603
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 214161142901073668}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  priority: 0
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+--- !u!1 &4776229672576681064
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1332186173640770814}
+  - component: {fileID: 3910882480473089179}
+  - component: {fileID: 8377161373931542248}
+  - component: {fileID: 6645196631651794191}
+  - component: {fileID: 3758429878946119150}
+  - component: {fileID: 1074418032489388797}
+  m_Layer: 0
+  m_Name: MinimalUser
+  m_TagString: TeleportStreamable
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1332186173640770814
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4776229672576681064}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 8805389478987335667}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3910882480473089179
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4776229672576681064}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4efd31a00edc51f49845c1d6bb0ade98, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ownedNodes: 
+  inputAudioSource: {fileID: 0}
+  clientSettings:
+    videoTextureSize: {x: 0, y: 0}
+    shadowmapPos: {x: 0, y: 0}
+    shadowmapSize: 0
+    webcamPos: {x: 0, y: 0}
+    webcamSize: {x: 0, y: 0}
+    captureCubeTextureSize: 0
+    backgroundMode: 0
+    backgroundColour: {x: 0, y: 0, z: 0, w: 0}
+    drawDistance: 0
+  clientDynamicLighting:
+    specularPos: {x: 0, y: 0}
+    specularCubemapSize: 0
+    specularMips: 0
+    diffusePos: {x: 0, y: 0}
+    diffuseCubemapSize: 0
+    lightPos: {x: 0, y: 0}
+    lightCubemapSize: 0
+    specularCubemapTexture: 0
+    diffuseCubemapTexture: 0
+    lightingMode: 1
+--- !u!114 &8377161373931542248
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4776229672576681064}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f65c740de9eff146ac92b5978c1735c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &6645196631651794191
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4776229672576681064}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44e53f737648c084189d70fc1dcd4b0c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  motionType: 1
+  arcPrefab: {fileID: 8811408270737532729, guid: b9d401b22e9e921438e12404e49759a9,
+    type: 3}
+  targetCirclePrefab: {fileID: 8811408270737532729, guid: 586dd3f70e0dccc4d8314c52daad5df8,
+    type: 3}
+--- !u!114 &3758429878946119150
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4776229672576681064}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60e391b1afa087241a79ed66eea982a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  priority: 0
+  streamedHierarchy: []
+  sendMovementUpdates: 1
+  sendEnabledStateUpdates: 1
+  pollCurrentAnimation: 0
+  uid: 0
+--- !u!114 &1074418032489388797
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4776229672576681064}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  priority: 0
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+--- !u!1 &6334136638645548303
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8805389478987335667}
+  - component: {fileID: 952429790626418361}
+  - component: {fileID: 7813725108202238897}
+  m_Layer: 0
+  m_Name: Head
+  m_TagString: TeleportStreamable
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8805389478987335667
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6334136638645548303}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 8718089245447279965}
+  m_Father: {fileID: 1332186173640770814}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &952429790626418361
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6334136638645548303}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e64f93b37c676b40913572200cb3a8c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  movementEnabled: 1
+--- !u!114 &7813725108202238897
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6334136638645548303}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  priority: 0
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1

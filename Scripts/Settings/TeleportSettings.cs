@@ -19,10 +19,11 @@ namespace teleport
 		// We always store the settings in this path:
 		public const string k_TeleportSettingsPath = "TeleportVR";
 		public const string k_TeleportSettingsFilename = "TeleportSettings";
-		//! Objects with this tag will be streamed; leaving it blank will cause it to just use the layer mask.
-		private string _TagToStream = "TeleportStreamable";
+		[SerializeField]
+		private string _TagToStream = "";
 		[System.NonSerialized]
 		private bool tagInitialized=false;
+		//! Objects with this tag will be streamed; leaving it blank will cause it to just use the layer mask.
 		public string TagToStream
 		{
 			get
@@ -60,6 +61,10 @@ namespace teleport
 								n.stringValue = s;
 								// and save the changes
 								tagManager.ApplyModifiedProperties();
+							}
+							else if(_TagToStream=="Untagged")
+							{
+								_TagToStream="";
 							}
 							else
 							{

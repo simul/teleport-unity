@@ -421,38 +421,6 @@ namespace teleport
 				{
 					StopStreaming(streamable, 1);
 				}
-				/*	List<Collider> innerSphereCollisions = new List<Collider>(Physics.OverlapSphere(position, R0, teleportSettings.LayersToStream));
-					List<Collider> outerSphereCollisions = new List<Collider>(Physics.OverlapSphere(position, R1, teleportSettings.LayersToStream));
-					List<Collider> gainedColliders = new List<Collider>(innerSphereCollisions.Except(streamedColliders));
-					List<Collider> lostColliders = new List<Collider>(streamedColliders.Except(outerSphereCollisions));
-
-					foreach (Collider collider in gainedColliders)
-					{			
-						if(!collider.enabled)
-							continue;
-						//Skip game objects without the streaming tag.
-						var props= collider.GetComponent < StreamableProperties >();
-						if((teleportSettings.TagToStream.Length == 0 || collider.CompareTag(teleportSettings.TagToStream))
-							&&(props== null ||!props.streamOnlyWithParent))
-						{
-							Teleport_Streamable streamable = collider.gameObject.GetComponent<Teleport_Streamable>();
-							//GameObject became streamable mid-session, and now needs a Teleport_Streamable component.
-							if(!streamable)
-							{
-								streamable = collider.gameObject.AddComponent<Teleport_Streamable>();
-							}
-							StartStreaming(streamable, 1);
-						}
-					}
-
-					foreach(Collider collider in lostColliders)
-					{
-						if (collider.enabled)
-						{
-							Teleport_Streamable streamable = collider.gameObject.GetComponent<Teleport_Streamable>();
-							StopStreaming(streamable, 1);
-						}
-					}*/
 			}
 			else
 			{

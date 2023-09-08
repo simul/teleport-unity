@@ -341,6 +341,8 @@ namespace teleport
             EditorGUILayout.EndHorizontal();
 			foreach (var u in GeometrySource.GetGeometrySource().GetSessionResourceUids())
 			{
+				if(u.Key==null)
+					continue;
 				if (resourceSearchText.Length > 0)
 				{
 					if(u.Key!=null)

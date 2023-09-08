@@ -1,8 +1,7 @@
 ﻿using UnityEngine;
 using UnityEditor;
-using System.Runtime.CompilerServices;
 using System.IO;
-using avs;
+using System.Collections.Generic;
 
 namespace teleport
 {
@@ -11,6 +10,12 @@ namespace teleport
 		static UnityEngine.Mesh cylinder;
 		static UnityEngine.Mesh controllerLeft;
 		static UnityEngine.Mesh controllerRight;
+		public enum PoseType
+		{
+			None,Grip,Aim,Unknown
+		}
+		static public Dictionary<Teleport_Controller,PoseType> poseTypes=new Dictionary<Teleport_Controller, PoseType>();
+
 		static Teleport_ControllerGizmo()
 		{
 			var GizmosPath= Application.dataPath + "/Gizmos";
@@ -19,9 +24,9 @@ namespace teleport
 				System.IO.Directory.CreateDirectory(GizmosPath);
 			} 
 			string sourceFile = Path.Combine(Startup.GizmosPath, "Joystick.png");
-			string destFile = Path.Combine(GizmosPath, "Joystick.png");
+			string destFile = Path.Combine(GizmosPath, "Joystick.png"); 
 			if (!System.IO.File.Exists(destFile))
-				System.IO.File.Copy(sourceFile, destFile,true);
+				System.IO.File.Copy(sourceFile, destFile,true); 
 			var go= GameObject.CreatePrimitive(PrimitiveType.Cylinder);
 			cylinder = go.GetComponent<MeshFilter>().sharedMesh;
 			GameObject.DestroyImmediate(go);
@@ -29,6 +34,17 @@ namespace teleport
 		[DrawGizmo(GizmoType.Selected | GizmoType.NotInSelectionHierarchy)] 
 		static void DrawClientspaceRoot(Teleport_Controller controller, GizmoType gizmoType)
 		{
+			if(!poseTypes.TryGetValue(controller,out PoseType poseType))
+				poseTypes.Add(controller,PoseType.None);
+			if(poseTypes [controller] == PoseType.None) {
+				if(controller.poseRegexPath.Contains("grip"))
+					poseType = PoseType.Grip;
+				else if (controller.poseRegexPath.Contains("aim"))
+					poseType = PoseType.Aim;
+				else
+					poseType = PoseType.Unknown;
+				poseTypes[controller]= poseType;
+			}
 			float s=1.0f;
 			var tr= controller.transform;
 			if (controllerLeft)
@@ -45,13 +61,15 @@ namespace teleport
 			Gizmos.color = new Color(0.8f, 0.5f, 0.3f);
 			Gizmos.DrawMesh(cylinder, 0, tr.position + l * tr.right - Z * tr.forward, Quaternion.LookRotation(tr.forward, tr.right), new UnityEngine.Vector3(c, l, c));
 			Gizmos.color = new Color(0.5f, 0.7f, 0.0f);
-			//Gizmos.DrawRay(tr.position, tr.up * axis_size);
 			Gizmos.DrawMesh(cylinder, 0, tr.position + l * tr.up - Z * tr.forward, Quaternion.LookRotation(tr.right, tr.up), new UnityEngine.Vector3(c, l, c));
-			//Gizmos.DrawIcon(tr.position, "Joystick.png");
 			// Main handle:
 			Gizmos.color = new Color(0.0f, 0.7f, 0.8f);
-			Gizmos.DrawMesh(cylinder, 0, tr.position-Z* tr.forward, Quaternion.LookRotation(tr.up, tr.forward), new UnityEngine.Vector3(X, Z, Y));
-			Gizmos.DrawMesh(cylinder, 0, tr.position-T*tr.forward, Quaternion.LookRotation(tr.up, tr.forward), new UnityEngine.Vector3(1.25F*X, T, 1.25F*Y));
+			if (poseType == PoseType.Grip)
+				Gizmos.DrawMesh(cylinder, 0, tr.position-Z* tr.forward, Quaternion.LookRotation(tr.up, tr.forward), new UnityEngine.Vector3(X, Z, Y));
+			if (poseType == PoseType.Grip)
+				Gizmos.DrawMesh(cylinder, 0, tr.position-T*tr.forward, Quaternion.LookRotation(tr.up, tr.forward), new UnityEngine.Vector3(1.25F*X, T, 1.25F*Y));
+			if (poseType == PoseType.Aim)
+				Gizmos.DrawMesh(cylinder, 0, tr.position , Quaternion.LookRotation(tr.up, tr.forward), new UnityEngine.Vector3(c, l, c));
 
 		}
 	}
