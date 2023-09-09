@@ -596,5 +596,10 @@ namespace teleport
 
 			Client_UpdateNodeEnabledState(session.GetClientID(), updates.ToArray(), updates.Count);
 		}
+
+		public List<Teleport_Streamable> GetCurrentStreamables()
+		{
+			return streamedHierarchies;
+		}
 	}
 }
