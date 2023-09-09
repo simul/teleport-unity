@@ -9,6 +9,17 @@ namespace teleport
 		static Texture [] giTextures = null;
 		static public Texture [] GetTextures()
 		{
+			if (giTextures != null)
+			{
+				for(int i=0;i<giTextures.Length; i++)
+				{
+					if (giTextures[i] == null)
+					{ 
+						giTextures = null;
+						break;
+					}
+				}
+			}
 			if (giTextures == null || giTextures.Length != LightmapSettings.lightmaps.Length)
 			{
 				if (LightmapSettings.lightmaps.Length == 0)

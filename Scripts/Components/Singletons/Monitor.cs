@@ -9,6 +9,11 @@ using UnityEditor;
 
 namespace teleport
 {
+	public interface IStreamedGeometryManagement
+	{
+		public void UpdateStreamedGeometry(Teleport_SessionComponent session, List<Teleport_Streamable> gainedStreamables, List<Teleport_Streamable> lostStreamables);
+	}
+
 	public struct SessionState
     {
 		public UInt64 sessionId;
@@ -154,7 +159,6 @@ namespace teleport
 #endif
         //! Create a new session, e.g. when a client connects.
         public delegate Teleport_SessionComponent CreateSession();
-
 		public CreateSession createSessionCallback = DefaultCreateSession;
 
 		[Tooltip("Choose the prefab to be used when a player connects, to represent that player's position and shape.")]
@@ -585,6 +589,9 @@ namespace teleport
 			if (session != null)
 			{
 				session.StartSession(id);
+				var mgmt = GetComponent<IStreamedGeometryManagement>();
+				if(session.GeometryStreamingService!=null)	
+					session.GeometryStreamingService.streamedGeometryManagement = mgmt;
 			}
 		}
 
@@ -636,11 +643,12 @@ namespace teleport
 				}
 				Vector3 SpawnPosition = new Vector3(0, 0, 0);
 				Quaternion SpawnRotation=Quaternion.identity;
-				var spawner=Instance.gameObject.GetComponent<teleport.Spawner>();
-				if(spawner)
+				var spawners=FindObjectsOfType<teleport.Spawner>();
+				if(spawners.Length>0)
                 {
+					var spawner= spawners[0];
 					// If the spawner fails, we can't initialize a session.
-					if(!spawner.Spawn(out SpawnPosition, out SpawnRotation))
+					if (!spawner.Spawn(out SpawnPosition, out SpawnRotation))
 					{
 						Debug.LogError($"spawner.Spawn failed.");
 						return null;

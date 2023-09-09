@@ -834,6 +834,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 2294279678477988055}
+    - targetCorrespondingSourceObject: {fileID: -2704769437738114892, guid: 798d0fdb43da4684188b699daef8e08c,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -7065074690631701906}
     - targetCorrespondingSourceObject: {fileID: 3796784307029216201, guid: 798d0fdb43da4684188b699daef8e08c,
         type: 3}
       insertIndex: -1
@@ -1302,6 +1306,19 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+--- !u!114 &-7065074690631701906
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5857591868694100439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07721edd0753f724fb9234c3eb3e9568, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  assetPath: .Elbow_R
 --- !u!1 &6349481475726780202 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5990070633754345033, guid: 798d0fdb43da4684188b699daef8e08c,
@@ -1600,6 +1617,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 8829552263159701926}
+    - targetCorrespondingSourceObject: {fileID: -2704769437738114892, guid: 798d0fdb43da4684188b699daef8e08c,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1069573457122561598}
     - targetCorrespondingSourceObject: {fileID: 3796784307029216201, guid: 798d0fdb43da4684188b699daef8e08c,
         type: 3}
       insertIndex: -1
@@ -1917,6 +1938,19 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+--- !u!114 &1069573457122561598
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2981893118913438527}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07721edd0753f724fb9234c3eb3e9568, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  assetPath: .Elbow_R
 --- !u!1 &4389487934215497735 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5764024222578518924, guid: 798d0fdb43da4684188b699daef8e08c,

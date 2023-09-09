@@ -8,6 +8,7 @@ using uid = System.UInt64;
 
 namespace teleport
 {
+	// One of these per-session.
 	public class GeometryStreamingService
 	{
 		#region DLLImports
@@ -53,6 +54,8 @@ namespace teleport
 
 		private readonly Teleport_SessionComponent session = null;
 		private readonly TeleportSettings teleportSettings = null;
+
+		public IStreamedGeometryManagement streamedGeometryManagement = null;
 
 		private List<Collider> streamedColliders = new List<Collider>();
 		private List<GameObject> streamedGameObjects = new List<GameObject>();
@@ -340,91 +343,89 @@ namespace teleport
 		int outer_overlap_count = 0;
 		public void UpdateGeometryStreaming()
 		{
-			if(!session.IsConnected())
-				return;
-			if(session.GetClientID()==0)
-			{
-				TeleportLog.LogErrorOnce("Client ID is zero.");
-				return;
-			}
-			var layersToStream=teleportSettings.LayersToStream;
-			//if(layersToStream==0)
-			//	layersToStream=0xFFFFFFFF;
-			//Detect changes in geometry that needs to be streamed to the client.
-
-			// each client session component should maintain a list of the TeleportStreamable (root) objects it is
-			// tracking. Perhaps count how many colliders it is impinging for each root.
-			// The session can use OnTriggerEnter and OnTriggerExit to update this list.
-			if (layersToStream!= 0)
-			{ 
-				Vector3 position= session.head.transform.position;
-				float R0= teleportSettings.serverSettings.detectionSphereRadius;
-				float R1= R0+teleportSettings.serverSettings.detectionSphereBufferDistance;
-				inner_overlap_count= Physics.OverlapSphereNonAlloc( position,  R0, innerOverlappingColliders, teleportSettings.LayersToStream);
-				if(inner_overlap_count>=innerOverlappingColliders.Length)
-                {
-					innerOverlappingColliders = new Collider[inner_overlap_count*2];
-					inner_overlap_count = Physics.OverlapSphereNonAlloc(position, R0, innerOverlappingColliders, teleportSettings.LayersToStream);
-				}
-				outer_overlap_count = Physics.OverlapSphereNonAlloc(position, R1, outerOverlappingColliders, teleportSettings.LayersToStream);
-				if (outer_overlap_count >= outerOverlappingColliders.Length)
-				{
-					outerOverlappingColliders = new Collider[outer_overlap_count * 2];
-					outer_overlap_count = Physics.OverlapSphereNonAlloc(position, R0, outerOverlappingColliders, teleportSettings.LayersToStream);
-				}
-				List<Teleport_Streamable> gainedStreamables=new List<Teleport_Streamable>();
-				for (int i = 0; i < inner_overlap_count; i++)
-                {
-					GameObject g=innerOverlappingColliders[i].gameObject;
-					if(!g)
-						continue;
-					if (!innerOverlappingColliders[i].enabled)
-						continue;
-					var streamable=g.GetComponentInParent<Teleport_Streamable>();
-					if(!streamable)
-						continue;
-					if(innerStreamables.Contains(streamable))
-						continue;
-					innerStreamables.Add(streamable);
-					gainedStreamables.Add(streamable);
-				}
-				List<Teleport_Streamable> lostStreamables = new List<Teleport_Streamable>();
-				HashSet<Teleport_Streamable> keptOuterStreamables = new HashSet<Teleport_Streamable>();
-				for (int i = 0; i < outer_overlap_count; i++)
-				{
-					GameObject g = outerOverlappingColliders[i].gameObject;
-					if (!g)
-						continue;
-					if (!outerOverlappingColliders[i].enabled)
-						continue;
-					var streamable = g.GetComponentInParent<Teleport_Streamable>();
-					if (!streamable)
-						continue;
-					if (outerStreamables.Contains(streamable))
-						continue;
-					keptOuterStreamables.Add(streamable);
-				}
-				foreach(var s in outerStreamables)
-				{
-					if(!keptOuterStreamables.Contains(s))
-                    {
-						outerStreamables.Remove(s);
-						lostStreamables.Add(s);
-                    }
-				}
-				foreach (var streamable in gainedStreamables)
-				{
-					StartStreaming(streamable, 1);
-				}
-
-				foreach (var streamable in lostStreamables)
-				{
-					StopStreaming(streamable, 1);
-				}
-			}
+			List<Teleport_Streamable> gainedStreamables = new List<Teleport_Streamable>();
+			List<Teleport_Streamable> lostStreamables = new List<Teleport_Streamable>();
+			if (streamedGeometryManagement!=null)
+				streamedGeometryManagement.UpdateStreamedGeometry(session,gainedStreamables,lostStreamables);
 			else
 			{
-				TeleportLog.LogErrorOnce("Teleport geometry streaming layer is not defined! Please assign layer masks under \"Layers To Stream\".");
+				if (!session.IsConnected())
+					return;
+				if(session.GetClientID()==0)
+				{
+					TeleportLog.LogErrorOnce("Client ID is zero.");
+					return;
+				}
+				var layersToStream=teleportSettings.LayersToStream;
+				//Detect changes in geometry that needs to be streamed to the client.
+				// each client session component should maintain a list of the TeleportStreamable (root) objects it is
+				// tracking. Perhaps count how many colliders it is impinging for each root.
+				// The session can use OnTriggerEnter and OnTriggerExit to update this list.
+				if (layersToStream!= 0)
+				{ 
+					Vector3 position= session.head.transform.position;
+					float R0= teleportSettings.serverSettings.detectionSphereRadius;
+					float R1= R0+teleportSettings.serverSettings.detectionSphereBufferDistance;
+					inner_overlap_count= Physics.OverlapSphereNonAlloc( position,  R0, innerOverlappingColliders, teleportSettings.LayersToStream);
+					if(inner_overlap_count>=innerOverlappingColliders.Length)
+					{
+						innerOverlappingColliders = new Collider[inner_overlap_count*2];
+						inner_overlap_count = Physics.OverlapSphereNonAlloc(position, R0, innerOverlappingColliders, teleportSettings.LayersToStream);
+					}
+					outer_overlap_count = Physics.OverlapSphereNonAlloc(position, R1, outerOverlappingColliders, teleportSettings.LayersToStream);
+					if (outer_overlap_count >= outerOverlappingColliders.Length)
+					{
+						outerOverlappingColliders = new Collider[outer_overlap_count * 2];
+						outer_overlap_count = Physics.OverlapSphereNonAlloc(position, R0, outerOverlappingColliders, teleportSettings.LayersToStream);
+					}
+					for (int i = 0; i < inner_overlap_count; i++)
+					{
+						GameObject g=innerOverlappingColliders[i].gameObject;
+						if(!g)
+							continue;
+						if (!innerOverlappingColliders[i].enabled)
+							continue;
+						var streamable=g.GetComponentInParent<Teleport_Streamable>();
+						if(!streamable)
+							continue;
+						if(innerStreamables.Contains(streamable))
+							continue;
+						innerStreamables.Add(streamable);
+						gainedStreamables.Add(streamable);
+					}
+					HashSet<Teleport_Streamable> keptOuterStreamables = new HashSet<Teleport_Streamable>();
+					for (int i = 0; i < outer_overlap_count; i++)
+					{
+						GameObject g = outerOverlappingColliders[i].gameObject;
+						if (!g)
+							continue;
+						if (!outerOverlappingColliders[i].enabled)
+							continue;
+						var streamable = g.GetComponentInParent<Teleport_Streamable>();
+						if (!streamable)
+							continue;
+						if (outerStreamables.Contains(streamable))
+							continue;
+						keptOuterStreamables.Add(streamable);
+					}
+					foreach (var s in outerStreamables)
+					{
+						if (!keptOuterStreamables.Contains(s))
+						{
+							outerStreamables.Remove(s);
+							lostStreamables.Add(s);
+						}
+					}
+				}
+			}
+			foreach (var streamable in gainedStreamables)
+			{
+				StartStreaming(streamable, 1);
+			}
+
+			foreach (var streamable in lostStreamables)
+			{
+				StopStreaming(streamable, 1);
 			}
 
 			//Send position updates, if enough time has elapsed.

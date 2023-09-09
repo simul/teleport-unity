@@ -484,16 +484,21 @@ namespace teleport
 		}
 
 
+		private bool ExtractGameObject(GameObject gameObject, GeometrySource.ForceExtractionMask forceMask)
+		{
+			geometrySource.AddNode(gameObject, forceMask, false, verifyGeometry);
+			return true;
+		}
 		private bool ExtractGeometry(List<GameObject> extractionList, GeometrySource.ForceExtractionMask forceMask)
 		{
 			for (int i = 0; i < extractionList.Count; i++)
 			{
 				GameObject gameObject = extractionList[i];
-				if(EditorUtility.DisplayCancelableProgressBar($"Extracting Geometry ({i + 1} / {extractionList.Count})", $"Processing \"{gameObject.name}\".", (float)(i + 1) / extractionList.Count))
+				if (EditorUtility.DisplayCancelableProgressBar($"Extracting Geometry ({i + 1} / {extractionList.Count})", $"Processing \"{gameObject.name}\".", (float)(i + 1) / extractionList.Count))
 				{
 					return false;
 				}
-				geometrySource.AddNode(gameObject, forceMask,false,verifyGeometry);
+				geometrySource.AddNode(gameObject, forceMask, false, verifyGeometry);
 			}
 			if (!geometrySource.ExtractTextures((forceMask & GeometrySource.ForceExtractionMask.FORCE_TEXTURES) == GeometrySource.ForceExtractionMask.FORCE_TEXTURES))
 				return false;
@@ -509,10 +514,26 @@ namespace teleport
 
 		private bool ExtractSceneGeometry(GeometrySource.ForceExtractionMask forceMask)
 		{
-			var scene = SceneManager.GetActiveScene();
-            List<GameObject> objectsToExtract = geometrySource.GetStreamableObjects(scene);
-			ExtractGlobalIlluminationTextures(scene);
-			return ExtractGeometry(objectsToExtract, forceMask);
+			List<GameObject> objectsToExtract=new List<GameObject>();
+			// Find all the prefabs we expect to use in this scene.
+			if (Monitor.Instance != null)
+			{
+				if(Monitor.Instance.defaultPlayerPrefab != null)
+					objectsToExtract.Add(Monitor.Instance.defaultPlayerPrefab);
+				else
+					objectsToExtract.Add(Resources.Load("Prefabs/DefaultUser") as GameObject);
+			}
+			for(int i=0;i<SceneManager.sceneCount;i++)
+			{
+				var scene = SceneManager.GetSceneAt(i);
+				if(scene==null)
+					continue;
+				ExtractGlobalIlluminationTextures(scene);
+				objectsToExtract.AddRange(geometrySource.GetStreamableObjects(scene));
+			}
+			if(!ExtractGeometry(objectsToExtract, forceMask))
+				return false;
+			return true;
 		}
 
 		private void ExtractProjectGeometry(GeometrySource.ForceExtractionMask forceMask)

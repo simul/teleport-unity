@@ -487,7 +487,7 @@ namespace teleport
 		private static extern UInt64 GetNumberOfTexturesWaitingForCompression();
 		[DllImport(TeleportServerDll.name)]
 		
-		private static extern void GetMessageForNextCompressedTexture(UInt64 textureIndex, UInt64 totalTexture,string str,UInt64 strlen);
+		private static extern void GetMessageForNextCompressedTexture(string str,UInt64 strlen);
 		[DllImport(TeleportServerDll.name)]
 		private static extern void CompressNextTexture();
 		[DllImport(TeleportServerDll.name)]
@@ -960,7 +960,10 @@ namespace teleport
 			}
 			extractedNode.stationary = streamableProperties ? streamableProperties.isStationary : true;
 			extractedNode.ownerClientId = teleport_Streamable != null ? teleport_Streamable.OwnerClient : 0;
-			extractedNode.localTransform = avs.Transform.FromLocalUnityTransform(gameObject.transform);
+			if(extractedNode.parentID!=0)
+				extractedNode.localTransform = avs.Transform.FromLocalUnityTransform(gameObject.transform);
+			else
+				extractedNode.localTransform = avs.Transform.FromGlobalUnityTransform(gameObject.transform);
 			extractedNode.dataType = avs.NodeDataType.None;
 			teleport.SkeletonRoot skeletonRoot = gameObject.GetComponent<teleport.SkeletonRoot>();
 			if (skeletonRoot)
@@ -1944,11 +1947,14 @@ namespace teleport
 #if UNITY_EDITOR
 			UInt64 strlen=32;
 			string compressionMessage=new string(' ',(int)strlen);
-			for (UInt64 i = 0; i < totalTexturesToCompress; i++)
+			int i=0;
+			UInt64 initialTexturesToCompress = totalTexturesToCompress;
+			while (totalTexturesToCompress>0)
 			{
-				GetMessageForNextCompressedTexture(i, totalTexturesToCompress,compressionMessage,strlen);
+				totalTexturesToCompress = GetNumberOfTexturesWaitingForCompression();
+				GetMessageForNextCompressedTexture(compressionMessage,strlen);
 
-				bool cancelled = EditorUtility.DisplayCancelableProgressBar("Compressing Textures", compressionMessage, (float)(i + 1) / totalTexturesToCompress);
+				bool cancelled = EditorUtility.DisplayCancelableProgressBar("Compressing Textures", compressionMessage, (float)(i + 1) / (float)(initialTexturesToCompress));
 				if(cancelled)
 					break;
 				CompressNextTexture();
@@ -2105,17 +2111,31 @@ namespace teleport
 				extractTo.renderState.globalIlluminationTextureUid = FindResourceID(giTextures[skinnedMeshRenderer.lightmapIndex]);
 			//Extract mesh used on node.
 			SceneReferenceManager sceneReferenceManager = SceneReferenceManager.GetSceneReferenceManager(gameObject.scene);
-			if(!sceneReferenceManager)
-			{
-				Debug.LogError($"Failed to get SceneReferenceManager for GameObject: {gameObject.name}");
-				return false;
-			}
 			extractTo.dataType = avs.NodeDataType.Mesh;
 			// Add the skeleton. If it's shared between multiple meshes, it may be already there.
 			var skeletonRootTransform = GetTopmostSkeletonRoot(skinnedMeshRenderer);
 			extractTo.skeletonNodeID = AddSkeleton(skeletonRootTransform, skinnedMeshRenderer, forceMask);
 
-			UnityEngine.Mesh mesh = sceneReferenceManager.GetMeshFromGameObject(gameObject);
+			UnityEngine.Mesh mesh=null;
+			var meshTracker = gameObject.GetComponent<MeshTracker>();
+			if (sceneReferenceManager)
+			{ 
+				mesh =sceneReferenceManager.GetMeshFromGameObject(gameObject);
+			}
+			else if(gameObject.GetComponent<MeshFilter>() != null)
+			{
+				mesh=gameObject.GetComponent<MeshFilter>().mesh;
+			}
+			else if (meshTracker != null)
+			{
+				mesh=meshTracker.mesh;
+			}
+			else
+			{
+				var sceneName = gameObject.scene != null && gameObject.scene.name != null ? gameObject.scene.name : "null";
+				Debug.LogError($"Failed to get mesh for GameObject: {gameObject.name} in scene: {sceneName}");
+				return false;
+			}
 			extractTo.dataID = AddMesh(mesh, forceMask,verify);
 
 			//Can't create a node with no data.
