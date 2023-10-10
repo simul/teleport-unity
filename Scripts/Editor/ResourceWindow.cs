@@ -166,16 +166,16 @@ namespace teleport
 				EditorGUILayout.EndHorizontal();
 				EditorGUILayout.BeginHorizontal();
 				GUILayout.Label("Project Geometry:", labelText, GUILayout.Width(300));
-				if (GUILayout.Button("Extract "))
+				if (GUILayout.Button("Extract"))
 				{
 					ExtractProjectGeometry(forceExtraction ? GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES : GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
 				}
 				EditorGUILayout.EndHorizontal();
 				EditorGUILayout.BeginHorizontal();
 				GUILayout.Label("Global Illumination Textures:", labelText, GUILayout.Width(300));
-				if (GUILayout.Button("Extract "))
+				if (GUILayout.Button("Extract"))
 				{
-					ExtractGlobalIlluminationTextures(SceneManager.GetActiveScene());
+					ExtractGlobalIlluminationTextures();
 				}
 				EditorGUILayout.EndHorizontal();
 				EditorGUILayout.BeginHorizontal();
@@ -183,7 +183,7 @@ namespace teleport
                 bool wasEnabled2 = GUI.enabled;
                 GUI.enabled &= forceExtraction||(Monitor.Instance?Monitor.Instance.envMapsGenerated:false);
 
-                if (GUILayout.Button("Extract "))
+                if (GUILayout.Button("Extract"))
 				{
 					ExtractDynamicObjectLightingTextures();
                 }
@@ -528,8 +528,9 @@ namespace teleport
 				var scene = SceneManager.GetSceneAt(i);
 				if(scene==null)
 					continue;
-				ExtractGlobalIlluminationTextures(scene);
+				ExtractGlobalIlluminationTextures();
 				objectsToExtract.AddRange(geometrySource.GetStreamableObjects(scene));
+				ExtractDynamicObjectLightingTextures();
 			}
 			if(!ExtractGeometry(objectsToExtract, forceMask))
 				return false;
@@ -561,7 +562,7 @@ namespace teleport
 				EditorSceneManager.OpenScene(originalScenes[i], OpenSceneMode.Additive);
 			}
 		}
-		private void ExtractDynamicObjectLightingTextures()
+		private void ExtractDynamicObjectLightingTextures( )
 		{
 			if (Monitor.Instance)
 			{
@@ -577,7 +578,7 @@ namespace teleport
 				}
 			}
 		}
-		private void ExtractGlobalIlluminationTextures(Scene scene)
+		private void ExtractGlobalIlluminationTextures()
 		{
 			Texture[] giTextures =teleport.GlobalIlluminationExtractor.GetTextures();
 			if(giTextures==null)

@@ -578,14 +578,16 @@ namespace teleport
 			{
 				return;
 			}
-
+			Teleport_SessionComponent session;
 			if (Teleport_SessionComponent.sessions.ContainsKey(id))
 			{
-				Debug.LogError($"Error setting up SessionComponent for Client {id}. There is already a registered session for that client!");
-				return;
+				Debug.LogWarning($"Setting up SessionComponent for Client {id}. There is already a registered session for that client!");
+				session= Teleport_SessionComponent.sessions[id];
 			}
-
-			var session = createSessionCallback();
+			else
+			{ 
+				session = createSessionCallback();
+			}
 			if (session != null)
 			{
 				session.StartSession(id);
@@ -668,6 +670,10 @@ namespace teleport
 			}
 
 			return session;
+		}
+		public static void DefaultRemoveSession(Teleport_SessionComponent sess)
+		{
+
 		}
 
 		static void AddMainCamToSession(Teleport_SessionComponent session)
