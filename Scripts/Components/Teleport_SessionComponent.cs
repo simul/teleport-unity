@@ -572,7 +572,7 @@ namespace teleport
 
 		//UNITY MESSAGES
 
-		private void Start()
+		public void Start1()
 		{
 			Debug.Log("Session Start(): clientID="+GetClientID());
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
@@ -663,6 +663,7 @@ namespace teleport
             {
 				return;
             }
+			Start1();
 			clientID = connectedID;
 			Debug.Log("Started session: clientID="+ clientID);
 			sessions[clientID] = this;
