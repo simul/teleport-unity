@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using System.Linq;
+using NUnit.Framework;
 
 namespace teleport
 {
@@ -56,6 +58,9 @@ namespace teleport
 			EditorGUILayout.LabelField("Name", GUILayout.Width(120));
 			EditorGUILayout.LabelField("Type", GUILayout.Width(100));
 			EditorGUILayout.LabelField("Path", GUILayout.MinWidth(100));
+			EditorGUILayout.LabelField("Path", GUILayout.MinWidth(100));
+			EditorGUILayout.LabelField("Path", GUILayout.MinWidth(100));
+			EditorGUILayout.LabelField("Path", GUILayout.MinWidth(100));
 			EditorGUILayout.LabelField(" ", GUILayout.Width(20));
 			EditorGUILayout.EndHorizontal();
 			EditorGUILayout.BeginVertical();
@@ -65,7 +70,16 @@ namespace teleport
 				EditorGUILayout.BeginHorizontal();
 				def.name=EditorGUILayout.TextField(def.name, GUILayout.Width(120));
 				def.inputType=(avs.InputType)EditorGUILayout.EnumPopup(def.inputType, GUILayout.Width(100));
-				def.controlPath=EditorGUILayout.TextField(def.controlPath, GUILayout.MinWidth(100));
+
+				List<string> paths=def.controlPath.Split(';').ToList();
+				while(paths.Count<4)
+					paths.Add("");
+				paths[0]=EditorGUILayout.TextField(paths[0], GUILayout.MinWidth(100));
+				paths[1] = EditorGUILayout.TextField(paths[1], GUILayout.MinWidth(100));
+				paths[2] = EditorGUILayout.TextField(paths[2], GUILayout.MinWidth(100));
+				paths[3] = EditorGUILayout.TextField(paths[3], GUILayout.MinWidth(100));
+				paths = paths.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
+				def.controlPath=string.Join(';',paths.ToArray());
 				if (GUILayout.Button("x",xstyle, GUILayout.Width(20)))
                 {
 					teleportSettings.inputDefinitions.RemoveAt(i);

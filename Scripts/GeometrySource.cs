@@ -255,6 +255,8 @@ namespace avs
 		
 		public IntPtr path;
 
+		[MarshalAs(UnmanagedType.I1)]
+		public bool useExternalNodes;
 		public Int64 numBones;
 		public uid[] boneIDs;
 

@@ -518,8 +518,10 @@ namespace teleport
 			controlledGameObject.transform.localPosition=newPosition;
 			controlledGameObject.transform.localRotation=newRotation;
 			StreamedNode node=streamable.GetStreamedNode(controlledGameObject);
-			node.stageSpaceVelocity=velocity;
-			node.stageSpaceAngularVelocity=angularVelocity;
+			if(node != null) { 
+				node.stageSpaceVelocity=velocity;
+				node.stageSpaceAngularVelocity=angularVelocity;
+			}
 		}
 
 		public void ProcessAudioInput(float[] data)
@@ -801,7 +803,7 @@ namespace teleport
 			if (clientSettings.videoTextureSize.x < videoEncodeCapabilities.minWidth || clientSettings.videoTextureSize.x > videoEncodeCapabilities.maxWidth
 				|| clientSettings.videoTextureSize.y < videoEncodeCapabilities.minHeight || clientSettings.videoTextureSize.y > videoEncodeCapabilities.maxHeight)
 			{
-				Debug.LogError("The video encoder does not support the video texture dimensions.");
+				Debug.LogError("The video encoder does not support the video texture dimensions "+ clientSettings.videoTextureSize.x+" x "+ clientSettings.videoTextureSize.y+".");
 			}
 			//Debug.Log("ClientSettings.videoTextureSize: "+clientSettings.videoTextureSize.x+", "+clientSettings.videoTextureSize.y);
 			//Debug.Log("ClientSettings.drawDistance: "+clientSettings.drawDistance);

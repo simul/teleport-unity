@@ -19,15 +19,15 @@ namespace teleport
 				t= t.parent;
 			topParent=t.gameObject;
 			TeleportSettings settings=TeleportSettings.GetOrCreateSettings();
-			LeftGrabInputIds = settings.FindInputsByName("Left Grip Click");
-			RightGrabInputIds = settings.FindInputsByName("Right Grip Click");
-			LeftMouseClickInputIds = settings.FindInputsByName("Left Mouse Click");
+			LeftGrabInputIds = settings.FindInputsByName("Left Grab");
+			RightGrabInputIds = settings.FindInputsByName("Right Grab");
+			RightGrabToggleInputIds = settings.FindInputsByName("Right Grab Toggle");
 			if(snowballPrefab==null)
 				snowballPrefab = (GameObject)Resources.Load("Prefabs/Snowball", typeof(GameObject));
 		}
 		System.UInt16 [] LeftGrabInputIds ={ };
 		System.UInt16 [] RightGrabInputIds = { };
-		System.UInt16 [] LeftMouseClickInputIds = { };
+		System.UInt16 [] RightGrabToggleInputIds = { };
 		//Vector3 oldRelativePosition=new Vector3();
 		//Quaternion oldRelativeRotation=new Quaternion();
 		Teleport_Controller nearController = null;
@@ -78,12 +78,12 @@ namespace teleport
 			if(controller.poseRegexPath.Contains("left"))
 			{
 				session.input.AddDelegate(LeftGrabInputIds, GrabASnowball, InputEventType.Press);
-				session.input.AddDelegate(LeftMouseClickInputIds, GrabASnowball, InputEventType.Release); //InputEventType.Press);
+				session.input.AddDelegate(RightGrabToggleInputIds, GrabASnowball, InputEventType.Release); //InputEventType.Press);
 			}
 			if (controller.poseRegexPath.Contains("right"))
 			{ 
 				session.input.AddDelegate(RightGrabInputIds, GrabASnowball, InputEventType.Press);
-				session.input.AddDelegate(LeftMouseClickInputIds, GrabASnowball, InputEventType.Release); //InputEventType.Press);
+				session.input.AddDelegate(RightGrabToggleInputIds, GrabASnowball, InputEventType.Release); //InputEventType.Press);
 			}
 			 nearController =controller;
 		}
@@ -104,12 +104,12 @@ namespace teleport
 			if (controller.poseRegexPath.Contains("left"))
 			{ 
 				session.input.RemoveDelegate(LeftGrabInputIds, GrabASnowball, InputEventType.Press);
-				session.input.RemoveDelegate(LeftMouseClickInputIds, GrabASnowball, InputEventType.Release); //InputEventType.Press);
+				session.input.RemoveDelegate(RightGrabToggleInputIds, GrabASnowball, InputEventType.Release); //InputEventType.Press);
 			}
 			if (controller.poseRegexPath.Contains("right"))
 			{
 				session.input.RemoveDelegate(RightGrabInputIds, GrabASnowball, InputEventType.Press);
-				session.input.RemoveDelegate(LeftMouseClickInputIds, GrabASnowball, InputEventType.Release); //InputEventType.Press);
+				session.input.RemoveDelegate(RightGrabToggleInputIds, GrabASnowball, InputEventType.Release); //InputEventType.Press);
 			}
 		}
 

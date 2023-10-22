@@ -20,10 +20,10 @@ namespace teleport
 				t= t.parent;
 			topParent=t.gameObject;
 			TeleportSettings settings=TeleportSettings.GetOrCreateSettings();
-			LeftGrabInputIds = settings.FindInputsByName("Left Grip Click");
-			RightGrabInputIds = settings.FindInputsByName("Right Grip Click");
-			LeftMouseClickInputIds = settings.FindInputsByName("Left Mouse Click");  
-			RightMouseClickInputIds = settings.FindInputsByName("Right Mouse Click"); 
+			LeftGrabInputIds = settings.FindInputsByName("Left Grab");
+			RightGrabInputIds = settings.FindInputsByName("Right Grab");
+			LeftGrabToggleInputIds = settings.FindInputsByName("Left Grab Toggle");  
+			RightGrabToggleInputIds = settings.FindInputsByName("Right Grab Toggle"); 
 		}
 
 		// Update is called once per frame
@@ -34,8 +34,8 @@ namespace teleport
 		public uid holderClient=0;
 		System.UInt16 [] LeftGrabInputIds ={ };
 		System.UInt16 [] RightGrabInputIds = { };
-		System.UInt16 [] LeftMouseClickInputIds = { };
-		System.UInt16[] RightMouseClickInputIds = { };
+		System.UInt16 [] LeftGrabToggleInputIds = { };
+		System.UInt16[] RightGrabToggleInputIds = { };
 		GameObject formerParent=null;
 		Vector3 oldRelativePosition=new Vector3();
 		Quaternion oldRelativeRotation=new Quaternion();
@@ -128,12 +128,12 @@ namespace teleport
 			if(controller.poseRegexPath.Contains("left"))
 			{
 				session.input.AddDelegate(LeftGrabInputIds, Grab, InputEventType.Press);
-				session.input.AddDelegate(RightMouseClickInputIds, Grab, InputEventType.Release); //InputEventType.Press);
+				session.input.AddDelegate(RightGrabToggleInputIds, Grab, InputEventType.Release); //InputEventType.Press);
 			}
 			if (controller.poseRegexPath.Contains("right"))
 			{ 
 				session.input.AddDelegate(RightGrabInputIds, Grab, InputEventType.Press);
-				session.input.AddDelegate(RightMouseClickInputIds, Grab, InputEventType.Release); //InputEventType.Press);
+				session.input.AddDelegate(RightGrabToggleInputIds, Grab, InputEventType.Release); //InputEventType.Press);
 			}
 			nearController =controller;
 		}
@@ -157,12 +157,12 @@ namespace teleport
 			if (controller.poseRegexPath.Contains("left"))
 			{ 
 				session.input.RemoveDelegate(LeftGrabInputIds, Grab, InputEventType.Press);
-				session.input.RemoveDelegate(RightMouseClickInputIds, Grab, InputEventType.Release); //InputEventType.Press);
+				session.input.RemoveDelegate(RightGrabToggleInputIds, Grab, InputEventType.Release); //InputEventType.Press);
 			}
 			if (controller.poseRegexPath.Contains("right"))
 			{
 				session.input.RemoveDelegate(RightGrabInputIds, Grab, InputEventType.Press);
-				session.input.RemoveDelegate(RightMouseClickInputIds, Grab, InputEventType.Release); //InputEventType.Press);
+				session.input.RemoveDelegate(RightGrabToggleInputIds, Grab, InputEventType.Release); //InputEventType.Press);
 			}
 		}
 

@@ -31,9 +31,42 @@ namespace teleport
 			cylinder = go.GetComponent<MeshFilter>().sharedMesh;
 			GameObject.DestroyImmediate(go);
 		}
+		/*	XR_HAND_JOINT_PALM 0,
+			WRIST 1,
+			THUMB_METACARPAL 2,
+			THUMB_PROXIMAL 3,
+			THUMB_DISTAL 4,
+			THUMB_TIP 5,
+			INDEX_METACARPAL 6,
+			INDEX_PROXIMAL 7,
+			INDEX_INTERMEDIATE 8,
+			INDEX_DISTAL 9,
+			INDEX_TIP 10,
+			MIDDLE_METACARPAL 11,
+			MIDDLE_PROXIMAL 12,
+			MIDDLE_INTERMEDIATE 13,
+			MIDDLE_DISTAL 14,
+			MIDDLE_TIP 15,
+			RING_METACARPAL 16,
+			RING_PROXIMAL 17,
+			RING_INTERMEDIATE 18,
+			RING_DISTAL 19,
+			RING_TIP 20,
+			LITTLE_METACARPAL 21,
+			LITTLE_PROXIMAL 22,
+			LITTLE_INTERMEDIATE 23,
+			LITTLE_DISTAL 24,
+			LITTLE_TIP 25,
+			MAX_ENUM 0x7FFFFFFF*/
 		[DrawGizmo(GizmoType.Selected | GizmoType.NotInSelectionHierarchy)] 
 		static void DrawClientspaceRoot(Teleport_Controller controller, GizmoType gizmoType)
 		{
+			if(controller==null)
+				return;
+			if (controller.poseRegexPath == null)
+				return;
+			if (controller.poseRegexPath.Length==0)
+				return;
 			if(!poseTypes.TryGetValue(controller,out PoseType poseType))
 				poseTypes.Add(controller,PoseType.None);
 			if(poseTypes [controller] == PoseType.None) {
