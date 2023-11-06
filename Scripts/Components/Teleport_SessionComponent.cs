@@ -35,6 +35,9 @@ namespace teleport
 		[DllImport(TeleportServerDll.name)]
 		public static extern void Client_StopStreaming(uid clientID);
 
+		[DllImport(TeleportServerDll.name)]
+		public static extern uint Client_GetSignalingPath(uid clientID, uint bufferLength, StringBuilder buffer);
+
 
 		[DllImport(TeleportServerDll.name)]
 		public static extern bool Client_GetNetworkState(uid clientID, ref avs.ClientNetworkState st);

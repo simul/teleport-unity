@@ -346,7 +346,7 @@ namespace teleport
 			List<Teleport_Streamable> gainedStreamables = new List<Teleport_Streamable>();
 			List<Teleport_Streamable> lostStreamables = new List<Teleport_Streamable>();
 			if (streamedGeometryManagement!=null)
-				streamedGeometryManagement.UpdateStreamedGeometry(session,gainedStreamables,lostStreamables);
+				streamedGeometryManagement.UpdateStreamedGeometry(session,ref gainedStreamables,ref lostStreamables);
 			else
 			{
 				if (!session.IsConnected())

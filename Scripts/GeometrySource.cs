@@ -3172,7 +3172,7 @@ namespace teleport
 				}
 				if (unityAssetPath!= expectedAssetPath)
                 {
-					Debug.LogWarning("Path mismatch for ("+typeof(UnityAsset).ToString()+")" + name+": "+ expectedAssetPath + " !="+unityAssetPath);
+					Debug.LogWarning("Path mismatch for ("+typeof(UnityAsset).ToString()+")" + name+": expected["+ expectedAssetPath + "]!=got["+unityAssetPath+"]");
                   // System.Threading.Thread.Sleep(10000);
                 }
 				UnityEngine.Object[] assetsAtPath = AssetDatabase.LoadAllAssetsAtPath("Assets/"+unityAssetPath);

@@ -603,5 +603,35 @@ namespace teleport
 				streamedNode.skinnedMeshRenderer.renderingLayerMask |= streamedClientMask;
 			}
 		}
+		Bounds bounds= new Bounds();
+		bool boundsValid=false;
+		public Bounds GetBounds()
+		{
+			if(streamedHierarchy.Count==0)
+				CreateStreamedHierarchy();
+			if(!boundsValid)
+			{
+				bounds.center=transform.position;
+				bounds=new Bounds(transform.position,new Vector3(1.0F, 1.0F, 1.0F));
+				foreach (var node in streamedHierarchy)
+				{
+					Collider coll = node.gameObject.GetComponent<Collider>();
+					if (coll)
+					{
+						bounds.Encapsulate(coll.bounds);
+					}
+					else
+					{
+						MeshRenderer m = node.gameObject.GetComponent<MeshRenderer>();
+						if (m)
+						{
+							bounds.Encapsulate(m.bounds);
+						}
+					}
+				}
+				boundsValid=true;
+			}
+			return bounds;
+		}
 	}
 }

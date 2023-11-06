@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using teleport;
 using UnityEditor;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
+using static teleport.DistanceGeometryManagement;
 
 namespace teleport
 {
@@ -49,15 +51,23 @@ namespace teleport
 
 	public class DistanceGeometryManagement : MonoBehaviour, IStreamedGeometryManagement
 	{
+		public class TrackedBounds
+		{
+			public TrackedBounds(Teleport_Streamable str, bool lwr)
+			{
+				streamable=str;
+				lower_bounds=lwr;
+			}
+			public Teleport_Streamable streamable;
+			public bool lower_bounds;
+		}
 		// Keep six ordered lists of all the Teleport_Streamables.
 		// Each list represents the + or - extent of the given object (treating it as a sphere with a certain size).
 		// for now, we consider all the objects to have fixed size 2 metres.
-		static List<Teleport_Streamable> X_minus = new List<Teleport_Streamable>();
-		static List<Teleport_Streamable> Y_minus = new List<Teleport_Streamable>();
-		static List<Teleport_Streamable> Z_minus = new List<Teleport_Streamable>();
-		static List<Teleport_Streamable> X_plus = new List<Teleport_Streamable>();
-		static List<Teleport_Streamable> Y_plus = new List<Teleport_Streamable>();
-		static List<Teleport_Streamable> Z_plus = new List<Teleport_Streamable>();
+		static List<Teleport_Streamable> all_streamables = new List<Teleport_Streamable>();
+		static List<TrackedBounds> X_bounds = new List<TrackedBounds>();
+		static List<TrackedBounds> Y_bounds = new List<TrackedBounds>();
+		static List<TrackedBounds> Z_bounds = new List<TrackedBounds>();
 		private TeleportSettings teleportSettings = null;
 		static  DistanceGeometryManagement()
 		{
@@ -66,20 +76,92 @@ namespace teleport
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
 			Teleport_Streamable[] streamables = FindObjectsByType<Teleport_Streamable>(FindObjectsSortMode.None);
-			X_minus = streamables.ToList<Teleport_Streamable>();
-			Y_minus = X_minus;
-			Z_minus = X_minus;
-			X_plus = X_minus;
-			Y_plus = X_minus;
-			Z_plus = X_minus;
+			all_streamables=streamables.ToList();
+			foreach(var streamable in streamables)
+			{
+				X_bounds.Add(new TrackedBounds(streamable,false));
+				X_bounds.Add(new TrackedBounds(streamable, true));
+				Y_bounds.Add(new TrackedBounds(streamable, false));
+				Y_bounds.Add(new TrackedBounds(streamable, true));
+				Z_bounds.Add(new TrackedBounds(streamable, false));
+				Z_bounds.Add(new TrackedBounds(streamable, true));
+			}
 		}
-
+		public static Vector3 GetBound(TrackedBounds trackedBounds)
+		{
+			Collider coll = trackedBounds.streamable.GetComponent<Collider>();
+			Vector3 pos = trackedBounds.streamable.transform.position;
+			if (coll)
+			{
+				if(trackedBounds.lower_bounds)
+					pos = coll.bounds.min;
+				else
+					pos = coll.bounds.max;
+			}
+			else
+			{
+				MeshRenderer m = trackedBounds.streamable.GetComponent<MeshRenderer>();
+				if (m)
+				{
+					if (trackedBounds.lower_bounds)
+						pos = m.bounds.min;
+					else
+						pos = m.bounds.max;
+				}
+			}
+			return pos;
+		}
+		public static Vector3 Max(Teleport_Streamable streamable)
+		{
+			Collider coll = streamable.GetComponent<Collider>();
+			Vector3 pos = streamable.transform.position;
+			if (coll)
+			{
+				pos = coll.bounds.max;
+			}
+			else
+			{
+				MeshRenderer m = streamable.GetComponent<MeshRenderer>();
+				if (m)
+					pos = m.bounds.max;
+			}
+			return pos;
+		}
+		void Update()
+		{
+			// X_minus should be in the order of the left-most edge of the bounds of each streamable.
+			X_bounds.Sort(delegate (TrackedBounds a, TrackedBounds b)
+			{
+				float A = 0.0F;
+				float B = 0.0F;
+				A=GetBound(a).x;
+				B = GetBound(b).x;
+				return Comparer<float>.Default.Compare(A,B);
+			});
+			// X_minus should be in the order of the left-most edge of the bounds of each streamable.
+			Y_bounds.Sort(delegate (TrackedBounds a, TrackedBounds b)
+			{
+				float A = 0.0F;
+				float B = 0.0F;
+				A = GetBound(a).y;
+				B = GetBound(b).y;
+				return Comparer<float>.Default.Compare(A, B);
+			});
+			Z_bounds.Sort(delegate (TrackedBounds a, TrackedBounds b)
+			{
+				float A = 0.0F;
+				float B = 0.0F;
+				A = GetBound(a).z;
+				B = GetBound(b).z;
+				return Comparer<float>.Default.Compare(A, B);
+			});
+		}
 		HashSet<Teleport_Streamable> innerStreamables = new HashSet<Teleport_Streamable>();
 		HashSet<Teleport_Streamable> outerStreamables = new HashSet<Teleport_Streamable>();
 		int inner_overlap_count = 0;
-		int outer_overlap_count = 0;
+		//int outer_overlap_count = 0;
 		// Update is called once per frame
-		public void UpdateStreamedGeometry(Teleport_SessionComponent session,List<Teleport_Streamable> gainedStreamables, List<Teleport_Streamable> lostStreamables)
+		public void UpdateStreamedGeometry(Teleport_SessionComponent session,ref List<Teleport_Streamable> gainedStreamables,ref List<Teleport_Streamable> lostStreamables)
 		{
 			if (!session.IsConnected())
 				return;
@@ -90,25 +172,46 @@ namespace teleport
 			}
 			var currentStreamables=session.GeometryStreamingService.GetCurrentStreamables();
 			var layersToStream = teleportSettings.LayersToStream;
-			//Detect changes in geometry that needs to be streamed to the client.
-			// each client session component should maintain a list of the TeleportStreamable (root) objects it is
-			// tracking. Perhaps count how many colliders it is impinging for each root.
-			// The session can use OnTriggerEnter and OnTriggerExit to update this list.
+			// Detect changes in geometry that needs to be streamed to the client.
+			// each client session component should maintain a list of the TeleportStreamable (root) objects it is tracking.
+
+			// We consider a box centred on the session root, and of fixed size in X, Y and Z.
+			// This box at any time impinges on a subset of the Streamables.
+			// Using our lists we know the group that it impinges on in the X, Y and Z directions.
+			// The streamables that are present in all three lists are the ones we should stream.
+
 			if (layersToStream != 0)
 			{
 				Vector3 position = session.head.transform.position;
-				
 				float R0 = teleportSettings.serverSettings.detectionSphereRadius;
 				float R1 = R0 + teleportSettings.serverSettings.detectionSphereBufferDistance;
-				gainedStreamables.Clear();
-				for (int i = 0; i < X_minus.Count; i++)
+
+				int first_x_index = -1, last_x_index =  - 1;
+				Vector3 pos_min= position-new Vector3(R0,R0,R0);
+				Vector3 pos_max = position+ new Vector3(R0, R0, R0);
+				// What's the right-most box that's still left of the session's right edge?
+				for (int i = 0; i < X_bounds.Count; i++)
 				{
-					var streamable= X_minus[i];
+					if(X_bounds[i].streamable.transform.position.x>pos_max.x)
+					{
+						last_x_index = i;
+						break;
+					}
+				}
+				if(first_x_index>=0&&last_x_index>=0)
+				{
+
+				}
+				gainedStreamables.Clear();
+				for (int i = 0; i < all_streamables.Count; i++)
+				{
+					var streamable= all_streamables[i];
 					GameObject g = streamable.gameObject;
 					if (!g)
 						continue;
 					float distance = (g.transform.position - position).magnitude;
-					if (distance < R0)
+					float objectRadius= streamable.GetBounds().size.magnitude;
+					if (distance < R0+objectRadius)
 					{
 						if (!currentStreamables.Contains(streamable))
 						{
@@ -124,7 +227,8 @@ namespace teleport
 					if (!g)
 						continue;
 					float distance=(g.transform.position-position).magnitude;
-					if(distance> R1)
+					float objectRadius = streamable.GetBounds().size.magnitude;
+					if (distance> R1 + objectRadius)
 						lostStreamables.Add(streamable);
 				}
 			}

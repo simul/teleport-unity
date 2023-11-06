@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Threading;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEditor.SearchService;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
+using Scene = UnityEngine.SceneManagement.Scene;
 using uid = System.UInt64;
 
 namespace teleport
@@ -15,7 +18,7 @@ namespace teleport
 		{
 			return source?.IndexOf(toCheck, StringComparison.OrdinalIgnoreCase) >= 0;
 		}
-		enum ResourceWindowCategories { SETUP, RESOURCES, SCENE_REFS, DEBUG};
+		enum ResourceWindowCategories { TAG_SETUP, COLLISION_SETUP,RESOURCES, SCENE_REFS, DEBUG};
 
 		//References to assets.
 		private GeometrySource geometrySource;
@@ -34,7 +37,7 @@ namespace teleport
 		private GUIStyle hScrollbarStyle;
 		private GUIStyle vScrollbarStyle;
 		private GUIStyle scrollwindowStyle;
-		private GUIStyle labelText ;
+		private GUIStyle labelTextStyle ;
 		private GUIStyle titleStyle;
 
 		//GUI variables that control user-changeable properties.
@@ -57,7 +60,7 @@ namespace teleport
 
 		private void Awake()
 		{
-			labelText = null;
+			labelTextStyle = null;
 			geometrySource = GeometrySource.GetGeometrySource();
 
 			string shaderGUID = AssetDatabase.FindAssets("ExtractTextureData t:ComputeShader")[0];
@@ -69,7 +72,7 @@ namespace teleport
 		//Use this to setup variables that are likely to change on a hot-reload.
 		private void OnFocus()
 		{
-			labelText=null;
+			labelTextStyle=null;
 			//Fill categories array with enumeration names.
 			categories = Enum.GetNames(typeof(ResourceWindowCategories));
 			//Change names to title-case; i.e. EXTRACTION -> Extraction.
@@ -81,14 +84,14 @@ namespace teleport
 
 		private void OnGUI()
 		{
-			if (labelText==null)
+			if (labelTextStyle==null)
 			{
 				richText = new GUIStyle(GUI.skin.textArea);
 				warningText = new GUIStyle(GUI.skin.label);
 				errorText = new GUIStyle(GUI.skin.label);
 				hScrollbarStyle = new GUIStyle(GUI.skin.horizontalScrollbar);
 				vScrollbarStyle = new GUIStyle(GUI.skin.verticalScrollbar);
-				labelText = new GUIStyle(GUI.skin.label);
+				labelTextStyle = new GUIStyle(GUI.skin.label);
 				scrollwindowStyle = new GUIStyle(GUI.skin.box);
 				titleStyle = new GUIStyle(GUI.skin.label);
 				titleStyle.fontSize = (GUI.skin.label.fontSize * 5) / 4;
@@ -111,9 +114,12 @@ namespace teleport
 			resourceSearchText = EditorGUILayout.TextField("Search ", resourceSearchText);
 			switch ((ResourceWindowCategories)selectedCategory)
 			{
-				case ResourceWindowCategories.SETUP:
-					DrawSetupLayout();
-					break;
+				case ResourceWindowCategories.TAG_SETUP:
+					DrawTagSetupLayout();
+					break; 
+				case ResourceWindowCategories.COLLISION_SETUP:
+					DrawCollisionSetupLayout();
+					break; 
 				case ResourceWindowCategories.RESOURCES:
 					DrawResourcesLayout();
 					break;
@@ -134,7 +140,7 @@ namespace teleport
 			EditorGUILayout.LabelField("Extraction", titleStyle);
 			EditorGUILayout.Space(10);
 			GUI.enabled = !Application.isPlaying;
-			labelText.alignment=TextAnchor.MiddleRight;
+			labelTextStyle.alignment=TextAnchor.MiddleRight;
 			EditorGUILayout.Space(10);
 			EditorGUILayout.BeginHorizontal();
 
@@ -149,7 +155,7 @@ namespace teleport
 					GUI.enabled = activeGOs.Length>0;
 					//EditorGUILayout.disab
 					EditorGUILayout.BeginHorizontal(); 
-					GUILayout.Label("Selected Geometry:", labelText, GUILayout.Width(300));
+					GUILayout.Label("Selected Geometry:", labelTextStyle, GUILayout.Width(300));
 					if (GUILayout.Button("Extract"))
 					{
 						ExtractSelectedGeometry(forceExtraction? GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES:GeometrySource.ForceExtractionMask.FORCE_NODES);
@@ -158,28 +164,28 @@ namespace teleport
 					GUI.enabled=wasEnabled;
 				}
 				EditorGUILayout.BeginHorizontal();
-				GUILayout.Label("Scene Geometry:", labelText, GUILayout.Width(300));
+				GUILayout.Label("Scene Geometry:", labelTextStyle, GUILayout.Width(300));
 				if (GUILayout.Button("Extract"))
 				{
 					ExtractSceneGeometry(forceExtraction ? GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES : GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
 				}
 				EditorGUILayout.EndHorizontal();
 				EditorGUILayout.BeginHorizontal();
-				GUILayout.Label("Project Geometry:", labelText, GUILayout.Width(300));
+				GUILayout.Label("Project Geometry:", labelTextStyle, GUILayout.Width(300));
 				if (GUILayout.Button("Extract"))
 				{
 					ExtractProjectGeometry(forceExtraction ? GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES : GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
 				}
 				EditorGUILayout.EndHorizontal();
 				EditorGUILayout.BeginHorizontal();
-				GUILayout.Label("Global Illumination Textures:", labelText, GUILayout.Width(300));
+				GUILayout.Label("Global Illumination Textures:", labelTextStyle, GUILayout.Width(300));
 				if (GUILayout.Button("Extract"))
 				{
 					ExtractGlobalIlluminationTextures();
 				}
 				EditorGUILayout.EndHorizontal();
 				EditorGUILayout.BeginHorizontal();
-				GUILayout.Label("Dynamic Object Lighting Textures:", labelText, GUILayout.Width(300));
+				GUILayout.Label("Dynamic Object Lighting Textures:", labelTextStyle, GUILayout.Width(300));
                 bool wasEnabled2 = GUI.enabled;
                 GUI.enabled &= forceExtraction||(Monitor.Instance?Monitor.Instance.envMapsGenerated:false);
 
@@ -359,7 +365,7 @@ namespace teleport
                 EditorGUILayout.EndHorizontal();
 			}
 		}
-		private void DrawSetupLayout()
+		private void DrawTagSetupLayout()
 		{
 			GUI.enabled = !Application.isPlaying;
 			//Names of the loaded scenes from the SceneManager.
@@ -378,31 +384,26 @@ namespace teleport
 			EditorGUILayout.LabelField($"Loaded Scenes: {loadedScenes}");
 
 			//Only display following GUI when the tag is set.
-			if(teleportSettings.TagToStream.Length > 0)
+			if (teleportSettings.TagToStream.Length > 0)
 			{
 				GameObject[] gameObjectsTagged = GameObject.FindGameObjectsWithTag(teleportSettings.TagToStream);
 
 				EditorGUILayout.LabelField($"There are <b>{gameObjectsTagged.Length}</b> GameObjects with the '{teleportSettings.TagToStream}' tag.", richText);
 
-				foreach(GameObject gameObject in gameObjectsTagged)
-				{
-					Collider[] colliders = gameObject.GetComponents<Collider>();
-					if(colliders.Length > 1)
-					{
-						EditorGUILayout.LabelField("Warning: " + gameObject.name + " has " + colliders.Length + " collision components.", warningText);
-					}
-				}
-
-				if(GUILayout.Button($"Clear tag '{teleportSettings.TagToStream}' from all GameObjects."))
+				EditorGUILayout.BeginHorizontal();
+				GUILayout.Label($"Clear tag '{teleportSettings.TagToStream}' from all GameObjects.", labelTextStyle, GUILayout.Width(400));
+				if (GUILayout.Button("Apply", GUILayout.Width(100)))
 				{
 					foreach(var gameObject in gameObjectsTagged)
 					{
 						gameObject.tag = "Untagged";
 					}
 				}
+				EditorGUILayout.EndHorizontal();
 
-				EditorGUILayout.LabelField("Applies the tag to objects with collision.");
-				if(GUILayout.Button($"Apply {teleportSettings.TagToStream} tag to selected GameObjects."))
+				EditorGUILayout.BeginHorizontal();
+				EditorGUILayout.LabelField($"Apply the tag {teleportSettings.TagToStream} to selected objects with collision.", labelTextStyle, GUILayout.Width(400));
+				if (GUILayout.Button($"Apply", GUILayout.Width(100)))
 				{
 					foreach(var gameObject in UnityEditor.Selection.gameObjects)
 					{
@@ -415,16 +416,61 @@ namespace teleport
 					}
 					EditorMask.Initialize();
 				}
+				EditorGUILayout.EndHorizontal();
+				EditorGUILayout.BeginHorizontal();
+				EditorGUILayout.LabelField($"Apply the tag to objects within selected collider.", labelTextStyle, GUILayout.Width(400));
+				List<Collider> colliders= new List<Collider>();
+				foreach (var gameObject in UnityEditor.Selection.gameObjects)
+				{
+					colliders.Add(gameObject.GetComponent<BoxCollider>());
+				}
+				bool was_enabled=GUI.enabled ;
+				GUI.enabled &= colliders.Count>0&& teleportSettings.TagToStream!=null&&teleportSettings.TagToStream.Length>0;
+				if (GUILayout.Button($"Apply", GUILayout.Width(100)))
+				{
+					foreach (var c in colliders)
+					{
+						BoxCollider bc=c.GetComponent<BoxCollider>();
+						if (bc)
+						{
+							for (int i = 0; i < SceneManager.sceneCount; i++)
+							{
+								var scene = SceneManager.GetSceneAt(i);
+								if (scene == null)
+									continue;
+								var objs = scene.GetRootGameObjects();
+								foreach (var o in objs)
+								{
+									UnityEngine.Transform[] transforms = o.GetComponentsInChildren<UnityEngine.Transform>();
+									foreach (var t in transforms)
+									{
+										if (bc.bounds.Contains(t.position))
+										{
+											t.gameObject.tag= teleportSettings.TagToStream;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				GUI.enabled = was_enabled;
+				EditorGUILayout.EndHorizontal();
 			}
+			GUI.enabled = true;
+		}
+		private void DrawCollisionSetupLayout()
+		{
+			GUI.enabled = !Application.isPlaying;
 
 			EditorGUILayout.LabelField("Adds a trigger box collider to selected GameObjects with a MeshFilter, but without a collider.");
-			if(GUILayout.Button("Add box collider to selected GameObjects."))
+			if (GUILayout.Button("Add box collider to selected GameObjects."))
 			{
-				foreach(var gameObject in Selection.gameObjects)
+				foreach (var gameObject in Selection.gameObjects)
 				{
 					var collider = gameObject.GetComponent<Collider>();
 					var meshFilter = gameObject.GetComponent<MeshFilter>();
-					if(meshFilter != null && collider == null)
+					if (meshFilter != null && collider == null)
 					{
 						BoxCollider bc = gameObject.AddComponent<BoxCollider>();
 						bc.isTrigger = true;
@@ -433,9 +479,9 @@ namespace teleport
 			}
 
 			EditorGUILayout.LabelField("Recursively adds box collision and tag to selected and children where appropriate.");
-			if(GUILayout.Button("Setup selected and children for streaming."))
+			if (GUILayout.Button("Setup selected and children for streaming."))
 			{
-				foreach(var gameObject in Selection.gameObjects)
+				foreach (var gameObject in Selection.gameObjects)
 				{
 					SetupGameObjectAndChildrenForStreaming(gameObject);
 				}
@@ -443,7 +489,7 @@ namespace teleport
 			GUI.enabled = true;
 		}
 
-		private void DrawDebugLayout()
+			private void DrawDebugLayout()
 		{
 			EditorGUILayout.BeginVertical();
 			GUI.enabled = !Application.isPlaying;

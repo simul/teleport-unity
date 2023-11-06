@@ -23,7 +23,7 @@ namespace teleport
 		int inner_overlap_count = 0;
 		int outer_overlap_count = 0;
 		// Update is called once per frame
-		public void UpdateStreamedGeometry(Teleport_SessionComponent session,List<Teleport_Streamable> gainedStreamables, List<Teleport_Streamable> lostStreamables)
+		public void UpdateStreamedGeometry(Teleport_SessionComponent session,ref List<Teleport_Streamable> gainedStreamables,ref List<Teleport_Streamable> lostStreamables)
 		{
 			if (!session.IsConnected())
 				return;

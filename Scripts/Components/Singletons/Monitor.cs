@@ -6,12 +6,14 @@ using System.Collections.Generic;
 using uid = System.UInt64;
 using UnityEngine.SceneManagement;
 using UnityEditor;
+using UnityEditor.PackageManager;
+using System.Text.RegularExpressions;
 
 namespace teleport
 {
 	public interface IStreamedGeometryManagement
 	{
-		public void UpdateStreamedGeometry(Teleport_SessionComponent session, List<Teleport_Streamable> gainedStreamables, List<Teleport_Streamable> lostStreamables);
+		public void UpdateStreamedGeometry(Teleport_SessionComponent session, ref List<Teleport_Streamable> gainedStreamables, ref List<Teleport_Streamable> lostStreamables);
 	}
 
 	public struct SessionState
@@ -158,7 +160,7 @@ namespace teleport
         public bool envMapsGenerated = false;
 #endif
         //! Create a new session, e.g. when a client connects.
-        public delegate Teleport_SessionComponent CreateSession();
+        public delegate Teleport_SessionComponent CreateSession(uid client_id);
 		public CreateSession createSessionCallback = DefaultCreateSession;
 
 		[Tooltip("Choose the prefab to be used when a player connects, to represent that player's position and shape.")]
@@ -586,7 +588,7 @@ namespace teleport
 			}
 			else
 			{ 
-				session = createSessionCallback();
+				session = createSessionCallback(id);
 			}
 			if (session != null)
 			{
@@ -597,8 +599,26 @@ namespace teleport
 			}
 		}
 
-		public static Teleport_SessionComponent DefaultCreateSession()
+		public static Teleport_SessionComponent DefaultCreateSession(uid clientID)
 		{
+			string path = "";
+			{
+				StringBuilder pathStringBuilder = new StringBuilder("", 25);
+				try
+				{
+					uint newlen = Teleport_SessionComponent.Client_GetSignalingPath(clientID, 25, pathStringBuilder);
+					if (newlen > 0)
+					{
+						pathStringBuilder = new StringBuilder("", (int)newlen + 2);
+						Teleport_SessionComponent.Client_GetSignalingPath(clientID, newlen + 1, pathStringBuilder);
+					}
+				}
+				catch (Exception exc)
+				{
+					Debug.Log(exc.ToString());
+				}
+				path= pathStringBuilder.ToString();
+			}
 			var currentSessions = GameObject.FindObjectsByType<Teleport_SessionComponent>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
 			// We want to use an existing session in the scene if it doesn't have a client.
 			// This is useful if the session is placed in the scene instead of spawned.
@@ -644,18 +664,50 @@ namespace teleport
 					return null;
 				}
 				Vector3 SpawnPosition = new Vector3(0, 0, 0);
+				MetaURLScene metaURLScene = MetaURLScene.GetInstance();
 				Quaternion SpawnRotation=Quaternion.identity;
-				var spawners=FindObjectsOfType<teleport.Spawner>();
-				if(spawners.Length>0)
-                {
-					var spawner= spawners[0];
-					// If the spawner fails, we can't initialize a session.
-					if (!spawner.Spawn(out SpawnPosition, out SpawnRotation))
+				bool got_metaurl=false;
+				if (path.Length>0&& metaURLScene!=null)
+				{
+					SpawnPosition= metaURLScene.origin;
+					//string pattern  = @"\?meta_url=/(-?\d+(\.\d+){2,3}/)+$";
+					string pattern = @"meta_url=(\d+\,\d+\,\d+)(/\d+\,\d+\,\d+)+";// (\.\d+){2}  (/\d+(\.\d+){2})+";
+					Match m = Regex.Match(path, pattern, RegexOptions.IgnoreCase);
+					if (m.Success)
 					{
-						Debug.LogError($"spawner.Spawn failed.");
-						return null;
+						float scale= metaURLScene.scaleMetres;
+						for (int i=1;i<m.Groups.Count;i++)
+						{
+							string subgroup=m.Groups[i].Value;
+							string subpattern = @"(\d+),(\d+),(\d+)";
+							Match submatch = Regex.Match(subgroup, subpattern, RegexOptions.IgnoreCase);
+							if(submatch.Success&&submatch.Groups.Count==4) {
+								int x= Int32.Parse(submatch.Groups[1].Value);
+								int y = Int32.Parse(submatch.Groups[2].Value);
+								int z = Int32.Parse(submatch.Groups[3].Value);
+								Vector3 addPosition=new Vector3((float)x*scale/100.0F, (float)y * scale / 100.0F, (float)z * scale / 100.0F);
+								SpawnPosition+=addPosition;
+								scale/=100.0F;
+							}
+						}
+						Debug.Log("Found MetaURL");
+						got_metaurl=true;
 					}
-                }
+				}
+				if (!got_metaurl)
+				{
+					var spawners=FindObjectsOfType<teleport.Spawner>();
+					if(spawners.Length>0)
+					{
+						var spawner= spawners[0];
+						// If the spawner fails, we can't initialize a session.
+						if (!spawner.Spawn(out SpawnPosition, out SpawnRotation))
+						{
+							Debug.LogError($"spawner.Spawn failed.");
+							return null;
+						}
+					}
+				}
 				GameObject player = Instantiate(Instance.defaultPlayerPrefab, SpawnPosition, SpawnRotation);
 				Teleport_Streamable rootStreamable=player.GetComponent<Teleport_Streamable>();
 				if(rootStreamable==null)
