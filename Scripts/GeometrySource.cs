@@ -265,7 +265,6 @@ namespace avs
 
 	public struct Texture
 	{
-		
 		public IntPtr name;
 		
 		public IntPtr path;
@@ -456,7 +455,7 @@ namespace teleport
 												string path, Int64 lastModified, avs.Material material);
 		[DllImport(TeleportServerDll.name)]
 		private static extern void StoreTexture(uid id, string guid,
-												string path, Int64 lastModified, avs.Texture texture, string compressedFilePath
+												string path, Int64 lastModified, avs.Texture texture
 												, [MarshalAs(UnmanagedType.I1)] bool genMips
 												, [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC
 												, [MarshalAs(UnmanagedType.I1)] bool forceOverwrite
@@ -788,7 +787,15 @@ namespace teleport
 			sessionResourceUids.TryGetValue(resource, out uid nodeID);
 			return nodeID;
 		}
-
+		public uid FindOrAddNodeID(UnityEngine.GameObject gameObject)
+		{
+			uid nodeID = geometrySource.AddNode(gameObject);
+			if (nodeID == 0)
+			{
+				nodeID=AddNode(gameObject);
+			}
+			return nodeID;
+		}
 		//Returns the ID of the resource if it has been processed, or zero if the resource has not been processed or was passed in null.
 		public uid[] FindResourceIDs(UnityEngine.Object[] resources)
 		{
@@ -952,7 +959,7 @@ namespace teleport
 					streamableProperties=gameObject.AddComponent<StreamableProperties>();
 				}
 			}
-			Teleport_Streamable teleport_Streamable = gameObject.GetComponent<Teleport_Streamable>();
+			teleport.StreamableRoot teleport_Streamable = gameObject.GetComponent<teleport.StreamableRoot>();
 			if (streamableProperties!=null&&streamableProperties.isStationary != gameObject.isStatic)
 				streamableProperties.isStationary = gameObject.isStatic;
 #endif
@@ -1261,7 +1268,7 @@ namespace teleport
 			else return "";
 			return compressedFilePath;
 		}
-	#if UNITY_EDITOR
+#if UNITY_EDITOR
 		private List<RenderTexture> renderTextures = new List<RenderTexture>();
 		public bool ExtractTextures(bool forceOverwrite)
 		{
@@ -1427,13 +1434,9 @@ namespace teleport
 				}
 				if (isNormal || textureImporter != null && textureImporter.GetDefaultPlatformTextureSettings().textureCompression == TextureImporterCompression.CompressedHQ)
 					highQualityUASTC = true;
-				//if (highQualityUASTC)
-				//	writePng = true;
+				if (highQualityUASTC)
+					writePng = true;
 				bool flipY=true;
-				if(writePng||isCubemap)
-				{
-					flipY=false;
-				}
 				int[] offsets = { 0, 0 };
 				if (flipY)
 				{
@@ -1457,7 +1460,6 @@ namespace teleport
 					UnityEngine.Debug.LogError("shader " + shaderName + " not found.");
 					continue;
 				}
-
 				// Here we will use a shader to extract from the source texture into the target which is readable.
 				// Unity stores all textures FLIPPED in the y direction. So the shader must handle re-flipping the images back to normal.
 				// But when unity encodes a png, it re-flips it. So we only do this reversal when the texture will be sent direct.
@@ -1599,68 +1601,22 @@ namespace teleport
 					}
 					textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
 					// Test: write to png. Only for observation/debugging.
-					if (pngCompatibleFormat)
+					if (pngCompatibleFormat&&highQualityUASTC)
+					{
+						writePng=true;
+						highQualityUASTC=false;
+					}
+					float valueScale = 1.0f;
+					textureData.valueScale = valueScale;
+					textureData.compressed=false;
 					if (writePng || highQualityUASTC)
 					{
-						// If it's png, let's have a uint16 here, N with the number of images, then a list of N size_t offsets. Each is a subresource image. Then image 0 starts.
-						float valueScale = 1.0f;
-						/*	if (hdr)
-							{
-								Unity.Collections.NativeArray<Vector4> pixels =	readTexture.GetPixelData<Vector4>(0);
-								float max_value = 0.0F;
-								foreach (var pix in pixels)
-								{
-									float mx=Math.Max(Math.Max(Math.Max(pix.x,pix.y),pix.z),pix.w);
-									max_value=Math.Max(mx,max_value);
-								}
-								if(max_value>1.0f)
-								{
-									for (int j=0;j< pixels.Length;j++)
-									{
-										pixels[j]/= max_value;
-									}
-									readTexture.SetPixelData<Vector4>(pixels,0);
-									valueScale=1.0f;
-								}
-							}*/
-						string pngFile = basisFile.Replace(".basis", $"_mip{j}_slice{i}.png");
-						if(arraySize>1)
-							pngFile=pngFile.Replace(".png","_"+i.ToString()+".png");
-						//File.WriteAllBytes(pngFile, subresourceImage.bytes);
-						/*
-						 * exr is way too big.
-						string exrFile = basisFile.Replace(".basis", ".exr");
-						byte[] exr_bytes = readTexture.EncodeToEXR();
-						File.WriteAllBytes(exrFile, exr_bytes);*/
-
 						// We will send the .png instead of a .basis file.
-						if (!writePng)
-						{
-							LaunchBasisUExe(pngFile);
-							// Intended for Basis compression. But passed uncompressed.
-							textureData.compressed=false;
-						}
-						else
-						{
-							subresourceImage.bytes = readTexture.EncodeToPNG();
-							textureData.compression = avs.TextureCompression.PNG;
-							// Already compressed as png
-							textureData.compressed=true;
-						}
-						textureData.valueScale = valueScale;
-						// copy the png into texture data.
+						textureData.compression = avs.TextureCompression.PNG;
 					}
 					else
 					{
 						textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
-						// Intended for Basis compression. But passed uncompressed.
-						textureData.compressed=false;
-						// what does the texture look like as a png? for debugging.
-						string pngFile = basisFile.Replace(".basis", $"_mip{j}_slice{i}_DEBUG.png");
-						if (arraySize > 1)
-							pngFile = pngFile.Replace(".png", "_" + i.ToString() + ".png");
-						var bytes = readTexture.EncodeToPNG();
-						File.WriteAllBytes(pngFile, bytes);
 					}
 					n++;
 					w = (w + 1) / 2;
@@ -1754,7 +1710,7 @@ namespace teleport
 				int exitCode = exeProcess.ExitCode;
 				if (exitCode != 0)
 				{
-					UnityEngine.Debug.LogError("Basis exit code " + exitCode);
+					UnityEngine.Debug.LogError("Basis failed for "+srcPng+", with exit code " + exitCode);
 					StreamWriter outputFile = new StreamWriter(srcPng + ".out");
 					outputFile.Write(output);
 					outputFile.Close();
@@ -1809,21 +1765,10 @@ namespace teleport
 			GetResourcePath(texture, out string resourcePath, false);
 #if UNITY_EDITOR
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(texture, out string guid);
-
 			string textureAssetPath = AssetDatabase.GetAssetPath(texture).Replace("Assets/","");
 			long lastModified = GetAssetWriteTimeUTC(textureAssetPath);
-
-			string compressedFilePath = "";
-			//Basis Universal compression won't be used if the file location is left empty.
-			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-			compressedFilePath = GenerateCompressedFilePath(textureAssetPath, textureData.compression);
-			if(compressedFilePath.Length==0)
-            {
-				Debug.LogError("Unable to compress texture "+texture.name);
-				return;
-            }
 			bool genMips=false;
-			StoreTexture(textureID, guid, resourcePath, lastModified, textureData, compressedFilePath,  genMips, highQualityUASTC, forceOverwrite);
+			StoreTexture(textureID, guid, resourcePath, lastModified, textureData,  genMips, highQualityUASTC, forceOverwrite);
 #endif
 		}
 
@@ -2086,7 +2031,8 @@ namespace teleport
 			}
 			if (mesh == null)
 			{
-				Debug.LogError($"Failed GeometrySource.ExtractNodeMeshData for GameObject \"{gameObject.name}\"!");
+				// This is ok, there might be no mesh at all.
+				//Debug.LogError($"Failed GeometrySource.ExtractNodeMeshData for GameObject \"{gameObject.name}\"!");
 				return false;
 			}
 			extractTo.dataID = AddMesh(mesh, forceMask, verify);

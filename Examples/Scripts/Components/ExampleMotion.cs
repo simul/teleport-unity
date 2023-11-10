@@ -91,7 +91,7 @@ public class ExampleMotion : MonoBehaviour
 		{
 			transform.SetPositionAndRotation(circle.transform.position, transform.rotation);
 		}
-		teleport.Teleport_Streamable streamable = GetComponent<teleport.Teleport_Streamable>();
+		teleport.StreamableRoot streamable = GetComponent<teleport.StreamableRoot>();
 		if (streamable)
         {
 			streamable.ResetVelocityTracking();
@@ -117,10 +117,10 @@ public class ExampleMotion : MonoBehaviour
 			circle = Instantiate<GameObject>(targetCirclePrefab);
 			teleport.GeometrySource.GetGeometrySource().AddNode(arc);
 			teleport.GeometrySource.GetGeometrySource().AddNode(circle);
-			circle.AddComponent<teleport.Teleport_Streamable>();
-			// having created new objects, they won't actually be streamed unless we notify the Teleport_Streamable
+			circle.AddComponent<teleport.StreamableRoot>();
+			// having created new objects, they won't actually be streamed unless we notify the teleport.StreamableRoot
 			// that manages the hierarchy they're in. Therefore:
-			var streamable=GetComponent<teleport.Teleport_Streamable>();
+			var streamable=GetComponent<teleport.StreamableRoot>();
 			if(streamable)
             {
 				streamable.UpdateHierarchy();

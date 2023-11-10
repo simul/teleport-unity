@@ -16,7 +16,7 @@ namespace teleport
 		void Start()
 		{
 			Transform t=transform;
-			while(t!=null&&t.GetComponent<Teleport_Streamable>()==null)
+			while(t!=null&&t.GetComponent<teleport.StreamableRoot>()==null)
 				t= t.parent;
 			topParent=t.gameObject;
 			TeleportSettings settings=TeleportSettings.GetOrCreateSettings();
@@ -72,7 +72,7 @@ namespace teleport
 				return;
 			Transform t = dropGrabbableHere.transform;
 			// Either parent from a streamable, or null.
-			while (t != null && t.GetComponent<Teleport_Streamable>() == null)
+			while (t != null && t.GetComponent<teleport.StreamableRoot>() == null)
 				t = t.parent;
 			Debug.Log("Dropped " + topParent);
 			Teleport_SessionComponent session = input.gameObject.GetComponent<Teleport_SessionComponent>();

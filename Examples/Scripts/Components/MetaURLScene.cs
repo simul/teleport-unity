@@ -22,7 +22,6 @@ public class MetaURLScene : MonoBehaviour
 		MetaURLScene[] metaURLScenes = GameObject.FindObjectsOfType<MetaURLScene>();
 		if (metaURLScenes.Length == 0)
 		{
-			UnityEngine.Debug.LogError("No MetaURLScene found, add precisely one to an object in the scene.");
 			return null;
 		}
 		if (metaURLScenes.Length > 1)

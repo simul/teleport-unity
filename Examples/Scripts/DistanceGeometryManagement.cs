@@ -9,9 +9,9 @@ using static teleport.DistanceGeometryManagement;
 
 namespace teleport
 {
-	class XComparer : IComparer<Teleport_Streamable>
+	class XComparer : IComparer<teleport.StreamableRoot>
 	{
-		public int Compare(Teleport_Streamable a, Teleport_Streamable b)
+		public int Compare(teleport.StreamableRoot a, teleport.StreamableRoot b)
 		{
 			if (a == null || b == null)
 				return 0;
@@ -22,9 +22,9 @@ namespace teleport
 			return 0;
 		}
 	}
-	class YComparer : IComparer<Teleport_Streamable>
+	class YComparer : IComparer<teleport.StreamableRoot>
 	{
-		public int Compare(Teleport_Streamable a, Teleport_Streamable b)
+		public int Compare(teleport.StreamableRoot a, teleport.StreamableRoot b)
 		{
 			if (a == null || b == null)
 				return 0;
@@ -35,9 +35,9 @@ namespace teleport
 			return 0;
 		}
 	}
-	class ZComparer : IComparer<Teleport_Streamable>
+	class ZComparer : IComparer<teleport.StreamableRoot>
 	{
-		public int Compare(Teleport_Streamable a, Teleport_Streamable b)
+		public int Compare(teleport.StreamableRoot a, teleport.StreamableRoot b)
 		{
 			if (a == null || b == null)
 				return 0;
@@ -53,18 +53,18 @@ namespace teleport
 	{
 		public class TrackedBounds
 		{
-			public TrackedBounds(Teleport_Streamable str, bool lwr)
+			public TrackedBounds(teleport.StreamableRoot str, bool lwr)
 			{
 				streamable=str;
 				lower_bounds=lwr;
 			}
-			public Teleport_Streamable streamable;
+			public teleport.StreamableRoot streamable;
 			public bool lower_bounds;
 		}
-		// Keep six ordered lists of all the Teleport_Streamables.
+		// Keep six ordered lists of all the teleport.StreamableRoots.
 		// Each list represents the + or - extent of the given object (treating it as a sphere with a certain size).
 		// for now, we consider all the objects to have fixed size 2 metres.
-		static List<Teleport_Streamable> all_streamables = new List<Teleport_Streamable>();
+		static List<teleport.StreamableRoot> all_streamables = new List<teleport.StreamableRoot>();
 		static List<TrackedBounds> X_bounds = new List<TrackedBounds>();
 		static List<TrackedBounds> Y_bounds = new List<TrackedBounds>();
 		static List<TrackedBounds> Z_bounds = new List<TrackedBounds>();
@@ -75,7 +75,7 @@ namespace teleport
 		public void Start()
 		{
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
-			Teleport_Streamable[] streamables = FindObjectsByType<Teleport_Streamable>(FindObjectsSortMode.None);
+			teleport.StreamableRoot[] streamables = FindObjectsByType<teleport.StreamableRoot>(FindObjectsSortMode.None);
 			all_streamables=streamables.ToList();
 			foreach(var streamable in streamables)
 			{
@@ -111,7 +111,7 @@ namespace teleport
 			}
 			return pos;
 		}
-		public static Vector3 Max(Teleport_Streamable streamable)
+		public static Vector3 Max(teleport.StreamableRoot streamable)
 		{
 			Collider coll = streamable.GetComponent<Collider>();
 			Vector3 pos = streamable.transform.position;
@@ -156,12 +156,12 @@ namespace teleport
 				return Comparer<float>.Default.Compare(A, B);
 			});
 		}
-		HashSet<Teleport_Streamable> innerStreamables = new HashSet<Teleport_Streamable>();
-		HashSet<Teleport_Streamable> outerStreamables = new HashSet<Teleport_Streamable>();
+		HashSet<teleport.StreamableRoot> innerStreamables = new HashSet<teleport.StreamableRoot>();
+		HashSet<teleport.StreamableRoot> outerStreamables = new HashSet<teleport.StreamableRoot>();
 		int inner_overlap_count = 0;
 		//int outer_overlap_count = 0;
 		// Update is called once per frame
-		public void UpdateStreamedGeometry(Teleport_SessionComponent session,ref List<Teleport_Streamable> gainedStreamables,ref List<Teleport_Streamable> lostStreamables)
+		public void UpdateStreamedGeometry(Teleport_SessionComponent session,ref List<teleport.StreamableRoot> gainedStreamables,ref List<teleport.StreamableRoot> lostStreamables)
 		{
 			if (!session.IsConnected())
 				return;

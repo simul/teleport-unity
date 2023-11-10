@@ -3,7 +3,7 @@ using UnityEditor;
 
 namespace teleport
 {
-	public class Teleport_StreamableGizmo : MonoBehaviour
+	public class teleport.StreamableRootGizmo : MonoBehaviour
 	{
 		static UnityEngine.Mesh cylinder;
 		static UnityEngine.Mesh sphere;
@@ -15,14 +15,14 @@ namespace teleport
 			GameObject.DestroyImmediate(go);
 			return mesh;
 		}
-		static Teleport_StreamableGizmo()
+		static teleport.StreamableRootGizmo()
 		{
 			cylinder = GetPrimitive(PrimitiveType.Cylinder);
 			sphere = GetPrimitive(PrimitiveType.Sphere);
 			cube = GetPrimitive(PrimitiveType.Cube);
 		}
 		[DrawGizmo(GizmoType.Selected )]
-		static void DrawStreamable(Teleport_Streamable Streamable, GizmoType gizmoType)
+		static void DrawStreamable(teleport.StreamableRoot Streamable, GizmoType gizmoType)
 		{
 			Gizmos.color = new Color(0.2f, 0.3f, 1.0f);
 			Camera camera = Streamable.gameObject.GetComponent<Camera>();

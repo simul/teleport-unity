@@ -361,7 +361,6 @@ namespace teleport
 
 		private bool resetOrigin = true;
 
-		private Vector3 last_sent_origin = new Vector3(0, 0, 0);
 		private Vector3 last_received_origin = new Vector3(0, 0, 0);
 		private Vector3 last_received_headPos = new Vector3(0, 0, 0);
 
@@ -371,26 +370,26 @@ namespace teleport
 		private void Awake()
 		{
 			// Stream the clientspace root, but player does NOT own this:
-
+			_clientspaceRoot = GetSingleComponentFromChildren<Teleport_ClientspaceRoot>();
 			if (_clientspaceRoot)
 			{
-				Teleport_Streamable streamableComponent = _clientspaceRoot.gameObject.GetComponent<Teleport_Streamable>();
+				teleport.StreamableRoot streamableComponent = _clientspaceRoot.gameObject.GetComponent<teleport.StreamableRoot>();
 				if (!streamableComponent)
 				{
-					streamableComponent = _clientspaceRoot.gameObject.AddComponent<Teleport_Streamable>();
+					streamableComponent = _clientspaceRoot.gameObject.AddComponent<teleport.StreamableRoot>();
 				}
 				streamableComponent.sendMovementUpdates = true;
 			}
-			//Add Teleport_Streamable component to all player body parts.
+			//Add teleport.StreamableRoot component to all player body parts.
 			List<GameObject> playerBodyParts = GetPlayerBodyParts();
 			foreach (GameObject bodyPart in playerBodyParts)
 			{
 				if(_clientspaceRoot!=null&&bodyPart == _clientspaceRoot.gameObject)
 					continue;
-				Teleport_Streamable streamableComponent = bodyPart.GetComponent<Teleport_Streamable>();
+				teleport.StreamableRoot streamableComponent = bodyPart.GetComponent<teleport.StreamableRoot>();
 				if (!streamableComponent)
 				{
-					streamableComponent = bodyPart.AddComponent<Teleport_Streamable>();
+					streamableComponent = bodyPart.AddComponent<teleport.StreamableRoot>();
 				}
 
 				//We want the client to control the client-side transform of the body parts for reduced latency.
@@ -423,7 +422,7 @@ namespace teleport
 				GameObject gameObject= (GameObject)GeometrySource.GetGeometrySource().FindResource(uid);
 				if (gameObject != null)
 				{
-					Teleport_Streamable teleport_Streamable = gameObject.GetComponent<Teleport_Streamable>();
+					teleport.StreamableRoot teleport_Streamable = gameObject.GetComponent<teleport.StreamableRoot>();
 					teleport_Streamable.OwnerClient=0;
 				}
 			}
@@ -497,7 +496,7 @@ namespace teleport
 		{
 			_input.ProcessInputEvents(binaryEvents, analogueEvents, motionEvents);
 		}
-
+		static bool setPoseFailed=false;
 		public void SetControllerPose(uid id, Quaternion newRotation, Vector3 newPosition, Vector3 velocity, Vector3 angularVelocity)
 		{
 			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
@@ -507,20 +506,24 @@ namespace teleport
 			}
 			if(!controlledGameObject)
 				return;
-			var streamable= controlledGameObject.GetComponentInParent<Teleport_Streamable>();
+			var streamable= controlledGameObject.GetComponentInParent<teleport.StreamableRoot>();
 			if (!streamable)
 			{
-				Debug.LogError("Trying to set pose of controlled object "+id+", "+ controlledGameObject.name+" that has no Teleport_Streamable.");
+				if (!setPoseFailed)
+					Debug.LogError("Trying to set pose of controlled object " + id + ", " + controlledGameObject.name + " that has no teleport.StreamableRoot.");
+				setPoseFailed =true;
 				return;
 			}
 			if (streamable.OwnerClient != clientID)
 			{
-				Debug.LogError("Trying to set pose of controlled object " + id + ", " + controlledGameObject.name + " whose owner client " + streamable.OwnerClient+" is not the client ID "+clientID.ToString()+".");
+				if(!setPoseFailed)
+					Debug.LogError("Trying to set pose of controlled object " + id + ", " + controlledGameObject.name + " whose owner client " + streamable.OwnerClient + " is not the client ID " + clientID.ToString() + ".");
+				setPoseFailed = true;
 				return;
 			}
 			controlledGameObject.transform.localPosition=newPosition;
 			controlledGameObject.transform.localRotation=newRotation;
-			StreamedNode node=streamable.GetStreamedNode(controlledGameObject);
+			teleport.StreamableNode node=streamable.GetStreamedNode(controlledGameObject);
 			if(node != null) { 
 				node.stageSpaceVelocity=velocity;
 				node.stageSpaceAngularVelocity=angularVelocity;
@@ -651,7 +654,7 @@ namespace teleport
 				Client_GetClientVideoEncoderStats(clientID, ref videoEncoderStats);
 			}
 
-			if (teleportSettings.serverSettings.isStreamingGeometry)
+			if (teleportSettings!=null&&teleportSettings.serverSettings.isStreamingGeometry)
 			{
 				if (geometryStreamingService != null)
 				{
@@ -686,8 +689,8 @@ namespace teleport
 				{
 					geometryStreamingService.SetNodePosePath(controller.gameObject,controller.poseRegexPath);
 				}
-				Teleport_Streamable[] streamables = controller.gameObject.GetComponentsInChildren<Teleport_Streamable>();
-				foreach (Teleport_Streamable streamable in streamables)
+				teleport.StreamableRoot[] streamables = controller.gameObject.GetComponentsInChildren<teleport.StreamableRoot>();
+				foreach (teleport.StreamableRoot streamable in streamables)
 				{
 					streamable.sendMovementUpdates = false;
 				}
@@ -831,7 +834,7 @@ namespace teleport
 			uid origin_uid =0;
 			if (_clientspaceRoot != null)
 			{
-				Teleport_Streamable streamable =_clientspaceRoot.gameObject.GetComponent<Teleport_Streamable>();
+				teleport.StreamableRoot streamable =_clientspaceRoot.gameObject.GetComponent<teleport.StreamableRoot>();
 				if(streamable!=null)
 				{
 					origin_uid = streamable.GetUid();
@@ -843,11 +846,10 @@ namespace teleport
 			{
 				if (_head != null && _clientspaceRoot != null)
 				{
-					if (!Client_HasOrigin(clientID) || resetOrigin || _clientspaceRoot.transform.hasChanged)
+					if (!Client_HasOrigin(clientID) || resetOrigin )//|| _clientspaceRoot.transform.hasChanged)
 					{
 						if (Client_SetOrigin(clientID,  origin_uid))
 						{
-							last_sent_origin = _clientspaceRoot.transform.position;
 							_clientspaceRoot.transform.hasChanged = false;
 							resetOrigin = false;
 						}
@@ -878,11 +880,15 @@ namespace teleport
 		public List<GameObject> GetPlayerBodyParts()
 		{
 			List<GameObject> bodyParts = new List<GameObject>();
+		/*	var r = GetComponentsInChildren<Teleport_ClientspaceRoot>();
+			foreach (var o in r)
+			{
+				bodyParts.Add(o.gameObject);
+			}*/
 			var c=GetComponentsInChildren<Teleport_Controller>();
 			foreach (var o in c)
 			{
-				if(o.gameObject.GetComponent<Teleport_Streamable>()!=null)
-					bodyParts.Add(o.gameObject);
+				bodyParts.Add(o.gameObject);
 			}
 			return bodyParts;
 		}

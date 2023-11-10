@@ -8,7 +8,7 @@
 #pragma kernel ConvertRoughnessMetallicGreenBlueGamma
 
 #include "UnityCG.cginc"
-
+ 
 float4 GammaToLinearSpaceExact (float4 value)
 {
 	return float4(GammaToLinearSpaceExact(value.x),GammaToLinearSpaceExact(value.y),GammaToLinearSpaceExact(value.z),GammaToLinearSpaceExact(value.w));
@@ -49,7 +49,8 @@ void ExtractTextureGamma(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void ExtractNormalMapLinear(uint3 id : SV_DispatchThreadID)
 {
-	float4 src = Source.Load(int3(id.xy * Scale,Mip));
+	int2 pos = int2(Offset + id.xy * Scale);
+	float4 src = Source.Load(int3(pos,Mip));
 	float3 unpackedNormal = UnpackNormalDXT5nm(src);
 	unpackedNormal=unpackedNormal * 0.5 + 0.5;
 	Result[id.xy] = float4(unpackedNormal, unpackedNormal.r);
@@ -58,7 +59,8 @@ void ExtractNormalMapLinear(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void ExtractNormalMapGamma(uint3 id : SV_DispatchThreadID)
 {
-	float4 src				= Source.Load(int3(id.xy * Scale,Mip));
+	int2 pos = int2(Offset + id.xy * Scale);
+	float4 src				= Source.Load(int3(pos,Mip));
 	float3 unpackedNormal	= UnpackNormalDXT5nm(src);
 	unpackedNormal			= unpackedNormal * 0.5 + 0.5;
 	Result[id.xy]			= float4(unpackedNormal, unpackedNormal.r);
@@ -94,7 +96,7 @@ float4 FromCubemap(int2 pos)
 [numthreads(8, 8, 1)]
 void ExtractCubeFaceLinear(uint3 id : SV_DispatchThreadID)
 {
-	int2 pos=int2(id.xy);
+	int2 pos=int2(Offset + id.xy * Scale); 
 	float4 colour	= FromCubemap(pos);
 	float4 res = saturate(colour);
 	Result[id.xy] = res;
@@ -104,7 +106,8 @@ void ExtractCubeFaceLinear(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void ExtractCubeFaceGamma(uint3 id : SV_DispatchThreadID)
 {
-	float4 colour	= FromCubemap(int2(id.xy));
+	int2 pos = int2(Offset + id.xy * Scale);
+	float4 colour	= FromCubemap(pos);
 	//float4 src = SourceArray[int3(id.xy * Scale,ArrayIndex)];
 	Result[id.xy].rgba = GammaToLinearSpaceExact(colour);
 }

@@ -12,9 +12,9 @@ namespace teleport
 	public class GeometryStreamingService
 	{
 		#region DLLImports
-		#if WIN32
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
 		const string dllName="TeleportServer";
-		#else
+#else
 		const string dllName="TeleportServer.so";
 		#endif
 		[DllImport(TeleportServerDll.name)]
@@ -59,7 +59,7 @@ namespace teleport
 
 		private List<Collider> streamedColliders = new List<Collider>();
 		private List<GameObject> streamedGameObjects = new List<GameObject>();
-		private List<Teleport_Streamable> streamedHierarchies = new List<Teleport_Streamable>();
+		private List<teleport.StreamableRoot> streamedHierarchies = new List<teleport.StreamableRoot>();
 		/// <summary>
 		///  Lights that are streamed to the client.
 		/// </summary>
@@ -109,7 +109,7 @@ namespace teleport
 
 		public void RemoveAllNodes()
 		{
-			foreach(Teleport_Streamable streamableComponent in streamedHierarchies)
+			foreach(teleport.StreamableRoot streamableComponent in streamedHierarchies)
 			{
 				streamableComponent.RemoveStreamingClient(session);
 				Client_RemoveNodeByID(session.GetClientID(), streamableComponent.GetUid());
@@ -158,10 +158,10 @@ namespace teleport
 				}
 				else
 				{
-					var streamable = light.gameObject.GetComponentInParent<Teleport_Streamable>();
+					var streamable = light.gameObject.GetComponentInParent<teleport.StreamableRoot>();
 					if (!streamable)
 					{
-						streamable=light.gameObject.AddComponent<Teleport_Streamable>();
+						streamable=light.gameObject.AddComponent<teleport.StreamableRoot>();
 					}
 					if (!streamedGameObjects.Contains(streamable.gameObject))
 					{
@@ -197,7 +197,7 @@ namespace teleport
 						streamedLights.Remove(u.Key);
 						if (u.Value != null)
 						{
-							var streamable = u.Value.GetComponentInParent<Teleport_Streamable>();
+							var streamable = u.Value.GetComponentInParent<teleport.StreamableRoot>();
 							if (streamable != null)
 							{
 								StopStreaming(streamable, 4);
@@ -267,17 +267,17 @@ namespace teleport
 			List<GameObject> bodyParts = session.GetPlayerBodyParts();
 			foreach(GameObject part in bodyParts)
 			{
-				Teleport_Streamable streamable = part.GetComponent<Teleport_Streamable>();
+				teleport.StreamableRoot streamable = part.GetComponent<teleport.StreamableRoot>();
 				streamable.OwnerClient=session.GetClientID();
 				StartStreaming(streamable, 2);
 			}
-			Teleport_Streamable session_streamable = session.GetComponent<Teleport_Streamable>();
+			teleport.StreamableRoot session_streamable = session.GetComponentInChildren<Teleport_ClientspaceRoot>().GetComponent<teleport.StreamableRoot>();
 			StartStreaming(session_streamable, 2);
 		}
 
 		public void SendAnimationState()
 		{
-			foreach(Teleport_Streamable streamable in streamedHierarchies)
+			foreach(teleport.StreamableRoot streamable in streamedHierarchies)
 			{
 				streamable.SendAnimationState(session.GetClientID());
 			}
@@ -299,7 +299,8 @@ namespace teleport
 
 		public void SetNodePosePath(GameObject gameObject, string regexPosePath)
 		{
-			uid nodeID = GeometrySource.GetGeometrySource().FindResourceID(gameObject);
+			GeometrySource geometrySource=GeometrySource.GetGeometrySource();
+			uid nodeID = geometrySource.FindOrAddNodeID(gameObject);
 			if (nodeID == 0)
 			{
 				Debug.LogError("Node id not found for "+gameObject.name);
@@ -337,14 +338,14 @@ namespace teleport
 		}
 		Collider[] innerOverlappingColliders=new Collider[10];
 		Collider[] outerOverlappingColliders = new Collider[10];
-		HashSet<Teleport_Streamable> innerStreamables = new HashSet<Teleport_Streamable>();
-		HashSet<Teleport_Streamable> outerStreamables = new HashSet<Teleport_Streamable>();
+		HashSet<teleport.StreamableRoot> innerStreamables = new HashSet<teleport.StreamableRoot>();
+		HashSet<teleport.StreamableRoot> outerStreamables = new HashSet<teleport.StreamableRoot>();
 		int inner_overlap_count=0;
 		int outer_overlap_count = 0;
 		public void UpdateGeometryStreaming()
 		{
-			List<Teleport_Streamable> gainedStreamables = new List<Teleport_Streamable>();
-			List<Teleport_Streamable> lostStreamables = new List<Teleport_Streamable>();
+			List<teleport.StreamableRoot> gainedStreamables = new List<teleport.StreamableRoot>();
+			List<teleport.StreamableRoot> lostStreamables = new List<teleport.StreamableRoot>();
 			if (streamedGeometryManagement!=null)
 				streamedGeometryManagement.UpdateStreamedGeometry(session,ref gainedStreamables,ref lostStreamables);
 			else
@@ -385,7 +386,7 @@ namespace teleport
 							continue;
 						if (!innerOverlappingColliders[i].enabled)
 							continue;
-						var streamable=g.GetComponentInParent<Teleport_Streamable>();
+						var streamable=g.GetComponentInParent<teleport.StreamableRoot>();
 						if(!streamable)
 							continue;
 						if(innerStreamables.Contains(streamable))
@@ -393,7 +394,7 @@ namespace teleport
 						innerStreamables.Add(streamable);
 						gainedStreamables.Add(streamable);
 					}
-					HashSet<Teleport_Streamable> keptOuterStreamables = new HashSet<Teleport_Streamable>();
+					HashSet<teleport.StreamableRoot> keptOuterStreamables = new HashSet<teleport.StreamableRoot>();
 					for (int i = 0; i < outer_overlap_count; i++)
 					{
 						GameObject g = outerOverlappingColliders[i].gameObject;
@@ -401,7 +402,7 @@ namespace teleport
 							continue;
 						if (!outerOverlappingColliders[i].enabled)
 							continue;
-						var streamable = g.GetComponentInParent<Teleport_Streamable>();
+						var streamable = g.GetComponentInParent<teleport.StreamableRoot>();
 						if (!streamable)
 							continue;
 						if (outerStreamables.Contains(streamable))
@@ -446,16 +447,18 @@ namespace teleport
 			public UInt32 streaming_reason = 0;
 		}
 
-		Dictionary<Teleport_Streamable,ClientStreamableTracking> clientStreamableTracking=new Dictionary<Teleport_Streamable, ClientStreamableTracking>();
-		public void StreamableHasChanged(Teleport_Streamable streamable)
+		Dictionary<teleport.StreamableRoot,ClientStreamableTracking> clientStreamableTracking=new Dictionary<teleport.StreamableRoot, ClientStreamableTracking>();
+		public void StreamableHasChanged(teleport.StreamableRoot streamable)
 		{
 			if (!streamedGameObjects.Contains(streamable.gameObject))
 				return;
 			SendHierarchyToClient(streamable);
 		}
         // Start streaming the given streamable gameObject and its hierarchy.
-        private bool StartStreaming(Teleport_Streamable streamable, UInt32 streaming_reason)
+        private bool StartStreaming(teleport.StreamableRoot streamable, UInt32 streaming_reason)
         {
+			if(!streamable)
+				return false;
             GameObject gameObject = streamable.gameObject;
             ClientStreamableTracking tracking = GetTracking(streamable);
             if (streamedGameObjects.Contains(gameObject))
@@ -475,10 +478,10 @@ namespace teleport
             streamedHierarchies.Add(streamable);
             return SendHierarchyToClient(streamable);
 		}
-		bool SendHierarchyToClient(Teleport_Streamable streamable)
+		bool SendHierarchyToClient(teleport.StreamableRoot streamable)
 		{
-			//Stream Teleport_Streamable's hierarchy.
-			foreach(StreamedNode streamedNode in streamable.streamedHierarchy)
+			//Stream teleport.StreamableRoot's hierarchy.
+			foreach(teleport.StreamableNode streamedNode in streamable.GetStreamableNodes())
 			{
 				if(streamedGameObjects.Contains(streamedNode.gameObject))
 				{
@@ -503,7 +506,7 @@ namespace teleport
 
 			return true;
 		}
-		private ClientStreamableTracking GetTracking(Teleport_Streamable streamable)
+		private ClientStreamableTracking GetTracking(teleport.StreamableRoot streamable)
 		{
 			ClientStreamableTracking outTracking;
 			if (clientStreamableTracking.TryGetValue(streamable,out outTracking))
@@ -512,7 +515,7 @@ namespace teleport
 			clientStreamableTracking.Add(streamable,t);
 			return t;
 		}
-		public bool StopStreaming(Teleport_Streamable streamable, UInt32 streaming_reason)
+		public bool StopStreaming(teleport.StreamableRoot streamable, UInt32 streaming_reason)
 		{
 			ClientStreamableTracking tracking = GetTracking(streamable);
 			tracking.streaming_reason &= ~streaming_reason;
@@ -525,7 +528,7 @@ namespace teleport
 			streamedHierarchies.Remove(streamable);
 
 			//Stop streaming hierarchy.
-			foreach(StreamedNode streamedNode in streamable.streamedHierarchy)
+			foreach(teleport.StreamableNode streamedNode in streamable.GetStreamableNodes())
 			{
 				streamedGameObjects.Remove(streamedNode);
 				Client_RemoveNodeByID(session.GetClientID(), streamedNode.nodeID);
@@ -547,7 +550,7 @@ namespace teleport
 			var geometrySource=GeometrySource.GetGeometrySource();
 			for (int i = streamedHierarchies.Count - 1; i >= 0; i--)
 			{
-				Teleport_Streamable streamable = streamedHierarchies[i];
+				teleport.StreamableRoot streamable = streamedHierarchies[i];
 				if (!geometrySource.IsGameObjectMarkedForStreaming(streamable.gameObject))
 				{
 					ClientStreamableTracking tracking = GetTracking(streamable);
@@ -565,7 +568,7 @@ namespace teleport
 			List<avs.MovementUpdate> updates = new List<avs.MovementUpdate>();
 			got_uids.Clear();
 
-            foreach (Teleport_Streamable streamable in streamedHierarchies)
+            foreach (teleport.StreamableRoot streamable in streamedHierarchies)
 			{
 				var add_list = streamable.GetMovementUpdates(session.GetClientID());
 				foreach (var add in add_list)
@@ -579,13 +582,23 @@ namespace teleport
 
 			Client_UpdateNodeMovement(session.GetClientID(), updates.ToArray(), updates.Count);
 		}
+		/// <summary>
+		/// Per-client data for streamed root nodes.
+		/// </summary>
+		class StreamedRootPerClient
+		{
+			public double lastEnabledCheckTime=0.0;
+		};
+		Dictionary<teleport.StreamableRoot,StreamedRootPerClient> streamedRoots=new Dictionary<teleport.StreamableRoot, StreamedRootPerClient>();
 
 		private void SendEnabledStateUpdates()
 		{
 			List<avs.NodeUpdateEnabledState> updates = new List<avs.NodeUpdateEnabledState>();
-			foreach(Teleport_Streamable streamable in streamedHierarchies)
+			foreach(teleport.StreamableRoot streamable in streamedHierarchies)
 			{
-				updates.AddRange(streamable.GetEnabledStateUpdates());
+				List<avs.NodeUpdateEnabledState> streamable_states = new List<avs.NodeUpdateEnabledState>();
+				streamable.GetEnabledStateUpdates(0, ref streamable_states);
+				updates.AddRange(streamable_states);
 			}
 
 			//Don't send an update command, if there were no updates.
@@ -597,7 +610,7 @@ namespace teleport
 			Client_UpdateNodeEnabledState(session.GetClientID(), updates.ToArray(), updates.Count);
 		}
 
-		public List<Teleport_Streamable> GetCurrentStreamables()
+		public List<teleport.StreamableRoot> GetCurrentStreamables()
 		{
 			return streamedHierarchies;
 		}

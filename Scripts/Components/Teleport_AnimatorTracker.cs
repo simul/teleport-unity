@@ -17,8 +17,8 @@ namespace teleport
 
 		#endregion //DllImport
 
-		//Teleport_Streamable that is the root of the hierarchy this GameObject with an Animator component is on.
-		public Teleport_Streamable hierarchyRoot;
+		//teleport.StreamableRoot that is the root of the hierarchy this GameObject with an Animator component is on.
+		public teleport.StreamableRoot hierarchyRoot;
 
 		private Animator animator;
 		private Transform skeletonRootTransform;
@@ -66,6 +66,8 @@ namespace teleport
 
 		private void Update()
 		{
+			if(hierarchyRoot== null||animator==null)
+				return;
 			if (hierarchyRoot.pollCurrentAnimation&& animator.runtimeAnimatorController!=null)
 			{
 				AnimatorClipInfo[] animatorClips = animator.GetCurrentAnimatorClipInfo(0);

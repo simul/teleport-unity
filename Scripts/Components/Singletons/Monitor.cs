@@ -13,7 +13,7 @@ namespace teleport
 {
 	public interface IStreamedGeometryManagement
 	{
-		public void UpdateStreamedGeometry(Teleport_SessionComponent session, ref List<Teleport_Streamable> gainedStreamables, ref List<Teleport_Streamable> lostStreamables);
+		public void UpdateStreamedGeometry(Teleport_SessionComponent session, ref List<teleport.StreamableRoot> gainedStreamables, ref List<teleport.StreamableRoot> lostStreamables);
 	}
 
 	public struct SessionState
@@ -370,7 +370,9 @@ namespace teleport
 				// Setting active to false on game obect does not disable audio listener or capture component
 				// so they must be disabled directly.
 				audioCapture.enabled = false;
-				audioCapture.GetComponent<AudioListener>().enabled = false;
+				var audioListener=audioCapture.GetComponent<AudioListener>();
+				if(audioListener)
+					audioListener.enabled = false;
 			}
 		}
 
@@ -441,15 +443,15 @@ namespace teleport
 				SetRenderingLayerMask(gameObject, invStreamedMask);
 			}
 
-			//Add the Teleport_Streamable component to all root streamable objects.
+			//Add the teleport.StreamableRoot component to all root streamable objects.
 			// Don't add to objects that have a streamable parent!
 			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects(scene);
 			foreach(GameObject gameObject in teleportStreamableObjects)
 			{
-				//Objects with collision will have a Teleport_Streamable component added, as they can be streamed as root objects.
-				if(gameObject.GetComponent<Collider>() != null && gameObject.GetComponentInParent<Teleport_Streamable>() == null)
+				//Objects with collision will have a teleport.StreamableRoot component added, as they can be streamed as root objects.
+				if(gameObject.GetComponent<Collider>() != null && gameObject.GetComponentInParent<teleport.StreamableRoot>() == null)
 				{
-					gameObject.AddComponent<Teleport_Streamable>();
+					gameObject.AddComponent<teleport.StreamableRoot>();
 				}
 			}
 
@@ -664,30 +666,37 @@ namespace teleport
 					return null;
 				}
 				Vector3 SpawnPosition = new Vector3(0, 0, 0);
-				MetaURLScene metaURLScene = MetaURLScene.GetInstance();
 				Quaternion SpawnRotation=Quaternion.identity;
 				bool got_metaurl=false;
-				if (path.Length>0&& metaURLScene!=null)
+				if (path.Length>0)
 				{
-					SpawnPosition= metaURLScene.origin;
 					//string pattern  = @"\?meta_url=/(-?\d+(\.\d+){2,3}/)+$";
 					string pattern = @"meta_url=(\d+\,\d+\,\d+)(/\d+\,\d+\,\d+)+";// (\.\d+){2}  (/\d+(\.\d+){2})+";
 					Match m = Regex.Match(path, pattern, RegexOptions.IgnoreCase);
 					if (m.Success)
 					{
-						float scale= metaURLScene.scaleMetres;
-						for (int i=1;i<m.Groups.Count;i++)
+						MetaURLScene metaURLScene = MetaURLScene.GetInstance();
+						if (metaURLScene == null)
 						{
-							string subgroup=m.Groups[i].Value;
-							string subpattern = @"(\d+),(\d+),(\d+)";
-							Match submatch = Regex.Match(subgroup, subpattern, RegexOptions.IgnoreCase);
-							if(submatch.Success&&submatch.Groups.Count==4) {
-								int x= Int32.Parse(submatch.Groups[1].Value);
-								int y = Int32.Parse(submatch.Groups[2].Value);
-								int z = Int32.Parse(submatch.Groups[3].Value);
-								Vector3 addPosition=new Vector3((float)x*scale/100.0F, (float)y * scale / 100.0F, (float)z * scale / 100.0F);
-								SpawnPosition+=addPosition;
-								scale/=100.0F;
+							UnityEngine.Debug.LogError("No MetaURLScene found, but meta_url was specified in the URL.");
+						}
+						else
+						{
+							SpawnPosition = metaURLScene.origin;
+							float scale= metaURLScene.scaleMetres;
+							for (int i=1;i<m.Groups.Count;i++)
+							{
+								string subgroup=m.Groups[i].Value;
+								string subpattern = @"(\d+),(\d+),(\d+)";
+								Match submatch = Regex.Match(subgroup, subpattern, RegexOptions.IgnoreCase);
+								if(submatch.Success&&submatch.Groups.Count==4) {
+									int x= Int32.Parse(submatch.Groups[1].Value);
+									int y = Int32.Parse(submatch.Groups[2].Value);
+									int z = Int32.Parse(submatch.Groups[3].Value);
+									Vector3 addPosition=new Vector3((float)x*scale/100.0F, (float)y * scale / 100.0F, (float)z * scale / 100.0F);
+									SpawnPosition+=addPosition;
+									scale/=100.0F;
+								}
 							}
 						}
 						Debug.Log("Found MetaURL");
@@ -709,9 +718,9 @@ namespace teleport
 					}
 				}
 				GameObject player = Instantiate(Instance.defaultPlayerPrefab, SpawnPosition, SpawnRotation);
-				Teleport_Streamable rootStreamable=player.GetComponent<Teleport_Streamable>();
+				teleport.StreamableRoot rootStreamable=player.GetComponent<teleport.StreamableRoot>();
 				if(rootStreamable==null)
-					rootStreamable=player.AddComponent<Teleport_Streamable>();
+					rootStreamable=player.AddComponent<teleport.StreamableRoot>();
 				rootStreamable.ForceInit();
 				player.name = "TeleportVR_" +Instance.defaultPlayerPrefab.name+"_"+ Teleport_SessionComponent.sessions.Count + 1;
 
@@ -757,11 +766,11 @@ namespace teleport
 
 			GameObject gameObject = (GameObject)obj;
 
-			if(!gameObject.TryGetComponent(out Teleport_Streamable streamable))
+			if(!gameObject.TryGetComponent(out teleport.StreamableRoot streamable))
 			{
 				//We still succeeded in ensuring the GameObject was in the correct state; the hierarchy root will show the node.
 				/*
-				Debug.LogWarning($"Failed to show node! \"{gameObject}\" does not have a {nameof(Teleport_Streamable)} component!");
+				Debug.LogWarning($"Failed to show node! \"{gameObject}\" does not have a {nameof(teleport.StreamableRoot)} component!");
 				return false;
 				*/
 
@@ -791,11 +800,11 @@ namespace teleport
 
 			GameObject gameObject = (GameObject)obj;
 
-			if(!gameObject.TryGetComponent(out Teleport_Streamable streamable))
+			if(!gameObject.TryGetComponent(out teleport.StreamableRoot streamable))
 			{
 				//We still succeeded in ensuring the GameObject was in the correct state; the hierarchy root will hide the node.
 				/*
-				Debug.LogWarning($"Failed to hide node! \"{gameObject}\" does not have a {nameof(Teleport_Streamable)} component!");
+				Debug.LogWarning($"Failed to hide node! \"{gameObject}\" does not have a {nameof(teleport.StreamableRoot)} component!");
 				return false;
 				*/
 				return true;
@@ -881,7 +890,7 @@ namespace teleport
 				child.transform.localPosition = relativePos;
 				child.transform.localRotation= relativeRot;
 			}
-			Teleport_Streamable teleport_Streamable = child.GetComponent<Teleport_Streamable>();
+			teleport.StreamableRoot teleport_Streamable = child.GetComponent<teleport.StreamableRoot>();
 			if(!teleport_Streamable)
             {
 				Debug.LogError("Reparenting a child that has no teleport_Streamable");
@@ -889,12 +898,12 @@ namespace teleport
 			// Is the new parent owned by a client? If so inform clients of this change:
 			Teleport_SessionComponent oldSession=null;
 			Teleport_SessionComponent newSession = null;
-			Teleport_Streamable newParentStreamable=null;
-			Teleport_Streamable oldParentStreamable=null;
+			teleport.StreamableRoot newParentStreamable=null;
+			teleport.StreamableRoot oldParentStreamable=null;
 			if (newParent != null)
 			{
 				// Is the new parent owned by a client? If so inform clients of this change:
-				newParentStreamable = newParent.GetComponentInParent<Teleport_Streamable>();
+				newParentStreamable = newParent.GetComponentInParent<teleport.StreamableRoot>();
 				if (newParentStreamable != null && newParentStreamable.OwnerClient != 0)
 				{
 					newSession = Teleport_SessionComponent.GetSessionComponent(newParentStreamable.OwnerClient);
@@ -908,7 +917,7 @@ namespace teleport
 				teleport_Streamable.OwnerClient = 0;
 			if (oldParent != null)
 			{
-				oldParentStreamable = oldParent.GetComponentInParent<Teleport_Streamable>();
+				oldParentStreamable = oldParent.GetComponentInParent<teleport.StreamableRoot>();
 				if (oldParentStreamable != null&&oldParentStreamable.OwnerClient != 0)
 				{
 					oldSession = Teleport_SessionComponent.GetSessionComponent(oldParentStreamable.OwnerClient);
@@ -930,7 +939,7 @@ namespace teleport
 		{
 			if (!Application.isPlaying)
 				return;
-			Teleport_Streamable streamable=component.gameObject.GetComponentInParent<Teleport_Streamable>();
+			teleport.StreamableRoot streamable=component.gameObject.GetComponentInParent<teleport.StreamableRoot>();
 			if(streamable)
 			{
 				uid u=streamable.GetUid();
