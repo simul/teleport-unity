@@ -265,7 +265,6 @@ namespace avs
 
 	public struct Texture
 	{
-		
 		public IntPtr name;
 		
 		public IntPtr path;
@@ -788,7 +787,15 @@ namespace teleport
 			sessionResourceUids.TryGetValue(resource, out uid nodeID);
 			return nodeID;
 		}
-
+		public uid FindOrAddNodeID(UnityEngine.GameObject gameObject)
+		{
+			uid nodeID = geometrySource.AddNode(gameObject);
+			if (nodeID == 0)
+			{
+				nodeID=AddNode(gameObject);
+			}
+			return nodeID;
+		}
 		//Returns the ID of the resource if it has been processed, or zero if the resource has not been processed or was passed in null.
 		public uid[] FindResourceIDs(UnityEngine.Object[] resources)
 		{
@@ -1599,55 +1606,33 @@ namespace teleport
 					}
 					textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
 					// Test: write to png. Only for observation/debugging.
-					if (pngCompatibleFormat)
-					if (writePng || highQualityUASTC)
-					{
-						// If it's png, let's have a uint16 here, N with the number of images, then a list of N size_t offsets. Each is a subresource image. Then image 0 starts.
-						float valueScale = 1.0f;
-						/*	if (hdr)
+					if (pngCompatibleFormat&&highQualityUASTC)
 							{
-								Unity.Collections.NativeArray<Vector4> pixels =	readTexture.GetPixelData<Vector4>(0);
-								float max_value = 0.0F;
-								foreach (var pix in pixels)
-								{
-									float mx=Math.Max(Math.Max(Math.Max(pix.x,pix.y),pix.z),pix.w);
-									max_value=Math.Max(mx,max_value);
+						writePng=true;
+						highQualityUASTC=false;
 								}
-								if(max_value>1.0f)
-								{
-									for (int j=0;j< pixels.Length;j++)
+					float valueScale = 1.0f;
+					textureData.valueScale = valueScale;
+					if (writePng || highQualityUASTC)
 									{
-										pixels[j]/= max_value;
-									}
-									readTexture.SetPixelData<Vector4>(pixels,0);
-									valueScale=1.0f;
-								}
-							}*/
+						// If it's png, let's have a uint16 here, N with the number of images, then a list of N size_t offsets. Each is a subresource image. Then image 0 starts.
+						
 						string pngFile = basisFile.Replace(".basis", $"_mip{j}_slice{i}.png");
 						if(arraySize>1)
 							pngFile=pngFile.Replace(".png","_"+i.ToString()+".png");
-						//File.WriteAllBytes(pngFile, subresourceImage.bytes);
-						/*
-						 * exr is way too big.
-						string exrFile = basisFile.Replace(".basis", ".exr");
-						byte[] exr_bytes = readTexture.EncodeToEXR();
-						File.WriteAllBytes(exrFile, exr_bytes);*/
 
 						// We will send the .png instead of a .basis file.
 						if (!writePng)
 						{
-							LaunchBasisUExe(pngFile);
-							// Intended for Basis compression. But passed uncompressed.
 							textureData.compressed=false;
 						}
 						else
 						{
-							subresourceImage.bytes = readTexture.EncodeToPNG();
+							//subresourceImage.bytes = readTexture.EncodeToPNG();
 							textureData.compression = avs.TextureCompression.PNG;
 							// Already compressed as png
-							textureData.compressed=true;
+							textureData.compressed=false;
 						}
-						textureData.valueScale = valueScale;
 						// copy the png into texture data.
 					}
 					else
@@ -1656,11 +1641,11 @@ namespace teleport
 						// Intended for Basis compression. But passed uncompressed.
 						textureData.compressed=false;
 						// what does the texture look like as a png? for debugging.
-						string pngFile = basisFile.Replace(".basis", $"_mip{j}_slice{i}_DEBUG.png");
+						/*string pngFile = basisFile.Replace(".basis", $"_mip{j}_slice{i}_DEBUG.png");
 						if (arraySize > 1)
 							pngFile = pngFile.Replace(".png", "_" + i.ToString() + ".png");
 						var bytes = readTexture.EncodeToPNG();
-						File.WriteAllBytes(pngFile, bytes);
+						File.WriteAllBytes(pngFile, bytes);*/
 					}
 					n++;
 					w = (w + 1) / 2;
@@ -1754,7 +1739,7 @@ namespace teleport
 				int exitCode = exeProcess.ExitCode;
 				if (exitCode != 0)
 				{
-					UnityEngine.Debug.LogError("Basis exit code " + exitCode);
+					UnityEngine.Debug.LogError("Basis failed for "+srcPng+", with exit code " + exitCode);
 					StreamWriter outputFile = new StreamWriter(srcPng + ".out");
 					outputFile.Write(output);
 					outputFile.Close();
@@ -2086,7 +2071,8 @@ namespace teleport
 			}
 			if (mesh == null)
 			{
-				Debug.LogError($"Failed GeometrySource.ExtractNodeMeshData for GameObject \"{gameObject.name}\"!");
+				// This is ok, there might be no mesh at all.
+				//Debug.LogError($"Failed GeometrySource.ExtractNodeMeshData for GameObject \"{gameObject.name}\"!");
 				return false;
 			}
 			extractTo.dataID = AddMesh(mesh, forceMask, verify);

@@ -664,17 +664,23 @@ namespace teleport
 					return null;
 				}
 				Vector3 SpawnPosition = new Vector3(0, 0, 0);
-				MetaURLScene metaURLScene = MetaURLScene.GetInstance();
 				Quaternion SpawnRotation=Quaternion.identity;
 				bool got_metaurl=false;
-				if (path.Length>0&& metaURLScene!=null)
+				if (path.Length>0)
 				{
-					SpawnPosition= metaURLScene.origin;
 					//string pattern  = @"\?meta_url=/(-?\d+(\.\d+){2,3}/)+$";
 					string pattern = @"meta_url=(\d+\,\d+\,\d+)(/\d+\,\d+\,\d+)+";// (\.\d+){2}  (/\d+(\.\d+){2})+";
 					Match m = Regex.Match(path, pattern, RegexOptions.IgnoreCase);
 					if (m.Success)
 					{
+						MetaURLScene metaURLScene = MetaURLScene.GetInstance();
+						if (metaURLScene == null)
+						{
+							UnityEngine.Debug.LogError("No MetaURLScene found, but meta_url was specified in the URL.");
+						}
+						else
+						{
+							SpawnPosition = metaURLScene.origin;
 						float scale= metaURLScene.scaleMetres;
 						for (int i=1;i<m.Groups.Count;i++)
 						{
@@ -688,6 +694,7 @@ namespace teleport
 								Vector3 addPosition=new Vector3((float)x*scale/100.0F, (float)y * scale / 100.0F, (float)z * scale / 100.0F);
 								SpawnPosition+=addPosition;
 								scale/=100.0F;
+								}
 							}
 						}
 						Debug.Log("Found MetaURL");

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEngine;
-
 using uid = System.UInt64;
 
 namespace teleport
@@ -12,7 +11,7 @@ namespace teleport
 	public class GeometryStreamingService
 	{
 		#region DLLImports
-		#if WIN32
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
 		const string dllName="TeleportServer";
 		#else
 		const string dllName="TeleportServer.so";
@@ -299,7 +298,8 @@ namespace teleport
 
 		public void SetNodePosePath(GameObject gameObject, string regexPosePath)
 		{
-			uid nodeID = GeometrySource.GetGeometrySource().FindResourceID(gameObject);
+			GeometrySource geometrySource=GeometrySource.GetGeometrySource();
+			uid nodeID = geometrySource.FindOrAddNodeID(gameObject);
 			if (nodeID == 0)
 			{
 				Debug.LogError("Node id not found for "+gameObject.name);
@@ -456,6 +456,8 @@ namespace teleport
         // Start streaming the given streamable gameObject and its hierarchy.
         private bool StartStreaming(Teleport_Streamable streamable, UInt32 streaming_reason)
         {
+			if(!streamable)
+				return false;
             GameObject gameObject = streamable.gameObject;
             ClientStreamableTracking tracking = GetTracking(streamable);
             if (streamedGameObjects.Contains(gameObject))

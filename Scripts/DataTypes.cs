@@ -7,7 +7,7 @@ namespace teleport
 {
 	public struct TeleportServerDll
 	{
-		#if WIN32
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
 		public const string name="TeleportServer";
 		#else
 		public const string name="TeleportServer.so";

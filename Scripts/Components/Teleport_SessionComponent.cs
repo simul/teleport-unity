@@ -651,7 +651,7 @@ namespace teleport
 				Client_GetClientVideoEncoderStats(clientID, ref videoEncoderStats);
 			}
 
-			if (teleportSettings.serverSettings.isStreamingGeometry)
+			if (teleportSettings!=null&&teleportSettings.serverSettings.isStreamingGeometry)
 			{
 				if (geometryStreamingService != null)
 				{
