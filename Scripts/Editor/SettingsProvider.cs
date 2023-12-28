@@ -104,6 +104,7 @@ namespace teleport
 			teleportSettings.highlightNonStreamables = EditorGUILayout.Toggle("Highlight Non-Streamables", teleportSettings.highlightNonStreamables);
 			teleportSettings.highlightNonStreamableColour = EditorGUILayout.ColorField("Highlight Non-Streamable Colour", teleportSettings.highlightNonStreamableColour);
 			teleportSettings.moveUpdatesPerSecond = (uint)EditorGUILayout.IntField("Move Updates Per Second", (int)teleportSettings.moveUpdatesPerSecond);
+			teleportSettings.defaultMinimumNodePriority = EditorGUILayout.IntField("Default Minimum Node Priority", teleportSettings.defaultMinimumNodePriority);
 			
 			string tempPorts= EditorGUILayout.TextField("Signaling Port/s", teleportSettings.signalingPorts);
 

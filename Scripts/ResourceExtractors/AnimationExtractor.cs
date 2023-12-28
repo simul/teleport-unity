@@ -437,7 +437,7 @@ namespace teleport
 				for(int j = 0; j < nodeCurves.Count; j++)
 				{
 					Transform bone = nodeCurves.Keys.ToArray()[j];
-					if(!geometrySource.HasResource(bone))
+					if(!geometrySource.HasResource(bone.gameObject))
 					{
 						Debug.LogWarning($"Bone \"{bone.name}\" has animation properties, but could not be found in the geometry source!");
 						continue;

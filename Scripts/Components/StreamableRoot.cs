@@ -11,6 +11,9 @@ namespace teleport
 	[DisallowMultipleComponent]
 	public class StreamableRoot : MonoBehaviour
 	{
+		//! Priority. Values greater than or equal to zero are essential to functionality and *must* be streamed. 
+		//! Negative values are optional, and the more negative, the less important they are (determining order of sending to client).
+		//! The larger the priority value, the earlier the object is sent.
 		//! The highest priority of StreamableProperties found in the streamable's hierarchy.
 		public int priority = 0;
 
@@ -21,7 +24,7 @@ namespace teleport
 		}
 
 		[SerializeField]
-		bool _sendMovementUpdates = true;
+		bool _sendMovementUpdates = false;
 		public bool sendMovementUpdates
 		{
 			get {return _sendMovementUpdates; }
@@ -89,8 +92,6 @@ namespace teleport
 		//Animator trackers in this TeleportStreamable's hierarchy.
 		private List<Teleport_AnimatorTracker> animatorTrackers = new List<Teleport_AnimatorTracker>();
 
-		private Dictionary<uid, avs.MovementUpdate> previousMovements = new Dictionary<uid, avs.MovementUpdate>();
-
 		static int clientLayer = 25;
 		// Add the 0x7 because that's used to show canvases, so we must remove it also from the inverse mask.
 		// clear clientLayer and set (clientLayer+1)
@@ -154,7 +155,7 @@ namespace teleport
 					Debug.LogWarning($"Failed to update movement of node! Null node in {nameof(teleport.StreamableRoot)}.childHierarchy of \"{name}\"!");
 					continue;
 				}
-				var update=GetNodeMovementUpdate(streamedNode, clientID);
+				var update= streamedNode.GetMovementUpdate( clientID);
 				if(update.nodeID!=0)
 					updates.Add(update);
 			}
@@ -234,7 +235,6 @@ namespace teleport
 		private void CreateStreamedHierarchy()
 		{
 			streamedHierarchy.Clear();
-			priority=0;
 			exploredGameObjects.Clear();
 			//We need to stop once we reach this node, so we add it to the explored list, but that means we now have to explicitly add it to the streamed hierarchy.
 			exploredGameObjects.Add(gameObject);
@@ -262,17 +262,20 @@ namespace teleport
 				{
 					StreamableProperties streamableProperties=t.gameObject.GetComponent<StreamableProperties>();
 					if(streamableProperties==null)
+					{
 						streamableProperties=t.gameObject.AddComponent<StreamableProperties>();
+					}
 					streamableProperties.isStationary = gameObject.isStatic;
 				}
 			}
 #endif
-			_sendMovementUpdates=false;
+			_sendMovementUpdates = false;
 			// Get all the StreamableProperties instances in the hierarchy, and use them to find the maximum "priority" value.
+
 			List<StreamableProperties> streamablePropertiesList = new List<StreamableProperties>(GetComponentsInChildren<StreamableProperties>(true));
+		
 			foreach (StreamableProperties streamableProperties in streamablePropertiesList)
 			{
-				priority=Math.Max(priority, streamableProperties.priority);
 				_sendMovementUpdates|= !streamableProperties.isStationary;
 			}
 			//Mark all children that will be streamed separately as explored; i.e. marked for streaming.
@@ -320,6 +323,14 @@ namespace teleport
 		protected void reportNodeEnabled(ActiveNodeTracker sender, bool enabled)
 		{
 			Debug.LogError("Node "+sender.name+(enabled?"Enabled":"Disabled"));
+			var streamableNode=sender.gameObject.GetComponent<StreamableNode>();
+			if(streamableNode != null)
+			{
+				foreach (var s in sessions)
+				{
+					s.GeometryStreamingService.ChangeNodeVisibility(sender.gameObject,enabled);
+				}
+			}
 		}
 		//Adds the GameObject of the passed transform to the hierarchy, if it has not already been explored in a depth-first search.
 		//	transform : Transform of the GameObject we will add the the hierarchy, if unexplored.
@@ -333,16 +344,20 @@ namespace teleport
 				{
 					StreamableNode streamableNode=gameObject.GetOrAddComponent<teleport.StreamableNode>();
 					exploredGameObjects.Add(gameObject);
+					var activeNodeTracker = gameObject.GetComponent<teleport.ActiveNodeTracker>();
+					if (activeNodeTracker != null)
+					{
+						activeNodeTracker.report = reportNodeEnabled;
+					}
+					if (streamableNode.allowStreaming==false)
+					{
+						return;
+					}
 					if(streamableNode!=null&&!streamedHierarchy.Contains(streamableNode))
 						streamedHierarchy.Add(streamableNode);
 					if(_trackAllEnabledStates)
 					{
 						gameObject.GetOrAddComponent<teleport.ActiveNodeTracker>();
-					}
-					var activeNodeTracker = gameObject.GetComponent<teleport.ActiveNodeTracker>();
-					if (activeNodeTracker != null)
-					{
-						activeNodeTracker.report = reportNodeEnabled;
 					}
 					AddToHierarchy(transform.parent);
 				}
@@ -392,120 +407,13 @@ namespace teleport
 				}
 			}
 		}
-		//! Make sure apparent motion is zero when sending the next movement update.
-		public void ResetVelocityTracking(GameObject node)
-		{
-			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node);
-			previousMovements.Remove(nodeID);
-			previousMovements.Remove(nodeID + 1000000000);
-		}
 		//! Make sure apparent motion is zero for the whole hierarchyu.
 		public void ResetVelocityTracking()
 		{
-			previousMovements.Clear();
-		}
-		private avs.MovementUpdate GetNodeMovementUpdate(StreamableNode streamedNode, uid clientID)
-		{
-			GameObject node= streamedNode.gameObject;
-			//Node should already have been added; but AddNode(...) will do the equivalent of FindResourceID(...), but with a fallback.
-			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node);
-			uid prevID=nodeID;
-			ref avs.MovementUpdate update= ref streamedNode.localUpdate;
-			bool has_parent= GeometryStreamingService.IsClientRenderingParent(clientID, node);
-			if (!has_parent)
+			foreach (var n in streamedHierarchy)
 			{
-				update=ref streamedNode.globalUpdate;
-				prevID=nodeID+1000000000;
+				n.ResetPreviousMovement();
 			}
-			if(update.time_since_server_start_ns == teleport.Monitor.GetServerTimeNs())
-				return update;
-			update.time_since_server_start_ns = teleport.Monitor.GetServerTimeNs();
-			update.nodeID = nodeID;
-
-			if (has_parent)
-			{
-				update.isGlobal = false;
-				update.position = node.transform.localPosition;
-				update.rotation = node.transform.localRotation;
-				update.scale = node.transform.localScale;
-			}
-			else
-			{
-				update.isGlobal = true;
-				update.position = node.transform.position;
-				update.rotation = node.transform.rotation;
-				update.scale	= node.transform.lossyScale;
-			}
-			bool do_smoothing=true;
-			StreamableProperties streamableProperties=node.GetComponent<StreamableProperties>();
-			if(streamableProperties)
-				do_smoothing= streamableProperties.smoothMotionAtClient;
-			if (do_smoothing&&previousMovements.TryGetValue(prevID, out avs.MovementUpdate previousMovement))
-			{
-				TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-				Vector3 position;
-				Quaternion rotation;
-
-				//Velocity and angular velocity must be calculated in the same basis as the previous movement.
-				if(previousMovement.isGlobal)
-				{
-					position = node.transform.position;
-					rotation = node.transform.rotation;
-				}
-				else
-				{
-					position = node.transform.localPosition;
-					rotation = node.transform.localRotation;
-				}
-				Int64 delta_time_ns = update.time_since_server_start_ns - previousMovement.time_since_server_start_ns;
-				if(delta_time_ns==0)
-				{ 
-					update.nodeID=0;
-					return update;
-				}
-				if (delta_time_ns != 0)
-                {
-					double delta_time_s = delta_time_ns * 0.000000001;
-
-					//We cast to the unity engine types to take advantage of the existing vector subtraction operators.
-					//We multiply by the amount of move updates per second to get the movement per second, rather than per update.
-					Rigidbody r=GetComponent<Rigidbody>();
-                    if (r && !r.isKinematic)
-                    {
-                        update.velocity = r.velocity;
-                        if (r.angularVelocity.sqrMagnitude > 0.000001)
-                        {
-                            update.angularVelocityAxis = r.angularVelocity.normalized;
-                            update.angularVelocityAngle = r.angularVelocity.magnitude;
-                        }
-                        else
-                        {
-                            update.angularVelocityAxis = Vector3.zero;
-                            update.angularVelocityAngle = 0;
-                        }
-                    }
-                    else
-                    {
-                        update.velocity = (position - previousMovement.position) / (float)delta_time_s;
-                        (rotation * Quaternion.Inverse(previousMovement.rotation)).ToAngleAxis(out update.angularVelocityAngle, out Vector3 angularVelocityAxis);
-                        update.angularVelocityAxis = angularVelocityAxis;
-                        if (update.angularVelocityAngle != 0)
-                        {
-                            //Angle needs to be inverted, for some reason.
-                            update.angularVelocityAngle /= (float)delta_time_s;
-                            update.angularVelocityAngle *= -Mathf.Deg2Rad;
-                        }
-                    }
-				}
-            }
-			else
-            {
-				update.velocity=Vector3.zero;
-				update.angularVelocityAngle=0.0F;
-            }
-
-            previousMovements[prevID] = update;
-			return update;
 		}
 
 		public void ShowHierarchy()

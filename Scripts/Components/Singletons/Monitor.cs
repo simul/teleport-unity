@@ -635,7 +635,7 @@ namespace teleport
 			}
 			foreach (var s in currentSessions)
 			{
-				if (!s.Spawned && s.GetClientID() == 0)
+				if (!s.Spawned && (s.GetClientID() == 0|| s.GetClientID()==clientID))
 				{
 					AddMainCamToSession(s);
 					return s;

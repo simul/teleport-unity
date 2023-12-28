@@ -3,7 +3,7 @@ using UnityEditor;
 
 namespace teleport
 {
-	public class teleport.StreamableRootGizmo : MonoBehaviour
+	public class StreamableRootGizmo : MonoBehaviour
 	{
 		static UnityEngine.Mesh cylinder;
 		static UnityEngine.Mesh sphere;
@@ -15,7 +15,7 @@ namespace teleport
 			GameObject.DestroyImmediate(go);
 			return mesh;
 		}
-		static teleport.StreamableRootGizmo()
+		static StreamableRootGizmo()
 		{
 			cylinder = GetPrimitive(PrimitiveType.Cylinder);
 			sphere = GetPrimitive(PrimitiveType.Sphere);

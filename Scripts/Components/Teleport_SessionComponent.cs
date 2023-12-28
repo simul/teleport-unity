@@ -740,6 +740,7 @@ namespace teleport
 			clientSettings.backgroundMode = Monitor.Instance.backgroundMode;
 			clientSettings.backgroundColour = Monitor.Instance.BackgroundColour;
 			clientSettings.drawDistance=teleportSettings.serverSettings.detectionSphereRadius;
+			clientSettings.minimumNodePriority= teleportSettings.defaultMinimumNodePriority;
 			int faceSize = clientSettings.captureCubeTextureSize;
 			int doubleFaceSize = faceSize * 2;
 			int halfFaceSize = (int)(faceSize * 0.5);

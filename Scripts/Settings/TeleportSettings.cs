@@ -99,6 +99,7 @@ namespace teleport
 
 		[Header("Geometry")]
 		public uint moveUpdatesPerSecond = 20;
+		public int defaultMinimumNodePriority=0;
 
 		public ServerSettings serverSettings = new ServerSettings();
 

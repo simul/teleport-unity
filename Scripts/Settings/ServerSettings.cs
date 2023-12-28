@@ -125,6 +125,7 @@ namespace teleport
 		public BackgroundMode backgroundMode;
 		public Vector4 backgroundColour;
 		public float drawDistance;
+		public Int32 minimumNodePriority;
 	}
 	/// <summary>
 	/// Settings specific to a given client, as decided engine-side.

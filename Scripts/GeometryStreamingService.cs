@@ -313,6 +313,17 @@ namespace teleport
 					Client_SetNodePosePath(clID, nodeID, regexPosePath);
 			}
 		}
+		public void ChangeNodeVisibility(GameObject gameObject, bool enabled)
+		{
+			var streamableNode = gameObject.GetComponent<StreamableNode>();
+			if(streamableNode != null)
+			{
+				avs.NodeUpdateEnabledState [] states=new avs.NodeUpdateEnabledState[1];
+				states[0].nodeID=streamableNode.nodeID;
+				states[0].enabled=enabled;
+				Client_UpdateNodeEnabledState(streamableNode.nodeID, states,1);
+			}
+		}
 		public void ReparentNode(GameObject child, GameObject newParent, Vector3 relativePos, Quaternion relativeRot)
 		{
 			uid childNodeID = GeometrySource.GetGeometrySource().FindResourceID(child);
@@ -454,13 +465,15 @@ namespace teleport
 				return;
 			SendHierarchyToClient(streamable);
 		}
-        // Start streaming the given streamable gameObject and its hierarchy.
+        // Start streaming the given hierarchy to this Client.
         private bool StartStreaming(teleport.StreamableRoot streamable, UInt32 streaming_reason)
         {
 			if(!streamable)
 				return false;
-            GameObject gameObject = streamable.gameObject;
-            ClientStreamableTracking tracking = GetTracking(streamable);
+			GameObject gameObject = streamable.gameObject;
+			Debug.Log($"StartStreaming called on {gameObject.name} for reason {streaming_reason}.");
+
+			ClientStreamableTracking tracking = GetTracking(streamable);
             if (streamedGameObjects.Contains(gameObject))
             {
                 if ((tracking.streaming_reason & streaming_reason) != 0)
@@ -481,8 +494,11 @@ namespace teleport
 		bool SendHierarchyToClient(teleport.StreamableRoot streamable)
 		{
 			//Stream teleport.StreamableRoot's hierarchy.
-			foreach(teleport.StreamableNode streamedNode in streamable.GetStreamableNodes())
+			var streamableNodes = streamable.GetStreamableNodes();
+			foreach (teleport.StreamableNode streamedNode in streamableNodes)
 			{
+				if(streamedNode.nodeID==0)
+					continue;
 				if(streamedGameObjects.Contains(streamedNode.gameObject))
 				{
 					continue;
@@ -492,8 +508,8 @@ namespace teleport
 				Client_NodeEnteredBounds(session.GetClientID(), streamedNode.nodeID);
 				if (num_nodes_streamed != streamedGameObjects.Count+1)
                 {
-					Debug.LogError("Object Node count mismatch between dll and C# after adding " + streamedNode.gameObject.name);
-					return false;
+					Debug.LogWarning($"Object Node count mismatch between dll ({num_nodes_streamed}) and C# ({(streamedGameObjects.Count + 1)}) after adding " + streamedNode.gameObject.name);
+					//return false;
 				}
 				streamedGameObjects.Add(streamedNode);
 			}

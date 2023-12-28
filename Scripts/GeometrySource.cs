@@ -505,6 +505,7 @@ namespace teleport
 		#endregion
 
 		public List<TextureExtractionData> texturesWaitingForExtraction = new List<TextureExtractionData>();
+		public bool treatTransparentAsDoubleSided=true;
 		[HideInInspector] public string compressedTexturesFolderPath;
 		private ComputeShader textureShader;
 
@@ -715,18 +716,27 @@ namespace teleport
 				path = Path.Combine(path, filename);
 				path +="##"+obj.name;
 			}
+			// Further disambiguation is needed for meshes because Unity discards internal structure from fbx files
+			// so more than one mesh with the same name can appear as part of the same asset.
+			if (obj.GetType() == typeof(UnityEngine.Mesh))
+			{
+				path +="_" + localId;
+			}
 			// Need something unique. Within default and editor resources are thousands of assets, often with clashing names.
-			// So here, we do use the localId's to distinguish them.
+			// So here, we use the localId's to distinguish them.
 			if (path.Contains("unity default resources"))
 			{
 				path += "##" + obj.name + "_" + localId;
 			}
 			if (path.Contains("unity editor resources"))
 			{
-				path += "##" + obj.name + "_" + localId;
+				path="";
 				// we can't use these.
 				return false;
 			}
+			// dots and commas are undesirable in URL's. Therefore we replace them.
+			path=path.Replace(".","_");
+			path=path.Replace(",","_");
 			path = SceneResourcePathManager.StandardizePath(path, "Assets/");
 			resourcePathManager.SetResourcePath(obj,path);
 			return true;
@@ -950,6 +960,7 @@ namespace teleport
 			}
 			StreamableProperties streamableProperties=gameObject.GetComponent<StreamableProperties>();
 			extractedNode.name = Marshal.StringToCoTaskMemUTF8(gameObject.name);
+			teleport.StreamableRoot teleport_Streamable = gameObject.GetComponentInParent<teleport.StreamableRoot>();
 #if UNITY_EDITOR
 			// if it's not stationary, it will need a StreamableProperties component to let us know, because isStatic is always false in builds for Unity.
 			if (!gameObject.isStatic)
@@ -959,13 +970,12 @@ namespace teleport
 					streamableProperties=gameObject.AddComponent<StreamableProperties>();
 				}
 			}
-			teleport.StreamableRoot teleport_Streamable = gameObject.GetComponent<teleport.StreamableRoot>();
 			if (streamableProperties!=null&&streamableProperties.isStationary != gameObject.isStatic)
 				streamableProperties.isStationary = gameObject.isStatic;
 #endif
-			if (streamableProperties != null)
+			if (teleport_Streamable != null)
 			{
-				extractedNode.priority = streamableProperties.priority;
+				extractedNode.priority = teleport_Streamable.priority;
 			}
 			extractedNode.stationary = streamableProperties ? streamableProperties.isStationary : true;
 			extractedNode.ownerClientId = teleport_Streamable != null ? teleport_Streamable.OwnerClient : 0;
@@ -1048,6 +1058,9 @@ namespace teleport
 			}
 			// Make sure there's a path for this mesh.
 			GetResourcePath(mesh, out string resourcePath, (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_SUBRESOURCES);
+			// Not a resource, don't extract.
+			if(resourcePath==null||resourcePath=="")
+				return 0;
 			//We can't extract an unreadable mesh.
 			if (!mesh.isReadable)
 			{
@@ -1151,7 +1164,10 @@ namespace teleport
 						break;
 				}
 			}
-
+			if (material.renderQueue > (int)RenderQueue.GeometryLast)
+			{
+				extractedMaterial.materialMode = avs.MaterialMode.TRANSPARENT;
+			}
 			extractedMaterial.pbrMetallicRoughness.baseColorTexture.index = AddTexture(material.mainTexture, forceMask);
 			extractedMaterial.pbrMetallicRoughness.baseColorTexture.tiling = material.mainTextureScale;
 			extractedMaterial.pbrMetallicRoughness.baseColorFactor = material.HasProperty("_Color") ? material.color.linear: new Color(1.0f, 1.0f, 1.0f, 1.0f);
@@ -1227,7 +1243,7 @@ namespace teleport
 			int rq= material.renderQueue;
 			if(rq<0&& material.shader!=null)
 				rq=(int)material.shader.renderQueue;
-			extractedMaterial.doubleSided=(rq==(int)RenderQueue.Transparent);
+			extractedMaterial.doubleSided=treatTransparentAsDoubleSided?(rq==(int)RenderQueue.Transparent):false;
 
 			//Extensions
 			extractedMaterial.extensionAmount = 0;
@@ -1995,7 +2011,7 @@ namespace teleport
 			}
 			extractTo.renderState.lightmapScaleOffset=meshRenderer.lightmapScaleOffset;
 			UnityEngine.Texture[] giTextures = GlobalIlluminationExtractor.GetTextures();
-			if(meshRenderer.lightmapIndex>=0&&meshRenderer.lightmapIndex<0xFFFE)
+			if(giTextures!=null&&meshRenderer.lightmapIndex>=0&&meshRenderer.lightmapIndex<0xFFFE)
 			{
 				// If this index not found? These errors are not fatal, but should not occur.
 				if(meshRenderer.lightmapIndex>=giTextures.Length)
@@ -2040,7 +2056,7 @@ namespace teleport
 			//Can't create a node with no data.
 			if(extractTo.dataID == 0)
 			{
-				Debug.LogError($"Failed to extract node mesh data! Failed extraction of mesh \"{(mesh ? mesh.name : "NULL")}\" from GameObject \"{gameObject.name}\"!");
+				// This is ok.
 				return false;
 			}
 			extractTo.dataType = avs.NodeDataType.Mesh;
@@ -2975,7 +2991,8 @@ namespace teleport
 			{
 				if (textureID != uid_from_path)
 				{
-					Debug.LogError("Uid mismatch for texture " + texture.name + " at path " + resourcePath);
+					Debug.LogError("Uid mismatch for texture " + texture.name + " at path " + resourcePath+"."
+						+" uid from path was "+uid_from_path+", but stored textureID was "+textureID+".");
 					sessionResourceUids.Remove(texture);
 					GetOrGenerateUid(resourcePath);
 					return 0;
