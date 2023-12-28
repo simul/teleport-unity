@@ -79,13 +79,13 @@ namespace teleport
 			if (holderClient == 0)
 				return;
 			GameObject currentParent= topParent.transform.parent.gameObject;
-			Teleport_Streamable currentParentStreamable = currentParent.GetComponentInParent<Teleport_Streamable>();
+			teleport.StreamableRoot currentParentStreamable = currentParent.GetComponentInParent<teleport.StreamableRoot>();
 			Debug.Log("Dropped " + topParent);
 			Teleport_SessionComponent session = input.gameObject.GetComponent<Teleport_SessionComponent>();
 			session.input.RemoveDelegate(inputId, Drop, InputEventType.Release);
-			Teleport_Streamable streamable = topParent.GetComponent<Teleport_Streamable>();
+			teleport.StreamableRoot streamable = topParent.GetComponent<teleport.StreamableRoot>();
 
-			StreamedNode streamedNode = currentParentStreamable.GetStreamedNode(currentParent);
+			teleport.StreamableNode streamedNode = currentParentStreamable.GetStreamedNode(currentParent);
 			// We receive velocities in stage space, i.e. in the space relative to the clientspace Root.
 			var v = streamedNode.stageSpaceVelocity;
 			var a = streamedNode.stageSpaceAngularVelocity;

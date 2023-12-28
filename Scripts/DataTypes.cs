@@ -9,9 +9,9 @@ namespace teleport
 	{
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
 		public const string name="TeleportServer";
-		#else
+#else
 		public const string name="TeleportServer.so";
-		#endif
+#endif
 	}
 }
 namespace avs

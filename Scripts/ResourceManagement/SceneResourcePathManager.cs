@@ -129,7 +129,7 @@ namespace teleport
 					}
 					else
 					{
-						Debug.LogError($"Trying to add duplicate resource path {p} for {o.name}, but already present for {sceneResourcePaths_keys[i].name}.");
+						Debug.LogError($"Trying to add duplicate resource path {p} for {o.GetType().Name} {o.name}, but already present for {sceneResourcePaths_keys[i].GetType().Name}  {sceneResourcePaths_keys[i].name}.");
 						return;
 					}
 				}

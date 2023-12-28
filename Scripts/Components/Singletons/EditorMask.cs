@@ -19,7 +19,10 @@ namespace teleport
 			{
 				for (int i = 0; i < SceneManager.sceneCount; i++)
 				{
-					var objs = SceneManager.GetSceneAt(i).GetRootGameObjects();
+					var s=SceneManager.GetSceneAt(i);
+					if(s==null||!s.isLoaded)
+						continue;
+					var objs = s.GetRootGameObjects();
 					foreach (var o in objs)
 					{
 						var m = o.GetComponentInChildren<EditorMask>();
@@ -90,7 +93,10 @@ namespace teleport
 			// first clear 31 for all objects.
 			for (int i = 0; i < SceneManager.sceneCount; i++)
 			{
-				var objs = SceneManager.GetSceneAt(i).GetRootGameObjects();
+				var s = SceneManager.GetSceneAt(i);
+				if (s == null || !s.isLoaded)
+					continue;
+				var objs = s.GetRootGameObjects();
 				foreach (var o in objs)
 				{
 					teleport.Monitor.UnsetRenderingLayerMask(o, streamable_mask, true);

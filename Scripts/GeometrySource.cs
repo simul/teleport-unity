@@ -455,7 +455,7 @@ namespace teleport
 												string path, Int64 lastModified, avs.Material material);
 		[DllImport(TeleportServerDll.name)]
 		private static extern void StoreTexture(uid id, string guid,
-												string path, Int64 lastModified, avs.Texture texture, string compressedFilePath
+												string path, Int64 lastModified, avs.Texture texture
 												, [MarshalAs(UnmanagedType.I1)] bool genMips
 												, [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC
 												, [MarshalAs(UnmanagedType.I1)] bool forceOverwrite
@@ -959,7 +959,7 @@ namespace teleport
 					streamableProperties=gameObject.AddComponent<StreamableProperties>();
 				}
 			}
-			Teleport_Streamable teleport_Streamable = gameObject.GetComponent<Teleport_Streamable>();
+			teleport.StreamableRoot teleport_Streamable = gameObject.GetComponent<teleport.StreamableRoot>();
 			if (streamableProperties!=null&&streamableProperties.isStationary != gameObject.isStatic)
 				streamableProperties.isStationary = gameObject.isStatic;
 #endif
@@ -1434,13 +1434,9 @@ namespace teleport
 				}
 				if (isNormal || textureImporter != null && textureImporter.GetDefaultPlatformTextureSettings().textureCompression == TextureImporterCompression.CompressedHQ)
 					highQualityUASTC = true;
-				//if (highQualityUASTC)
-				//	writePng = true;
+				if (highQualityUASTC)
+					writePng = true;
 				bool flipY=true;
-				if(writePng||isCubemap)
-				{
-					flipY=false;
-				}
 				int[] offsets = { 0, 0 };
 				if (flipY)
 				{
@@ -1464,7 +1460,6 @@ namespace teleport
 					UnityEngine.Debug.LogError("shader " + shaderName + " not found.");
 					continue;
 				}
-
 				// Here we will use a shader to extract from the source texture into the target which is readable.
 				// Unity stores all textures FLIPPED in the y direction. So the shader must handle re-flipping the images back to normal.
 				// But when unity encodes a png, it re-flips it. So we only do this reversal when the texture will be sent direct.
@@ -1607,45 +1602,21 @@ namespace teleport
 					textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
 					// Test: write to png. Only for observation/debugging.
 					if (pngCompatibleFormat&&highQualityUASTC)
-							{
+									{
 						writePng=true;
 						highQualityUASTC=false;
-								}
+					}
 					float valueScale = 1.0f;
 					textureData.valueScale = valueScale;
+					textureData.compressed=false;
 					if (writePng || highQualityUASTC)
-									{
-						// If it's png, let's have a uint16 here, N with the number of images, then a list of N size_t offsets. Each is a subresource image. Then image 0 starts.
-						
-						string pngFile = basisFile.Replace(".basis", $"_mip{j}_slice{i}.png");
-						if(arraySize>1)
-							pngFile=pngFile.Replace(".png","_"+i.ToString()+".png");
-
+					{
 						// We will send the .png instead of a .basis file.
-						if (!writePng)
-						{
-							textureData.compressed=false;
-						}
-						else
-						{
-							//subresourceImage.bytes = readTexture.EncodeToPNG();
 							textureData.compression = avs.TextureCompression.PNG;
-							// Already compressed as png
-							textureData.compressed=false;
 						}
-						// copy the png into texture data.
-					}
 					else
 					{
 						textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
-						// Intended for Basis compression. But passed uncompressed.
-						textureData.compressed=false;
-						// what does the texture look like as a png? for debugging.
-						/*string pngFile = basisFile.Replace(".basis", $"_mip{j}_slice{i}_DEBUG.png");
-						if (arraySize > 1)
-							pngFile = pngFile.Replace(".png", "_" + i.ToString() + ".png");
-						var bytes = readTexture.EncodeToPNG();
-						File.WriteAllBytes(pngFile, bytes);*/
 					}
 					n++;
 					w = (w + 1) / 2;
@@ -1794,21 +1765,10 @@ namespace teleport
 			GetResourcePath(texture, out string resourcePath, false);
 #if UNITY_EDITOR
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(texture, out string guid);
-
 			string textureAssetPath = AssetDatabase.GetAssetPath(texture).Replace("Assets/","");
 			long lastModified = GetAssetWriteTimeUTC(textureAssetPath);
-
-			string compressedFilePath = "";
-			//Basis Universal compression won't be used if the file location is left empty.
-			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-			compressedFilePath = GenerateCompressedFilePath(textureAssetPath, textureData.compression);
-			if(compressedFilePath.Length==0)
-            {
-				Debug.LogError("Unable to compress texture "+texture.name);
-				return;
-            }
 			bool genMips=false;
-			StoreTexture(textureID, guid, resourcePath, lastModified, textureData, compressedFilePath,  genMips, highQualityUASTC, forceOverwrite);
+			StoreTexture(textureID, guid, resourcePath, lastModified, textureData,  genMips, highQualityUASTC, forceOverwrite);
 #endif
 		}
 

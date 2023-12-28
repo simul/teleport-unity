@@ -8,7 +8,7 @@ using uid = System.UInt64;
 
 namespace teleport
 {
-    [RequireComponent(typeof(AudioListener))]
+    //[RequireComponent(typeof(AudioListener))]
 	[HelpURL("https://docs.teleportvr.io/unity.html")]
     public class Teleport_AudioCaptureComponent : MonoBehaviour
     {
