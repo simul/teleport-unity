@@ -534,9 +534,9 @@ namespace avs
 		public byte framerate;                  // In hertz
 		[MarshalAs(UnmanagedType.U1)] public bool usingHands;             //Whether to send the hand nodes to the client.
 		[MarshalAs(UnmanagedType.U1)] public bool isVR;
-		public UInt64	resourceCount;            //	Number of resources the client has, these are appended to the handshake.
-		public UInt32	maxLightsSupported;       // Maximum number of lights the client can render.
-		public Int32	minimumPriority;		// Minimum priority of node the client will render.
+		public UInt64	resourceCount;				//< Number of resources the client has, these are appended to the handshake.
+		public UInt32	maxLightsSupported;			//< Maximum number of lights the client can render.
+		public Int32	minimumPriority;			//< Minimum priority of node the client will render.
 	}; 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct InputDefinitionInterop
@@ -598,7 +598,7 @@ namespace avs
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct MovementUpdate
 	{
-		public Int64 time_since_server_start_ns;
+		public Int64 time_since_server_start_us;
 		[MarshalAs(UnmanagedType.U1)] public bool isGlobal;
 
 		public uid nodeID;
@@ -617,25 +617,18 @@ namespace avs
 		public uid nodeID;
 		[MarshalAs(UnmanagedType.U1)] public bool enabled;
 	}
-
+	//int animLayer,AnimationClip playingClip,float transitionFromTimestampS, float animTimeAtTimestamp, float speed
 	[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
 	public struct ApplyAnimation
 	{
-		public Int64 startTimestampUnixUTC; //Start time of the animation, in Unix time milliseconds
-		public uid nodeID;		//ID of the node the animation is playing on.
-		public uid animationID; //ID of the animation that is now playing.
+		public Int32 animationLayer;				//< Each layer has at most two anims, a current and a next, with a transition between if needed.
+		public Int64 timestampUs;					//< Timestamp for the state we are specifying, in microseconds since the session's start timestamp.
+		public uid nodeID;							//< ID of the node the animation is playing on.
+		public uid animationID;						//< ID of the animation that is now playing.
+		public float animTimeAtTimestamp;			//< At the given timestamp, where in the animation should we be, in seconds?
+		public float speedUnitsPerSecond;           //< At the given timestamp, how fast is the animation playing, where 1.0F is the default (1 unit=1 second).
+		[MarshalAs(UnmanagedType.U1)] public bool loop;
 	}
-
-	/*[StructLayout(LayoutKind.Sequential, Pack = 1)]
-	public struct NodeUpdateAnimationControl
-	{
-		public uid nodeID; //ID of the node the animation is playing on.
-		public uid animationID; //ID of the animation that we are updating.
-		
-		public AnimationTimeControl timeControl; //What controls the animation's time value.
-	}*/
-
-
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct NodeRenderState
 	{

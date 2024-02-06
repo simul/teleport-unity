@@ -75,7 +75,6 @@ namespace teleport
 		public Int32 debugStream = 0;
 		[MarshalAs(UnmanagedType.U1)] public bool debugNetworkPackets = false;
 		[MarshalAs(UnmanagedType.U1)] public bool debugControlPackets = false;
-		[MarshalAs(UnmanagedType.U1)] public bool calculateChecksums = false;
 		[MarshalAs(UnmanagedType.U1)] private bool willCacheReset = false;
 		[MarshalAs(UnmanagedType.U1)] public bool pipeDllOutputToUnity = false;
 		public byte estimatedDecodingFrequency = 10; //An estimate of how frequently the client will decode the packets sent to it; used by throttling.
@@ -97,9 +96,6 @@ namespace teleport
 		public Int32 defaultDiffuseCubemapSize = 64;
 		public Int32 defaultLightCubemapSize = 64;
 		public Int32 defaultShadowmapSize = 0;
-
-		[Header("Input")]
-		public ControlModel controlModel = ControlModel.SERVER_ORIGIN_CLIENT_LOCAL;
 	}
 	/// <summary>
 	/// A control definition to send to the client.
@@ -125,6 +121,7 @@ namespace teleport
 		public BackgroundMode backgroundMode;
 		public Vector4 backgroundColour;
 		public float drawDistance;
+		public Int32 minimumNodePriority;
 	}
 	/// <summary>
 	/// Settings specific to a given client, as decided engine-side.

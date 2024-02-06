@@ -178,7 +178,7 @@ namespace teleport
 			cubeTagDataWrapper.clientID = clientID;
 			cubeTagDataWrapper.dataSize = (UInt64)(Marshal.SizeOf(typeof(avs.SceneCaptureCubeTagData)) + lightSizeInBytes);
 			cubeTagDataWrapper.data = new avs.SceneCaptureCubeTagData();
-			cubeTagDataWrapper.data.timestamp = teleport.Monitor.GetUnixTimestampNowMs();
+			cubeTagDataWrapper.data.timestamp = teleport.Monitor.GetSessionTimestampNowUs();
 			cubeTagDataWrapper.data.id = tagDataID;
 			cubeTagDataWrapper.data.cameraTransform = new avs.Transform();
 			// TODO: Associate each tag with a specific revision of the origin? Or just use global pos/rot??

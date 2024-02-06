@@ -208,17 +208,15 @@ namespace teleport
 		}
 		public void ProcessInputStates(byte[] booleanStates, float[] analogueStates)
 		{
-			for (int i = 0; i < booleanStates.Length; i++)
+			for (int i = 0; i < booleanStates.Length && i < booleanStateIDs.Count; i++)
 			{
 				var b = booleanStates[i] != 0;
-				if (i >= booleanStateIDs.Count)
-					break;
 				InputID inputID = booleanStateIDs[i];
 				if (!buttonStates.ContainsKey(inputID))
 					buttonStates.Add(inputID, b);
 				buttonStates[inputID] = b;
 			}
-			for (int i = 0; i < analogueStates.Length; i++)
+			for (int i = 0; i < analogueStates.Length&&i< floatStateIDs.Count; i++)
 			{
 				InputID inputID = floatStateIDs[i];
 				float f = analogueStates[i];

@@ -96,7 +96,7 @@ namespace teleport
 			public ReportHandshakeFn reportHandshake;
 			public OnAudioInputReceived audioInputReceived;
 			public GetUnixTimestampFn getUnixTimestamp;
-			public Int64 startUnixTimeNs;
+			public Int64 startUnixTimeUs;
 		};
 
 		[DllImport(TeleportServerDll.name)]
@@ -219,27 +219,39 @@ namespace teleport
 			}
 		}
 
-		static Int64 startUnixTimeNs = 0;
-		public static Int64 GetUnixTimestampNowMs()
+		static Int64 startUnixTimeUs = 0;
+		static Int64 sessionTimeUs = 0;
+		static public Int64 GetSessionTimestampNowUs()
 		{
-			return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+			sessionTimeUs= GetUnixTimestampNowUs()- startUnixTimeUs;
+			return sessionTimeUs;
 		}
-		public static Int64 GetUnixTimestampNowNs()
-        {
-			return GetUnixTimestampNowMs()*1000000;
+		static public double GetSessionTimestampNowS()
+		{
+			double sessionTimeS = (double)(GetSessionTimestampNowUs())/1000000.0;
+			return sessionTimeS;
+		}
+		static public Int64 GetUnixTimestampNowUs()
+		{
+			return (Int64)(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()*1000.0);
+		}
+		static public Int64 GetUnixStartTimestampUs()
+		{
+			return startUnixTimeUs;
+		}
 
-		}
+
 		static float lastFixedTime=0.0f;
-		public static Int64 GetServerTimeNs()
+		public static Int64 GetServerTimeUs()
         {
 			if (lastFixedTime != Time.fixedTime)
             {
-				server_unix_time_ns = GetUnixTimestampNowNs() - startUnixTimeNs;
+				server_unix_time_us = GetSessionTimestampNowUs();
 				lastFixedTime = Time.fixedTime;
 			}
-			return server_unix_time_ns;
+			return server_unix_time_us;
 		}
-		static Int64 server_unix_time_ns=0;
+		static Int64 server_unix_time_us=0;
 		void FixedUpdate()
         {
 			
@@ -297,7 +309,7 @@ namespace teleport
 		}
 		private void OnEnable()
 		{
-			startUnixTimeNs= GetUnixTimestampNowNs();
+			startUnixTimeUs= GetUnixTimestampNowUs();
 			ulong unmanagedSize = SizeOf("ServerSettings");
 			ulong managedSize = (ulong)Marshal.SizeOf(typeof(teleport.ServerSettings));
 		
@@ -334,12 +346,12 @@ namespace teleport
 				signalingPorts = teleportSettings.signalingPorts,
 				reportHandshake = ReportHandshake,
 				audioInputReceived = Teleport_SessionComponent.StaticProcessAudioInput,
-				getUnixTimestamp = GetUnixTimestampNowNs,
+				getUnixTimestamp = GetUnixTimestampNowUs,
 				httpMountDirectory = teleportSettings.cachePath,
 				clientIP = teleportSettings.clientIP,
 				certPath = teleportSettings.certPath,
 				privateKeyPath = teleportSettings.privateKeyPath,
-				startUnixTimeNs= startUnixTimeNs
+				startUnixTimeUs= startUnixTimeUs
 			};
 
 			initialised = Teleport_Initialize(initialiseState);
@@ -635,7 +647,7 @@ namespace teleport
 			}
 			foreach (var s in currentSessions)
 			{
-				if (!s.Spawned && s.GetClientID() == 0)
+				if (!s.Spawned && (s.GetClientID() == 0|| s.GetClientID()==clientID))
 				{
 					AddMainCamToSession(s);
 					return s;

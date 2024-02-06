@@ -102,7 +102,13 @@ namespace teleport
 		}
 		static public string StandardizePath(string file_name,string path_root)
 		{
+			if (file_name == null)
+			{
+				return "";
+			}
 			string p = file_name;
+			p=p.Replace(".","_");
+			p=p.Replace(",","_");
 			p=p.Replace(" ","___");
 			p=p.Replace('\\','/');
 			if(path_root.Length>0)
@@ -145,6 +151,14 @@ namespace teleport
 			if(sceneResourcePaths ==null)
 				sceneResourcePaths = new Dictionary<UnityEngine.Object, string>();
 			sceneResourcePaths.TryGetValue(o,out path);
+			if (path != null)
+			{
+				string p=StandardizePath(path,"");
+				if(p!=path)
+				{
+					sceneResourcePaths[o]=path=p;
+				}
+			}
 			return path;
 		}
 		///INHERITED FUNCTIONS

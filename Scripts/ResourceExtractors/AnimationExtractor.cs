@@ -12,9 +12,12 @@ namespace avs
 	{
 		public IntPtr name;
 		public IntPtr path;
-
-		public Int64 boneAmount;
+		public Int64 numBones;
 		public TransformKeyframeList[] boneKeyframes;
+
+		public float duration;          /// How long the animation lasts, must be greater than all keyframe time values.
+
+
 	}
 
 	public struct TransformKeyframeList
@@ -130,7 +133,6 @@ namespace teleport
 				for(int i = 0; i < animationClips.Length; i++)
 				{
 					AnimationClip clip = animationClips[i];
-
 					uid animationID = geometrySource.FindResourceID(clip);
 					if(animationID != 0 && (forceMask & GeometrySource.ForceExtractionMask.FORCE_SUBRESOURCES) == GeometrySource.ForceExtractionMask.FORCE_NOTHING)
 					{
@@ -200,8 +202,9 @@ namespace teleport
 					}
 
 					avs.TransformAnimation newAnimation = new avs.TransformAnimation();
-					newAnimation.boneAmount = nodeCurves.Count;
-					newAnimation.boneKeyframes = new avs.TransformKeyframeList[newAnimation.boneAmount];
+					newAnimation.duration=clip.length;
+					newAnimation.numBones = nodeCurves.Count;
+					newAnimation.boneKeyframes = new avs.TransformKeyframeList[newAnimation.numBones];
 					int max_k=0;
 					float max_t=0.0F;
 					foreach (string humanName in nodeCurves.Keys)
@@ -221,7 +224,7 @@ namespace teleport
 						GameObject boneObject;
 						if(!humanToBone.TryGetValue(humanName, out boneObject))
 						{
-							Debug.LogWarning($"Couldn't find bone gameobject with bone name of: {humanName}");
+							//Debug.LogWarning($"Couldn't find bone gameobject with bone name of: {humanName}");
 							continue;
 						}
 
@@ -288,10 +291,11 @@ namespace teleport
 
 					//Create a new TransformAnimation where we ignore the unfilled values of the interim one.
 					avs.TransformAnimation animation = new avs.TransformAnimation();
+					animation.duration=clip.length;
 					animation.name = Marshal.StringToCoTaskMemUTF8(clip.name);
 
-					animation.boneAmount = j;
-					animation.boneKeyframes = new avs.TransformKeyframeList[animation.boneAmount];
+					animation.numBones = j;
+					animation.boneKeyframes = new avs.TransformKeyframeList[animation.numBones];
 					for(int k = 0; k < j; k++)
 					{
 						animation.boneKeyframes[k] = newAnimation.boneKeyframes[k];
@@ -437,7 +441,7 @@ namespace teleport
 				for(int j = 0; j < nodeCurves.Count; j++)
 				{
 					Transform bone = nodeCurves.Keys.ToArray()[j];
-					if(!geometrySource.HasResource(bone))
+					if(!geometrySource.HasResource(bone.gameObject))
 					{
 						Debug.LogWarning($"Bone \"{bone.name}\" has animation properties, but could not be found in the geometry source!");
 						continue;
@@ -521,7 +525,7 @@ namespace teleport
 
 					animation.boneKeyframes[j] = transformKeyframe;
 				}
-				animation.boneAmount = animation.boneKeyframes.Length;
+				animation.numBones = animation.boneKeyframes.Length;
 
 				//Generate an ID, if we don't have one.
 				if(animationID == 0)

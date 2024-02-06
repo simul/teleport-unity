@@ -14,7 +14,7 @@ namespace teleport
         {
        //     base.OnInspectorGUI();
 			teleport.Monitor monitor = (teleport.Monitor)target;
-
+			
 			background = EditorGUILayout.BeginFoldoutHeaderGroup(background, "Options");
 			if (background)
             {

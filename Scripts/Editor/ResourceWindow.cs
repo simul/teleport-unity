@@ -149,11 +149,11 @@ namespace teleport
 				UnityEngine.Object[] activeGOs =
 					Selection.GetFiltered(
 						typeof(GameObject),
-						SelectionMode.Editable | SelectionMode.TopLevel);
+						 SelectionMode.TopLevel);
 				{ 
 					bool wasEnabled=GUI.enabled;
 					GUI.enabled = activeGOs.Length>0;
-					//EditorGUILayout.disab
+					
 					EditorGUILayout.BeginHorizontal(); 
 					GUILayout.Label("Selected Geometry:", labelTextStyle, GUILayout.Width(300));
 					if (GUILayout.Button("Extract"))
@@ -187,7 +187,7 @@ namespace teleport
 				EditorGUILayout.BeginHorizontal();
 				GUILayout.Label("Dynamic Object Lighting Textures:", labelTextStyle, GUILayout.Width(300));
                 bool wasEnabled2 = GUI.enabled;
-                GUI.enabled &= forceExtraction||(Monitor.Instance?Monitor.Instance.envMapsGenerated:false);
+                GUI.enabled &= (Monitor.Instance?Monitor.Instance.envMapsGenerated:false);
 
                 if (GUILayout.Button("Extract"))
 				{
@@ -202,6 +202,7 @@ namespace teleport
 			EditorGUILayout.BeginVertical();
 				verifyGeometry = GUILayout.Toggle(verifyGeometry, "Verify Compressed Geometry");
 				forceExtraction = GUILayout.Toggle(forceExtraction, "Force Extraction");
+				geometrySource.treatTransparentAsDoubleSided = GUILayout.Toggle(geometrySource.treatTransparentAsDoubleSided, "Treat transparent as double-sided");
 			EditorGUILayout.EndVertical();
 
 			EditorGUILayout.BeginVertical();
@@ -610,7 +611,7 @@ namespace teleport
 		}
 		private void ExtractDynamicObjectLightingTextures( )
 		{
-			if (Monitor.Instance)
+			if (Monitor.Instance&& Monitor.Instance.envMapsGenerated )
 			{
 				if (Monitor.Instance.diffuseRenderTexture != null)
 				{

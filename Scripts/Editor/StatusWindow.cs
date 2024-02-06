@@ -35,7 +35,10 @@ namespace teleport
 			teleport.SessionState sessionState=new teleport.SessionState();
 			teleport.Monitor.Teleport_GetSessionState(ref sessionState);
 			EditorGUILayout.LabelField("Session Id", sessionState.sessionId.ToString());
-			//EditorGUILayout.Separator();
+			EditorGUILayout.Separator();
+			EditorGUILayout.LabelField("  Start Time", teleport.Monitor.GetUnixStartTimestampUs().ToString());
+			EditorGUILayout.LabelField("Session Time", teleport.Monitor.GetSessionTimestampNowUs().ToString());
+			EditorGUILayout.Separator();
 			//EditorGUILayout.BeginFoldoutHeaderGroup(true,GUIContent.none);
 			//EditorGUILayout.EndFoldoutHeaderGroup();
 			EditorGUILayout.BeginHorizontal();

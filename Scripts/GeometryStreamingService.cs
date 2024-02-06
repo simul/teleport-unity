@@ -7,6 +7,14 @@ using uid = System.UInt64;
 
 namespace teleport
 {
+	public enum StreamingReason: uint
+	{
+		NEARBY=1,
+		CLIENT_SELF=2,
+		LIGHT=4,
+		ALL= 0xFFFFFFFF
+	}
+
 	// One of these per-session.
 	public class GeometryStreamingService
 	{
@@ -164,7 +172,7 @@ namespace teleport
 					}
 					if (!streamedGameObjects.Contains(streamable.gameObject))
 					{
-						StartStreaming(streamable,4);
+						StartStreaming(streamable, StreamingReason.LIGHT);
 					}
 					var uid = streamable.GetUid();
 					if (uid == 0)
@@ -199,7 +207,7 @@ namespace teleport
 							var streamable = u.Value.GetComponentInParent<teleport.StreamableRoot>();
 							if (streamable != null)
 							{
-								StopStreaming(streamable, 4);
+								StopStreaming(streamable, StreamingReason.LIGHT);
 							}
 						}
 						break;
@@ -268,10 +276,10 @@ namespace teleport
 			{
 				teleport.StreamableRoot streamable = part.GetComponent<teleport.StreamableRoot>();
 				streamable.OwnerClient=session.GetClientID();
-				StartStreaming(streamable, 2);
+				StartStreaming(streamable, StreamingReason.CLIENT_SELF);
 			}
 			teleport.StreamableRoot session_streamable = session.GetComponentInChildren<Teleport_ClientspaceRoot>().GetComponent<teleport.StreamableRoot>();
-			StartStreaming(session_streamable, 2);
+			StartStreaming(session_streamable, StreamingReason.CLIENT_SELF);
 		}
 
 		public void SendAnimationState()
@@ -310,6 +318,17 @@ namespace teleport
 				// for now we assume that these types have no parent.
 				if (clID>0)
 					Client_SetNodePosePath(clID, nodeID, regexPosePath);
+			}
+		}
+		public void ChangeNodeVisibility(GameObject gameObject, bool enabled)
+		{
+			var streamableNode = gameObject.GetComponent<StreamableNode>();
+			if(streamableNode != null)
+			{
+				avs.NodeUpdateEnabledState [] states=new avs.NodeUpdateEnabledState[1];
+				states[0].nodeID=streamableNode.nodeID;
+				states[0].enabled=enabled;
+				Client_UpdateNodeEnabledState(streamableNode.nodeID, states,1);
 			}
 		}
 		public void ReparentNode(GameObject child, GameObject newParent, Vector3 relativePos, Quaternion relativeRot)
@@ -420,12 +439,12 @@ namespace teleport
 			}
 			foreach (var streamable in gainedStreamables)
 			{
-				StartStreaming(streamable, 1);
+				StartStreaming(streamable, StreamingReason.NEARBY);
 			}
 
 			foreach (var streamable in lostStreamables)
 			{
-				StopStreaming(streamable, 1);
+				StopStreaming(streamable, StreamingReason.NEARBY);
 			}
 
 			//Send position updates, if enough time has elapsed.
@@ -453,18 +472,21 @@ namespace teleport
 				return;
 			SendHierarchyToClient(streamable);
 		}
-        // Start streaming the given streamable gameObject and its hierarchy.
-        private bool StartStreaming(teleport.StreamableRoot streamable, UInt32 streaming_reason)
+        // Start streaming the given hierarchy to this Client.
+        private bool StartStreaming(teleport.StreamableRoot streamable, StreamingReason reason)
         {
 			if(!streamable)
 				return false;
-            GameObject gameObject = streamable.gameObject;
-            ClientStreamableTracking tracking = GetTracking(streamable);
+			uint streaming_reason= (uint)reason;
+			GameObject gameObject = streamable.gameObject;
+			Debug.Log($"StartStreaming called on {gameObject.name} for reason {reason}.");
+
+			ClientStreamableTracking tracking = GetTracking(streamable);
             if (streamedGameObjects.Contains(gameObject))
             {
                 if ((tracking.streaming_reason & streaming_reason) != 0)
                 {
-                    Debug.LogWarning($"StartStreaming called on {gameObject.name} for reason {streaming_reason}, but this was already known.");
+                    Debug.LogWarning($"StartStreaming called on {gameObject.name} for reason {reason}, but this was already known.");
                 }
                 else
                 {
@@ -480,8 +502,11 @@ namespace teleport
 		bool SendHierarchyToClient(teleport.StreamableRoot streamable)
 		{
 			//Stream teleport.StreamableRoot's hierarchy.
-			foreach(teleport.StreamableNode streamedNode in streamable.GetStreamableNodes())
+			var streamableNodes = streamable.GetStreamableNodes();
+			foreach (teleport.StreamableNode streamedNode in streamableNodes)
 			{
+				if(streamedNode.nodeID==0)
+					continue;
 				if(streamedGameObjects.Contains(streamedNode.gameObject))
 				{
 					continue;
@@ -491,8 +516,8 @@ namespace teleport
 				Client_NodeEnteredBounds(session.GetClientID(), streamedNode.nodeID);
 				if (num_nodes_streamed != streamedGameObjects.Count+1)
                 {
-					Debug.LogError("Object Node count mismatch between dll and C# after adding " + streamedNode.gameObject.name);
-					return false;
+					Debug.LogWarning($"Object Node count mismatch between dll ({num_nodes_streamed}) and C# ({(streamedGameObjects.Count + 1)}) after adding " + streamedNode.gameObject.name);
+					//return false;
 				}
 				streamedGameObjects.Add(streamedNode);
 			}
@@ -514,10 +539,10 @@ namespace teleport
 			clientStreamableTracking.Add(streamable,t);
 			return t;
 		}
-		public bool StopStreaming(teleport.StreamableRoot streamable, UInt32 streaming_reason)
+		public bool StopStreaming(teleport.StreamableRoot streamable, StreamingReason streaming_reason)
 		{
 			ClientStreamableTracking tracking = GetTracking(streamable);
-			tracking.streaming_reason &= ~streaming_reason;
+			tracking.streaming_reason &= ~((uint)streaming_reason);
 			if(tracking.streaming_reason != 0)
 			{
 				return false;
@@ -553,9 +578,9 @@ namespace teleport
 				if (!geometrySource.IsGameObjectMarkedForStreaming(streamable.gameObject))
 				{
 					ClientStreamableTracking tracking = GetTracking(streamable);
-					if ((tracking.streaming_reason & 1) != 0)
+					if ((tracking.streaming_reason & (uint)StreamingReason.NEARBY) != 0)
 					{
-						StopStreaming(streamable, 1);
+						StopStreaming(streamable, StreamingReason.NEARBY);
 					}
 				}
 			}
