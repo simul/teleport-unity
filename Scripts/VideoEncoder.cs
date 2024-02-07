@@ -13,20 +13,20 @@ namespace teleport
 	{
 		#region DLLImports
 		[DllImport(TeleportServerDll.name)]
-		static extern System.IntPtr GetRenderEventWithDataCallback();
+		static extern System.IntPtr Server_GetRenderEventWithDataCallback();
 		[DllImport(TeleportServerDll.name)]
-		public static extern bool GetVideoEncodeCapabilities(ref avs.VideoEncodeCapabilities capabilities);
+		public static extern bool Server_GetVideoEncodeCapabilities(ref avs.VideoEncodeCapabilities capabilities);
 		#endregion
 		[DllImport(TeleportServerDll.name)]
-		public static extern void ConvertTransform(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Transform transform);
+		public static extern void Server_ConvertTransform(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Transform transform);
 		[DllImport(TeleportServerDll.name)]
-		public static extern void ConvertRotation(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector4 rotation);
+		public static extern void Server_ConvertRotation(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector4 rotation);
 		[DllImport(TeleportServerDll.name)]
-		public static extern void ConvertPosition(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector3 position);
+		public static extern void Server_ConvertPosition(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector3 position);
 		[DllImport(TeleportServerDll.name)]
-		public static extern void ConvertScale(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector3 scale);
+		public static extern void Server_ConvertScale(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref avs.Vector3 scale);
 		[DllImport(TeleportServerDll.name)]
-		public static extern byte ConvertAxis(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref byte axis);
+		public static extern byte Server_ConvertAxis(avs.AxesStandard fromStandard, avs.AxesStandard toStandard, ref byte axis);
 
 		[StructLayout(LayoutKind.Sequential)]
 		struct EncodeVideoParamsWrapper
@@ -67,7 +67,7 @@ namespace teleport
 			{
 				encodeCapabilities = new VideoEncodeCapabilities();
 				
-				if (GetVideoEncodeCapabilities(ref encodeCapabilities))
+				if (Server_GetVideoEncodeCapabilities(ref encodeCapabilities))
 				{
 					encodeCapabilitiesAvailable = true;
 				}
@@ -144,12 +144,12 @@ namespace teleport
 
 			if (!initialized)
 			{
-				commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 0, paramsWrapperPtr);
+				commandBuffer.IssuePluginEventAndData(Server_GetRenderEventWithDataCallback(), 0, paramsWrapperPtr);
 				initialized = true;
 			}
 			else
 			{
-				commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 1, paramsWrapperPtr);
+				commandBuffer.IssuePluginEventAndData(Server_GetRenderEventWithDataCallback(), 1, paramsWrapperPtr);
 			}
 			_reconfigure = false;
 		}
@@ -163,7 +163,7 @@ namespace teleport
 
 			IntPtr ptr;
 			CreateTagDataWrapper(camera, tagDataID, diffuseAmbientScale,out ptr);
-			commandBuffer.IssuePluginEventAndData(GetRenderEventWithDataCallback(), 2, ptr);
+			commandBuffer.IssuePluginEventAndData(Server_GetRenderEventWithDataCallback(), 2, ptr);
 		}
 
 		public SceneCaptureCubeTagDataWrapper cubeTagDataWrapper = new SceneCaptureCubeTagDataWrapper();
@@ -292,8 +292,8 @@ namespace teleport
 				// doesn't matter, we don't use it.
 				//ConvertTransform(avs.AxesStandard.UnityStyle, session.axesStandard, ref lightData.worldTransform);
 				lightData.uid = uid;
-				ConvertPosition(avs.AxesStandard.UnityStyle, session.AxesStandard, ref lightData.position);
-				ConvertRotation(avs.AxesStandard.UnityStyle, session.AxesStandard, ref lightData.orientation);
+				Server_ConvertPosition(avs.AxesStandard.UnityStyle, session.AxesStandard, ref lightData.position);
+				Server_ConvertRotation(avs.AxesStandard.UnityStyle, session.AxesStandard, ref lightData.orientation);
 
 				lightDataList.Add(lightData);
 			}

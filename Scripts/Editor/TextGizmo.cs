@@ -62,7 +62,7 @@ public class TextGizmo
 			interopFontAtlas=new teleport.InteropFontAtlas();
 			fontAtlas=new FontAtlas();
 			fontAtlases.Add(resourcePath,fontAtlas);
-			if(!teleport.GeometrySource.GetFontAtlas(resourcePath,interopFontAtlas))
+			if(!teleport.GeometrySource.Server_GetFontAtlas(resourcePath,interopFontAtlas))
 				return new FontMap();
 			for (int i = 0; i < interopFontAtlas.fontMaps.Length;i++)
 			{

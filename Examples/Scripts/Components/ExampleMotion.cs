@@ -79,7 +79,10 @@ public class ExampleMotion : MonoBehaviour
 
 		session.input.AddDelegate(Trigger, DoTeleportation, teleport.InputEventType.Release);
 		session.input.AddDelegate(LeftMouseClick, DoTeleportation, teleport.InputEventType.Release);
+
+		inputsHookedUp=true;
 	}
+	bool inputsHookedUp=false;
 	GameObject arc;
 	GameObject circle;
 	GameObject pointingController;
@@ -139,7 +142,7 @@ public class ExampleMotion : MonoBehaviour
 	// Update is called once per frame
 	void Update()
 	{
-		if (LeftThumbstickX==null||LeftThumbstickX.Length==0)
+		if (!inputsHookedUp)
 		{
 			HookupInputs();
 		}

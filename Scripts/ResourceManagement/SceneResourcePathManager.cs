@@ -100,6 +100,12 @@ namespace teleport
 				}
 			}
 		}
+		/// <summary>
+		/// Convert a Unity-style asset path to a Teleport standardized path.
+		/// </summary>
+		/// <param name="file_name"></param>
+		/// <param name="path_root"></param>
+		/// <returns>The standardized path.</returns>
 		static public string StandardizePath(string file_name,string path_root)
 		{
 			if (file_name == null)
@@ -108,14 +114,41 @@ namespace teleport
 			}
 			string p = file_name;
 			p=p.Replace(".","_");
-			p=p.Replace(",","_");
+			p=p.Replace(",","_-_");
 			p=p.Replace(" ","___");
 			p=p.Replace('\\','/');
 			if(path_root.Length>0)
 				p=p.Replace(path_root, "" );
-			//int last_dot_pos = p.LastIndexOf('.');
-			//if(last_dot_pos>0&&last_dot_pos < p.Length)
-			//	p=p.Substring(0,last_dot_pos);
+			return p;
+		}
+		/// <summary>
+		/// Convert a Teleport standardized path to a Unity asset path.
+		/// </summary>
+		/// <param name="file_name"></param>
+		/// <param name="path_root"></param>
+		/// <returns>The path.</returns>
+		static public string UnstandardizePath(string file_name, string path_root)
+		{
+			if (file_name == null)
+			{
+				return "";
+			}
+			string p = file_name;
+			p = p.Replace("___"," ");
+			p = p.Replace("_-_", ",");
+			p = p.Replace("_", ".");
+			if (path_root.Length > 0)
+			{ 
+				if(!path_root.EndsWith("/"))
+					path_root+= "/";
+				p = p.Replace(path_root, "");
+				p=path_root+p;
+			}
+			int hash = p.IndexOf("##");
+			if (hash >= 0)
+			{
+				p = p.Substring(0, hash);
+			}
 			return p;
 		}
 		public void SetResourcePath(UnityEngine.Object o,string p)

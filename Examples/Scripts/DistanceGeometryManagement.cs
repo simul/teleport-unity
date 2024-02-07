@@ -1,9 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using teleport;
-using UnityEditor;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using static teleport.DistanceGeometryManagement;
 

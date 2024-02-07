@@ -14,9 +14,9 @@ namespace teleport
     {
         #region DLLImports
         [DllImport(TeleportServerDll.name)]
-        static extern void SetAudioSettings(ref AudioSettings audioSettings);
+        static extern void Server_SetAudioSettings(ref AudioSettings audioSettings);
         [DllImport(TeleportServerDll.name)]
-        static extern void SendAudio(IntPtr data, UInt64 dataSize);
+        static extern void Server_SendAudio(IntPtr data, UInt64 dataSize);
         #endregion
 
         TeleportSettings teleportSettings = null;
@@ -69,7 +69,7 @@ namespace teleport
             audioSettings.sampleRate = (UInt32)sampleRate;
             audioSettings.bitsPerSample = 32;
             audioSettings.numChannels = 2;
-            SetAudioSettings(ref audioSettings);
+			Server_SetAudioSettings(ref audioSettings);
             initialized = true;
         }
 
@@ -89,8 +89,8 @@ namespace teleport
             var sizeInBytes = data.Length * 4;
             IntPtr ptr = Marshal.AllocHGlobal(sizeInBytes);
             Marshal.Copy(data, 0, ptr, data.Length);
-            // Send audio to the client
-            SendAudio(ptr, (UInt64)sizeInBytes);
+			// Send audio to the client
+			Server_SendAudio(ptr, (UInt64)sizeInBytes);
             Marshal.FreeHGlobal(ptr);  
         }
     }

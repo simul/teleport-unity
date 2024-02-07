@@ -73,10 +73,10 @@ namespace teleport
 
 		#region DLLImports
 		[DllImport(TeleportServerDll.name)]
-		private static extern uid GenerateUid();
+		private static extern uid Server_GenerateUid();
 
 		[DllImport(TeleportServerDll.name)]
-		private static extern void StoreTransformAnimation(uid id, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(TransformAnimationMarshaler))] avs.TransformAnimation animation);
+		private static extern void Server_StoreTransformAnimation(uid id, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(TransformAnimationMarshaler))] avs.TransformAnimation animation);
 		#endregion
 
 		public static uid[] AddAnimations(Animator animator, GeometrySource.ForceExtractionMask forceMask)
@@ -304,14 +304,14 @@ namespace teleport
 					//Generate an ID, if we don't have one.
 					if(animationID == 0)
 					{
-						animationID = GenerateUid();
+						animationID = Server_GenerateUid();
 					}
 					animationIDs[i] = animationID;
 
 					//Add resource to the GeometrySource, so we know if it has been added before.
 					geometrySource.AddResource(clip, animationID);
 					//Store animation on unmanaged side.
-					StoreTransformAnimation(animationID, animation);
+					Server_StoreTransformAnimation(animationID, animation);
 				}
 				//Reset the animator's GameObject's transform.
 				//Won't this just zero the values? Won't this be incorrect most of the time? Is this really necessary with the next block?
@@ -530,14 +530,14 @@ namespace teleport
 				//Generate an ID, if we don't have one.
 				if(animationID == 0)
 				{
-					animationID = GenerateUid();
+					animationID = Server_GenerateUid();
 				}
 				animationIDs[i] = animationID;
 
 				//Add resource to the GeometrySource, so we know if it has been added before.
 				geometrySource.AddResource(clip, animationID);
 				//Store animation on unmanaged side.
-				StoreTransformAnimation(animationID, animation);
+				Server_StoreTransformAnimation(animationID, animation);
 			}
 
 			return animationIDs;

@@ -5,8 +5,9 @@ using UnityEngine;
 using System.Collections.Generic;
 using uid = System.UInt64;
 using UnityEngine.SceneManagement;
+#if UNITY_EDITOR
 using UnityEditor;
-using UnityEditor.PackageManager;
+#endif
 using System.Text.RegularExpressions;
 
 namespace teleport
@@ -100,33 +101,33 @@ namespace teleport
 		};
 
 		[DllImport(TeleportServerDll.name)]
-		static extern void SetMessageHandlerDelegate(OnMessageHandler m);
+		static extern void Server_SetMessageHandlerDelegate(OnMessageHandler m);
 		
 		[DllImport(TeleportServerDll.name)]
-		public static extern UInt64 SizeOf(string name);
+		public static extern UInt64 Server_SizeOf(string name);
 		[DllImport(TeleportServerDll.name)]
-		private static extern bool Teleport_Initialize(InitialiseState initialiseState);
+		private static extern bool Server_Teleport_Initialize(InitialiseState initialiseState);
 		[DllImport(TeleportServerDll.name)]
-		public static extern bool Teleport_GetSessionState( ref teleport.SessionState sessionState);
+		public static extern bool Server_Teleport_GetSessionState( ref teleport.SessionState sessionState);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void SetConnectionTimeout(Int32 timeout);
+		private static extern void Server_SetConnectionTimeout(Int32 timeout);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void UpdateServerSettings(teleport.ServerSettings newSettings);
+		private static extern void Server_UpdateServerSettings(teleport.ServerSettings newSettings);
 		
 		[DllImport(TeleportServerDll.name)]
-		private static extern void SetClientPosition(uid clientID, Vector3 pos);
+		private static extern void Server_SetClientPosition(uid clientID, Vector3 pos);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void Tick(float deltaTime);
+		private static extern void Server_Tick(float deltaTime);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void EditorTick();
+		private static extern void Server_EditorTick();
 		[DllImport(TeleportServerDll.name)]
-		private static extern void Teleport_Shutdown();
+		private static extern void Server_Teleport_Shutdown();
 		[DllImport(TeleportServerDll.name)]
-		private static extern uid GetUnlinkedClientID();
+		private static extern uid Server_GetUnlinkedClientID();
 
 		// Really basic "send it again" function. Sends to all relevant clients. Must improve!
 		[DllImport(TeleportServerDll.name)]
-		private static extern void ResendNode(uid id);
+		private static extern void Server_ResendNode(uid id);
 		#endregion
 
 
@@ -178,7 +179,7 @@ namespace teleport
 #if UNITY_EDITOR
 		static Monitor()
 		{
-			UnityEditor.EditorApplication.update += EditorTick;
+			UnityEditor.EditorApplication.update += Server_EditorTick;
 		}
 #endif
 
@@ -310,7 +311,7 @@ namespace teleport
 		private void OnEnable()
 		{
 			startUnixTimeUs= GetUnixTimestampNowUs();
-			ulong unmanagedSize = SizeOf("ServerSettings");
+			ulong unmanagedSize = Server_SizeOf("ServerSettings");
 			ulong managedSize = (ulong)Marshal.SizeOf(typeof(teleport.ServerSettings));
 		
 			if (managedSize != unmanagedSize)
@@ -332,7 +333,7 @@ namespace teleport
 				return;
 
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-			UpdateServerSettings(teleportSettings.serverSettings);
+			Server_UpdateServerSettings(teleportSettings.serverSettings);
 			InitialiseState initialiseState = new InitialiseState
 			{
 				clientStoppedRenderingNode = ClientStoppedRenderingNode,
@@ -354,13 +355,13 @@ namespace teleport
 				startUnixTimeUs= startUnixTimeUs
 			};
 
-			initialised = Teleport_Initialize(initialiseState);
+			initialised = Server_Teleport_Initialize(initialiseState);
 			if(!initialised)
 			{
 				Debug.LogError($"Teleport_Initialize failed, so server cannot start.");
 			}
 			// Sets connection timeouts for peers (milliseconds)
-			SetConnectionTimeout(teleportSettings.connectionTimeout);
+			Server_SetConnectionTimeout(teleportSettings.connectionTimeout);
 
 			TeleportSettings settings = TeleportSettings.GetOrCreateSettings();
 			// Create audio component
@@ -390,7 +391,7 @@ namespace teleport
 
 		private void OnDisable()
 		{
-			SetMessageHandlerDelegate(null);
+			Server_SetMessageHandlerDelegate(null);
 #if UNITY_EDITOR
 			if (dummyCam)
 			{
@@ -398,7 +399,7 @@ namespace teleport
 			}
 #endif
 			SceneManager.sceneLoaded -= OnSceneLoaded;
-			Teleport_Shutdown();
+			Server_Teleport_Shutdown();
 		}
 		
 		static public void OverrideRenderingLayerMask(GameObject gameObject, uint mask,bool recursive=false)
@@ -478,7 +479,7 @@ namespace teleport
 		{
 			if(initialised&&Application.isPlaying)
 			{
-				Tick(Time.deltaTime);
+				Server_Tick(Time.deltaTime);
 				CheckForClients();
 			}
 #if UNITY_EDITOR
@@ -583,13 +584,13 @@ namespace teleport
 			if(Application.isPlaying)
 			{
 				TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-				UpdateServerSettings(teleportSettings.serverSettings);
+				Server_UpdateServerSettings(teleportSettings.serverSettings);
 			}
 		}
 
 		private void CheckForClients()
 		{
-			uid id = GetUnlinkedClientID();
+			uid id = Server_GetUnlinkedClientID();
 			if (id == 0)
 			{
 				return;
@@ -636,6 +637,7 @@ namespace teleport
 			var currentSessions = GameObject.FindObjectsByType<Teleport_SessionComponent>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
 			// We want to use an existing session in the scene if it doesn't have a client.
 			// This is useful if the session is placed in the scene instead of spawned.
+			#if UNITY_EDITOR
 			if (Instance.defaultPlayerPrefab!=null)
 			{
 				var prefabs = PrefabUtility.FindAllInstancesOfPrefab(Instance.defaultPlayerPrefab);
@@ -645,6 +647,7 @@ namespace teleport
 					currentSessions[i] = prefabs[i].GetComponentInChildren<Teleport_SessionComponent>();
 				}
 			}
+			#endif
 			foreach (var s in currentSessions)
 			{
 				if (!s.Spawned && (s.GetClientID() == 0|| s.GetClientID()==clientID))
@@ -956,7 +959,7 @@ namespace teleport
 			{
 				uid u=streamable.GetUid();
 				if(u!=0)
-					ResendNode(u);
+					Server_ResendNode(u);
 			}
 		}
 	}

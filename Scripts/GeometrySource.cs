@@ -416,45 +416,48 @@ namespace teleport
 		#region DLLImports
 
 		[DllImport(TeleportServerDll.name)]
-		private static extern bool SetCachePath(string name);
+		private static extern bool Server_SetCachePath(string name);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void DeleteUnmanagedArray(in IntPtr unmanagedArray);
+		private static extern void Server_DeleteUnmanagedArray(in IntPtr unmanagedArray);
 
 		[DllImport(TeleportServerDll.name)]
-		private static extern uid GenerateUid();
+		private static extern uid Server_GenerateUid();
 		[DllImport(TeleportServerDll.name)]
-		private static extern uid GetOrGenerateUid(string path);
+		private static extern uid Server_GetOrGenerateUid(string path);
 		[DllImport(TeleportServerDll.name)]
-		private static extern uid PathToUid(string path);
+		private static extern uid Server_PathToUid(string path);
         [DllImport(TeleportServerDll.name)]
-        private static extern UInt64 UidToPath(uid u, StringBuilder path, UInt64 stringsize);
+        private static extern UInt64 Server_UidToPath(uid u, StringBuilder path, UInt64 stringsize);
+		[DllImport(TeleportServerDll.name)]
 
-        [DllImport(TeleportServerDll.name)]
-		private static extern void SaveGeometryStore();
+		private static extern UInt64 Server_EnsurePathResourceIsLoaded(string path);
+
 		[DllImport(TeleportServerDll.name)]
-		private static extern void LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 numMaterials, out IntPtr loadedMaterials);
+		private static extern void Server_SaveGeometryStore();
+		[DllImport(TeleportServerDll.name)]
+		private static extern void Server_LoadGeometryStore(out UInt64 meshAmount, out IntPtr loadedMeshes, out UInt64 textureAmount, out IntPtr loadedTextures, out UInt64 numMaterials, out IntPtr loadedMaterials);
 	
 		[DllImport(TeleportServerDll.name)]
-		private static extern void ClearGeometryStore();
+		private static extern void Server_ClearGeometryStore();
 		[DllImport(TeleportServerDll.name)]
-		private static extern bool CheckGeometryStoreForErrors();
+		private static extern bool Server_CheckGeometryStoreForErrors();
 
 		[DllImport(TeleportServerDll.name)]
-		private static extern void StoreNode(uid id, avs.Node node);
+		private static extern void Server_StoreNode(uid id, avs.Node node);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void StoreSkeleton(uid id, avs.Skeleton skeleton);
+		private static extern void Server_StoreSkeleton(uid id, avs.Skeleton skeleton);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void StoreMesh(uid id,
+		private static extern void Server_StoreMesh(uid id,
 												string guid,
 												string path,
 												Int64 lastModified,
 												[MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(MeshMarshaler))] avs.Mesh mesh,
 												 [MarshalAs(UnmanagedType.I1)] avs.AxesStandard extractToStandard, [MarshalAs(UnmanagedType.I1)] bool compress, [MarshalAs(UnmanagedType.I1)] bool verify);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void StoreMaterial(uid id, string guid,
+		private static extern void Server_StoreMaterial(uid id, string guid,
 												string path, Int64 lastModified, avs.Material material);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void StoreTexture(uid id, string guid,
+		private static extern void Server_StoreTexture(uid id, string guid,
 												string path, Int64 lastModified, avs.Texture texture
 												, [MarshalAs(UnmanagedType.I1)] bool genMips
 												, [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC
@@ -462,40 +465,40 @@ namespace teleport
 												);
 		
 		[DllImport(TeleportServerDll.name)]
-		private static extern uid StoreFont(  string  ttf_path,string  relative_assetPath, Int64 lastModified, int size);
+		private static extern uid Server_StoreFont(  string  ttf_path,string  relative_assetPath, Int64 lastModified, int size);
 		[DllImport(TeleportServerDll.name)]
-		private static extern uid StoreTextCanvas(string relative_assetPath,teleport.InteropTextCanvas interopTextCanvas);
+		private static extern uid Server_StoreTextCanvas(string relative_assetPath,teleport.InteropTextCanvas interopTextCanvas);
 
 		[DllImport(TeleportServerDll.name)]
-		private static extern void StoreShadowMap(uid id, string guid,
+		private static extern void Server_StoreShadowMap(uid id, string guid,
 												string path, Int64 lastModified, avs.Texture shadowMap);
 
 		[DllImport(TeleportServerDll.name)]
-		private static extern bool IsNodeStored(uid id);
+		private static extern bool Server_IsNodeStored(uid id);
 		[DllImport(TeleportServerDll.name)]
-		private static extern bool IsSkeletonStored(uid id);
+		private static extern bool Server_IsSkeletonStored(uid id);
 		[DllImport(TeleportServerDll.name)]
-		private static extern bool IsMeshStored(uid id);
+		private static extern bool Server_IsMeshStored(uid id);
 		[DllImport(TeleportServerDll.name)]
-		private static extern bool IsMaterialStored(uid id);
+		private static extern bool Server_IsMaterialStored(uid id);
 		[DllImport(TeleportServerDll.name)]
-		private static extern bool IsTextureStored(uid id);
+		private static extern bool Server_IsTextureStored(uid id);
 
 		[DllImport(TeleportServerDll.name)]
-		private static extern void RemoveNode(uid id);
+		private static extern void Server_RemoveNode(uid id);
 
 		[DllImport(TeleportServerDll.name)]
-		private static extern UInt64 GetNumberOfTexturesWaitingForCompression();
+		private static extern UInt64 Server_GetNumberOfTexturesWaitingForCompression();
 		[DllImport(TeleportServerDll.name)]
 		
-		private static extern void GetMessageForNextCompressedTexture(string str,UInt64 strlen);
+		private static extern void Server_GetMessageForNextCompressedTexture(string str,UInt64 strlen);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void CompressNextTexture();
+		private static extern void Server_CompressNextTexture();
 		[DllImport(TeleportServerDll.name)]
-		private static extern void SetCompressionLevels(byte compressionStrength, byte compressionQuality);
+		private static extern void Server_SetCompressionLevels(byte compressionStrength, byte compressionQuality);
 		
 		[DllImport(TeleportServerDll.name)]
-		public static extern bool GetFontAtlas( string path, InteropFontAtlas interopFontAtlas);
+		public static extern bool Server_GetFontAtlas( string path, InteropFontAtlas interopFontAtlas);
 		#endregion
 
 		#region CustomSerialisation
@@ -549,7 +552,7 @@ namespace teleport
 				AssetDatabase.CreateAsset(geometrySource, unityAssetPath);
 				AssetDatabase.SaveAssets();
 
-				ClearGeometryStore();
+				Server_ClearGeometryStore();
 				Debug.LogWarning($"Geometry Source asset created with path \"{unityAssetPath}\"!");
 			}	
 #endif
@@ -617,7 +620,7 @@ namespace teleport
 			var pairsToDelete = sessionResourceUids.Where(pair => pair.Key == null).ToArray();
 			foreach (var pair in pairsToDelete)
 			{
-				RemoveNode(pair.Value);
+				Server_RemoveNode(pair.Value);
 				sessionResourceUids.Remove(pair.Key);
 			}
 
@@ -625,7 +628,7 @@ namespace teleport
 
 		bool SetGeometryCachePath(string cachePath)
 		{
-			bool valid = SetCachePath(cachePath);
+			bool valid = Server_SetCachePath(cachePath);
 			if (!valid)
 			{
 				Debug.LogError("Failed to set the Geometry Cache Path to: " + cachePath);
@@ -640,7 +643,7 @@ namespace teleport
 			if (!SetGeometryCachePath(teleportSettings.cachePath))
 				return;
 
-			SaveGeometryStore();
+			Server_SaveGeometryStore();
 		}
 
 		public void LoadFromDisk()
@@ -652,7 +655,7 @@ namespace teleport
 
 			//Load data from files.
 			// These are the dll-side resource definitions.
-			LoadGeometryStore(out UInt64 numMeshes, out IntPtr loadedMeshes, out UInt64 numTextures, out IntPtr loadedTextures, out UInt64 numMaterials, out IntPtr loadedMaterials);
+			Server_LoadGeometryStore(out UInt64 numMeshes, out IntPtr loadedMeshes, out UInt64 numTextures, out IntPtr loadedTextures, out UInt64 numMaterials, out IntPtr loadedMaterials);
 	
 			// Assign new IDs to the loaded resources.
 			AddToProcessedResources<UnityEngine.Mesh>((int)numMeshes, loadedMeshes);
@@ -660,9 +663,9 @@ namespace teleport
 			AddToProcessedResources<UnityEngine.Material>((int)numMaterials, loadedMaterials);
 
 			//Delete unmanaged memory.
-			DeleteUnmanagedArray(loadedMeshes);
-			DeleteUnmanagedArray(loadedTextures);
-			DeleteUnmanagedArray(loadedMaterials);
+			Server_DeleteUnmanagedArray(loadedMeshes);
+			Server_DeleteUnmanagedArray(loadedTextures);
+			Server_DeleteUnmanagedArray(loadedMaterials);
 		}
 
 		public void ClearData()
@@ -683,7 +686,7 @@ namespace teleport
 				}
 			}
             SceneResourcePathManager.ClearAll();
-			ClearGeometryStore();
+			Server_ClearGeometryStore();
 		}
 		// The resource path is the path that will be used by remote clients to identify the resource object.
 		// For Unity it will consist of the asset filename (relative to the Assets folder), followed if necessary by the subobject name within the file.
@@ -796,6 +799,20 @@ namespace teleport
 
 			sessionResourceUids.TryGetValue(resource, out uid nodeID);
 			return nodeID;
+		}
+		public uid FindOrAddResourceID(UnityEngine.Object resource)
+		{
+			uid u= FindResourceID(resource);
+			if(u!=0)
+			{
+				return u;
+			}
+			// The resource is not yet in the locally processed list. Therefore, we will try to find it in the mapping of resources and paths.
+			string path;
+			if(!GetResourcePath(resource,out path,true))
+				return 0;
+			u= Server_EnsurePathResourceIsLoaded(path);
+			return u;
 		}
 		public uid FindOrAddNodeID(UnityEngine.GameObject gameObject)
 		{
@@ -943,7 +960,7 @@ namespace teleport
 
 			//Just return the ID; if we have already processed the GameObject, the node can be found on the unmanaged side,
 			//we are not forcing an extraction of nodes, and we are not forcing an extraction on the hierarchy of a node.
-			if(	sessionResourceUids.TryGetValue(gameObject, out uid nodeID) && IsNodeStored(nodeID) &&
+			if(	sessionResourceUids.TryGetValue(gameObject, out uid nodeID) && Server_IsNodeStored(nodeID) &&
 					(
 						!isChildExtraction && (forceMask & ForceExtractionMask.FORCE_NODES) == ForceExtractionMask.FORCE_NOTHING ||
 						(isChildExtraction && (forceMask & ForceExtractionMask.FORCE_HIERARCHIES) == ForceExtractionMask.FORCE_NOTHING)
@@ -1004,7 +1021,7 @@ namespace teleport
 			}
 			extractedNode.url=IntPtr.Zero;
 
-			nodeID = nodeID == 0 ? GenerateUid() : nodeID;
+			nodeID = nodeID == 0 ? Server_GenerateUid() : nodeID;
 			sessionResourceUids[gameObject] = nodeID;
 			sessionNodes[nodeID] = gameObject;
 			if (extractedNode.dataType == avs.NodeDataType.None)
@@ -1050,7 +1067,7 @@ namespace teleport
 				}
 			}
 			//Store extracted node.
-			StoreNode(nodeID, extractedNode);
+			Server_StoreNode(nodeID, extractedNode);
 			ExtractNodeHierarchy(gameObject, ref extractedNode, forceMask, verify);
 			return nodeID;
 		}
@@ -1077,7 +1094,7 @@ namespace teleport
 			//Just return the ID; if we have already processed the mesh, the mesh can be found on the unmanaged side, and we are not forcing extraction.
 			if(sessionResourceUids.TryGetValue(mesh, out uid meshID))
 			{
-				if (IsMeshStored(meshID))
+				if (Server_IsMeshStored(meshID))
 				{
 					if ((forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
 					{
@@ -1087,7 +1104,7 @@ namespace teleport
 			}
 			bool running = Application.isPlaying;
 			//resourcePath = avs.AxesStandard.EngineeringStyle.ToString().Replace("Style", "").ToLower() + "/" + resourcePath;
-			meshID = meshID == 0 ? GetOrGenerateUid(resourcePath) : meshID;
+			meshID = meshID == 0 ? Server_GetOrGenerateUid(resourcePath) : meshID;
 			sessionResourceUids[mesh] = meshID;
 			// only compress if not running - too slow...
 			// Actually, let's ONLY extract offline. 
@@ -1104,10 +1121,10 @@ namespace teleport
  					Debug.LogError("Mesh missing! Mesh " + mesh.name + " was not in sessionResourceUids.");
 					return 0;
 				}
-				if(!IsMeshStored(meshID))
+				if(!Server_IsMeshStored(meshID))
 				{
 					Debug.LogError("Mesh missing! Mesh "+mesh.name+" was not stored dll-side.");
-					IsMeshStored(meshID);
+					Server_IsMeshStored(meshID);
 					return 0;
 				}
 			}
@@ -1129,7 +1146,7 @@ namespace teleport
 			}
 
 			//Just return the ID; if we have already processed the material, the material can be found on the unmanaged side, and we are not forcing an update.
-			if(sessionResourceUids.TryGetValue(material, out uid materialID) && IsMaterialStored(materialID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
+			if(sessionResourceUids.TryGetValue(material, out uid materialID) && Server_IsMaterialStored(materialID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
 			{
 				return materialID;
 			}
@@ -1138,12 +1155,12 @@ namespace teleport
 				return 0;
 			if (materialID == 0)
 			{
-				materialID =  GetOrGenerateUid(resourcePath) ;
+				materialID =  Server_GetOrGenerateUid(resourcePath) ;
 				//Debug.Log("Generated uid "+materialID+ " for "+resourcePath);
 			}
 			else
 			{
-				uid id_from_dll = GetOrGenerateUid(resourcePath);
+				uid id_from_dll = Server_GetOrGenerateUid(resourcePath);
                 if (materialID != id_from_dll)
 				{
 					Debug.LogError("Uid mismatch for object "+material.name+" at path "+resourcePath+". Id from list was "+ materialID+", but Id from path "+resourcePath+" was "+id_from_dll);
@@ -1260,8 +1277,8 @@ namespace teleport
 			//long fileId=0;
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(material, out string guid);
 			extractedMaterial.path = Marshal.StringToCoTaskMemUTF8(resourcePath);
-			
- 			StoreMaterial(materialID, guid, resourcePath, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32))), extractedMaterial);
+
+			Server_StoreMaterial(materialID, guid, resourcePath, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32))), extractedMaterial);
 #endif
 
 			return materialID;
@@ -1790,7 +1807,7 @@ namespace teleport
 			string textureAssetPath = AssetDatabase.GetAssetPath(texture).Replace("Assets/","");
 			long lastModified = GetAssetWriteTimeUTC(textureAssetPath);
 			bool genMips=false;
-			StoreTexture(textureID, guid, resourcePath, lastModified, textureData,  genMips, highQualityUASTC, forceOverwrite);
+			Server_StoreTexture(textureID, guid, resourcePath, lastModified, textureData,  genMips, highQualityUASTC, forceOverwrite);
 #endif
 		}
 
@@ -1819,13 +1836,13 @@ namespace teleport
             if (boneIDs.ContainsKey(bone))
             {
                 //Just return the ID; if we have already processed the transform and the bone can be found on the unmanaged side.
-                if (boneID != 0 && IsNodeStored(boneID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
+                if (boneID != 0 && Server_IsNodeStored(boneID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
                 {
                     return ;
                 }
 
                 //Add to sessionResourceUids first to prevent a stack overflow from recursion. 
-                boneID = boneID == 0 ? GenerateUid() : boneID;
+                boneID = boneID == 0 ? Server_GenerateUid() : boneID;
                 sessionResourceUids[bone] = boneID;
 
                 // The parent of the bone might NOT be in the skeleton! Unity's avatar system can skip objects in the hierarchy.
@@ -1884,7 +1901,7 @@ namespace teleport
 			sessionResourceUids.TryGetValue(rootBone.gameObject, out uid boneID);
             if (boneID == 0)
             {
-				boneID=GenerateUid();
+				boneID=Server_GenerateUid();
                 sessionResourceUids[rootBone.gameObject] = boneID;
             }
 			boneIDs[rootBone] =boneID;
@@ -1907,10 +1924,10 @@ namespace teleport
 		}
 		public void CompressTextures()
 		{
-			UInt64 totalTexturesToCompress = GetNumberOfTexturesWaitingForCompression();
+			UInt64 totalTexturesToCompress = Server_GetNumberOfTexturesWaitingForCompression();
 
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-			SetCompressionLevels(teleportSettings.serverSettings.compressionLevel, teleportSettings.serverSettings.qualityLevel);
+			Server_SetCompressionLevels(teleportSettings.serverSettings.compressionLevel, teleportSettings.serverSettings.qualityLevel);
 #if UNITY_EDITOR
 			UInt64 strlen=32;
 			string compressionMessage=new string(' ',(int)strlen);
@@ -1918,13 +1935,13 @@ namespace teleport
 			UInt64 initialTexturesToCompress = totalTexturesToCompress;
 			while (totalTexturesToCompress>0)
 			{
-				totalTexturesToCompress = GetNumberOfTexturesWaitingForCompression();
-				GetMessageForNextCompressedTexture(compressionMessage,strlen);
+				totalTexturesToCompress = Server_GetNumberOfTexturesWaitingForCompression();
+				Server_GetMessageForNextCompressedTexture(compressionMessage,strlen);
 
 				bool cancelled = EditorUtility.DisplayCancelableProgressBar("Compressing Textures", compressionMessage, (float)(i + 1) / (float)(initialTexturesToCompress));
 				if(cancelled)
 					break;
-				CompressNextTexture();
+				Server_CompressNextTexture();
 			}
 
 			EditorUtility.ClearProgressBar();
@@ -1961,7 +1978,7 @@ namespace teleport
 					materialIDs.Add(materialID);
 					
 					//Check GeometryStore to see if material actually exists, if it doesn't then there is a mismatch between the mananged code data and the unmanaged code data.
-					if(!IsMaterialStored(materialID))
+					if(!Server_IsMaterialStored(materialID))
 					{
 						Debug.LogError($"Missing material {material.name}({materialID}), which was added to \"{extractTo.name}\".");
 					}
@@ -1984,10 +2001,10 @@ namespace teleport
 			long lastModified = GetAssetWriteTimeUTC(fontAssetPath);
 			string font_ttf_path = System.IO.Directory.GetParent(Application.dataPath).ToString().Replace("\\","/") +"/Assets/"+ fontAssetPath;
 			string resourcePath=fontAssetPath.Replace("Assets/","");
-			uid font_uid=StoreFont(font_ttf_path,resourcePath,lastModified,textCanvas.size);
+			uid font_uid= Server_StoreFont(font_ttf_path,resourcePath,lastModified,textCanvas.size);
 		#else
 			GetResourcePath(textCanvas.font, out string resourcePath, false);
-			uid font_uid= GetOrGenerateUid(resourcePath);
+			uid font_uid= Server_GetOrGenerateUid(resourcePath);
 		#endif
 			string canvasAssetPath="Text/"+textCanvas.name;
 			teleport.InteropTextCanvas interopTextCanvas=new teleport.InteropTextCanvas();
@@ -2002,7 +2019,7 @@ namespace teleport
 			interopTextCanvas.colour=textCanvas.colour;
 			
 			// We store the canvas text. This is a pure text asset, treated as a mutable resource - i.e. it can be modified in real time.
-			uid u=StoreTextCanvas(canvasAssetPath,interopTextCanvas);
+			uid u= Server_StoreTextCanvas(canvasAssetPath,interopTextCanvas);
 			return u;
 		}
 		private bool ExtractNodeMeshData(GameObject gameObject, ref avs.Node extractTo, ForceExtractionMask forceMask, bool verify)
@@ -2123,7 +2140,7 @@ namespace teleport
 				return false;
 			if (!sessionResourceUids.TryGetValue(link, out extractTo.dataID))
 			{
-				extractTo.dataID = GenerateUid();
+				extractTo.dataID = Server_GenerateUid();
 			}
 			sessionResourceUids[link] = extractTo.dataID;
 			extractTo.dataType = avs.NodeDataType.Link;
@@ -2140,7 +2157,7 @@ namespace teleport
 
 			if(!sessionResourceUids.TryGetValue(light, out extractTo.dataID))
 			{
-				extractTo.dataID = GenerateUid();
+				extractTo.dataID = Server_GenerateUid();
 			}
 			sessionResourceUids[light] = extractTo.dataID;
 			extractTo.dataType = avs.NodeDataType.Light;
@@ -2177,13 +2194,13 @@ namespace teleport
 			//Just return the ID; if we have already processed the skeleton and the skeleton can be found on the unmanaged side.
 			if (sessionResourceUids.TryGetValue(skeletonRootTransform.gameObject, out skeletonRootNodeID) )
 			{
-				if(IsNodeStored(skeletonRootNodeID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
+				if(Server_IsNodeStored(skeletonRootNodeID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
 				{
 					return skeletonRootNodeID;
 				}
 			}
 			skeletonUids.TryGetValue(skeletonRoot.assetPath, out skeletonAssetID);
-			skeletonAssetID = skeletonAssetID == 0 ? GenerateUid() : skeletonAssetID;
+			skeletonAssetID = skeletonAssetID == 0 ? Server_GenerateUid() : skeletonAssetID;
 			skeletonUids[skeletonRoot.assetPath] = skeletonAssetID;
 
 			avs.Skeleton skeleton = new avs.Skeleton();
@@ -2211,7 +2228,7 @@ namespace teleport
 					avsNode.dataID=skeletonAssetID;
 				}
 				uid boneID = boneIDs.Values.ElementAt(i);
-				StoreNode(boneID, avsNode);
+				Server_StoreNode(boneID, avsNode);
 			}
 
 			// Now, we've stored all the nodes in the object hierarchy. This may be more nodes than the actual skeleton has:
@@ -2229,7 +2246,7 @@ namespace teleport
 
 			skeleton.rootTransform = avs.Transform.FromLocalUnityTransform(skeletonRootTransform.parent);
 
-			StoreSkeleton(skeletonAssetID, skeleton);
+			Server_StoreSkeleton(skeletonAssetID, skeleton);
 			return skeletonRootNodeID;
 		}
 
@@ -2622,7 +2639,7 @@ namespace teleport
 				buffers = buffers.Values.ToArray(),
 				inverseBindMatricesAccessor = inverseBindMatricesID
 		};
-			StoreMesh
+			Server_StoreMesh
 			(
 				meshID,
 				guid,
@@ -2993,13 +3010,13 @@ namespace teleport
 			}
 
 			//Just return the ID; if we have already processed the texture and the texture can be found on the unmanaged side.
-			if(sessionResourceUids.TryGetValue(texture, out uid textureID) && IsTextureStored(textureID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
+			if(sessionResourceUids.TryGetValue(texture, out uid textureID) && Server_IsTextureStored(textureID) && (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
 			{
 				return textureID;
 			}
 
 			GetResourcePath(texture, out string resourcePath, (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_SUBRESOURCES);
-			uid uid_from_path= GetOrGenerateUid(resourcePath);
+			uid uid_from_path= Server_GetOrGenerateUid(resourcePath);
 			if (textureID == 0)
 			{
 				textureID = uid_from_path;
@@ -3011,12 +3028,12 @@ namespace teleport
 					Debug.LogError("Uid mismatch for texture " + texture.name + " at path " + resourcePath+"."
 						+" uid from path was "+uid_from_path+", but stored textureID was "+textureID+".");
 					sessionResourceUids.Remove(texture);
-					GetOrGenerateUid(resourcePath);
+					Server_GetOrGenerateUid(resourcePath);
 					return 0;
 				}
 			}
 			sessionResourceUids[texture] = textureID;
-			if(IsTextureStored(textureID))
+			if(Server_IsTextureStored(textureID))
 			{
 				if (Application.isPlaying||(forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_NOTHING)
 					return textureID;
@@ -3105,11 +3122,10 @@ namespace teleport
 				return 0;
 			}
 		}
-
-		//Confirms resources loaded from disk of a certain Unity asset type still exist.
-		//  numResources : Amount of resources in loadedResources.
+		bool paused_already=false;
+		// Mark resources as already processed.
+		//  numResources : Number of resources in loadedResources.
 		//  loadedResources : LoadedResource array that was created in unmanaged memory.
-		//Returns list of resources that have been confirmed to exist, with their new ID assigned.
 		private void AddToProcessedResources<UnityAsset>(int numResources, in IntPtr loadedResources) where UnityAsset : UnityEngine.Object
 		{
 			int resourceSize = Marshal.SizeOf<LoadedResource>();
@@ -3131,13 +3147,8 @@ namespace teleport
 
 #if UNITY_EDITOR
 				string expectedAssetPath=path;
-				int hash= expectedAssetPath.IndexOf("##");
-				if ( hash>= 0)
-                {
-					expectedAssetPath = expectedAssetPath.Substring(0,hash);
-				}
-				expectedAssetPath = expectedAssetPath.Replace("___", " ");
-				if(expectedAssetPath.StartsWith("Library/"))
+				expectedAssetPath = SceneResourcePathManager.UnstandardizePath(expectedAssetPath, "");
+				if (expectedAssetPath.StartsWith("Library/"))
 				{
 					expectedAssetPath = "Library/unity default resources";
 				}
@@ -3150,10 +3161,15 @@ namespace teleport
 					//Attempt to find asset the from the guid.
 					unityAssetPath = AssetDatabase.GUIDToAssetPath(guid.Substring(0, 32)).Replace("Assets/", "");
 				}
-				if (unityAssetPath!= expectedAssetPath)
+				string standardizedUnityAssetPath= SceneResourcePathManager.StandardizePath(unityAssetPath, "Assets/");
+				if (expectedAssetPath != unityAssetPath)
                 {
-					Debug.LogWarning("Path mismatch for ("+typeof(UnityAsset).ToString()+")" + name+": expected["+ expectedAssetPath + "]!=got["+unityAssetPath+"]");
-                  // System.Threading.Thread.Sleep(10000);
+					Debug.LogWarning("Path mismatch for ("+typeof(UnityAsset).ToString()+")" + name+": expected["+ expectedAssetPath + "]!=got["+ unityAssetPath + "]");
+					if(!paused_already)
+					{ 
+						System.Threading.Thread.Sleep(10000);
+						paused_already=true;
+					}
                 }
 				UnityEngine.Object[] assetsAtPath = AssetDatabase.LoadAllAssetsAtPath("Assets/"+unityAssetPath);
 				if (assetsAtPath.Length == 0)
@@ -3163,7 +3179,7 @@ namespace teleport
 				}
 				if (assetsAtPath.Length == 0)
                 {
-					unityAssetPath= expectedAssetPath;
+					unityAssetPath=SceneResourcePathManager.UnstandardizePath(expectedAssetPath, "");
 					do
                     {
 						assetsAtPath = AssetDatabase.LoadAllAssetsAtPath("Assets/" + unityAssetPath);
@@ -3229,16 +3245,16 @@ namespace teleport
 		}
 		public bool CheckForErrors()
 		{
-			return CheckGeometryStoreForErrors();
+			return Server_CheckGeometryStoreForErrors();
 		}
 		static public string GetPathFromUid(uid u)
 		{
 			StringBuilder path=new StringBuilder("", 20);
-            int len=(int)UidToPath(u,  path, 0);
+            int len=(int)Server_UidToPath(u,  path, 0);
 			if (len > 0)
 			{
 				path = new StringBuilder(len, len);
-				 UidToPath(u, path, (UInt64)len);
+				Server_UidToPath(u, path, (UInt64)len);
             }
 
 			return path.ToString();

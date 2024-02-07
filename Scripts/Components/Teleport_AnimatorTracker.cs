@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using UnityEditor.Animations;
 using UnityEngine;
-using static UnityEditor.Experimental.GraphView.GraphView;
 using uid = System.UInt64;
 
 namespace teleport
@@ -98,7 +96,9 @@ namespace teleport
 				for (int layer=0; layer<animator.layerCount; layer++)
 				{
 					bool changed = false;
+					#if TELEPORT_DEBUG_ANIMATION
 					string layerInfo = "Animator Layer " + layer;
+					#endif
 					LayerTracker layerTracker= layerTrackers[layer];
 					AnimatorClipInfo[] currentAnimatorClips = animator.GetCurrentAnimatorClipInfo(layer);
 					AnimatorStateInfo currentAnimatorState = animator.GetCurrentAnimatorStateInfo(layer);
@@ -114,7 +114,9 @@ namespace teleport
 					{
 						changed = true;
 						layerTracker.transitionDuration = transitionInfo.duration;
+#if TELEPORT_DEBUG_ANIMATION
 						layerInfo+=", transition "+ transitionInfo.duration;
+#endif
 					}
 					AnimationClip currentClip=null,nextClip=null;
 					if (currentAnimatorClips.Length > 0)
@@ -131,6 +133,7 @@ namespace teleport
 						changed = true;
 						layerTracker.nextClip.clip = nextClip;
 					}
+#if TELEPORT_DEBUG_ANIMATION
 					layerInfo+=" Current: "+currentAnimatorClips.Length+" clips.";
 					foreach (var clipInfo in currentAnimatorClips)
 					{
@@ -141,6 +144,7 @@ namespace teleport
 					{
 						layerInfo += " " + clipInfo.clip.name + "(" + clipInfo.weight + ")";
 					}
+#endif
 					if(changed)
 					{
 						// if we have a "next", this is what we send, with the timestamp at the END of the transition.
@@ -172,32 +176,12 @@ namespace teleport
 							SendAnimationUpdate(layer, currentAnimatorClips[0].clip, teleport.Monitor.GetSessionTimestampNowUs(), animTimeAtTimestampS, currentAnimatorState.speed, currentAnimatorState.loop);
 						}
 					}
-					foreach (var clipInfo in currentAnimatorClips)
-					{ 
-						/*	ClipTracker clipTracker;
-							clipTracker.updated = true;
-							clipTracker.weight = clipInfo.weight;
-							AnimationClip playingClip = clipInfo.clip;
-							if (playingClip != null)
-							{
-								AnimatorStateInfo animatorState = animator.GetCurrentAnimatorStateInfo(0);
-								//We want animTimeAtTimestamp: at the current time, where is this animation in its sequence?
-								double timestampOffset = (animatorState.normalizedTime % 1.0) * playingClip.length;/// animatorState.speed;
-
-								SendAnimationUpdate(playingClip, (float)timestampOffset, animatorState.speed, clipInfo.weight);
-							}*/
-					}
-					/*foreach (var clipTracker in clipTrackers)
-					{
-						if (clipTracker.Value.updated)
-							continue;
-						// This animation is no longer playing:
-						SendAnimationUpdate(clipTracker.Key, 0.0F, 0.0F, 0.0F);
-					}*/
+#if TELEPORT_DEBUG_ANIMATION
 					if (changed&&layer==0)
 					{
-					//UnityEngine.Debug.Log(layerInfo);
+						UnityEngine.Debug.Log(layerInfo);
 					}
+#endif
 				}
 				if (layerTrackers.Count > animator.layerCount)
 				{
@@ -210,7 +194,7 @@ namespace teleport
 
 		private void SendAnimationUpdate(int animLayer,AnimationClip playingClip,Int64 timestampUs, float animTimeAtTimestamp, float speed,bool loop)
 		{
-			uid animationID = GeometrySource.GetGeometrySource().FindResourceID(playingClip);
+			uid animationID = GeometrySource.GetGeometrySource().FindOrAddResourceID(playingClip);
 			if(animationID == 0)
 			{
 				Debug.LogError($"Teleport: Animation update failure! Failed to update playing animation, as \"{playingClip.name}\" has not been extracted!");
