@@ -29,7 +29,6 @@ namespace teleport
 				titleStyle.fontStyle = FontStyle.Bold;
 				scrollwindowStyle = new GUIStyle( GUI.skin.box);
 				verticalScrollbarStyle = new GUIStyle(GUI.skin.verticalScrollbar);
-
 			}
 			EditorGUILayout.BeginVertical();
 			teleport.SessionState sessionState=new teleport.SessionState();

@@ -77,7 +77,7 @@ namespace teleport
 		private HashSet< Light> bakedLights = new HashSet< Light>();
 
 		private float timeSincePositionUpdate = 0;
-
+		private float timeSinceEnabledStateUpdate=0;
 		static public bool IsClientRenderingParent(uid clientID, GameObject gameObject)
 		{
 			if(gameObject.transform.parent)
@@ -99,7 +99,7 @@ namespace teleport
 			session = parentComponent;
 
 			teleportSettings = TeleportSettings.GetOrCreateSettings();
-			timeSincePositionUpdate = 1 / teleportSettings.moveUpdatesPerSecond;
+			timeSincePositionUpdate = 1.0F / teleportSettings.moveUpdatesPerSecond;
 		}
 
 		public void Clear()
@@ -447,13 +447,9 @@ namespace teleport
 				StopStreaming(streamable, StreamingReason.NEARBY);
 			}
 
-			//Send position updates, if enough time has elapsed.
-			timeSincePositionUpdate += Time.deltaTime;
-			if(session.IsConnected() && timeSincePositionUpdate >= 1.0f / teleportSettings.moveUpdatesPerSecond)
+			if(session.IsConnected() )
 			{
-				timeSincePositionUpdate = 0;
-
-				StopStreamingUntaggedStreamables();
+				//tagHandler.StopStreamingUntaggedStreamables();
 				SendPositionUpdates();
 				SendEnabledStateUpdates();
 			}
@@ -461,7 +457,6 @@ namespace teleport
 		class ClientStreamableTracking
 		{
 			// Track the reasons why we're streaming this. A set of bit flags, when it goes to zero you can stop streaming it.
-			// TODO: this should obviously be per-client.
 			public UInt32 streaming_reason = 0;
 		}
 
@@ -479,7 +474,10 @@ namespace teleport
 				return false;
 			uint streaming_reason= (uint)reason;
 			GameObject gameObject = streamable.gameObject;
-			Debug.Log($"StartStreaming called on {gameObject.name} for reason {reason}.");
+
+			// Only report the more unusual reasons:
+			if(reason!=StreamingReason.NEARBY)
+				Debug.Log($"StartStreaming called on {gameObject.name} for reason {reason}.");
 
 			ClientStreamableTracking tracking = GetTracking(streamable);
             if (streamedGameObjects.Contains(gameObject))
@@ -569,26 +567,15 @@ namespace teleport
 			return true;
 		}
 
-		private void StopStreamingUntaggedStreamables()
-		{
-			var geometrySource=GeometrySource.GetGeometrySource();
-			for (int i = streamedHierarchies.Count - 1; i >= 0; i--)
-			{
-				teleport.StreamableRoot streamable = streamedHierarchies[i];
-				if (!geometrySource.IsGameObjectMarkedForStreaming(streamable.gameObject))
-				{
-					ClientStreamableTracking tracking = GetTracking(streamable);
-					if ((tracking.streaming_reason & (uint)StreamingReason.NEARBY) != 0)
-					{
-						StopStreaming(streamable, StreamingReason.NEARBY);
-					}
-				}
-			}
-        }
         HashSet<uid> got_uids=new HashSet<uid>();
 
         private void SendPositionUpdates()
 		{
+			//Send position updates, if enough time has elapsed.
+			timeSincePositionUpdate += Time.deltaTime;
+			if (timeSincePositionUpdate < 1.0f / teleportSettings.moveUpdatesPerSecond)
+				return;
+			timeSincePositionUpdate = 0;
 			List<avs.MovementUpdate> updates = new List<avs.MovementUpdate>();
 			got_uids.Clear();
 
@@ -617,6 +604,10 @@ namespace teleport
 
 		private void SendEnabledStateUpdates()
 		{
+			timeSinceEnabledStateUpdate+=Time.deltaTime;
+			if (timeSinceEnabledStateUpdate <1.0f / teleportSettings.moveUpdatesPerSecond)
+				return;
+			timeSinceEnabledStateUpdate=0;
 			List<avs.NodeUpdateEnabledState> updates = new List<avs.NodeUpdateEnabledState>();
 			foreach(teleport.StreamableRoot streamable in streamedHierarchies)
 			{

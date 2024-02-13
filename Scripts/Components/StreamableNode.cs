@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using UnityEditor.PackageManager;
 using UnityEngine;
 using uid = System.UInt64;
 
@@ -105,52 +106,44 @@ namespace teleport
 		{
 			return streamedNode.gameObject;
 		}
-		avs.MovementUpdate previousMovement;
+		avs.MovementUpdate previousLocalUpdate;
 		bool previousMovementValid=false;
 		public void ResetPreviousMovement()
 		{
 			previousMovementValid = false;
 		}
-		public avs.MovementUpdate GetMovementUpdate(uid clientID)
+		// Update the velocity, angular velocity for smoothed motion.
+		public void CalcMovementUpdate()
 		{
+			localUpdate.nodeID = nodeID;
+			localUpdate.time_since_server_start_us = teleport.Monitor.GetSessionTimestampNowUs();
+			Int64 delta_time_us = localUpdate.time_since_server_start_us - previousLocalUpdate.time_since_server_start_us;
+			if (delta_time_us == 0)
+				return;
 			if (!transform.hasChanged)
 			{
-				localUpdate.nodeID=0;
-				return localUpdate;
+				localUpdate.velocity = Vector3.zero;
+				localUpdate.angularVelocityAngle = 0.0F;
+				return;
 			}
 			transform.hasChanged = false;
-			GameObject node = gameObject;
-			//Node should already have been added; but AddNode(...) will do the equivalent of FindResourceID(...), but with a fallback.
-			uid nodeID = GeometrySource.GetGeometrySource().AddNode(node);
-			uid prevID = nodeID;
-			ref avs.MovementUpdate update = ref localUpdate;
-			bool has_parent = GeometryStreamingService.IsClientRenderingParent(clientID, node);
-			if (!has_parent)
+			StreamableRoot streamableRoot= gameObject.GetComponent<StreamableRoot>();
+			if(streamableRoot!=null)
 			{
-				update = ref globalUpdate;
-				prevID = nodeID + 1000000000;
-			}
-			if (update.time_since_server_start_us == teleport.Monitor.GetSessionTimestampNowUs())
-				return update;
-			update.time_since_server_start_us = teleport.Monitor.GetSessionTimestampNowUs();
-			update.nodeID = nodeID;
-
-			if (has_parent)
-			{
-				update.isGlobal = false;
-				update.position = node.transform.localPosition;
-				update.rotation = node.transform.localRotation;
-				update.scale = node.transform.localScale;
+				localUpdate.isGlobal = true;
+				localUpdate.position = gameObject.transform.position;
+				localUpdate.rotation = gameObject.transform.rotation;
+				localUpdate.scale = gameObject.transform.lossyScale;
 			}
 			else
 			{
-				update.isGlobal = true;
-				update.position = node.transform.position;
-				update.rotation = node.transform.rotation;
-				update.scale = node.transform.lossyScale;
+				localUpdate.isGlobal = false;
+				localUpdate.position = gameObject.transform.localPosition;
+				localUpdate.rotation = gameObject.transform.localRotation;
+				localUpdate.scale = gameObject.transform.localScale;
 			}
-			bool do_smoothing = true;
-			StreamableProperties streamableProperties = node.GetComponent<StreamableProperties>();
+			bool do_smoothing = false;
+			StreamableProperties streamableProperties = gameObject.GetComponent<StreamableProperties>();
 			if (streamableProperties)
 				do_smoothing = streamableProperties.smoothMotionAtClient;
 			if (do_smoothing && previousMovementValid)
@@ -159,67 +152,67 @@ namespace teleport
 				Vector3 position;
 				Quaternion rotation;
 
-				//Velocity and angular velocity must be calculated in the same basis as the previous movement.
-				if (previousMovement.isGlobal)
-				{
-					position = node.transform.position;
-					rotation = node.transform.rotation;
-				}
-				else
-				{
-					position = node.transform.localPosition;
-					rotation = node.transform.localRotation;
-				}
-				Int64 delta_time_ns = update.time_since_server_start_us - previousMovement.time_since_server_start_us;
-				if (delta_time_ns == 0)
-				{
-					update.nodeID = 0;
-					return update;
-				}
-				if (delta_time_ns != 0)
-				{
-					double delta_time_s = delta_time_ns * 0.000000001;
+				position = gameObject.transform.localPosition;
+				rotation = gameObject.transform.localRotation;
+				double delta_time_s = Time.deltaTime;//delta_time_us * 0.000001;
 
-					//We cast to the unity engine types to take advantage of the existing vector subtraction operators.
-					//We multiply by the amount of move updates per second to get the movement per second, rather than per update.
-					Rigidbody r = GetComponent<Rigidbody>();
-					if (r && !r.isKinematic)
+				//We cast to the unity engine types to take advantage of the existing vector subtraction operators.
+				//We multiply by the amount of move updates per second to get the movement per second, rather than per update.
+				Rigidbody r = GetComponent<Rigidbody>();
+				if (r && !r.isKinematic)
+				{
+					localUpdate.velocity = r.velocity;
+					if (r.angularVelocity.sqrMagnitude > 0.000001)
 					{
-						update.velocity = r.velocity;
-						if (r.angularVelocity.sqrMagnitude > 0.000001)
-						{
-							update.angularVelocityAxis = r.angularVelocity.normalized;
-							update.angularVelocityAngle = r.angularVelocity.magnitude;
-						}
-						else
-						{
-							update.angularVelocityAxis = Vector3.zero;
-							update.angularVelocityAngle = 0;
-						}
+						localUpdate.angularVelocityAxis = r.angularVelocity.normalized;
+						localUpdate.angularVelocityAngle = r.angularVelocity.magnitude;
 					}
 					else
 					{
-						update.velocity = (position - previousMovement.position) / (float)delta_time_s;
-						(rotation * Quaternion.Inverse(previousMovement.rotation)).ToAngleAxis(out update.angularVelocityAngle, out Vector3 angularVelocityAxis);
-						update.angularVelocityAxis = angularVelocityAxis;
-						if (update.angularVelocityAngle != 0)
-						{
-							//Angle needs to be inverted, for some reason.
-							update.angularVelocityAngle /= (float)delta_time_s;
-							update.angularVelocityAngle *= -Mathf.Deg2Rad;
-						}
+						localUpdate.angularVelocityAxis = Vector3.zero;
+						localUpdate.angularVelocityAngle = 0;
 					}
+				}
+				else
+				{
+					localUpdate.velocity = (position - previousLocalUpdate.position) / (float)delta_time_s;
+					(rotation * Quaternion.Inverse(previousLocalUpdate.rotation)).ToAngleAxis(out localUpdate.angularVelocityAngle, out Vector3 angularVelocityAxis);
+					if (localUpdate.angularVelocityAngle != 0)
+					{
+						//Angle needs to be inverted, for some reason.
+						localUpdate.angularVelocityAngle /= (float)delta_time_s;
+						localUpdate.angularVelocityAngle *= -Mathf.Deg2Rad;
+					}
+					float smoothingFactor=0.8F;
+					if (previousMovementValid)
+					{
+						UnityEngine.Vector3 v0= previousLocalUpdate.velocity;
+						UnityEngine.Vector3 v1= localUpdate.velocity;
+						localUpdate.velocity=(smoothingFactor*v0)+(1.0F- smoothingFactor)*v1;
+						UnityEngine.Vector3 a0 = previousLocalUpdate.angularVelocityAxis;
+						UnityEngine.Vector3 a1 = localUpdate.angularVelocityAxis;
+						UnityEngine.Quaternion q0=Quaternion.AngleAxis(previousLocalUpdate.angularVelocityAngle* Mathf.Rad2Deg, a0);
+						UnityEngine.Quaternion q1 = Quaternion.AngleAxis(localUpdate.angularVelocityAngle * Mathf.Rad2Deg, a1);
+						UnityEngine.Quaternion q=UnityEngine.Quaternion.Slerp(q0,q1,1.0F-smoothingFactor);
+						float angleDegrees=0.0f;
+						q.ToAngleAxis(out angleDegrees, out angularVelocityAxis);
+						localUpdate.angularVelocityAngle = angleDegrees*Mathf.Deg2Rad;
+					}
+					localUpdate.angularVelocityAxis = angularVelocityAxis;
 				}
 			}
 			else
 			{
-				update.velocity = Vector3.zero;
-				update.angularVelocityAngle = 0.0F;
+				localUpdate.velocity = Vector3.zero;
+				localUpdate.angularVelocityAngle = 0.0F;
 			}
 
-			previousMovement=update;
-			previousMovementValid=true;
-			return update;
+			previousLocalUpdate = localUpdate;
+			previousMovementValid = true;
+		}
+		public avs.MovementUpdate GetMovementUpdate(uid clientID)
+		{
+			return localUpdate;
 		}
 	}
 }

@@ -22,7 +22,7 @@ namespace avs
 
 	public struct TransformKeyframeList
 	{
-		public UInt64 boneIndex;
+		public Int16 boneIndex;
 
 		public int positionAmount;
 		public Vector3Keyframe[] positionKeyframes;
@@ -72,11 +72,9 @@ namespace teleport
 		}
 
 		#region DLLImports
-		[DllImport(TeleportServerDll.name)]
-		private static extern uid Server_GenerateUid();
 
 		[DllImport(TeleportServerDll.name)]
-		private static extern void Server_StoreTransformAnimation(uid id, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(TransformAnimationMarshaler))] avs.TransformAnimation animation);
+		private static extern void Server_StoreTransformAnimation(uid id,string path, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(TransformAnimationMarshaler))] avs.TransformAnimation animation);
 		#endregion
 
 		public static uid[] AddAnimations(Animator animator, GeometrySource.ForceExtractionMask forceMask)
@@ -134,10 +132,20 @@ namespace teleport
 				{
 					AnimationClip clip = animationClips[i];
 					uid animationID = geometrySource.FindResourceID(clip);
-					if(animationID != 0 && (forceMask & GeometrySource.ForceExtractionMask.FORCE_SUBRESOURCES) == GeometrySource.ForceExtractionMask.FORCE_NOTHING)
+					string path;
+					if (!GeometrySource.GetResourcePath(clip, out path, true))
+					{
+						continue;
+					}
+					if (animationID != 0 && (forceMask & GeometrySource.ForceExtractionMask.FORCE_SUBRESOURCES) == GeometrySource.ForceExtractionMask.FORCE_NOTHING)
 					{
 						animationIDs[i] = animationID;
 						continue;
+					}
+					//Generate an ID, if we don't have one.
+					if (animationID == 0)
+					{
+						animationID = GeometrySource.Server_GetOrGenerateUid(path);
 					}
 
 					EditorCurveBinding[] curveBindings = AnimationUtility.GetCurveBindings(clip);
@@ -233,8 +241,8 @@ namespace teleport
 							Debug.LogWarning($"Couldn't find  {boneObject.name}");
 							continue;
 						}
-						newAnimation.boneKeyframes[j].boneIndex = (ulong)Array.FindIndex(bones.ToArray(), x => x.transform == boneObject.transform);
-						if (newAnimation.boneKeyframes[j].boneIndex >= (UInt64)bones.Count)
+						newAnimation.boneKeyframes[j].boneIndex = (Int16)Array.FindIndex(bones.ToArray(), x => x.transform == boneObject.transform);
+						if ((int)newAnimation.boneKeyframes[j].boneIndex >= bones.Count)
 						{
 							Debug.LogWarning($"Couldn't find bone index for: {boneObject.name}");
 							continue;
@@ -301,17 +309,12 @@ namespace teleport
 						animation.boneKeyframes[k] = newAnimation.boneKeyframes[k];
 					}
 
-					//Generate an ID, if we don't have one.
-					if(animationID == 0)
-					{
-						animationID = Server_GenerateUid();
-					}
 					animationIDs[i] = animationID;
 
 					//Add resource to the GeometrySource, so we know if it has been added before.
 					geometrySource.AddResource(clip, animationID);
 					//Store animation on unmanaged side.
-					Server_StoreTransformAnimation(animationID, animation);
+					Server_StoreTransformAnimation(animationID, path,animation);
 				}
 				//Reset the animator's GameObject's transform.
 				//Won't this just zero the values? Won't this be incorrect most of the time? Is this really necessary with the next block?
@@ -361,11 +364,21 @@ namespace teleport
 			{
 				AnimationClip clip = animator.runtimeAnimatorController.animationClips[i];
 
+				string path;
+				if (!GeometrySource.GetResourcePath(clip, out path, true))
+				{
+					continue;
+				}
 				uid animationID = geometrySource.FindResourceID(clip);
 				if(animationID != 0 && (forceMask & GeometrySource.ForceExtractionMask.FORCE_SUBRESOURCES) == GeometrySource.ForceExtractionMask.FORCE_NOTHING)
 				{
 					animationIDs[i] = animationID;
 					continue;
+				}
+				//Generate an ID, if we don't have one.
+				if (animationID == 0)
+				{
+					animationID = GeometrySource.Server_GetOrGenerateUid(path);
 				}
 
 				avs.TransformAnimation animation = new avs.TransformAnimation();
@@ -449,7 +462,7 @@ namespace teleport
 
 					InterimAnimation interim = nodeCurves[bone];
 					avs.TransformKeyframeList transformKeyframe = new avs.TransformKeyframeList();
-					transformKeyframe.boneIndex = (ulong)Array.FindIndex(skinnedMeshRenderer.bones, x => x.transform == bone);
+					transformKeyframe.boneIndex = (Int16)Array.FindIndex(skinnedMeshRenderer.bones, x => x.transform == bone);
 
 					if(interim.positionX != null)
 					{
@@ -527,17 +540,12 @@ namespace teleport
 				}
 				animation.numBones = animation.boneKeyframes.Length;
 
-				//Generate an ID, if we don't have one.
-				if(animationID == 0)
-				{
-					animationID = Server_GenerateUid();
-				}
 				animationIDs[i] = animationID;
 
 				//Add resource to the GeometrySource, so we know if it has been added before.
 				geometrySource.AddResource(clip, animationID);
 				//Store animation on unmanaged side.
-				Server_StoreTransformAnimation(animationID, animation);
+				Server_StoreTransformAnimation(animationID, path, animation);
 			}
 
 			return animationIDs;

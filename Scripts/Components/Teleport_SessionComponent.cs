@@ -878,11 +878,6 @@ namespace teleport
 		public List<GameObject> GetPlayerBodyParts()
 		{
 			List<GameObject> bodyParts = new List<GameObject>();
-		/*	var r = GetComponentsInChildren<Teleport_ClientspaceRoot>();
-			foreach (var o in r)
-			{
-				bodyParts.Add(o.gameObject);
-			}*/
 			var c=GetComponentsInChildren<Teleport_Controller>();
 			foreach (var o in c)
 			{

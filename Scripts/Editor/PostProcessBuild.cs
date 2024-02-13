@@ -29,6 +29,7 @@ namespace teleport
             string sourceCachePath = teleportSettings.cachePath;
             string targetPath= Directory.GetParent(report.summary.outputPath).ToString();
             string outputCachePath = targetPath+"/teleport_cache";
+            Directory.Delete(outputCachePath,true);
             Debug.Log("teleport.PostprocessBuild, copying teleport_cache for target " + report.summary.platform + " to path " + outputCachePath);
             CopyFilesRecursively(sourceCachePath, outputCachePath);
     

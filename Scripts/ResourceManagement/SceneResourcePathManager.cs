@@ -113,8 +113,8 @@ namespace teleport
 				return "";
 			}
 			string p = file_name;
-			p=p.Replace(".","_");
-			p=p.Replace(",","_-_");
+			p=p.Replace(".","_-_");
+			p=p.Replace(",","_--_");
 			p=p.Replace(" ","___");
 			p=p.Replace('\\','/');
 			if(path_root.Length>0)
@@ -135,8 +135,8 @@ namespace teleport
 			}
 			string p = file_name;
 			p = p.Replace("___"," ");
-			p = p.Replace("_-_", ",");
-			p = p.Replace("_", ".");
+			p = p.Replace("_--_", ",");
+			p = p.Replace("_-_", ".");
 			if (path_root.Length > 0)
 			{ 
 				if(!path_root.EndsWith("/"))

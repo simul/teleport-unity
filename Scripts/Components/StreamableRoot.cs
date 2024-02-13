@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEditor.PackageManager;
 using UnityEngine;
+using UnityEngine.PlayerLoop;
 using uid = System.UInt64;
 
 namespace teleport
@@ -132,6 +134,17 @@ namespace teleport
 		public HashSet<Teleport_SessionComponent> GetActiveSessions()
 		{
 			return sessions;
+		}
+		private void Update()
+		{
+			if (!_sendMovementUpdates )
+			{
+				return ;
+			}
+			foreach (StreamableNode streamedNode in streamedHierarchy)
+			{
+				streamedNode.CalcMovementUpdate();
+			}
 		}
 
 		public List<avs.MovementUpdate> GetMovementUpdates(uid clientID)
@@ -291,7 +304,7 @@ namespace teleport
 				if (props &&props.streamOnlyWithParent)
 					continue;
 				//GetComponentsInChildren(...) also grabs components from node we are on, but we don't want to exclude the children of the node we are on.
-				if (childRoot.gameObject != gameObject && GeometrySource.GetGeometrySource().IsGameObjectMarkedForStreaming(childRoot.gameObject))
+				if (childRoot.gameObject != gameObject )
 				{
 					//Mark child's children as explored, as they are part of a different streaming hierarchy.
 					Transform[] childTransforms = childRoot.GetComponentsInChildren<Transform>(true);

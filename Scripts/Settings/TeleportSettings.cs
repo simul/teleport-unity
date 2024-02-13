@@ -21,8 +21,10 @@ namespace teleport
 		public const string k_TeleportSettingsFilename = "TeleportSettings";
 		[SerializeField]
 		private string _TagToStream = "";
+#if UNITY_EDITOR
 		[System.NonSerialized]
 		private bool tagInitialized=false;
+		#endif
 		//! Objects with this tag will be streamed; leaving it blank will cause it to just use the layer mask.
 		public string TagToStream
 		{

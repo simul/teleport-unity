@@ -423,7 +423,7 @@ namespace teleport
 		[DllImport(TeleportServerDll.name)]
 		private static extern uid Server_GenerateUid();
 		[DllImport(TeleportServerDll.name)]
-		private static extern uid Server_GetOrGenerateUid(string path);
+		public static extern uid Server_GetOrGenerateUid(string path);
 		[DllImport(TeleportServerDll.name)]
 		private static extern uid Server_PathToUid(string path);
         [DllImport(TeleportServerDll.name)]
@@ -483,6 +483,8 @@ namespace teleport
 		private static extern bool Server_IsMaterialStored(uid id);
 		[DllImport(TeleportServerDll.name)]
 		private static extern bool Server_IsTextureStored(uid id);
+		[DllImport(TeleportServerDll.name)]
+		private static extern bool Server_EnsureResourceIsLoaded(uid u);
 
 		[DllImport(TeleportServerDll.name)]
 		private static extern void Server_RemoveNode(uid id);
@@ -692,12 +694,17 @@ namespace teleport
 		// For Unity it will consist of the asset filename (relative to the Assets folder), followed if necessary by the subobject name within the file.
 		// We will use forward slashes, and a double forward slash will separate the filename from the subobject name where present.
 		public static bool GetResourcePath(UnityEngine.Object obj, out string path,bool force)
-		{ 
+		{
+#if UNITY_EDITOR
+			// If in Editor and not playing, let's force a regeneration of the path, in case there are code changes that modify the paths.
+			if (!Application.isPlaying)
+				force=true;
+#endif
 			var resourcePathManager = SceneResourcePathManager.GetSceneResourcePathManager(SceneManager.GetActiveScene());
 			path = resourcePathManager.GetResourcePath(obj);
-			if (!force&&path != null&&path.Length > 0)
-				return true;
 #if UNITY_EDITOR
+			if (!force && path != null && path.Length > 0)
+				return true;
 			long localId = 0;
 			string guid;
 			bool result = UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out localId);
@@ -738,12 +745,12 @@ namespace teleport
 				return false;
 			}
 			// dots and commas are undesirable in URL's. Therefore we replace them.
-			path=path.Replace(".","_");
-			path=path.Replace(",","_");
 			path = SceneResourcePathManager.StandardizePath(path, "Assets/");
 			resourcePathManager.SetResourcePath(obj,path);
 			return true;
 #else
+			if (path != null&&path.Length > 0)
+				return true;
 			return false;
 #endif
 		}
@@ -1010,14 +1017,39 @@ namespace teleport
 
 				Animator animator =gameObject.GetComponentInParent<Animator>();
 				//Animator component usually appears on the parent GameObject, so we need to use that instead for searching the children.
-#if UNITY_EDITOR
+
 				if (animator)
 				{
-					extractedNode.priority = 0;
-				}
-				extractedNode.animationIDs = AnimationExtractor.AddAnimations(animator, forceMask);
-				extractedNode.numAnimations = (ulong)extractedNode.animationIDs.Length;
+#if UNITY_EDITOR
+					extractedNode.animationIDs = AnimationExtractor.AddAnimations(animator, forceMask);
 #endif
+					AnimationClip[] animationClips = animator.runtimeAnimatorController.animationClips;
+					List<uid> anim_uids=new List<uid>();
+					foreach (var clip in animationClips)
+					{
+						sessionResourceUids.TryGetValue(clip, out uid animID);
+						if(animID != 0)
+							anim_uids.Add(animID);
+						else
+						{
+							GetResourcePath(clip, out string resourcePath, true);
+							// Not a resource, don't extract.
+							animID = GeometrySource.Server_GetOrGenerateUid(resourcePath);
+							if (animID != 0)
+								anim_uids.Add(animID);
+							else
+							{
+								Debug.LogError("Failed to get a uid for animation clip "+clip.name);
+							}
+						}
+					}
+					extractedNode.animationIDs=anim_uids.ToArray();
+					extractedNode.numAnimations = (ulong)extractedNode.animationIDs.Length;
+				}
+				else
+				{
+					extractedNode.numAnimations = (ulong)0;
+				}
 			}
 			extractedNode.url=IntPtr.Zero;
 
@@ -1897,7 +1929,11 @@ namespace teleport
 		}
 		public void BuildBoneNodeList(UnityEngine.Transform rootBone, Dictionary<UnityEngine.Transform, uid> boneIDs,List<avs.Node> avsNodes)
 		{
-			sessionResourceUids.TryGetValue(rootBone.parent.gameObject,out uid parentID);
+			uid parentID=0;
+			if(rootBone.parent!=null)
+			{
+				sessionResourceUids.TryGetValue(rootBone.parent.gameObject,out parentID);
+			}
 			sessionResourceUids.TryGetValue(rootBone.gameObject, out uid boneID);
             if (boneID == 0)
             {
@@ -2244,7 +2280,8 @@ namespace teleport
 			skeleton.boneIDs = boneIDs.Values.ToArray();
 			skeleton.numBones = boneIDs.Count;
 
-			skeleton.rootTransform = avs.Transform.FromLocalUnityTransform(skeletonRootTransform.parent);
+			if(skeletonRootTransform.parent)
+				skeleton.rootTransform = avs.Transform.FromLocalUnityTransform(skeletonRootTransform.parent);
 
 			Server_StoreSkeleton(skeletonAssetID, skeleton);
 			return skeletonRootNodeID;
@@ -2611,7 +2648,7 @@ namespace teleport
 #if UNITY_EDITOR
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(mesh, out string guid);
 			GetResourcePath(mesh, out string resourcePath, false);
-			//resourcePath = extractToBasis.ToString().Replace("Style","").ToLower()+"/"+ resourcePath;
+			
 			long last_modified=0;
 			// If it's one of the default resources, we must generate a prop
 			if (!guid.Contains("0000000000000000e000000000000000")|| resourcePath.Contains("unity default resources"))
@@ -3043,6 +3080,8 @@ namespace teleport
 				//We can't extract textures in play-mode.
 				if (Application.isPlaying)
 				{
+					if(Server_EnsureResourceIsLoaded(textureID))
+						return textureID;
 					Debug.LogWarning("Texture <b>" + texture.name + "</b> has not been extracted, but is being used on streamed geometry!");
 					return 0;
 				}
