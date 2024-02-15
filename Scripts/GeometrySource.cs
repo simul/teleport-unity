@@ -849,51 +849,29 @@ namespace teleport
 		{
 			return (resourceID == 0) ? null : sessionResourceUids.FirstOrDefault(x => x.Value == resourceID).Key;
 		}
-
-		//If the passed collision layer is streamed.
-		public bool IsCollisionLayerStreamed(int layer)
-		{
-			var settings=TeleportSettings.GetOrCreateSettings();
-			if(settings.LayersToStream.value==0)
-				return true;
-			return (settings.LayersToStream & (1 << layer)) != 0;
-		}
-
-		//If the GameObject has been marked correctly to be streamed; i.e. on streamed collision layer and has the correct tag.
-		public bool IsGameObjectMarkedForStreaming(GameObject gameObject)
-		{
-			string streamingTag = TeleportSettings.GetOrCreateSettings().TagToStream;
-			return (streamingTag.Length == 0 || gameObject.CompareTag(streamingTag)) && IsCollisionLayerStreamed(gameObject.layer);
-		}
-		public bool IsObjectStreamable(GameObject gameObject)
-		{
-			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
-			if (teleportSettings.TagToStream.Length > 0)
-				if (!gameObject.CompareTag(teleportSettings.TagToStream))
-					return false;
-			if (!IsCollisionLayerStreamed(gameObject.layer))
-			{
-				return false;
-			}
-			return true;
-        }
-		public List<GameObject> GetStreamableObjects()
+		/// <summary>
+		/// Get all streamable objects in all loaded scenes.
+		/// </summary>
+		public List<GameObject> GetStreamableNodes()
 		{
 			List<GameObject> streamableObjects = new List<GameObject>();
 			for (int i = 0; i < SceneManager.sceneCount; i++)
 			{
 				Scene scene = SceneManager.GetSceneAt(i);
-				var sceneStr = GetStreamableObjects(scene);
+				var sceneStr = GetStreamableNodes(scene);
 				streamableObjects.AddRange(sceneStr);
             }
 			return streamableObjects;
 
         }
-        public List<GameObject> GetStreamableObjects(Scene scene)
+		/// <summary>
+		/// Get all the game objects that can be streamed, root and otherwise.
+		/// </summary>
+        public List<GameObject> GetStreamableNodes(Scene scene)
 		{
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 
-			//Find all GameObjects in open scenes that have the streamed tag.
+			//Find all GameObjects in open scenes that have the StreamableNode.
 			List<GameObject> streamableObjects=new List<GameObject>();
 			if(SceneManager.sceneCount==0)
 				return streamableObjects;
@@ -904,32 +882,36 @@ namespace teleport
 					UnityEngine.Transform[] transforms = o.GetComponentsInChildren<UnityEngine.Transform>();
 					foreach (var t in transforms)
 					{
-						if (teleportSettings.TagToStream.Length > 0)
-						{
-							if(t.gameObject.CompareTag(teleportSettings.TagToStream))
-								streamableObjects.Add(t.gameObject);
-						}
-						else
-						{
+						if(t.gameObject.GetComponent<StreamableNode>() != null)
 							streamableObjects.Add(t.gameObject);
-						}
 					}
 				}
 			}
-			//Remove GameObjects not on a streamed collision layer.
-			for (int i = streamableObjects.Count - 1; i >= 0; i--)
-			{
-				GameObject gameObject = streamableObjects[i];
-				if(!IsCollisionLayerStreamed(gameObject.layer))
-				{
-					streamableObjects.RemoveAt(i);
-				}
-			}
-
 			return streamableObjects;
 		}
-
-		//Adds animations events to all extracted AnimationClips, so we can detect when they start playing.
+		/// <summary>
+		/// Get all the root game objects that can be streamed.
+		/// </summary>
+		public List<GameObject> GetStreamableRoots(Scene scene)
+		{
+			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+			List<GameObject> streamableRoots= new List<GameObject>();
+			if (SceneManager.sceneCount == 0)
+				return streamableRoots;
+			var objs = scene.GetRootGameObjects();
+			foreach (var o in objs)
+			{
+				teleport.StreamableRoot[] roots = o.GetComponentsInChildren<teleport.StreamableRoot>();
+				foreach (var t in roots)
+				{
+					streamableRoots.Add(t.gameObject);
+				}
+			}
+			return streamableRoots;
+		}
+		/// <summary>
+		/// Adds animations events to all extracted AnimationClips, so we can detect when they start playing.
+		/// </summary>
 		public void AddAnimationEventHooks()
 		{
 			foreach(AnimationClip clip in processedAnimations)
@@ -976,9 +958,10 @@ namespace teleport
 			{
 				return nodeID;
 			}
-
+			bool isRoot=(gameObject.GetComponent<StreamableRoot>() != null);
 			avs.Node extractedNode = new avs.Node();
-			if (gameObject.transform.parent)
+			// If this is a root, we treat it as parentless.
+			if (!isRoot&&gameObject.transform.parent!=null)
 			{
 				extractedNode.parentID = FindResourceID(gameObject.transform.parent.gameObject);
 			}

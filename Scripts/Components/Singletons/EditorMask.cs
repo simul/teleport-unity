@@ -75,7 +75,8 @@ namespace teleport
 		static uint unstreamable_mask = (uint)1 << 30;
 		static public void InitializeObject(GameObject o)
 		{
-			if(GeometrySource.GetGeometrySource().IsObjectStreamable(o))
+			var streamableNode=o.GetComponent<StreamableNode>();
+			if(streamableNode!=null)
 			{
 				teleport.Monitor.UnsetRenderingLayerMask(o, streamable_mask);
 				teleport.Monitor.SetRenderingLayerMask(o, unstreamable_mask);
@@ -94,40 +95,41 @@ namespace teleport
 			for (int i = 0; i < SceneManager.sceneCount; i++)
 			{
 				var s = SceneManager.GetSceneAt(i);
-				if (s == null || !s.isLoaded)
-					continue;
-				var objs = s.GetRootGameObjects();
-				foreach (var o in objs)
-				{
-					teleport.Monitor.UnsetRenderingLayerMask(o, streamable_mask, true);
-					teleport.Monitor.SetRenderingLayerMask(o, unstreamable_mask, true);
-				}
+				UpdateMasks(s);
 			}
-			GeometrySource geometrySource = GeometrySource.GetGeometrySource();
-			List<GameObject> streamable = geometrySource.GetStreamableObjects();
-			foreach (var o in streamable)
+		}
+		static private void UpdateMasks(Scene scene)
+		{
+			uint streamable_mask = (uint)1 << 31;
+			GameObject[] rootGameObjects = scene.GetRootGameObjects();
+			foreach (GameObject o in rootGameObjects)
 			{
-				teleport.Monitor.SetRenderingLayerMask(o, streamable_mask,true);
-				teleport.Monitor.UnsetRenderingLayerMask(o, unstreamable_mask,true);
+				teleport.Monitor.UnsetRenderingLayerMask(o, streamable_mask, true);
+				teleport.Monitor.SetRenderingLayerMask(o, unstreamable_mask, true);
+			}
+
+			//Set the mask on all streamable objects.
+			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableNodes(scene);
+			foreach (GameObject o in teleportStreamableObjects)
+			{
+				teleport.Monitor.SetRenderingLayerMask(o, streamable_mask);
+			}
+			// If we're doing tags, set the mask on objects that will become streamable due to their tag.
+			if (TagHandler.Instance != null)
+			{
+				GameObject[] taggedObjects = TagHandler.Instance.GetTaggedObjects(scene);
+				foreach (GameObject o in taggedObjects)
+				{
+					teleport.Monitor.SetRenderingLayerMask(o, streamable_mask);
+					teleport.Monitor.UnsetRenderingLayerMask(o, unstreamable_mask, true);
+				}
 			}
 		}
 		private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
 		{
 			if (Application.isPlaying)
 				return;
-			uint streamable_mask = (uint)1 << 31;
-			GameObject[] rootGameObjects = scene.GetRootGameObjects();
-			foreach (GameObject o in rootGameObjects)
-			{
-				teleport.Monitor.UnsetRenderingLayerMask(o, streamable_mask);
-			}
-
-			//Set the mask on all streamable objects.
-			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects(scene);
-			foreach (GameObject o in teleportStreamableObjects)
-			{
-				teleport.Monitor.SetRenderingLayerMask(o, streamable_mask);
-			}
+			UpdateMasks(scene);
 		}
 
 		// Start is called before the first frame update

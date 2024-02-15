@@ -7,7 +7,7 @@ namespace teleport
 	using uid = System.UInt64;
 	public class StatusWindow : EditorWindow
 	{
-		[MenuItem("Teleport VR/Live Server Status")]
+		[MenuItem("Teleport VR/Live Server Status" , false, 2005)]
 		public static void OpenStatusWindow()
 		{
 			StatusWindow window = GetWindow<StatusWindow>(false, "Teleport Server Status");

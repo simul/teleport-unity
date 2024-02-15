@@ -7,7 +7,6 @@ namespace teleport
 { 
 	public class ModalWarningPopup : EditorWindow
 	{
-		[MenuItem("Example/ShowPopup Example")]
 		static public void Init()
 		{
 			EditorWindow mainWindow=EditorWindow.GetWindow(typeof(EditorWindow));

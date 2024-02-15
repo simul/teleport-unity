@@ -22,8 +22,9 @@ namespace teleport
 			Camera camera = Monitor.gameObject.GetComponent<Camera>(); 
 			Gizmos.color = BackgroundColour;
 			Gizmos.DrawSphere( Monitor.transform.position,0.1f);
-			Handles.Label(Monitor.transform.position + new Vector3(0, 1.2f, 0), ((double)Monitor.GetUnixStartTimestampUs()/1000000.0).ToString(), centredStyle);
-			Handles.Label(Monitor.transform.position + new Vector3(0, 1.4f, 0), Monitor.GetSessionTimestampNowS().ToString(), centredStyle);
+			Handles.Label(Monitor.transform.position ,"Teleport Monitor", centredStyle);
+			//	Handles.Label(Monitor.transform.position + new Vector3(0, 1.2f, 0), ((double)Monitor.GetUnixStartTimestampUs()/1000000.0).ToString(), centredStyle);
+			//	Handles.Label(Monitor.transform.position + new Vector3(0, 1.4f, 0), Monitor.GetSessionTimestampNowS().ToString(), centredStyle);
 
 		}
 	}

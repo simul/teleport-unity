@@ -445,6 +445,9 @@ namespace teleport
 
 		private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
 		{
+			// If there's a taghandler, call its OnSceneLoaded.
+			if(TagHandler.Instance)
+				TagHandler.Instance.OnSceneLoaded( scene,  mode);
 			// clear masks corresponding to streamed objects.
 			int clientLayer = 25;
 			uint streamedClientMask = (uint)(((int)1) << (clientLayer + 1));
@@ -455,19 +458,6 @@ namespace teleport
 			{
 				SetRenderingLayerMask(gameObject, invStreamedMask);
 			}
-
-			//Add the teleport.StreamableRoot component to all root streamable objects.
-			// Don't add to objects that have a streamable parent!
-			List<GameObject> teleportStreamableObjects = GeometrySource.GetGeometrySource().GetStreamableObjects(scene);
-			foreach(GameObject gameObject in teleportStreamableObjects)
-			{
-				//Objects with collision will have a teleport.StreamableRoot component added, as they can be streamed as root objects.
-				if(gameObject.GetComponent<Collider>() != null && gameObject.GetComponentInParent<teleport.StreamableRoot>() == null)
-				{
-					gameObject.AddComponent<teleport.StreamableRoot>();
-				}
-			}
-
 			// Reset the "origin" for all sessions on the assumption we have changed level.
 			foreach(Teleport_SessionComponent sessionComponent in Teleport_SessionComponent.sessions.Values)
 			{

@@ -50,7 +50,7 @@ namespace teleport
 		private string[] categories;
 		private int selectedCategory = 0;
 
-		[MenuItem("Teleport VR/Resource Manager")]
+		[MenuItem("Teleport VR/Resource Manager",false,1000)]
 		public static void OpenResourceWindow()
 		{
 			ResourceWindow window = GetWindow<ResourceWindow>(false, "Teleport Resources");
@@ -205,8 +205,8 @@ namespace teleport
 				geometrySource.treatTransparentAsDoubleSided = GUILayout.Toggle(geometrySource.treatTransparentAsDoubleSided, "Treat transparent as double-sided");
 			EditorGUILayout.EndVertical();
 
-			EditorGUILayout.BeginVertical();
-
+			/*EditorGUILayout.BeginVertical();
+			
 			foldout_textures = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_textures, "Last Extracted Textures (" + renderTextures.Length + ")");
 			if (foldout_textures)
 			{
@@ -228,9 +228,9 @@ namespace teleport
 				}
 
 				EditorGUILayout.EndScrollView();
-			}
+			}*
 			EditorGUILayout.EndFoldoutHeaderGroup();
-			EditorGUILayout.EndVertical();
+			EditorGUILayout.EndVertical();*/
 			EditorGUILayout.EndHorizontal();
 
 			EditorGUILayout.Space(10);
@@ -576,7 +576,11 @@ namespace teleport
 				if(scene==null)
 					continue;
 				ExtractGlobalIlluminationTextures();
-				objectsToExtract.AddRange(geometrySource.GetStreamableObjects(scene));
+				objectsToExtract.AddRange(geometrySource.GetStreamableNodes(scene));
+				if(TagHandler.Instance)
+				{
+					objectsToExtract.AddRange(TagHandler.Instance.GetTaggedObjects(scene));
+				}
 				ExtractDynamicObjectLightingTextures();
 			}
 			if(!ExtractGeometry(objectsToExtract, forceMask))

@@ -296,10 +296,6 @@ namespace teleport
 			context.ExecuteCommandBuffer(buffer);
 			buffer.Release();
 		}
-		static public void SetStreamableHighlightMaskOnObjects()
-		{
-			EditorMask editorMask = EditorMask.GetInstance();
-		}
 #if UNITY_EDITOR
 		public void GenerateEnvMaps(ScriptableRenderContext context)
 		{
@@ -350,14 +346,12 @@ namespace teleport
 				}
 				else
 				{
-					SetStreamableHighlightMaskOnObjects();
 					renderingMask = (uint)1 << 31;   // When not playing, only streamables have this bit set.
 				}
 				DrawOpaqueGeometry(context, camera, is_reflection, cullingResultsAll,layerMask, renderingMask, lightingOrder, true,teleportSettings.highlightStreamableColour);
 			}
 			if (teleportSettings.highlightNonStreamables)
 			{
-				SetStreamableHighlightMaskOnObjects();
 				renderingMask = (uint)1 << 30;   // When not playing, only non-streamables have this bit set.
 				DrawOpaqueGeometry(context, camera, is_reflection, cullingResultsAll, layerMask, renderingMask, lightingOrder, true,teleportSettings.highlightNonStreamableColour);
 			}

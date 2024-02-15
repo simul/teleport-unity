@@ -30,7 +30,7 @@ namespace teleport
 			//	Debug.Log("Before first Scene loaded");
 		}
 		// click command-0 to go to the prelaunch scene and then play
-		[MenuItem("Teleport VR/Start Scene %5")]
+		[MenuItem("Teleport VR/Start Scene %5", false, 2004)]
 		public static void PlayDefaultScene()
 		{
 			if (EditorApplication.isPlaying == true)

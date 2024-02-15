@@ -6,7 +6,7 @@ namespace teleport
 { 
 	public class Package : MonoBehaviour
 	{
-		[MenuItem("Teleport VR/Export Package")]
+		[MenuItem("Teleport VR/Export Package", false, 2002)]
 		public static void MenuExportPackage()
 		{
 			ExportPackage("TeleportVRUnity.unitypackage");

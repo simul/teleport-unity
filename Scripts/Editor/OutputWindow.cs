@@ -8,7 +8,7 @@ namespace teleport
 	public class OutputWindow : EditorWindow
 	{
 		static OutputWindow windowInstance = null;
-		[MenuItem("Teleport VR/Server Output Log")]
+		[MenuItem("Teleport VR/Server Output Log", false, 2001)]
 		public static void OpenOutputWindow()
 		{
 			OutputWindow window = GetWindow<OutputWindow>(false, "Teleport Server Output Log");

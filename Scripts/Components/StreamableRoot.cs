@@ -430,7 +430,7 @@ namespace teleport
 				}
 			}
 		}
-		//! Make sure apparent motion is zero for the whole hierarchyu.
+		//! Make sure apparent motion is zero for the whole hierarchy.
 		public void ResetVelocityTracking()
 		{
 			foreach (var n in streamedHierarchy)
