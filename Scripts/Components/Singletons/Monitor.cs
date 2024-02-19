@@ -463,6 +463,19 @@ namespace teleport
 			{
 				sessionComponent.ResetOrigin();
 			}
+			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+			// Ensure that the RootStreamables are added.
+			var g1=scene.GetRootGameObjects();
+			foreach(GameObject gameObject in g1)
+			{
+				var g2=gameObject.GetComponentsInChildren<StreamableRoot>();
+				foreach(StreamableRoot r in g2)
+				{
+					if (r.priority < teleportSettings.defaultMinimumNodePriority)
+						continue;
+					GeometrySource.GetGeometrySource().AddNode(r.gameObject, GeometrySource.ForceExtractionMask.FORCE_NOTHING);
+				}
+			}
 		}
 
 		private void Update()

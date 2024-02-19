@@ -34,13 +34,15 @@ namespace teleport
 			meshRenderer = default;
 			skinnedMeshRenderer = default;
 			light = default;
-
+			/*
+			 * this is handled by the Streamable Root:
 			if (nodeID == 0)
 			{
 				nodeID= GeometrySource.GetGeometrySource().AddNode(gameObject);
 				if(nodeID==0)
 					UnityEngine.Debug.LogWarning($"We have created an invalid {nameof(StreamableNode)}! Node ID is {nodeID}!");
 			}
+			*/
 		} 
 
 		//Updates nodeEnabled state by checking cached references, and returns whether the nodeEnabled state changed.

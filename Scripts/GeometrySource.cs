@@ -588,6 +588,13 @@ namespace teleport
 
 		public void OnAfterDeserialize()
 		{
+			if (sessionResourceUids_keys.Length == sessionResourceUids_values.Length)
+			{
+				for(int i=0;i<sessionResourceUids_keys.Length;i++)
+				{
+					sessionResourceUids[sessionResourceUids_keys[i]]=sessionResourceUids_values[i];
+				}
+			}
 			EliminateDuplicates();
 		}
 
@@ -2051,25 +2058,32 @@ namespace teleport
 			}
 			extractTo.renderState.lightmapScaleOffset=meshRenderer.lightmapScaleOffset;
 			UnityEngine.Texture[] giTextures = GlobalIlluminationExtractor.GetTextures();
-			if(giTextures!=null&&meshRenderer.lightmapIndex>=0&&meshRenderer.lightmapIndex<0xFFFE)
+			if(meshRenderer.lightmapIndex>=0&&meshRenderer.lightmapIndex<0xFFFE)
 			{
-				// If this index not found? These errors are not fatal, but should not occur.
-				if(meshRenderer.lightmapIndex>=giTextures.Length)
-				{
-					Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap "+ meshRenderer.lightmapIndex + " was not listed in GlobalIlluminationExtractor!");
+				if(giTextures != null)
+				{ 
+					// If this index not found? These errors are not fatal, but should not occur.
+					if(meshRenderer.lightmapIndex>=giTextures.Length)
+					{
+						Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap "+ meshRenderer.lightmapIndex + " was not listed in GlobalIlluminationExtractor!");
+					}
+					else
+					{
+						var lightmap_texture= giTextures[meshRenderer.lightmapIndex];
+						extractTo.renderState.globalIlluminationTextureUid = FindResourceID(lightmap_texture);
+						if (extractTo.renderState.globalIlluminationTextureUid == 0)
+						{
+							extractTo.renderState.globalIlluminationTextureUid=AddTexture(lightmap_texture, forceMask);
+							if (extractTo.renderState.globalIlluminationTextureUid == 0)
+							{
+								Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap " + meshRenderer.lightmapIndex + " was not found in GeometrySource!");
+							}
+						}
+					}
 				}
 				else
 				{
-					var lightmap_texture= giTextures[meshRenderer.lightmapIndex];
-					extractTo.renderState.globalIlluminationTextureUid = FindResourceID(lightmap_texture);
-					if (extractTo.renderState.globalIlluminationTextureUid == 0)
-					{
-						extractTo.renderState.globalIlluminationTextureUid=AddTexture(lightmap_texture, forceMask);
-						if (extractTo.renderState.globalIlluminationTextureUid == 0)
-						{
-							Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap " + meshRenderer.lightmapIndex + " was not found in GeometrySource!");
-						}
-					}
+					Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap " + meshRenderer.lightmapIndex + " was not found in giTextures!");
 				}
 			}
 			//Extract mesh used on node.

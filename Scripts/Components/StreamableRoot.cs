@@ -12,7 +12,7 @@ namespace teleport
 	[DisallowMultipleComponent]
 	public class StreamableRoot : MonoBehaviour
 	{
-		//! Priority. Values greater than or equal to zero are essential to functionality and *must* be streamed. 
+		//! Priority. Values greater than or equal to TeleportSettings.defaultMinimumNodePriority are essential to functionality and *must* be streamed. 
 		//! Negative values are optional, and the more negative, the less important they are (determining order of sending to client).
 		//! The larger the priority value, the earlier the object is sent.
 		//! The highest priority of StreamableProperties found in the streamable's hierarchy.
@@ -215,14 +215,21 @@ namespace teleport
 
 		private void OnEnable()
 		{
-			uid = GeometrySource.GetGeometrySource().AddNode(gameObject, GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
-			Teleport_SessionComponent sess=GetComponent< Teleport_SessionComponent >();
+			Teleport_SessionComponent sess=GetComponent<Teleport_SessionComponent>();
 			if(sess)
 			{ 
 				CreateStreamedHierarchy();
 			}
 			else
 				CreateStreamedHierarchy();
+			// NOTE: The scene itself may not yet be loaded. So we don't necessarily call GeometrySource.AddNode unless it is.
+
+			if(gameObject.scene!=null&& gameObject.scene.isLoaded) { 
+				TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+				if (priority < teleportSettings.defaultMinimumNodePriority)
+					return;
+				uid = GeometrySource.GetGeometrySource().AddNode(gameObject, GeometrySource.ForceExtractionMask.FORCE_NOTHING);
+			}
 		}
 		public void ForceInit()
         {
