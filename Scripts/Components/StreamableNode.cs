@@ -193,12 +193,11 @@ namespace teleport
 						localUpdate.velocity=(smoothingFactor*v0)+(1.0F- smoothingFactor)*v1;
 						UnityEngine.Vector3 a0 = previousLocalUpdate.angularVelocityAxis;
 						UnityEngine.Vector3 a1 = localUpdate.angularVelocityAxis;
-						UnityEngine.Quaternion q0=Quaternion.AngleAxis(previousLocalUpdate.angularVelocityAngle* Mathf.Rad2Deg, a0);
-						UnityEngine.Quaternion q1 = Quaternion.AngleAxis(localUpdate.angularVelocityAngle * Mathf.Rad2Deg, a1);
-						UnityEngine.Quaternion q=UnityEngine.Quaternion.Slerp(q0,q1,1.0F-smoothingFactor);
-						float angleDegrees=0.0f;
-						q.ToAngleAxis(out angleDegrees, out angularVelocityAxis);
-						localUpdate.angularVelocityAngle = angleDegrees*Mathf.Deg2Rad;
+						UnityEngine.Vector3 a = (smoothingFactor * a0) + (1.0F - smoothingFactor) * a1;
+						a.Normalize();
+						localUpdate.angularVelocityAxis=a;
+						localUpdate.angularVelocityAngle = (smoothingFactor * previousLocalUpdate.angularVelocityAngle) + (1.0F - smoothingFactor) * localUpdate.angularVelocityAngle;
+			
 					}
 					localUpdate.angularVelocityAxis = angularVelocityAxis;
 				}

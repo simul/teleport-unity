@@ -356,7 +356,6 @@ namespace teleport
 		}
 		Collider[] innerOverlappingColliders=new Collider[10];
 		Collider[] outerOverlappingColliders = new Collider[10];
-		HashSet<teleport.StreamableRoot> innerStreamables = new HashSet<teleport.StreamableRoot>();
 		HashSet<teleport.StreamableRoot> outerStreamables = new HashSet<teleport.StreamableRoot>();
 		int inner_overlap_count=0;
 		int outer_overlap_count = 0;
@@ -398,7 +397,7 @@ namespace teleport
 						outer_overlap_count = Physics.OverlapSphereNonAlloc(position, R0, outerOverlappingColliders, teleportSettings.LayersToStream);
 					}
 					for (int i = 0; i < inner_overlap_count; i++)
-					{
+					{ 
 						GameObject g=innerOverlappingColliders[i].gameObject;
 						if(!g)
 							continue;
@@ -407,9 +406,8 @@ namespace teleport
 						var streamable=g.GetComponentInParent<teleport.StreamableRoot>();
 						if(!streamable)
 							continue;
-						if(innerStreamables.Contains(streamable))
+						if(streamedHierarchies.Contains(streamable))
 							continue;
-						innerStreamables.Add(streamable);
 						gainedStreamables.Add(streamable);
 					}
 					HashSet<teleport.StreamableRoot> keptOuterStreamables = new HashSet<teleport.StreamableRoot>();

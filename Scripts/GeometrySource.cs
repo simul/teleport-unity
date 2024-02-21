@@ -956,141 +956,140 @@ namespace teleport
 
 			//Just return the ID; if we have already processed the GameObject, the node can be found on the unmanaged side,
 			//we are not forcing an extraction of nodes, and we are not forcing an extraction on the hierarchy of a node.
-			if(	sessionResourceUids.TryGetValue(gameObject, out uid nodeID) && Server_IsNodeStored(nodeID) &&
+			if(	!sessionResourceUids.TryGetValue(gameObject, out uid nodeID) ||! Server_IsNodeStored(nodeID) &&
 					(
 						!isChildExtraction && (forceMask & ForceExtractionMask.FORCE_NODES) == ForceExtractionMask.FORCE_NOTHING ||
 						(isChildExtraction && (forceMask & ForceExtractionMask.FORCE_HIERARCHIES) == ForceExtractionMask.FORCE_NOTHING)
 					)
 				)
 			{
-				return nodeID;
-			}
-			bool isRoot=(gameObject.GetComponent<StreamableRoot>() != null);
-			avs.Node extractedNode = new avs.Node();
-			// If this is a root, we treat it as parentless.
-			if (!isRoot&&gameObject.transform.parent!=null)
-			{
-				extractedNode.parentID = FindResourceID(gameObject.transform.parent.gameObject);
-			}
-			StreamableProperties streamableProperties=gameObject.GetComponent<StreamableProperties>();
-			extractedNode.name = Marshal.StringToCoTaskMemUTF8(gameObject.name);
-			teleport.StreamableRoot teleport_Streamable = gameObject.GetComponentInParent<teleport.StreamableRoot>();
-#if UNITY_EDITOR
-			// if it's not stationary, it will need a StreamableProperties component to let us know, because isStatic is always false in builds for Unity.
-			if (!gameObject.isStatic)
-			{
-				if (streamableProperties == null)
+				bool isRoot=(gameObject.GetComponent<StreamableRoot>() != null);
+				avs.Node extractedNode = new avs.Node();
+				// If this is a root, we treat it as parentless.
+				if (!isRoot&&gameObject.transform.parent!=null)
 				{
-					streamableProperties=gameObject.AddComponent<StreamableProperties>();
+					extractedNode.parentID = FindResourceID(gameObject.transform.parent.gameObject);
 				}
-			}
-			if (streamableProperties!=null&&streamableProperties.isStationary != gameObject.isStatic)
-				streamableProperties.isStationary = gameObject.isStatic;
-#endif
-			if (teleport_Streamable != null)
-			{
-				extractedNode.priority = teleport_Streamable.priority;
-			}
-			extractedNode.stationary = streamableProperties ? streamableProperties.isStationary : true;
-			extractedNode.ownerClientId = teleport_Streamable != null ? teleport_Streamable.OwnerClient : 0;
-			if(extractedNode.parentID!=0)
-				extractedNode.localTransform = avs.Transform.FromLocalUnityTransform(gameObject.transform);
-			else
-				extractedNode.localTransform = avs.Transform.FromGlobalUnityTransform(gameObject.transform);
-			extractedNode.dataType = avs.NodeDataType.None;
-			teleport.SkeletonRoot skeletonRoot = gameObject.GetComponent<teleport.SkeletonRoot>();
-			if (skeletonRoot)
-			{
-				nodeID =AddSkeleton(gameObject.transform, null, forceMask);
-				extractedNode.dataType=avs.NodeDataType.Skeleton;
-				skeletonUids.TryGetValue(skeletonRoot.assetPath, out extractedNode.dataID);
-
-				Animator animator =gameObject.GetComponentInParent<Animator>();
-				//Animator component usually appears on the parent GameObject, so we need to use that instead for searching the children.
-
-				if (animator)
+				StreamableProperties streamableProperties=gameObject.GetComponent<StreamableProperties>();
+				extractedNode.name = Marshal.StringToCoTaskMemUTF8(gameObject.name);
+				teleport.StreamableRoot teleport_Streamable = gameObject.GetComponentInParent<teleport.StreamableRoot>();
+	#if UNITY_EDITOR
+				// if it's not stationary, it will need a StreamableProperties component to let us know, because isStatic is always false in builds for Unity.
+				if (!gameObject.isStatic)
 				{
-#if UNITY_EDITOR
-					extractedNode.animationIDs = AnimationExtractor.AddAnimations(animator, forceMask);
-#endif
-					AnimationClip[] animationClips = animator.runtimeAnimatorController.animationClips;
-					List<uid> anim_uids=new List<uid>();
-					foreach (var clip in animationClips)
+					if (streamableProperties == null)
 					{
-						sessionResourceUids.TryGetValue(clip, out uid animID);
-						if(animID != 0)
-							anim_uids.Add(animID);
-						else
+						streamableProperties=gameObject.AddComponent<StreamableProperties>();
+					}
+				}
+				if (streamableProperties!=null&&streamableProperties.isStationary != gameObject.isStatic)
+					streamableProperties.isStationary = gameObject.isStatic;
+	#endif
+				if (teleport_Streamable != null)
+				{
+					extractedNode.priority = teleport_Streamable.priority;
+				}
+				extractedNode.stationary = streamableProperties ? streamableProperties.isStationary : true;
+				extractedNode.ownerClientId = teleport_Streamable != null ? teleport_Streamable.OwnerClient : 0;
+				if(extractedNode.parentID!=0)
+					extractedNode.localTransform = avs.Transform.FromLocalUnityTransform(gameObject.transform);
+				else
+					extractedNode.localTransform = avs.Transform.FromGlobalUnityTransform(gameObject.transform);
+				extractedNode.dataType = avs.NodeDataType.None;
+				teleport.SkeletonRoot skeletonRoot = gameObject.GetComponent<teleport.SkeletonRoot>();
+				if (skeletonRoot)
+				{
+					nodeID =AddSkeleton(gameObject.transform,  forceMask);
+					extractedNode.dataType=avs.NodeDataType.Skeleton;
+					skeletonUids.TryGetValue(skeletonRoot.assetPath, out extractedNode.dataID);
+
+					Animator animator =gameObject.GetComponentInParent<Animator>();
+					//Animator component usually appears on the parent GameObject, so we need to use that instead for searching the children.
+
+					if (animator)
+					{
+	#if UNITY_EDITOR
+						extractedNode.animationIDs = AnimationExtractor.AddAnimations(animator, forceMask);
+	#endif
+						AnimationClip[] animationClips = animator.runtimeAnimatorController.animationClips;
+						List<uid> anim_uids=new List<uid>();
+						foreach (var clip in animationClips)
 						{
-							GetResourcePath(clip, out string resourcePath, true);
-							// Not a resource, don't extract.
-							animID = GeometrySource.Server_GetOrGenerateUid(resourcePath);
-							if (animID != 0)
+							sessionResourceUids.TryGetValue(clip, out uid animID);
+							if(animID != 0)
 								anim_uids.Add(animID);
 							else
 							{
-								Debug.LogError("Failed to get a uid for animation clip "+clip.name);
+								GetResourcePath(clip, out string resourcePath, true);
+								// Not a resource, don't extract.
+								animID = GeometrySource.Server_GetOrGenerateUid(resourcePath);
+								if (animID != 0)
+									anim_uids.Add(animID);
+								else
+								{
+									Debug.LogError("Failed to get a uid for animation clip "+clip.name);
+								}
 							}
 						}
+						extractedNode.animationIDs=anim_uids.ToArray();
+						extractedNode.numAnimations = (ulong)extractedNode.animationIDs.Length;
 					}
-					extractedNode.animationIDs=anim_uids.ToArray();
-					extractedNode.numAnimations = (ulong)extractedNode.animationIDs.Length;
-				}
-				else
-				{
-					extractedNode.numAnimations = (ulong)0;
-				}
-			}
-			extractedNode.url=IntPtr.Zero;
-
-			nodeID = nodeID == 0 ? Server_GenerateUid() : nodeID;
-			sessionResourceUids[gameObject] = nodeID;
-			sessionNodes[nodeID] = gameObject;
-			if (extractedNode.dataType == avs.NodeDataType.None)
-			{
-				ExtractNodeMeshData(gameObject, ref extractedNode, forceMask, verify);
-			}
-			if (extractedNode.dataType == avs.NodeDataType.None)
-			{
-				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
-				if (skinnedMeshRenderer&&skinnedMeshRenderer.enabled&&skinnedMeshRenderer.rootBone)
-				{
-					ExtractNodeSkinnedMeshData(gameObject, ref extractedNode, forceMask, verify);
-					// Map from bones to joints, i.e. which of the skeleton's bones does 
-					// this particular skinned mesh use as joints?
-					var skeletonRootTransform = GetTopmostSkeletonRoot(skinnedMeshRenderer);
-					List<UnityEngine.Transform> bones = new List<UnityEngine.Transform>();
-					GetBones(skeletonRootTransform, bones);
-					extractedNode.numJoints=(UInt64)skinnedMeshRenderer.bones.Length;
-					extractedNode.jointIndices=new int[extractedNode.numJoints];
-					for (int i = 0; i < skinnedMeshRenderer.bones.Length; i++)
+					else
 					{
-						extractedNode.jointIndices[i] = bones.IndexOf(skinnedMeshRenderer.bones[i]);
+						extractedNode.numAnimations = (ulong)0;
 					}
 				}
-			}
-			if(extractedNode.dataType == avs.NodeDataType.None)
-			{
-				ExtractNodeLightData(gameObject, ref extractedNode, forceMask);
-			}
-			if (extractedNode.dataType == avs.NodeDataType.None)
-			{
-				ExtractNodeLinkData(gameObject, ref extractedNode, forceMask);
-			}
-			
-			var textCanvas=gameObject.GetComponent<teleport.TextCanvas>();
-			if (textCanvas)
-			{
-				uid text_canvas_uid=ExtractTextCanvas(textCanvas);
-				if(text_canvas_uid!=0)
+				extractedNode.url=IntPtr.Zero;
+
+				nodeID = nodeID == 0 ? Server_GenerateUid() : nodeID;
+				sessionResourceUids[gameObject] = nodeID;
+				sessionNodes[nodeID] = gameObject;
+				if (extractedNode.dataType == avs.NodeDataType.None)
 				{
-					extractedNode.dataType=avs.NodeDataType.TextCanvas;
-					extractedNode.dataID=text_canvas_uid;
+					ExtractNodeMeshData(gameObject, ref extractedNode, forceMask, verify);
 				}
+				if (extractedNode.dataType == avs.NodeDataType.None)
+				{
+					SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
+					if (skinnedMeshRenderer&&skinnedMeshRenderer.enabled&&skinnedMeshRenderer.rootBone)
+					{
+						ExtractNodeSkinnedMeshData(gameObject, ref extractedNode, forceMask, verify);
+						// Map from bones to joints, i.e. which of the skeleton's bones does 
+						// this particular skinned mesh use as joints?
+						var skeletonRootTransform = GetTopmostSkeletonRoot(skinnedMeshRenderer);
+						List<UnityEngine.Transform> bones = new List<UnityEngine.Transform>();
+						GetBones(skeletonRootTransform, bones);
+						extractedNode.numJoints=(UInt64)skinnedMeshRenderer.bones.Length;
+						extractedNode.jointIndices=new int[extractedNode.numJoints];
+						for (int i = 0; i < skinnedMeshRenderer.bones.Length; i++)
+						{
+							extractedNode.jointIndices[i] = bones.IndexOf(skinnedMeshRenderer.bones[i]);
+						}
+					}
+				}
+				if(extractedNode.dataType == avs.NodeDataType.None)
+				{
+					ExtractNodeLightData(gameObject, ref extractedNode, forceMask);
+				}
+				if (extractedNode.dataType == avs.NodeDataType.None)
+				{
+					ExtractNodeLinkData(gameObject, ref extractedNode, forceMask);
+				}
+			
+				var textCanvas=gameObject.GetComponent<teleport.TextCanvas>();
+				if (textCanvas)
+				{
+					uid text_canvas_uid=ExtractTextCanvas(textCanvas);
+					if(text_canvas_uid!=0)
+					{
+						extractedNode.dataType=avs.NodeDataType.TextCanvas;
+						extractedNode.dataID=text_canvas_uid;
+					}
+				}
+				//Store extracted node.
+				Server_StoreNode(nodeID, extractedNode);
 			}
-			//Store extracted node.
-			Server_StoreNode(nodeID, extractedNode);
-			ExtractNodeHierarchy(gameObject, ref extractedNode, forceMask, verify);
+			ExtractNodeHierarchy(gameObject, forceMask, verify);
 			return nodeID;
 		}
 
@@ -1917,7 +1916,8 @@ namespace teleport
 				GetBones(child, bones);
 			}
 		}
-		public void BuildBoneNodeList(UnityEngine.Transform rootBone, Dictionary<UnityEngine.Transform, uid> boneIDs,List<avs.Node> avsNodes)
+		// Ensure that every bone in a hierarchy has: a) a uid, and b) a StreamableNode
+		public void BuildBoneNodeList(UnityEngine.Transform rootBone, Dictionary<UnityEngine.Transform, uid> boneIDs)
 		{
 			uid parentID=0;
 			if(rootBone.parent!=null)
@@ -1932,20 +1932,22 @@ namespace teleport
             }
 			boneIDs[rootBone] =boneID;
 
+			if(rootBone.GetComponent<StreamableNode>() == null)
+				rootBone.gameObject.AddComponent<StreamableNode>();
+				/*
 			avs.Transform avsTransform = avs.Transform.FromLocalUnityTransform(rootBone);
 			avs.Node boneNode = new avs.Node();
 			boneNode.priority = 0;
 			boneNode.name = Marshal.StringToCoTaskMemUTF8(rootBone.name);
 			boneNode.parentID = parentID;
 			boneNode.localTransform = avsTransform;
-			boneNode.dataType = avs.NodeDataType.None;
+			boneNode.dataType = avs.NodeDataType.None;*/
 
 			ulong numChildren = (ulong)rootBone.childCount;
-			avsNodes.Add(boneNode);
 			for (uint i =0; i < numChildren; i++)
             {
 				var child= rootBone.GetChild((int)i);
-				BuildBoneNodeList(child, boneIDs,avsNodes);
+				BuildBoneNodeList(child, boneIDs);
 			}
 		}
 		public void CompressTextures()
@@ -1974,7 +1976,7 @@ namespace teleport
 #endif
 		}
 
-		private void ExtractNodeHierarchy(GameObject gameObject, ref avs.Node extractTo, ForceExtractionMask forceMask,bool verify)
+		private void ExtractNodeHierarchy(GameObject gameObject, ForceExtractionMask forceMask,bool verify)
 		{
 			//Extract children of node, through transform hierarchy.
 			// Cheating, but to help with skeletons, extract skinned mesh children first.
@@ -2132,7 +2134,7 @@ namespace teleport
 			extractTo.dataType = avs.NodeDataType.Mesh;
 			// Add the skeleton. If it's shared between multiple meshes, it may be already there.
 			var skeletonRootTransform = GetTopmostSkeletonRoot(skinnedMeshRenderer);
-			extractTo.skeletonNodeID = AddSkeleton(skeletonRootTransform, skinnedMeshRenderer, forceMask);
+			extractTo.skeletonNodeID = AddSkeleton(skeletonRootTransform, forceMask);
 
 			UnityEngine.Mesh mesh=null;
 			var meshTracker = gameObject.GetComponent<MeshTracker>();
@@ -2209,7 +2211,7 @@ namespace teleport
 		//! Add the skeleton associated with the specified SkinnedMeshRenderer.
 		//! Multiple Skinned Meshes can share the same skeleton, and we only need to add each one once.
 		//! This fn returns the id of the skeleton Node. The skeleton asset has its own id.
-		private uid AddSkeleton(UnityEngine.Transform skeletonRootTransform,SkinnedMeshRenderer skinnedMeshRenderer, ForceExtractionMask forceMask)
+		private uid AddSkeleton(UnityEngine.Transform skeletonRootTransform, ForceExtractionMask forceMask)
 		{
 			// In unity, this isn't really an asset, it has no location on disk.
 			uid skeletonRootNodeID = 0;
@@ -2244,35 +2246,13 @@ namespace teleport
 			HashSet<UnityEngine.Transform> done=new HashSet<UnityEngine.Transform>();
 			Dictionary<UnityEngine.Transform,uid> boneIDs=new Dictionary<UnityEngine.Transform, uid>();
 			// First, make sure every bone has a uid.
-			List<avs.Node> avsNodes=new List<avs.Node>();
 			// Note: we can end up here with MORE joint ID's than there are "bones" in the Skinned Mesh Renderer, because
 			// Unity is allowed to skip over non-animated nodes. We must obtain the full hierarchy.
-			BuildBoneNodeList(skeletonRootTransform, boneIDs,avsNodes);
+			BuildBoneNodeList(skeletonRootTransform, boneIDs);
 			if(boneIDs.Count==0)
 				return 0;
 			skeletonRootNodeID = boneIDs[skeletonRootTransform];
-			for (int i = 0; i < avsNodes.Count; i++)
-			{
-				avs.Node avsNode = avsNodes[i];
-				// The root is stored as a Skeleton, not a bone.
-				if(i==0)
-				{
-					avsNode.dataType = avs.NodeDataType.Skeleton;
-					avsNode.dataID=skeletonAssetID;
-				}
-				uid boneID = boneIDs.Values.ElementAt(i);
-				Server_StoreNode(boneID, avsNode);
-			}
 
-			// Now, we've stored all the nodes in the object hierarchy. This may be more nodes than the actual skeleton has:
-			/*
-			foreach (UnityEngine.Transform bone in skinnedMeshRenderer.bones)
-			{
-				// For now, IK nodes are not in the boneIDs list, although they ARE in the skinned mesh renderer's bones list...
-				if(!boneIDs.TryGetValue(bone,out uid id))
-					continue;
-				jointIDs.Add(id);
-			}*/
 			// TODO: uid's may be a bad way to do this because it only applies to one skeleton...
 			skeleton.boneIDs = boneIDs.Values.ToArray();
 			skeleton.numBones = boneIDs.Count;
