@@ -414,6 +414,8 @@ namespace teleport
 
 
 		#region DLLImports
+		[DllImport(TeleportServerDll.name)]
+		private static extern void Server_BadCall();
 
 		[DllImport(TeleportServerDll.name)]
 		private static extern bool Server_SetCachePath(string name);
@@ -429,7 +431,6 @@ namespace teleport
         [DllImport(TeleportServerDll.name)]
         private static extern UInt64 Server_UidToPath(uid u, StringBuilder path, UInt64 stringsize);
 		[DllImport(TeleportServerDll.name)]
-
 		private static extern UInt64 Server_EnsurePathResourceIsLoaded(string path);
 
 		[DllImport(TeleportServerDll.name)]
@@ -536,12 +537,15 @@ namespace teleport
 
 
 		private static GeometrySource geometrySource = null;
-
+		public static void CheckDllImports()
+		{// TODO: Add try-catch blocks to all Server_ calls and Client_ calls.
+		}
 		public static GeometrySource GetGeometrySource()
 		{
 			if (geometrySource == null)
 			{
 				geometrySource = Resources.Load<GeometrySource>(TELEPORT_VR_PATH + nameof(GeometrySource));
+				CheckDllImports();
 			}
 
 #if UNITY_EDITOR
@@ -3266,14 +3270,28 @@ namespace teleport
 		static public string GetPathFromUid(uid u)
 		{
 			StringBuilder path=new StringBuilder("", 20);
-            int len=(int)Server_UidToPath(u,  path, 0);
-			if (len > 0)
-			{
-				path = new StringBuilder(len, len);
-				Server_UidToPath(u, path, (UInt64)len);
-            }
+			try
+			{ 
+				int len=(int)Server_UidToPath(u,  path, 0);
+				if (len > 0)
+				{
+					path = new StringBuilder(len, len);
+					Server_UidToPath(u, path, (UInt64)len);
+				}
 
-			return path.ToString();
-        }
+				return path.ToString();
+			}
+			catch (EntryPointNotFoundException)
+			{
+				Debug.LogError("Server_UidToPath not found in dll.");
+			}
+			catch (Exception e)
+			{
+				Debug.LogError("Failed in GetPathFromUid.");
+				if (UnityEditor.EditorApplication.isPlaying)
+					UnityEditor.EditorApplication.isPlaying=false;
+			}
+			return "";
+		}
 	}
 }

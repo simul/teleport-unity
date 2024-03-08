@@ -138,8 +138,9 @@ namespace teleport
 				}
 			}
 
-			// This MUST be called for connection / reconnection to work properly.
-			Client_StopStreaming(clientID);
+			// Formerly needed to be called for connection / reconnection to work properly.
+			// But now the caller of StaticDisconnect() does this.
+			//Client_StopStreaming(clientID);
 		}
 
 
