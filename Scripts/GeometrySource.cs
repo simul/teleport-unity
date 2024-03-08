@@ -3148,111 +3148,112 @@ namespace teleport
 		//  loadedResources : LoadedResource array that was created in unmanaged memory.
 		private void AddToProcessedResources<UnityAsset>(int numResources, in IntPtr loadedResources) where UnityAsset : UnityEngine.Object
 		{
-			int resourceSize = Marshal.SizeOf<LoadedResource>();
-			for(int i = 0; i<numResources; i++)
+			try
 			{
-				//Create new pointer to the memory location of the LoadedResource for this index.
-				IntPtr resourcePtr = new IntPtr(loadedResources.ToInt64() + i * resourceSize);
-
-				//Marshal data to manaaged types.
-				LoadedResource metaResource = Marshal.PtrToStructure<LoadedResource>(resourcePtr);
-				if (metaResource.name == null)
+				int resourceSize = Marshal.SizeOf<LoadedResource>();
+				for (int i = 0; i < numResources; i++)
 				{
-					Debug.LogError("metaResource.name is null");
-					continue;
-				}
-				string name = Marshal.PtrToStringAnsi(metaResource.name);
-				string path = Marshal.PtrToStringAnsi(metaResource.path);
-				string guid = Marshal.PtrToStringAnsi(metaResource.guid);
+					//Create new pointer to the memory location of the LoadedResource for this index.
+					IntPtr resourcePtr = new IntPtr(loadedResources.ToInt64() + i * resourceSize);
+
+					//Marshal data to manaaged types.
+					LoadedResource metaResource = Marshal.PtrToStructure<LoadedResource>(resourcePtr);
+					if (metaResource.name == null)
+					{
+						Debug.LogError("metaResource.name is null");
+						continue;
+					}
+					string name = Marshal.PtrToStringAnsi(metaResource.name);
+					string path = Marshal.PtrToStringAnsi(metaResource.path);
 
 #if UNITY_EDITOR
-				string expectedAssetPath=path;
-				expectedAssetPath = SceneResourcePathManager.UnstandardizePath(expectedAssetPath, "");
-				if (expectedAssetPath.StartsWith("Library/"))
-				{
-					expectedAssetPath = "Library/unity default resources";
-				}
-				// Paths in Library/
-				string unityAssetPath = expectedAssetPath;
-				//Asset we found in the database.
-				UnityAsset asset = null;
-				if (guid.Length >= 32)
-				{
-					//Attempt to find asset the from the guid.
-					unityAssetPath = AssetDatabase.GUIDToAssetPath(guid.Substring(0, 32)).Replace("Assets/", "");
-				}
-				string standardizedUnityAssetPath= SceneResourcePathManager.StandardizePath(unityAssetPath, "Assets/");
-				if (expectedAssetPath != unityAssetPath)
-                {
-					Debug.LogWarning("Path mismatch for ("+typeof(UnityAsset).ToString()+")" + name+": expected["+ expectedAssetPath + "]!=got["+ unityAssetPath + "]");
-					if(!paused_already)
-					{ 
-						System.Threading.Thread.Sleep(10000);
-						paused_already=true;
-					}
-                }
-				UnityEngine.Object[] assetsAtPath = AssetDatabase.LoadAllAssetsAtPath("Assets/"+unityAssetPath);
-				if (assetsAtPath.Length == 0)
-				{
-					// Library assets are not under "Assets/"
-					assetsAtPath = AssetDatabase.LoadAllAssetsAtPath(unityAssetPath);
-				}
-				if (assetsAtPath.Length == 0)
-                {
-					unityAssetPath=SceneResourcePathManager.UnstandardizePath(expectedAssetPath, "");
-					do
-                    {
-						assetsAtPath = AssetDatabase.LoadAllAssetsAtPath("Assets/" + unityAssetPath);
-						if (assetsAtPath.Length != 0)
-							break;
-						int slash= unityAssetPath.LastIndexOf('/');
-						if(slash<0)
-							break;
-						unityAssetPath= unityAssetPath.Substring(0,slash);
-					} while(unityAssetPath.Length>0);
-				}
-				foreach(UnityEngine.Object unityObject in assetsAtPath)
-				{ 
-					if(unityObject)
-					if((unityObject.GetType() == typeof(UnityAsset) || unityObject.GetType().IsSubclassOf(typeof(UnityAsset))) && unityObject.name == name)
+					string expectedAssetPath = path;
+					expectedAssetPath = SceneResourcePathManager.UnstandardizePath(expectedAssetPath, "");
+					if (expectedAssetPath.StartsWith("Library/"))
 					{
-						asset = (UnityAsset)unityObject;
-						break;
+						expectedAssetPath = "Library/unity default resources";
 					}
-				}
-				// Give up on matching the name, is the type correct?
-				if (asset == null)
-                {
+					// Paths in Library/
+					string unityAssetPath = expectedAssetPath;
+					//Asset we found in the database.
+					UnityAsset asset = null;
+					string standardizedUnityAssetPath = SceneResourcePathManager.StandardizePath(unityAssetPath, "Assets/");
+					if (expectedAssetPath != unityAssetPath)
+					{
+						Debug.LogWarning("Path mismatch for (" + typeof(UnityAsset).ToString() + ")" + name + ": expected[" + expectedAssetPath + "]!=got[" + unityAssetPath + "]");
+						if (!paused_already)
+						{
+							System.Threading.Thread.Sleep(10000);
+							paused_already = true;
+						}
+					}
+					UnityEngine.Object[] assetsAtPath = AssetDatabase.LoadAllAssetsAtPath("Assets/" + unityAssetPath);
+					if (assetsAtPath.Length == 0)
+					{
+						// Library assets are not under "Assets/"
+						assetsAtPath = AssetDatabase.LoadAllAssetsAtPath(unityAssetPath);
+					}
+					if (assetsAtPath.Length == 0)
+					{
+						unityAssetPath = SceneResourcePathManager.UnstandardizePath(expectedAssetPath, "");
+						do
+						{
+							assetsAtPath = AssetDatabase.LoadAllAssetsAtPath("Assets/" + unityAssetPath);
+							if (assetsAtPath.Length != 0)
+								break;
+							int slash = unityAssetPath.LastIndexOf('/');
+							if (slash < 0)
+								break;
+							unityAssetPath = unityAssetPath.Substring(0, slash);
+						} while (unityAssetPath.Length > 0);
+					}
 					foreach (UnityEngine.Object unityObject in assetsAtPath)
 					{
 						if (unityObject)
-							if ((unityObject.GetType() == typeof(UnityAsset) || unityObject.GetType().IsSubclassOf(typeof(UnityAsset))))
+							if ((unityObject.GetType() == typeof(UnityAsset) || unityObject.GetType().IsSubclassOf(typeof(UnityAsset))) && unityObject.name == name)
 							{
 								asset = (UnityAsset)unityObject;
 								break;
 							}
 					}
-				}
-
-				if (asset)
-				{
-					long lastModified = GetAssetWriteTimeUTC(unityAssetPath);
-
-					//Use the asset as is, if it has not been modified since it was saved.
-					if(metaResource.lastModified >= lastModified)
+					// Give up on matching the name, is the type correct?
+					if (asset == null)
 					{
-						sessionResourceUids[asset] = metaResource.id;
+						foreach (UnityEngine.Object unityObject in assetsAtPath)
+						{
+							if (unityObject)
+								if ((unityObject.GetType() == typeof(UnityAsset) || unityObject.GetType().IsSubclassOf(typeof(UnityAsset))))
+								{
+									asset = (UnityAsset)unityObject;
+									break;
+								}
+						}
+					}
+
+					if (asset)
+					{
+						long lastModified = GetAssetWriteTimeUTC(unityAssetPath);
+
+						//Use the asset as is, if it has not been modified since it was saved.
+						if (metaResource.lastModified >= lastModified)
+						{
+							sessionResourceUids[asset] = metaResource.id;
+						}
+						else
+						{
+							Debug.Log($"Asset {typeof(UnityAsset).FullName} \"{name}\" with GUID \"{guid}\" has been modified.");
+						}
 					}
 					else
 					{
-						Debug.Log($"Asset {typeof(UnityAsset).FullName} \"{name}\" with GUID \"{guid}\" has been modified.");
+						Debug.LogWarning($"Can't find asset {typeof(UnityAsset).FullName} \"{name}\" with GUID \"{guid}\"!");
 					}
-				}
-				else
-				{
-					Debug.LogWarning($"Can't find asset {typeof(UnityAsset).FullName} \"{name}\" with GUID \"{guid}\"!");
-				}
 #endif
+				}
+			}
+			catch (Exception e )
+			{
+				Debug.LogWarning("Exception in AddToProcessedResources: " +e.Message);
 			}
 		}
 
