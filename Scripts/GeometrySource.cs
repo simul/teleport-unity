@@ -3241,12 +3241,12 @@ namespace teleport
 						}
 						else
 						{
-							Debug.Log($"Asset {typeof(UnityAsset).FullName} \"{name}\" with GUID \"{guid}\" has been modified.");
+							Debug.Log($"Asset {typeof(UnityAsset).FullName} \"{name}\" has been modified.");
 						}
 					}
 					else
 					{
-						Debug.LogWarning($"Can't find asset {typeof(UnityAsset).FullName} \"{name}\" with GUID \"{guid}\"!");
+						Debug.LogWarning($"Can't find asset {typeof(UnityAsset).FullName} \"{name}\"!");
 					}
 #endif
 				}
