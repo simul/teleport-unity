@@ -399,7 +399,8 @@ namespace teleport
 			}
 #endif
 			SceneManager.sceneLoaded -= OnSceneLoaded;
-			Server_Teleport_Shutdown();
+			if(Application.isPlaying)
+				Server_Teleport_Shutdown();
 		}
 		
 		static public void OverrideRenderingLayerMask(GameObject gameObject, uint mask,bool recursive=false)

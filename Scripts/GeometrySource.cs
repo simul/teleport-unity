@@ -14,6 +14,7 @@ using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 //using static RootMotion.BipedNaming;
 using static teleport.GeometrySource;
+using static UnityEngine.Rendering.DebugUI;
 using uid = System.UInt64;
 
 namespace avs
@@ -367,6 +368,7 @@ namespace teleport
 		public UnityEngine.Texture unityTexture;
 		public avs.Texture textureData;
 		public TextureConversion textureConversion;
+		public UnityEngine.GameObject gameObject;	// owner, for fallback path.
 	}
 }
 
@@ -448,12 +450,12 @@ namespace teleport
 		[DllImport(TeleportServerDll.name)]
 		private static extern void Server_StoreSkeleton(uid id, avs.Skeleton skeleton);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void Server_StoreMesh(uid id,
+		private static extern bool Server_StoreMesh(uid id,
 												string guid,
 												string path,
 												Int64 lastModified,
 												[MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(MeshMarshaler))] avs.Mesh mesh,
-												 [MarshalAs(UnmanagedType.I1)] avs.AxesStandard extractToStandard, [MarshalAs(UnmanagedType.I1)] bool compress, [MarshalAs(UnmanagedType.I1)] bool verify);
+												 [MarshalAs(UnmanagedType.I1)] avs.AxesStandard extractToStandard,  [MarshalAs(UnmanagedType.I1)] bool verify);
 		[DllImport(TeleportServerDll.name)]
 		private static extern void Server_StoreMaterial(uid id, string guid,
 												string path, Int64 lastModified, avs.Material material);
@@ -721,8 +723,7 @@ namespace teleport
 			bool result = UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out localId);
 			if (!result)
 			{
-				path = "";
-				return false;
+				return (path!=null&&path.Length>0);
 			}
 			path = UnityEditor.AssetDatabase.GetAssetPath(obj);
 			// Problem is, Unity can bundle a bunch of individual meshes/materials/etc in one asset file, but use them completely independently.
@@ -1096,8 +1097,7 @@ namespace teleport
 			ExtractNodeHierarchy(gameObject, forceMask, verify);
 			return nodeID;
 		}
-
-		public uid AddMesh(UnityEngine.Mesh mesh, ForceExtractionMask forceMask,bool verify)
+		public uid AddMesh(UnityEngine.Mesh mesh, GameObject gameObject, ForceExtractionMask forceMask,bool verify)
 		{
 			if(!mesh)
 			{
@@ -1106,9 +1106,15 @@ namespace teleport
 			}
 			// Make sure there's a path for this mesh.
 			GetResourcePath(mesh, out string resourcePath, (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_SUBRESOURCES);
-			// Not a resource, don't extract.
+			// Not a resource in the AssetDatabase generate the path some other way.
 			if(resourcePath==null||resourcePath=="")
+			{
+				resourcePath= SceneResourcePathManager.GetNonAssetResourcePath(mesh, gameObject);
+			}
+			if (resourcePath == null || resourcePath == "")
+			{
 				return 0;
+			}
 			//We can't extract an unreadable mesh.
 			if (!mesh.isReadable)
 			{
@@ -1135,8 +1141,8 @@ namespace teleport
 			// Actually, let's ONLY extract offline. 
 			if (!running)
 			{
-				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID,  !running,verify);
-				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID,  !running, verify);
+				ExtractMeshData(avs.AxesStandard.EngineeringStyle, mesh, meshID,  verify);
+				ExtractMeshData(avs.AxesStandard.GlStyle, mesh, meshID,   verify);
 				return meshID;
 			}
 			else
@@ -1163,7 +1169,7 @@ namespace teleport
 			Fade,   // Old school alpha-blending mode, fresnel does not affect amount of transparency
 			Transparent // Physically plausible transparency mode, implemented as alpha pre-multiply
 		}
-		public uid AddMaterial(UnityEngine.Material material, ForceExtractionMask forceMask)
+		public uid AddMaterial(UnityEngine.Material material, GameObject gameObject, ForceExtractionMask forceMask)
 		{
 			if(!material)
 			{
@@ -1177,7 +1183,10 @@ namespace teleport
 			}
 
 			if(!GetResourcePath(material, out string resourcePath, (forceMask & ForceExtractionMask.FORCE_SUBRESOURCES) == ForceExtractionMask.FORCE_SUBRESOURCES))
-				return 0;
+			{
+				// Create a path based on gameObject if none can be created from the material itself.
+				resourcePath = SceneResourcePathManager.GetNonAssetResourcePath(material, gameObject);
+			}
 			if (materialID == 0)
 			{
 				materialID =  Server_GetOrGenerateUid(resourcePath) ;
@@ -1216,7 +1225,7 @@ namespace teleport
 			{
 				extractedMaterial.materialMode = avs.MaterialMode.TRANSPARENT;
 			}
-			extractedMaterial.pbrMetallicRoughness.baseColorTexture.index = AddTexture(material.mainTexture, forceMask);
+			extractedMaterial.pbrMetallicRoughness.baseColorTexture.index = AddTexture(material.mainTexture, gameObject, forceMask);
 			extractedMaterial.pbrMetallicRoughness.baseColorTexture.tiling = material.mainTextureScale;
 			extractedMaterial.pbrMetallicRoughness.baseColorFactor = material.HasProperty("_Color") ? material.color.linear: new Color(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -1226,7 +1235,7 @@ namespace teleport
 			if(material.HasProperty("_MetallicGlossMap"))
 			{
 				metallicRoughness = material.GetTexture("_MetallicGlossMap");
-				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index = AddTexture(metallicRoughness, forceMask, TextureConversion.CONVERT_TO_METALLICROUGHNESS_BLUEGREEN);
+				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index = AddTexture(metallicRoughness, gameObject,forceMask, TextureConversion.CONVERT_TO_METALLICROUGHNESS_BLUEGREEN);
 				extractedMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling = material.mainTextureScale;
 			}
 			if (metallicRoughness)
@@ -1255,7 +1264,7 @@ namespace teleport
 			if(material.HasProperty("_BumpMap"))
 			{
 				UnityEngine.Texture normal = material.GetTexture("_BumpMap");
-				extractedMaterial.normalTexture.index = AddTexture(normal, forceMask);
+				extractedMaterial.normalTexture.index = AddTexture(normal, gameObject,forceMask);
 				extractedMaterial.normalTexture.tiling = material.mainTextureScale;
 			}
 			extractedMaterial.normalTexture.strength = material.HasProperty("_BumpScale") ? material.GetFloat("_BumpScale") : 1.0f;
@@ -1265,7 +1274,7 @@ namespace teleport
 			if(material.HasProperty("_OcclusionMap"))
 			{
 				UnityEngine.Texture occlusion = material.GetTexture("_OcclusionMap");
-				extractedMaterial.occlusionTexture.index = AddTexture(occlusion, forceMask);
+				extractedMaterial.occlusionTexture.index = AddTexture(occlusion, gameObject,forceMask);
 				extractedMaterial.occlusionTexture.tiling = material.mainTextureScale;
 			}
 			extractedMaterial.occlusionTexture.strength = material.HasProperty("_OcclusionStrength") ? material.GetFloat("_OcclusionStrength") : 1.0f;
@@ -1280,7 +1289,7 @@ namespace teleport
 					UnityEngine.Texture emission = material.GetTexture("_EmissionMap");
 					if(emission!=null)
 					{ 
-						extractedMaterial.emissiveTexture.index = AddTexture(emission, forceMask);
+						extractedMaterial.emissiveTexture.index = AddTexture(emission, gameObject,forceMask);
 						extractedMaterial.emissiveTexture.tiling = material.mainTextureScale;
 					}
 				}
@@ -1559,7 +1568,7 @@ namespace teleport
 					continue;
 				}
 				//Rip data from render texture, and store in GeometryStore.
-				ExtractAndStoreTexture(sourceTexture, textureArray, textureExtractionData.textureData, targetWidth, targetHeight, writePng, highQualityUASTC, forceOverwrite);
+				ExtractAndStoreTexture(sourceTexture, textureExtractionData.gameObject, textureArray, textureExtractionData.textureData, targetWidth, targetHeight, writePng, highQualityUASTC, forceOverwrite);
 				rendertextureIndex+=arraySize;
 			}
 
@@ -1580,7 +1589,7 @@ namespace teleport
 			public byte[] bytes;
 		}
 
-		void ExtractAndStoreTexture(UnityEngine.Texture sourceTexture, List<RenderTexture> renderTextures, avs.Texture textureData,int targetWidth, int targetHeight,bool writePng, bool highQualityUASTC,  bool forceOverwrite)
+		void ExtractAndStoreTexture(UnityEngine.Texture sourceTexture, GameObject gameObject,List<RenderTexture> renderTextures, avs.Texture textureData,int targetWidth, int targetHeight,bool writePng, bool highQualityUASTC,  bool forceOverwrite)
 		{
 			int arraySize=1;
 			if(sourceTexture.GetType()==typeof(Cubemap)|| sourceTexture.GetType() == typeof(RenderTexture)&&
@@ -1715,7 +1724,7 @@ namespace teleport
 				Marshal.Copy(subresourceImage.bytes, 0, targetPtr, (int)subresourceImage.bytes.Length);
 				targetPtr += subresourceImage.bytes.Length;
 			}
-			geometrySource.AddTextureData(sourceTexture, textureData, highQualityUASTC, forceOverwrite);
+			geometrySource.AddTextureData(sourceTexture, gameObject,textureData, highQualityUASTC, forceOverwrite);
 			Marshal.FreeCoTaskMem(textureData.data);
 		}
 		static string basisUExe = "";
@@ -1818,7 +1827,7 @@ namespace teleport
 #endif
 		}
 #endif
-		public void AddTextureData(UnityEngine.Texture texture, avs.Texture textureData, bool highQualityUASTC, bool forceOverwrite )
+		public void AddTextureData(UnityEngine.Texture texture, GameObject gameObject,avs.Texture textureData, bool highQualityUASTC, bool forceOverwrite )
 		{
 			if(!sessionResourceUids.TryGetValue(texture, out uid textureID))
 			{
@@ -1828,6 +1837,10 @@ namespace teleport
 
 			GetResourcePath(texture, out string resourcePath, false);
 #if UNITY_EDITOR
+			if(resourcePath=="")
+			{
+				resourcePath = SceneResourcePathManager.GetNonAssetResourcePath(texture, gameObject);
+			}
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(texture, out string guid);
 			string textureAssetPath = AssetDatabase.GetAssetPath(texture).Replace("Assets/","");
 			long lastModified = GetAssetWriteTimeUTC(textureAssetPath);
@@ -1998,18 +2011,18 @@ namespace teleport
 			}
 		}
 
-		private void ExtractNodeMaterials(UnityEngine.Material[] sourceMaterials, ref avs.Node extractTo, ForceExtractionMask forceMask)
+		private void ExtractNodeMaterials(UnityEngine.Material[] sourceMaterials, GameObject gameObject,ref avs.Node extractTo, ForceExtractionMask forceMask)
 		{
 			List<uid> materialIDs = new List<uid>();
 			foreach(UnityEngine.Material material in sourceMaterials)
 			{
-				uid materialID = AddMaterial(material, forceMask);
+				uid materialID = AddMaterial(material,  gameObject, forceMask);
 
 				if(materialID != 0)
 				{
 					materialIDs.Add(materialID);
 					
-					//Check GeometryStore to see if material actually exists, if it doesn't then there is a mismatch between the mananged code data and the unmanaged code data.
+					//Check GeometryStore to see if material actually exists, if it doesn't then there is a mismatch between the managed code data and the unmanaged code data.
 					if(!Server_IsMaterialStored(materialID))
 					{
 						Debug.LogError($"Missing material {material.name}({materialID}), which was added to \"{extractTo.name}\".");
@@ -2079,7 +2092,7 @@ namespace teleport
 						extractTo.renderState.globalIlluminationTextureUid = FindResourceID(lightmap_texture);
 						if (extractTo.renderState.globalIlluminationTextureUid == 0)
 						{
-							extractTo.renderState.globalIlluminationTextureUid=AddTexture(lightmap_texture, forceMask);
+							extractTo.renderState.globalIlluminationTextureUid=AddTexture(lightmap_texture, gameObject, forceMask);
 							if (extractTo.renderState.globalIlluminationTextureUid == 0)
 							{
 								Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap " + meshRenderer.lightmapIndex + " was not found in GeometrySource!");
@@ -2111,7 +2124,7 @@ namespace teleport
 				//Debug.LogError($"Failed GeometrySource.ExtractNodeMeshData for GameObject \"{gameObject.name}\"!");
 				return false;
 			}
-			extractTo.dataID = AddMesh(mesh, forceMask, verify);
+			extractTo.dataID = AddMesh(mesh,  gameObject ,forceMask, verify);
 
 			//Can't create a node with no data.
 			if(extractTo.dataID == 0)
@@ -2121,7 +2134,7 @@ namespace teleport
 			}
 			extractTo.dataType = avs.NodeDataType.Mesh;
 
-			ExtractNodeMaterials(meshRenderer.sharedMaterials, ref extractTo, forceMask);
+			ExtractNodeMaterials(meshRenderer.sharedMaterials, gameObject,ref extractTo, forceMask);
 			
 			return true;
 		}
@@ -2160,7 +2173,7 @@ namespace teleport
 				Debug.LogError($"Failed to get mesh for GameObject: {gameObject.name} in scene: {sceneName}");
 				return false;
 			}
-			extractTo.dataID = AddMesh(mesh, forceMask,verify);
+			extractTo.dataID = AddMesh(mesh, gameObject,forceMask, verify);
 
 			//Can't create a node with no data.
 			if(extractTo.dataID == 0)
@@ -2168,7 +2181,7 @@ namespace teleport
 				Debug.LogError($"Failed to extract skinned mesh data from GameObject: {gameObject.name}");
 				return false;
 			}
-			ExtractNodeMaterials(skinnedMeshRenderer.sharedMaterials, ref extractTo, forceMask);
+			ExtractNodeMaterials(skinnedMeshRenderer.sharedMaterials,  gameObject, ref extractTo, forceMask);
 
 			return true;
 		}
@@ -2279,8 +2292,35 @@ namespace teleport
 
 			return bindMatrices;
 		}
-
-		private void ExtractMeshData(avs.AxesStandard extractToBasis, UnityEngine.Mesh mesh, uid meshID,bool compress,bool verify)
+		public void FindBadMeshes(UnityEngine.GameObject g)
+		{
+			var meshes=g.GetComponentsInChildren<MeshFilter>();
+			foreach(var m in meshes)
+			{
+				var mesh = m.sharedMesh;
+				bool meshbad=false;
+				if(!mesh.isReadable) continue;
+				List<int> badVertices=new List<int>();
+				for (int i = 0; i < mesh.vertices.Length; i++)
+				{
+					var v=mesh.vertices[i];
+					bool isbad = false;
+					isbad |= (Single.IsNaN(v.x) || Single.IsInfinity(v.x));
+					isbad |= (Single.IsNaN(v.y) || Single.IsInfinity(v.y));
+					isbad |= (Single.IsNaN(v.z) || Single.IsInfinity(v.z));
+					if(isbad)
+					{
+						Debug.LogWarning("Found bad vertex "+i);
+					}
+					meshbad|=isbad;
+				}
+				if (meshbad)
+				{
+					Debug.LogError("Found bad data in mesh of game object "+g.name,g);
+				}
+			}
+		}
+		private void ExtractMeshData(avs.AxesStandard extractToBasis, UnityEngine.Mesh mesh, uid meshID,bool verify)
 		{
 			UInt64 localId=1;
 			avs.PrimitiveArray[] primitives = new avs.PrimitiveArray[mesh.subMeshCount];
@@ -2656,8 +2696,8 @@ namespace teleport
 				bufferIDs = buffers.Keys.ToArray(),
 				buffers = buffers.Values.ToArray(),
 				inverseBindMatricesAccessor = inverseBindMatricesID
-		};
-			Server_StoreMesh
+			};
+			if (!Server_StoreMesh
 			(
 				meshID,
 				guid,
@@ -2665,9 +2705,11 @@ namespace teleport
 				last_modified,
 				avsMesh,
 				extractToBasis
-				,compress
-				,verify
-			);
+				, verify
+			))
+			{
+				Debug.LogError("Failed to store mesh: \""+ mesh.name+"\" with id "+meshID);
+			}
 #endif
 		}
 
@@ -3020,7 +3062,7 @@ namespace teleport
 					//return 8;
 			}
 		}
-		public uid AddTexture(UnityEngine.Texture texture, ForceExtractionMask forceMask= ForceExtractionMask.FORCE_NOTHING, TextureConversion textureConversion= TextureConversion.CONVERT_NOTHING)
+		public uid AddTexture(UnityEngine.Texture texture,GameObject gameObject, ForceExtractionMask forceMask= ForceExtractionMask.FORCE_NOTHING, TextureConversion textureConversion= TextureConversion.CONVERT_NOTHING)
 		{
 			if(!texture)
 			{
@@ -3124,7 +3166,7 @@ namespace teleport
 					return 0;
 			}
 
-			texturesWaitingForExtraction.Add(new TextureExtractionData { id = textureID, unityTexture = texture, textureData = extractedTexture , textureConversion=textureConversion });
+			texturesWaitingForExtraction.Add(new TextureExtractionData { id = textureID, unityTexture = texture, textureData = extractedTexture , textureConversion=textureConversion, gameObject=gameObject });
 			return textureID;
 		}
 

@@ -392,7 +392,23 @@ namespace teleport
 				EditorGUILayout.LabelField($"There are <b>{gameObjectsTagged.Length}</b> GameObjects with the '{teleportSettings.TagToStream}' tag.", richText);
 
 				EditorGUILayout.BeginHorizontal();
-				GUILayout.Label($"Clear tag '{teleportSettings.TagToStream}' from all GameObjects.", labelTextStyle, GUILayout.Width(400));
+				GUILayout.Label($"Remove Streamable Node and Streamable Root from all GameObjects.", labelTextStyle, GUILayout.Width(500));
+				if (GUILayout.Button("Apply", GUILayout.Width(100)))
+				{
+					StreamableNode [] n =GameObject.FindObjectsByType<StreamableNode>(FindObjectsSortMode.None);
+					foreach (var sn in n)
+					{
+						DestroyImmediate(sn);
+					}
+					StreamableRoot[] r = GameObject.FindObjectsByType<StreamableRoot>(FindObjectsSortMode.None);
+					foreach (var sr in r)
+					{
+						DestroyImmediate(sr);
+					}
+				}
+				EditorGUILayout.EndHorizontal();
+				EditorGUILayout.BeginHorizontal();
+				GUILayout.Label($"Clear tag '{teleportSettings.TagToStream}' from all GameObjects.", labelTextStyle, GUILayout.Width(500));
 				if (GUILayout.Button("Apply", GUILayout.Width(100)))
 				{
 					foreach(var gameObject in gameObjectsTagged)
@@ -403,7 +419,7 @@ namespace teleport
 				EditorGUILayout.EndHorizontal();
 
 				EditorGUILayout.BeginHorizontal();
-				EditorGUILayout.LabelField($"Apply the tag {teleportSettings.TagToStream} to selected objects with collision.", labelTextStyle, GUILayout.Width(400));
+				EditorGUILayout.LabelField($"Apply the tag {teleportSettings.TagToStream} to selected objects with collision.", labelTextStyle, GUILayout.Width(500));
 				if (GUILayout.Button($"Apply", GUILayout.Width(100)))
 				{
 					foreach(var gameObject in UnityEditor.Selection.gameObjects)
@@ -419,7 +435,7 @@ namespace teleport
 				}
 				EditorGUILayout.EndHorizontal();
 				EditorGUILayout.BeginHorizontal();
-				EditorGUILayout.LabelField($"Apply the tag to objects within selected collider.", labelTextStyle, GUILayout.Width(400));
+				EditorGUILayout.LabelField($"Apply the tag to objects within selected collider.", labelTextStyle, GUILayout.Width(500));
 				List<Collider> colliders= new List<Collider>();
 				foreach (var gameObject in UnityEditor.Selection.gameObjects)
 				{
@@ -526,6 +542,29 @@ namespace teleport
 			{
 				EditorMask.ResetAll();
 			}
+			if (GUILayout.Button($"Find bad meshes."))
+			{
+				bool end=false;
+				for (int i = 0; i < SceneManager.sceneCount; i++)
+				{
+					var scene = SceneManager.GetSceneAt(i);
+					if (scene == null)
+						continue;
+					if (end)
+						break;
+					var objs = scene.GetRootGameObjects();
+					for(int j=0;j<objs.Length; j++)
+					{
+						if(end)
+							break;
+						if (EditorUtility.DisplayCancelableProgressBar($"Checking for bad Geometry", $"Scene {i}, object {j}", (float)(j + 1) / (float)(objs.Length)))
+						{
+							end=true;
+						}
+						geometrySource.FindBadMeshes(objs[j]);
+					}
+				}
+			}
 			GUI.enabled = true;
 			EditorGUILayout.EndVertical();
 		}
@@ -619,12 +658,12 @@ namespace teleport
 			{
 				if (Monitor.Instance.diffuseRenderTexture != null)
 				{
-					geometrySource.AddTexture(Monitor.Instance.diffuseRenderTexture, GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
+					geometrySource.AddTexture(Monitor.Instance.diffuseRenderTexture, Monitor.Instance.gameObject, GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
 					geometrySource.ExtractTextures(true);
 				}
 				if (Monitor.Instance.specularRenderTexture != null)
 				{
-					geometrySource.AddTexture(Monitor.Instance.specularRenderTexture, GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
+					geometrySource.AddTexture(Monitor.Instance.specularRenderTexture, Monitor.Instance.gameObject, GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
 					geometrySource.ExtractTextures(true);
 				}
 			}
@@ -636,7 +675,7 @@ namespace teleport
 				return;
 			foreach (Texture texture in giTextures)
 			{
-				geometrySource.AddTexture(texture, GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
+				geometrySource.AddTexture(texture, Monitor.Instance.gameObject, GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
 			}
 			geometrySource.ExtractTextures(true);
 		}

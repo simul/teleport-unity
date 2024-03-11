@@ -65,6 +65,17 @@ namespace teleport
 		{
 			return sceneResourcePaths;
 		}
+		public UnityEngine.Object GetResourceFromPath(string path)
+		{
+			sceneResourcePaths_keys = sceneResourcePaths.Keys.ToArray();
+			sceneResourcePaths_values = sceneResourcePaths.Values.ToArray();
+			int idx=Array.FindIndex(sceneResourcePaths_values, element => element==path);
+			if(idx>=0)
+			{
+				return sceneResourcePaths_keys[idx];
+			}
+			return null;
+		}
 		static public void ClearAll()
 		{
 			// At least get the one in the current scene.
@@ -177,6 +188,28 @@ namespace teleport
 #if UNITY_EDITOR
 			UnityEditor.EditorUtility.SetDirty(this);
 #endif
+		}
+		// Fallback for objects not found in the AssetDatabase.
+		public static string GetNonAssetResourcePath(UnityEngine.Object obj, GameObject owner)
+		{
+			string resourcePath = SceneReferenceManager.GetGameObjectPath(owner) + "_" + obj.GetType().ToString() + "_" + obj.name;
+			resourcePath = StandardizePath(resourcePath, "Assets/");
+			// Is this path unique?
+			int n = 0;
+			string resourcePathRoot = resourcePath;
+			var scene = SceneManager.GetActiveScene();
+			if (owner.scene != null)
+				scene = owner.scene;
+			var resourcePathManager = GetSceneResourcePathManager(scene);
+			var otherObj = resourcePathManager.GetResourceFromPath(resourcePath);
+			while (otherObj != null && otherObj != obj)
+			{
+				n++;
+				resourcePath = resourcePathRoot + n;
+				otherObj = resourcePathManager.GetResourceFromPath(resourcePath);
+			}
+			resourcePathManager.SetResourcePath(obj, resourcePath);
+			return resourcePath;
 		}
 		public string GetResourcePath(UnityEngine.Object o)
 		{

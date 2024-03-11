@@ -80,7 +80,7 @@ namespace teleport
 				Debug.LogError("Passed null GameObject to SceneReferenceManager!");
             }
 
-            //Retrieve path of GameObject, if gameObjectPath is null.
+            //Retrieve path of GameObject, if gameObjectPath is null. X??Y is equivalent to X?X:Y
             gameObjectPath = gameObjectPath ?? GetGameObjectPath(gameObject);
 			MeshTracker meshTracker= gameObject.GetComponent<MeshTracker>();
             //Only return what we have in the dictionary, if we are in play-mode; we want to re-extract if we are in the editor to update to any changes made.
@@ -116,6 +116,11 @@ namespace teleport
 			if (meshTracker == null)
 				return null;
 			meshTracker.mesh = GetMesh(gameObject);
+			var sceneResourcePathManager = SceneResourcePathManager.GetSceneResourcePathManager(gameObject.scene);
+			string resourcePath= sceneResourcePathManager.GetResourcePath(meshTracker.mesh);
+			if(resourcePath=="")
+				resourcePath = SceneResourcePathManager.GetNonAssetResourcePath(meshTracker.mesh,gameObject);
+			meshTracker.resourcePath= resourcePath;
 #if UNITY_EDITOR
 			UnityEditor.EditorUtility.SetDirty(this);
 #endif
@@ -139,7 +144,7 @@ namespace teleport
             return meshTracker.mesh;
 		}
 		//Returns path of GameObject in scene hierarchy.
-		private string GetGameObjectPath(GameObject gameObject)
+		static public string GetGameObjectPath(GameObject gameObject)
 		{
 			string gameObjectPath = gameObject.name;
 
