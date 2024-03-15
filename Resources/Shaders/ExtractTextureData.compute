@@ -37,13 +37,12 @@ void ExtractTextureLinear(uint3 id : SV_DispatchThreadID)
 	float4 src = Source.Load(int3(Offset+id.xy * Scale,Mip));
 	Result[id.xy].rgba = saturate(src);
 }
-
 //Extract textures from gamma space.
 [numthreads(8, 8, 1)]
 void ExtractTextureGamma(uint3 id : SV_DispatchThreadID)
 {
-	float4 src			= Source.Load(int3(Offset+id.xy * Scale,Mip));
-	Result[id.xy].rgba	= GammaToLinearSpaceExact(src);
+	float4 src			=Source.Load(int3(Offset+id.xy * Scale,Mip));
+	Result[id.xy].rgba	=GammaToLinearSpaceExact(src);
 }
 
 [numthreads(8, 8, 1)]

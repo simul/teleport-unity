@@ -29,7 +29,7 @@ namespace teleport
 		private RenderTexture[] renderTextures = new RenderTexture[0];
 		private bool verifyGeometry = false;
 		private bool forceExtraction=false;
-
+		private bool fixBadMeshes=false;
 		//Text styles.
 		private GUIStyle richText ;
 		private GUIStyle warningText ;
@@ -544,7 +544,9 @@ namespace teleport
 			}
 			if (GUILayout.Button($"Find bad meshes."))
 			{
+				EditorUtility.ClearProgressBar();
 				bool end=false;
+				var sel = Selection.gameObjects;
 				for (int i = 0; i < SceneManager.sceneCount; i++)
 				{
 					var scene = SceneManager.GetSceneAt(i);
@@ -553,18 +555,25 @@ namespace teleport
 					if (end)
 						break;
 					var objs = scene.GetRootGameObjects();
-					for(int j=0;j<objs.Length; j++)
+					if(sel.Length>0)
+						objs=sel;
+					for (int j=0;j<objs.Length; j++)
 					{
 						if(end)
 							break;
 						if (EditorUtility.DisplayCancelableProgressBar($"Checking for bad Geometry", $"Scene {i}, object {j}", (float)(j + 1) / (float)(objs.Length)))
 						{
-							end=true;
+							EditorUtility.ClearProgressBar();
+							end =true;
 						}
-						geometrySource.FindBadMeshes(objs[j]);
+						geometrySource.FindBadMeshes(objs[j], fixBadMeshes);
 					}
+					if(sel.Length > 0)
+						break;
 				}
+				EditorUtility.ClearProgressBar();
 			}
+			fixBadMeshes = GUILayout.Toggle(fixBadMeshes, "Fix Bad Meshes");
 			GUI.enabled = true;
 			EditorGUILayout.EndVertical();
 		}
@@ -582,6 +591,7 @@ namespace teleport
 				GameObject gameObject = extractionList[i];
 				if (EditorUtility.DisplayCancelableProgressBar($"Extracting Geometry ({i + 1} / {extractionList.Count})", $"Processing \"{gameObject.name}\".", (float)(i + 1) / extractionList.Count))
 				{
+					EditorUtility.ClearProgressBar();
 					return false;
 				}
 				geometrySource.AddNode(gameObject, forceMask, false, verifyGeometry);

@@ -4,6 +4,7 @@
 using avs;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -561,7 +562,7 @@ namespace teleport
 				AssetDatabase.SaveAssets();
 
 				Server_ClearGeometryStore();
-				Debug.LogWarning($"Geometry Source asset created with path \"{unityAssetPath}\"!");
+				UnityEngine.Debug.LogWarning($"Geometry Source asset created with path \"{unityAssetPath}\"!");
 			}	
 #endif
 
@@ -578,7 +579,7 @@ namespace teleport
 				{
 					if (sessionResourceUids_values[i] == sessionResourceUids_values[j])
 					{
-						Debug.LogWarning("Duplicate Uid "+ sessionResourceUids_values [i]+ "found for objects " + sessionResourceUids_keys[i].name+" and " + sessionResourceUids_keys[j]+".");
+						UnityEngine.Debug.LogWarning("Duplicate Uid "+ sessionResourceUids_values [i]+ "found for objects " + sessionResourceUids_keys[i].name+" and " + sessionResourceUids_keys[j]+".");
 						sessionResourceUids.Remove(sessionResourceUids_keys[j]);
 					}
 				}
@@ -646,8 +647,8 @@ namespace teleport
 			bool valid = Server_SetCachePath(cachePath);
 			if (!valid)
 			{
-				Debug.LogError("Failed to set the Geometry Cache Path to: " + cachePath);
-				Debug.LogError("Unable to Save/Load caching from/to disk.");
+				UnityEngine.Debug.LogError("Failed to set the Geometry Cache Path to: " + cachePath);
+				UnityEngine.Debug.LogError("Unable to Save/Load caching from/to disk.");
 			}
 			return valid;
 		}
@@ -696,7 +697,7 @@ namespace teleport
 					var mt=gameObject.GetComponentsInChildren<teleport.MeshTracker>();
 					foreach(var t in mt)
 					{
-						UnityEngine.Object.Destroy(t);
+						UnityEngine.Object.DestroyImmediate(t);
 					}
 				}
 			}
@@ -774,13 +775,13 @@ namespace teleport
 		{
 			if(resource == null)
 			{
-				Debug.LogError("Failed to add the resource to the GeometrySource! Attempted to add a null resource!");
+				UnityEngine.Debug.LogError("Failed to add the resource to the GeometrySource! Attempted to add a null resource!");
 				return false;
 			}
 
 			if(resourceID == 0)
 			{
-				Debug.LogError($"Failed to add the resource \"{resource.name}\" to the GeometrySource! Attempted to add a resource with an ID of zero!");
+				UnityEngine.Debug.LogError($"Failed to add the resource \"{resource.name}\" to the GeometrySource! Attempted to add a resource with an ID of zero!");
 				return false;
 			}
 
@@ -955,7 +956,7 @@ namespace teleport
 		{
 			if(!gameObject)
 			{
-				Debug.LogError("Failed to extract node from GameObject! Passed GameObject was null!");
+				UnityEngine.Debug.LogError("Failed to extract node from GameObject! Passed GameObject was null!");
 				return 0;
 			}
 
@@ -1032,7 +1033,7 @@ namespace teleport
 									anim_uids.Add(animID);
 								else
 								{
-									Debug.LogError("Failed to get a uid for animation clip "+clip.name);
+									UnityEngine.Debug.LogError("Failed to get a uid for animation clip "+clip.name);
 								}
 							}
 						}
@@ -1101,7 +1102,7 @@ namespace teleport
 		{
 			if(!mesh)
 			{
-				Debug.LogError("Mesh extraction failure! Null mesh passed to AddMesh(...) in GeometrySource!");
+				UnityEngine.Debug.LogError("Mesh extraction failure! Null mesh passed to AddMesh(...) in GeometrySource!");
 				return 0;
 			}
 			// Make sure there's a path for this mesh.
@@ -1118,7 +1119,7 @@ namespace teleport
 			//We can't extract an unreadable mesh.
 			if (!mesh.isReadable)
 			{
-				Debug.LogWarning($"Failed to extract mesh \"{mesh.name}\"! Mesh is unreadable!");
+				UnityEngine.Debug.LogWarning($"Failed to extract mesh \"{mesh.name}\"! Mesh is unreadable!");
 				return 0;
 			}
 
@@ -1149,12 +1150,12 @@ namespace teleport
 			{
 				if (!sessionResourceUids.TryGetValue(mesh, out meshID))
 				{
- 					Debug.LogError("Mesh missing! Mesh " + mesh.name + " was not in sessionResourceUids.");
+ 					UnityEngine.Debug.LogError("Mesh missing! Mesh " + mesh.name + " was not in sessionResourceUids.");
 					return 0;
 				}
 				if(!Server_IsMeshStored(meshID))
 				{
-					Debug.LogError("Mesh missing! Mesh "+mesh.name+" was not stored dll-side.");
+					UnityEngine.Debug.LogError("Mesh missing! Mesh "+mesh.name+" was not stored dll-side.");
 					Server_IsMeshStored(meshID);
 					return 0;
 				}
@@ -1197,7 +1198,7 @@ namespace teleport
 				uid id_from_dll = Server_GetOrGenerateUid(resourcePath);
                 if (materialID != id_from_dll)
 				{
-					Debug.LogError("Uid mismatch for object "+material.name+" at path "+resourcePath+". Id from list was "+ materialID+", but Id from path "+resourcePath+" was "+id_from_dll);
+					UnityEngine.Debug.LogError("Uid mismatch for object "+material.name+" at path "+resourcePath+". Id from list was "+ materialID+", but Id from path "+resourcePath+" was "+id_from_dll);
 					sessionResourceUids.Remove(material);
 				}
 			}
@@ -1462,7 +1463,7 @@ namespace teleport
 								writePng = true;
 								break;
 							case UnityEngine.TextureFormat.RGBA32:
-								rtFormat = RenderTextureFormat.ARGBInt;
+								rtFormat = RenderTextureFormat.ARGB32;
 								break;
 							case UnityEngine.TextureFormat.ARGB32:
 								rtFormat = RenderTextureFormat.ARGB32;
@@ -1503,7 +1504,7 @@ namespace teleport
 				}
 				else
 				{
-				//	Debug.LogError("Texture "+sourceTexture.name+" has no importer.");
+				//	UnityEngine.Debug.LogError("Texture "+sourceTexture.name+" has no importer.");
 				}
 				if (isNormal || textureImporter != null && textureImporter.GetDefaultPlatformTextureSettings().textureCompression == TextureImporterCompression.CompressedHQ)
 					highQualityUASTC = true;
@@ -1527,6 +1528,11 @@ namespace teleport
 				var assetpath= UnityEditor.AssetDatabase.GUIDToAssetPath(shaderGUID);
 				ComputeShader shader = AssetDatabase.LoadAssetAtPath<ComputeShader>(assetpath);
 
+				if (shader==null)
+				{
+					UnityEngine.Debug.LogError("shader " + shaderName + " not found.");
+					continue;
+				}
 				int kernelHandle = shader.FindKernel(shaderName);
 				if(kernelHandle<0)
 				{
@@ -1563,7 +1569,7 @@ namespace teleport
 				}
 				if (!SystemInfo.IsFormatSupported(renderTextures[rendertextureIndex].graphicsFormat, UnityEngine.Experimental.Rendering.FormatUsage.Sample))
 				{
-					UnityEngine.Debug.LogError("Format of texture " + i + " is not supported.");
+					UnityEngine.Debug.LogError("Format "+ renderTextures[rendertextureIndex].graphicsFormat+" of texture " + sourceTexture.name + " is not supported.");
 					rendertextureIndex+=arraySize;
 					continue;
 				}
@@ -1603,7 +1609,7 @@ namespace teleport
 			
 			if (textureData.mipCount * arraySize != renderTextures.Count)
 			{
-				Debug.LogError("Image count mismatch");
+				UnityEngine.Debug.LogError("Image count mismatch");
 				return;
 			}
 			int n=0;
@@ -1831,15 +1837,20 @@ namespace teleport
 		{
 			if(!sessionResourceUids.TryGetValue(texture, out uid textureID))
 			{
-				Debug.LogError(texture.name + " had its data extracted, but is not in the dictionary of processed resources!");
+				UnityEngine.Debug.LogError(texture.name + " had its data extracted, but is not in the dictionary of processed resources!");
 				return;
 			}
 
 			GetResourcePath(texture, out string resourcePath, false);
 #if UNITY_EDITOR
-			if(resourcePath=="")
+			if(resourcePath==null||resourcePath == "")
 			{
 				resourcePath = SceneResourcePathManager.GetNonAssetResourcePath(texture, gameObject);
+			}
+			if (resourcePath == null || resourcePath == "")
+			{
+				UnityEngine.Debug.LogError("No resource path for texture: "+texture.name + "!");
+				return;
 			}
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(texture, out string guid);
 			string textureAssetPath = AssetDatabase.GetAssetPath(texture).Replace("Assets/","");
@@ -1867,7 +1878,7 @@ namespace teleport
             {
 				if(boneID!=boneIDs[bone])
                 {
-					Debug.LogError("Bone id's don't match");
+					UnityEngine.Debug.LogError("Bone id's don't match");
 					return;
                 }
             }
@@ -1901,7 +1912,7 @@ namespace teleport
                     parentID = FindResourceID(parent);
                     if (parentID == 0)
                     {
-                        Debug.Log("Unable to extract bone: parent not found for " + bone.name);
+						UnityEngine.Debug.Log("Unable to extract bone: parent not found for " + bone.name);
                         return;
                     }
 				}
@@ -2025,12 +2036,12 @@ namespace teleport
 					//Check GeometryStore to see if material actually exists, if it doesn't then there is a mismatch between the managed code data and the unmanaged code data.
 					if(!Server_IsMaterialStored(materialID))
 					{
-						Debug.LogError($"Missing material {material.name}({materialID}), which was added to \"{extractTo.name}\".");
+						UnityEngine.Debug.LogError($"Missing material {material.name}({materialID}), which was added to \"{extractTo.name}\".");
 					}
 				}
 				else
 				{
-					Debug.LogWarning($"Received 0 for ID of material on game object: {extractTo.name}");
+					UnityEngine.Debug.LogWarning($"Received 0 for ID of material on game object: {extractTo.name}");
 				}
 			}
 			extractTo.numMaterials = (ulong)materialIDs.Count;
@@ -2084,7 +2095,7 @@ namespace teleport
 					// If this index not found? These errors are not fatal, but should not occur.
 					if(meshRenderer.lightmapIndex>=giTextures.Length)
 					{
-						Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap "+ meshRenderer.lightmapIndex + " was not listed in GlobalIlluminationExtractor!");
+						UnityEngine.Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap "+ meshRenderer.lightmapIndex + " was not listed in GlobalIlluminationExtractor!");
 					}
 					else
 					{
@@ -2095,21 +2106,21 @@ namespace teleport
 							extractTo.renderState.globalIlluminationTextureUid=AddTexture(lightmap_texture, gameObject, forceMask);
 							if (extractTo.renderState.globalIlluminationTextureUid == 0)
 							{
-								Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap " + meshRenderer.lightmapIndex + " was not found in GeometrySource!");
+								UnityEngine.Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap " + meshRenderer.lightmapIndex + " was not found in GeometrySource!");
 							}
 						}
 					}
 				}
 				else
 				{
-					Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap " + meshRenderer.lightmapIndex + " was not found in giTextures!");
+					UnityEngine.Debug.LogError($"For GameObject \"{gameObject.name}\", lightmap " + meshRenderer.lightmapIndex + " was not found in giTextures!");
 				}
 			}
 			//Extract mesh used on node.
 			SceneReferenceManager sceneReferenceManager= SceneReferenceManager.GetSceneReferenceManager(gameObject.scene);
 			if (sceneReferenceManager == null)
 			{
-				Debug.LogError($"Failed to get SceneReferenceManager for GameObject \"{gameObject.name}\"!");
+				UnityEngine.Debug.LogError($"Failed to get SceneReferenceManager for GameObject \"{gameObject.name}\"!");
 				return false;
 			}
 			UnityEngine.Mesh mesh = sceneReferenceManager.GetMeshFromGameObject(gameObject);
@@ -2121,7 +2132,7 @@ namespace teleport
 			if (mesh == null)
 			{
 				// This is ok, there might be no mesh at all.
-				//Debug.LogError($"Failed GeometrySource.ExtractNodeMeshData for GameObject \"{gameObject.name}\"!");
+				//UnityEngine.Debug.LogError($"Failed GeometrySource.ExtractNodeMeshData for GameObject \"{gameObject.name}\"!");
 				return false;
 			}
 			extractTo.dataID = AddMesh(mesh,  gameObject ,forceMask, verify);
@@ -2170,7 +2181,7 @@ namespace teleport
 			else
 			{
 				var sceneName = gameObject.scene != null && gameObject.scene.name != null ? gameObject.scene.name : "null";
-				Debug.LogError($"Failed to get mesh for GameObject: {gameObject.name} in scene: {sceneName}");
+				UnityEngine.Debug.LogError($"Failed to get mesh for GameObject: {gameObject.name} in scene: {sceneName}");
 				return false;
 			}
 			extractTo.dataID = AddMesh(mesh, gameObject,forceMask, verify);
@@ -2178,7 +2189,7 @@ namespace teleport
 			//Can't create a node with no data.
 			if(extractTo.dataID == 0)
 			{
-				Debug.LogError($"Failed to extract skinned mesh data from GameObject: {gameObject.name}");
+				UnityEngine.Debug.LogError($"Failed to extract skinned mesh data from GameObject: {gameObject.name}");
 				return false;
 			}
 			ExtractNodeMaterials(skinnedMeshRenderer.sharedMaterials,  gameObject, ref extractTo, forceMask);
@@ -2292,14 +2303,15 @@ namespace teleport
 
 			return bindMatrices;
 		}
-		public void FindBadMeshes(UnityEngine.GameObject g)
+		public void FindBadMeshes(UnityEngine.GameObject g,bool fixit=false)
 		{
 			var meshes=g.GetComponentsInChildren<MeshFilter>();
 			foreach(var m in meshes)
 			{
 				var mesh = m.sharedMesh;
 				bool meshbad=false;
-				if(!mesh.isReadable) continue;
+				if(!mesh.isReadable)
+					continue;
 				List<int> badVertices=new List<int>();
 				for (int i = 0; i < mesh.vertices.Length; i++)
 				{
@@ -2310,13 +2322,58 @@ namespace teleport
 					isbad |= (Single.IsNaN(v.z) || Single.IsInfinity(v.z));
 					if(isbad)
 					{
-						Debug.LogWarning("Found bad vertex "+i);
+						//UnityEngine.Debug.LogWarning("Found bad vertex position "+i);
+						if(fixit)
+							mesh.vertices[i] = new UnityEngine.Vector3(0, 0, 0);
 					}
 					meshbad|=isbad;
 				}
+				for (int i = 0; i < mesh.normals.Length; i++)
+				{
+					var v = mesh.normals[i];
+					bool isbad = false;
+					isbad |= (Single.IsNaN(v.x) || Single.IsInfinity(v.x));
+					isbad |= (Single.IsNaN(v.y) || Single.IsInfinity(v.y));
+					isbad |= (Single.IsNaN(v.z) || Single.IsInfinity(v.z));
+					if (isbad)
+					{
+						//UnityEngine.Debug.LogWarning("Found bad vertex normal " + i);
+						if (fixit)
+							mesh.normals[i]=new UnityEngine.Vector3(0,0,1.0f);
+					}
+					meshbad |= isbad;
+				}
+				UnityEngine.Vector2[] uv0=mesh.uv;
+				UnityEngine.Vector2[] uv1=mesh.uv2;
+				UnityEngine.Vector2[][] uvs={uv0,uv1};
+				for (int i = 0; i < uvs.Length; i++)
+				{
+					var uv= uvs[i];
+					for (int j = 0; j < uv.Length; j++)
+					{
+						var v = uv[j];
+						bool isbad = false;
+						isbad |= (Single.IsNaN(v.x) || Single.IsInfinity(v.x));
+						isbad |= (Single.IsNaN(v.y) || Single.IsInfinity(v.y));
+						if (isbad)
+						{
+							//UnityEngine.Debug.LogWarning("Found bad texcoord " + i);
+							if (fixit)
+								uv[j] = new UnityEngine.Vector2(0, 0);
+						}
+						meshbad |= isbad;
+					}
+				}
 				if (meshbad)
 				{
-					Debug.LogError("Found bad data in mesh of game object "+g.name,g);
+					if(fixit)
+					{
+						mesh.uv=uvs[0];
+						mesh.uv2=uvs[1];
+						mesh.RecalculateNormals();
+						mesh.UploadMeshData(false);
+					}
+					UnityEngine.Debug.LogError("Found bad data in mesh of game object "+g.name,g);
 				}
 			}
 		}
@@ -2708,7 +2765,7 @@ namespace teleport
 				, verify
 			))
 			{
-				Debug.LogError("Failed to store mesh: \""+ mesh.name+"\" with id "+meshID);
+				UnityEngine.Debug.LogError("Failed to store mesh: \""+ mesh.name+"\" with id "+meshID);
 			}
 #endif
 		}
@@ -2731,7 +2788,7 @@ namespace teleport
 			else
 			{
 				if(stride != 4)
-					Debug.LogError($"CreateIndexBufferAndView(...) received invalid stride of {stride}! Extracting as uint!");
+					UnityEngine.Debug.LogError($"CreateIndexBufferAndView(...) received invalid stride of {stride}! Extracting as uint!");
 
 				for(int i = 0; i < data.Length; i++)
 				{
@@ -2787,7 +2844,7 @@ namespace teleport
 
 					break;
 				default:
-					Debug.LogError("Attempted to extract mesh buffer data with unsupported axes standard of:" + extractToBasis);
+					UnityEngine.Debug.LogError("Attempted to extract mesh buffer data with unsupported axes standard of:" + extractToBasis);
 					break;
 			}
 
@@ -2841,7 +2898,7 @@ namespace teleport
 
 					break;
 				default:
-					Debug.LogError("Attempted to extract mesh buffer data with unsupported axes standard of:" + extractToBasis);
+					UnityEngine.Debug.LogError("Attempted to extract mesh buffer data with unsupported axes standard of:" + extractToBasis);
 					break;
 			}
 
@@ -2924,7 +2981,7 @@ namespace teleport
 
 					break;
 				default:
-					Debug.LogError("Attempted to extract mesh buffer data with unsupported axes standard of:" + extractToBasis);
+					UnityEngine.Debug.LogError("Attempted to extract mesh buffer data with unsupported axes standard of:" + extractToBasis);
 					break;
 			}
 
@@ -3021,7 +3078,7 @@ namespace teleport
 				case UnityEngine.TextureFormat.ASTC_12x12: return 8;
 #endif
 				default:
-					Debug.LogWarning("Defaulting to <color=red>8</color> bytes per pixel as format is unsupported: " + format);
+					UnityEngine.Debug.LogWarning("Defaulting to <color=red>8</color> bytes per pixel as format is unsupported: " + format);
 					return 8;
 			}
 		}
@@ -3045,7 +3102,7 @@ namespace teleport
 				default:
 					break;
 			}
-			Debug.LogError("No equivalent TextureFormat found for RenderTextureFormat " + rtf.ToString());
+			UnityEngine.Debug.LogError("No equivalent TextureFormat found for RenderTextureFormat " + rtf.ToString());
 			return texFormat;
 		}
 		private static uint GetBytesPerPixel(RenderTextureFormat format)
@@ -3058,7 +3115,7 @@ namespace teleport
 				default:
 					UnityEngine.TextureFormat f= ConvertRenderTextureFormatToTextureFormat(format);
 					return GetBytesPerPixel(f);
-					//Debug.LogWarning("Defaulting to <color=red>8</color> bytes per pixel as format is unsupported: " + format);
+					//UnityEngine.Debug.LogWarning("Defaulting to <color=red>8</color> bytes per pixel as format is unsupported: " + format);
 					//return 8;
 			}
 		}
@@ -3085,7 +3142,7 @@ namespace teleport
 			{
 				if (textureID != uid_from_path)
 				{
-					Debug.LogError("Uid mismatch for texture " + texture.name + " at path " + resourcePath+"."
+					UnityEngine.Debug.LogError("Uid mismatch for texture " + texture.name + " at path " + resourcePath+"."
 						+" uid from path was "+uid_from_path+", but stored textureID was "+textureID+".");
 					sessionResourceUids.Remove(texture);
 					Server_GetOrGenerateUid(resourcePath);
@@ -3105,7 +3162,7 @@ namespace teleport
 				{
 					if(Server_EnsureResourceIsLoaded(textureID))
 						return textureID;
-					Debug.LogWarning("Texture <b>" + texture.name + "</b> has not been extracted, but is being used on streamed geometry!");
+					UnityEngine.Debug.LogWarning("Texture <b>" + texture.name + "</b> has not been extracted, but is being used on streamed geometry!");
 					return 0;
 				}
 			}
@@ -3162,7 +3219,7 @@ namespace teleport
 					extractedTexture.bytesPerPixel = GetBytesPerPixel(renderTexture.format);
 					break;
 				default:
-					Debug.LogError("Passed texture was unsupported type: " + texture.GetType() + "!");
+					UnityEngine.Debug.LogError("Passed texture was unsupported type: " + texture.GetType() + "!");
 					return 0;
 			}
 
@@ -3180,7 +3237,7 @@ namespace teleport
 			}
 			catch(Exception)
 			{
-				Debug.LogError("Failed to get last write time for "+filePath);
+				UnityEngine.Debug.LogError("Failed to get last write time for "+filePath);
 				return 0;
 			}
 		}
@@ -3202,7 +3259,7 @@ namespace teleport
 					LoadedResource metaResource = Marshal.PtrToStructure<LoadedResource>(resourcePtr);
 					if (metaResource.name == null)
 					{
-						Debug.LogError("metaResource.name is null");
+						UnityEngine.Debug.LogError("metaResource.name is null");
 						continue;
 					}
 					string name = Marshal.PtrToStringAnsi(metaResource.name);
@@ -3222,7 +3279,7 @@ namespace teleport
 					string standardizedUnityAssetPath = SceneResourcePathManager.StandardizePath(unityAssetPath, "Assets/");
 					if (expectedAssetPath != unityAssetPath)
 					{
-						Debug.LogWarning("Path mismatch for (" + typeof(UnityAsset).ToString() + ")" + name + ": expected[" + expectedAssetPath + "]!=got[" + unityAssetPath + "]");
+						UnityEngine.Debug.LogWarning("Path mismatch for (" + typeof(UnityAsset).ToString() + ")" + name + ": expected[" + expectedAssetPath + "]!=got[" + unityAssetPath + "]");
 						if (!paused_already)
 						{
 							System.Threading.Thread.Sleep(10000);
@@ -3283,19 +3340,19 @@ namespace teleport
 						}
 						else
 						{
-							Debug.Log($"Asset {typeof(UnityAsset).FullName} \"{name}\" has been modified.");
+							UnityEngine.Debug.Log($"Asset {typeof(UnityAsset).FullName} \"{name}\" has been modified.");
 						}
 					}
 					else
 					{
-						Debug.LogWarning($"Can't find asset {typeof(UnityAsset).FullName} \"{name}\"!");
+						UnityEngine.Debug.LogWarning($"Can't find asset {typeof(UnityAsset).FullName} \"{name}\"!");
 					}
 #endif
 				}
 			}
 			catch (Exception e )
 			{
-				Debug.LogWarning("Exception in AddToProcessedResources: " +e.Message);
+				UnityEngine.Debug.LogWarning("Exception in AddToProcessedResources: " +e.Message);
 			}
 		}
 
@@ -3326,11 +3383,11 @@ namespace teleport
 			}
 			catch (EntryPointNotFoundException)
 			{
-				Debug.LogError("Server_UidToPath not found in dll.");
+				UnityEngine.Debug.LogError("Server_UidToPath not found in dll.");
 			}
 			catch (Exception e)
 			{
-				Debug.LogError("Failed in GetPathFromUid.");
+				UnityEngine.Debug.LogError("Failed in GetPathFromUid.");
 				if (UnityEditor.EditorApplication.isPlaying)
 					UnityEditor.EditorApplication.isPlaying=false;
 			}

@@ -14,7 +14,6 @@ CGINCLUDE
 // Configuration
 
 
-
 struct appdata {
     float4 vertex : POSITION;
     float2 texcoord : TEXCOORD0;

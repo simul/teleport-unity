@@ -230,7 +230,9 @@ namespace teleport
 			{
 				if (highlightMaterial == null)
 				{
-					highlightMaterial = new Material(Shader.Find("Teleport/HighlightShader"));
+					Shader sh= Shader.Find("Teleport/HighlightShader");
+					if(sh!= null)
+						highlightMaterial = new Material(sh);
 				}
 				drawingSettings.overrideMaterial = highlightMaterial;
 			}
