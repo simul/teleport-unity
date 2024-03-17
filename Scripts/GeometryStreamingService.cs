@@ -437,7 +437,10 @@ namespace teleport
 			}
 			foreach (var streamable in gainedStreamables)
 			{
-				StartStreaming(streamable, StreamingReason.NEARBY);
+				if(StartStreaming(streamable, StreamingReason.NEARBY))
+				{
+
+				}
 			}
 
 			foreach (var streamable in lostStreamables)
@@ -492,8 +495,10 @@ namespace teleport
             }
             tracking.streaming_reason |= streaming_reason;
             streamable.AddStreamingClient(session);
-            streamedHierarchies.Add(streamable);
-            return SendHierarchyToClient(streamable);
+            if(!SendHierarchyToClient(streamable))
+				return false;
+			streamedHierarchies.Add(streamable);
+			return true;
 		}
 		bool SendHierarchyToClient(teleport.StreamableRoot streamable)
 		{
@@ -508,7 +513,7 @@ namespace teleport
 					continue;
 				}
 				int num_nodes_streamed=(int)Client_AddNode(session.GetClientID(), streamedNode.nodeID);
-
+				Client_AddNode(session.GetClientID(), streamedNode.nodeID);
 				Client_NodeEnteredBounds(session.GetClientID(), streamedNode.nodeID);
 				if (num_nodes_streamed != streamedGameObjects.Count+1)
                 {

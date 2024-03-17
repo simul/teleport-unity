@@ -226,6 +226,7 @@ namespace avs
 		public int priority;
 
 		public IntPtr url;
+		public IntPtr query_url;
 	}
 
 	public class Mesh
@@ -1046,6 +1047,7 @@ namespace teleport
 					}
 				}
 				extractedNode.url=IntPtr.Zero;
+				extractedNode.query_url = IntPtr.Zero;
 
 				nodeID = nodeID == 0 ? Server_GenerateUid() : nodeID;
 				sessionResourceUids[gameObject] = nodeID;
@@ -1077,7 +1079,8 @@ namespace teleport
 				{
 					ExtractNodeLightData(gameObject, ref extractedNode, forceMask);
 				}
-				if (extractedNode.dataType == avs.NodeDataType.None)
+				teleport.Link link = gameObject.GetComponent<teleport.Link>();
+				if (link!=null)
 				{
 					ExtractNodeLinkData(gameObject, ref extractedNode, forceMask);
 				}
@@ -2208,6 +2211,7 @@ namespace teleport
 			sessionResourceUids[link] = extractTo.dataID;
 			extractTo.dataType = avs.NodeDataType.Link;
 			extractTo.url= Marshal.StringToCoTaskMemUTF8(link.url);
+			extractTo.query_url = Marshal.StringToCoTaskMemUTF8(link.query_url);
 			return true;
 		}
 		private bool ExtractNodeLightData(GameObject gameObject, ref avs.Node extractTo, ForceExtractionMask forceMask)
