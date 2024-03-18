@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEditor;
+using System.IO;
 
 namespace teleport
 {
@@ -10,9 +11,18 @@ namespace teleport
 		static Teleport_LinkGizmo()
 		{
 			centredStyle.normal.textColor = linkColour;
-			centredStyle.fontSize = 24;
+			centredStyle.fontSize = 36;
 			centredStyle.alignment= TextAnchor.MiddleCenter;
 			centredStyle.normal.background=new Texture2D(24,24);
+			var GizmosPath = Application.dataPath + "/Gizmos";
+			if (!System.IO.Directory.Exists(GizmosPath))
+			{
+				System.IO.Directory.CreateDirectory(GizmosPath);
+			}
+			string sourceFile = Path.Combine(Startup.GizmosPath, "PortalLinkIcon.png");
+			string destFile = Path.Combine(GizmosPath, "PortalLinkIcon.png");
+			if (!System.IO.File.Exists(destFile))
+				System.IO.File.Copy(sourceFile, destFile, true);
 		}
 		[DrawGizmo(GizmoType.Selected | GizmoType.NotInSelectionHierarchy)]
 		static void DrawLink(teleport.Link Link, GizmoType gizmoType)
@@ -20,7 +30,8 @@ namespace teleport
 			Camera camera = Link.gameObject.GetComponent<Camera>(); 
 			Gizmos.color = linkColour;
 			Gizmos.DrawSphere( Link.transform.position,0.5f);
-			Handles.Label(Link.transform.position+new Vector3(0,0.6f,0), Link.url,centredStyle);
+			Gizmos.DrawIcon(Link.transform.position, "PortalLinkIcon.png", true);
+			Handles.Label(Link.transform.position+new Vector3(0,0.6f,0),Link.url,centredStyle);
 
 		}
 	}

@@ -960,10 +960,10 @@ namespace teleport
 				UnityEngine.Debug.LogError("Failed to extract node from GameObject! Passed GameObject was null!");
 				return 0;
 			}
-
+			StreamableProperties streamableProperties = gameObject.GetComponent<StreamableProperties>();
 			//Just return the ID; if we have already processed the GameObject, the node can be found on the unmanaged side,
 			//we are not forcing an extraction of nodes, and we are not forcing an extraction on the hierarchy of a node.
-			if(	!sessionResourceUids.TryGetValue(gameObject, out uid nodeID) ||! Server_IsNodeStored(nodeID) ||
+			if (!sessionResourceUids.TryGetValue(gameObject, out uid nodeID) ||! Server_IsNodeStored(nodeID) ||
 					(
 						!isChildExtraction && (forceMask & ForceExtractionMask.FORCE_NODES) == ForceExtractionMask.FORCE_NODES ||
 						(isChildExtraction && (forceMask & ForceExtractionMask.FORCE_HIERARCHIES) == ForceExtractionMask.FORCE_HIERARCHIES)
@@ -977,7 +977,6 @@ namespace teleport
 				{
 					extractedNode.parentID = FindResourceID(gameObject.transform.parent.gameObject);
 				}
-				StreamableProperties streamableProperties=gameObject.GetComponent<StreamableProperties>();
 				extractedNode.name = Marshal.StringToCoTaskMemUTF8(gameObject.name);
 				teleport.StreamableRoot teleport_Streamable = gameObject.GetComponentInParent<teleport.StreamableRoot>();
 	#if UNITY_EDITOR
@@ -1098,7 +1097,8 @@ namespace teleport
 				//Store extracted node.
 				Server_StoreNode(nodeID, extractedNode);
 			}
-			ExtractNodeHierarchy(gameObject, forceMask, verify);
+			if(!streamableProperties||streamableProperties.includeChildren)
+				AddChildNodes(gameObject, forceMask, verify);
 			return nodeID;
 		}
 		public uid AddMesh(UnityEngine.Mesh mesh, GameObject gameObject, ForceExtractionMask forceMask,bool verify)
@@ -2007,7 +2007,7 @@ namespace teleport
 #endif
 		}
 
-		private void ExtractNodeHierarchy(GameObject gameObject, ForceExtractionMask forceMask,bool verify)
+		private void AddChildNodes(GameObject gameObject, ForceExtractionMask forceMask,bool verify)
 		{
 			//Extract children of node, through transform hierarchy.
 			// Cheating, but to help with skeletons, extract skinned mesh children first.

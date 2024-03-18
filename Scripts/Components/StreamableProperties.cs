@@ -15,6 +15,7 @@ namespace teleport
 		//! Don't use as a streaming root, even if it has a collider.
 		public bool streamOnlyWithParent=false;
 		public bool smoothMotionAtClient=true;
+		public bool includeChildren = true;
 		bool _isStationary=true;
 		public bool isStationary
 		{
