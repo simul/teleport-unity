@@ -191,9 +191,27 @@ namespace teleport
 
                 if (GUILayout.Button("Extract"))
 				{
-					ExtractDynamicObjectLightingTextures();
-                }
-                GUI.enabled = wasEnabled2;
+					for (int i = 0; i < SceneManager.sceneCount; i++)
+					{
+						var scene = SceneManager.GetSceneAt(i);
+						if (scene == null)
+							continue;
+						ExtractDynamicObjectLightingTextures(scene);
+					}
+				}
+				GUI.enabled = wasEnabled2;
+				GUILayout.Label("Background Texture:", labelTextStyle, GUILayout.Width(300));
+
+				if (GUILayout.Button("Extract"))
+				{
+					for (int i = 0; i < SceneManager.sceneCount; i++)
+					{
+						var scene = SceneManager.GetSceneAt(i);
+						if (scene == null)
+							continue;
+						ExtractBackgroundTexture(scene);
+					}
+				}
                 EditorGUILayout.EndHorizontal();
 			}
 			EditorGUILayout.EndVertical();
@@ -630,7 +648,8 @@ namespace teleport
 				{
 					objectsToExtract.AddRange(TagHandler.Instance.GetTaggedObjects(scene));
 				}
-				ExtractDynamicObjectLightingTextures();
+				ExtractDynamicObjectLightingTextures(scene);
+				ExtractBackgroundTexture(scene);
 			}
 			if(!ExtractGeometry(objectsToExtract, forceMask))
 				return false;
@@ -662,7 +681,18 @@ namespace teleport
 				EditorSceneManager.OpenScene(originalScenes[i], OpenSceneMode.Additive);
 			}
 		}
-		private void ExtractDynamicObjectLightingTextures( )
+		private void ExtractBackgroundTexture(Scene scene)
+		{
+			if (Monitor.Instance )
+			{
+				if (Monitor.Instance.environmentCubemap != null)
+				{
+					geometrySource.AddTexture(Monitor.Instance.environmentRenderTexture, Monitor.Instance.gameObject, GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES);
+					geometrySource.ExtractTextures(true);
+				}
+			}
+		}
+		private void ExtractDynamicObjectLightingTextures(Scene scene)
 		{
 			if (Monitor.Instance&& Monitor.Instance.envMapsGenerated )
 			{

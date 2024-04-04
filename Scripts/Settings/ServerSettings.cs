@@ -122,6 +122,7 @@ namespace teleport
 		public Vector4 backgroundColour;
 		public float drawDistance;
 		public Int32 minimumNodePriority;
+		public uid backgroundTexture;
 	}
 	/// <summary>
 	/// Settings specific to a given client, as decided engine-side.

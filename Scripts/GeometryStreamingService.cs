@@ -268,6 +268,8 @@ namespace teleport
 			uid [] textureIDs= GeometrySource.GetGeometrySource().FindResourceIDs(GlobalIlluminationExtractor.GetTextures());
 			if(textureIDs!=null)
 				Client_SetGlobalIlluminationTextures(session.GetClientID(), (UInt64)textureIDs.Length, textureIDs);
+			if(session.clientSettings.backgroundMode==BackgroundMode.TEXTURE&& session.clientSettings.backgroundTexture!=0)
+				Client_AddGenericTexture(session.GetClientID(), session.clientSettings.backgroundTexture);
 		}
 		public void StreamPlayerBody()
 		{
@@ -477,8 +479,8 @@ namespace teleport
 			GameObject gameObject = streamable.gameObject;
 
 			// Only report the more unusual reasons:
-			if(reason!=StreamingReason.NEARBY)
-				Debug.Log($"StartStreaming called on {gameObject.name} for reason {reason}.");
+			//if(reason!=StreamingReason.NEARBY)
+			//	Debug.Log($"StartStreaming called on {gameObject.name} for reason {reason}.");
 
 			ClientStreamableTracking tracking = GetTracking(streamable);
             if (streamedGameObjects.Contains(gameObject))
@@ -494,9 +496,9 @@ namespace teleport
                 return false;
             }
             tracking.streaming_reason |= streaming_reason;
-            streamable.AddStreamingClient(session);
             if(!SendHierarchyToClient(streamable))
 				return false;
+            streamable.AddStreamingClient(session);
 			streamedHierarchies.Add(streamable);
 			return true;
 		}
@@ -507,7 +509,15 @@ namespace teleport
 			foreach (teleport.StreamableNode streamedNode in streamableNodes)
 			{
 				if(streamedNode.nodeID==0)
+				{
+					GeometrySource.GetGeometrySource().AddNode(streamedNode.gameObject);
+				}
+				if(streamedNode.nodeID== 0)
+				{
+					UnityEngine.Debug.LogError("Unable to assign node uid for "+streamedNode.gameObject.name);
+					GeometrySource.GetGeometrySource().AddNode(streamedNode.gameObject);
 					continue;
+				}
 				if(streamedGameObjects.Contains(streamedNode.gameObject))
 				{
 					continue;

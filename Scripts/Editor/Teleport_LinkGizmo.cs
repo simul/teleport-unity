@@ -6,6 +6,7 @@ namespace teleport
 {
 	public class Teleport_LinkGizmo : MonoBehaviour
 	{
+		static GUIStyle unselectedStyle = new GUIStyle();
 		static GUIStyle centredStyle=new GUIStyle();
 		static Color linkColour=new Color(0.15f, 0.18f, 1.0f);
 		static Teleport_LinkGizmo()
@@ -14,6 +15,8 @@ namespace teleport
 			centredStyle.fontSize = 36;
 			centredStyle.alignment= TextAnchor.MiddleCenter;
 			centredStyle.normal.background=new Texture2D(24,24);
+			unselectedStyle=centredStyle;
+			unselectedStyle.fontSize=12;
 			var GizmosPath = Application.dataPath + "/Gizmos";
 			if (!System.IO.Directory.Exists(GizmosPath))
 			{
@@ -29,9 +32,18 @@ namespace teleport
 		{
 			Camera camera = Link.gameObject.GetComponent<Camera>(); 
 			Gizmos.color = linkColour;
-			Gizmos.DrawSphere( Link.transform.position,0.5f);
-			Gizmos.DrawIcon(Link.transform.position, "PortalLinkIcon.png", true);
-			Handles.Label(Link.transform.position+new Vector3(0,0.6f,0),Link.url,centredStyle);
+			var style=unselectedStyle;
+			if(gizmoType==GizmoType.Selected)
+			{
+				Gizmos.DrawSphere(Link.transform.position, 0.5f);
+				Gizmos.DrawIcon(Link.transform.position, "PortalLinkIcon.png", true);
+				style =centredStyle;
+			}
+			else
+			{
+				Gizmos.DrawSphere(Link.transform.position, 0.1f);
+			}
+			Handles.Label(Link.transform.position+new Vector3(0,0.6f,0),Link.url,style);
 
 		}
 	}

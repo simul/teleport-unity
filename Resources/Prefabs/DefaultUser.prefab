@@ -10,10 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 8718089245447279965}
   - component: {fileID: 3991960492684180549}
-  - component: {fileID: 8762821749113986603}
   m_Layer: 0
   m_Name: SceneCapture
-  m_TagString: TeleportStreamable
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -52,21 +51,6 @@ MonoBehaviour:
   SpecularCubeTexture: {fileID: 0}
   cam: {fileID: 0}
   webcamTexture: {fileID: 0}
---- !u!114 &8762821749113986603
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 214161142901073668}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!1 &1205670117018766125
 GameObject:
   m_ObjectHideFlags: 0
@@ -79,6 +63,7 @@ GameObject:
   - component: {fileID: 3735490764781402931}
   - component: {fileID: 6853945291444276193}
   - component: {fileID: 5594248991027419614}
+  - component: {fileID: 2019480076634245509}
   m_Layer: 0
   m_Name: Right Aim
   m_TagString: TeleportStreamable
@@ -127,7 +112,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   priority: 0
-  _sendMovementUpdates: 0
+  _sendMovementUpdates: 1
   _sendEnabledStateUpdates: 1
   _trackAllEnabledStates: 0
   pollCurrentAnimation: 0
@@ -146,6 +131,26 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!114 &2019480076634245509
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1205670117018766125}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c061a2cc06ada6145b720678031030b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nodeID: 0
+  allowStreaming: 1
+  meshRenderer: {fileID: 0}
+  skinnedMeshRenderer: {fileID: 0}
+  light: {fileID: 0}
+  stageSpaceVelocity: {x: 0, y: 0, z: 0}
+  stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
 --- !u!1 &4776229672576681064
 GameObject:
   m_ObjectHideFlags: 0
@@ -160,6 +165,7 @@ GameObject:
   - component: {fileID: 6645196631651794191}
   - component: {fileID: 3758429878946119150}
   - component: {fileID: 1074418032489388797}
+  - component: {fileID: 3479113947323024426}
   m_Layer: 0
   m_Name: DefaultUser
   m_TagString: TeleportStreamable
@@ -212,6 +218,7 @@ MonoBehaviour:
     backgroundColour: {x: 0, y: 0, z: 0, w: 0}
     drawDistance: 0
     minimumNodePriority: 0
+    backgroundTexture: 0
   clientDynamicLighting:
     specularPos: {x: 0, y: 0}
     specularCubemapSize: 0
@@ -264,8 +271,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60e391b1afa087241a79ed66eea982a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  priority: 0
-  _sendMovementUpdates: 0
+  priority: 100000000
+  _sendMovementUpdates: 1
   _sendEnabledStateUpdates: 1
   _trackAllEnabledStates: 0
   pollCurrentAnimation: 0
@@ -284,6 +291,26 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!114 &3479113947323024426
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4776229672576681064}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c061a2cc06ada6145b720678031030b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nodeID: 0
+  allowStreaming: 1
+  meshRenderer: {fileID: 0}
+  skinnedMeshRenderer: {fileID: 0}
+  light: {fileID: 0}
+  stageSpaceVelocity: {x: 0, y: 0, z: 0}
+  stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
 --- !u!1 &6334136638645548303
 GameObject:
   m_ObjectHideFlags: 0
@@ -346,6 +373,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!1 &6548213070253477713
 GameObject:
   m_ObjectHideFlags: 0
@@ -358,6 +386,7 @@ GameObject:
   - component: {fileID: 5404443078981119608}
   - component: {fileID: 6999729023188953200}
   - component: {fileID: 421466570814214554}
+  - component: {fileID: 1883103533079106617}
   m_Layer: 0
   m_Name: Left Aim
   m_TagString: TeleportStreamable
@@ -406,7 +435,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   priority: 0
-  _sendMovementUpdates: 0
+  _sendMovementUpdates: 1
   _sendEnabledStateUpdates: 1
   _trackAllEnabledStates: 0
   pollCurrentAnimation: 0
@@ -425,6 +454,26 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!114 &1883103533079106617
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6548213070253477713}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c061a2cc06ada6145b720678031030b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nodeID: 0
+  allowStreaming: 1
+  meshRenderer: {fileID: 0}
+  skinnedMeshRenderer: {fileID: 0}
+  light: {fileID: 0}
+  stageSpaceVelocity: {x: 0, y: 0, z: 0}
+  stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
 --- !u!1 &6829965221155726695
 GameObject:
   m_ObjectHideFlags: 0
@@ -440,6 +489,7 @@ GameObject:
   - component: {fileID: 256458345728266316}
   - component: {fileID: 4356986825909541284}
   - component: {fileID: 5540971829307833008}
+  - component: {fileID: 1645658246349128992}
   m_Layer: 0
   m_Name: Right Grip
   m_TagString: TeleportStreamable
@@ -520,6 +570,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 1
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &4356986825909541284
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -533,7 +584,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   priority: 0
-  _sendMovementUpdates: 0
+  _sendMovementUpdates: 1
   _sendEnabledStateUpdates: 1
   _trackAllEnabledStates: 0
   pollCurrentAnimation: 0
@@ -555,6 +606,25 @@ MonoBehaviour:
   ButtonAPath2: right/input/a/click
   ButtonBPath1: right/input/y/click
   ButtonBPath2: right/input/b/click
+--- !u!114 &1645658246349128992
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6829965221155726695}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c061a2cc06ada6145b720678031030b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nodeID: 0
+  allowStreaming: 1
+  meshRenderer: {fileID: 0}
+  skinnedMeshRenderer: {fileID: 0}
+  light: {fileID: 0}
+  stageSpaceVelocity: {x: 0, y: 0, z: 0}
+  stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
 --- !u!1 &7874665763676028163
 GameObject:
   m_ObjectHideFlags: 0
@@ -570,6 +640,7 @@ GameObject:
   - component: {fileID: 6225410090374027571}
   - component: {fileID: -5313932978729687202}
   - component: {fileID: 2583375213908465877}
+  - component: {fileID: 6778277903778357931}
   m_Layer: 0
   m_Name: Left Grip
   m_TagString: TeleportStreamable
@@ -650,6 +721,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 1
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &-5313932978729687202
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -663,7 +735,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   priority: 0
-  _sendMovementUpdates: 0
+  _sendMovementUpdates: 1
   _sendEnabledStateUpdates: 1
   _trackAllEnabledStates: 0
   pollCurrentAnimation: 0
@@ -685,6 +757,25 @@ MonoBehaviour:
   ButtonAPath2: left/input/a/click
   ButtonBPath1: left/input/y/click
   ButtonBPath2: left/input/b/click
+--- !u!114 &6778277903778357931
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7874665763676028163}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c061a2cc06ada6145b720678031030b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nodeID: 0
+  allowStreaming: 1
+  meshRenderer: {fileID: 0}
+  skinnedMeshRenderer: {fileID: 0}
+  light: {fileID: 0}
+  stageSpaceVelocity: {x: 0, y: 0, z: 0}
+  stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
 --- !u!1001 &809770814385887587
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -795,6 +886,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &8132956881842064235
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -835,27 +927,32 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!114 &4051791808088590156
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 575769786705650738}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c061a2cc06ada6145b720678031030b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nodeID: 0
+  allowStreaming: 1
+  meshRenderer: {fileID: 0}
+  skinnedMeshRenderer: {fileID: 0}
+  light: {fileID: 0}
+  stageSpaceVelocity: {x: 0, y: 0, z: 0}
+  stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
 --- !u!1 &843120602965066385 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -9182910029245129742, guid: 798d0fdb43da4684188b699daef8e08c,
     type: 3}
   m_PrefabInstance: {fileID: 809770814385887587}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &8048551968371720699
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 843120602965066385}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &-4374460772539546425
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -875,6 +972,22 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &8048551968371720699
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 843120602965066385}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!4 &916019898517192328 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 798d0fdb43da4684188b699daef8e08c,
@@ -887,21 +1000,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 809770814385887587}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1818260551280200692
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1014198367131770071}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &-346648185532407797
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -921,19 +1019,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &1354591910591764630 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: -7354210612567375371, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 809770814385887587}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &5231459356793094796
+--- !u!114 &1818260551280200692
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1354591910591764630}
+  m_GameObject: {fileID: 1014198367131770071}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -942,6 +1034,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &1354591910591764630 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -7354210612567375371, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 809770814385887587}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &-2749337227653310061
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -961,6 +1060,22 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &5231459356793094796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1354591910591764630}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!1 &1504922547822549711 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2296393078715663276, guid: 798d0fdb43da4684188b699daef8e08c,
@@ -982,6 +1097,26 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!114 &8398794917023573178
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1504922547822549711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c061a2cc06ada6145b720678031030b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nodeID: 0
+  allowStreaming: 1
+  meshRenderer: {fileID: 0}
+  skinnedMeshRenderer: {fileID: 0}
+  light: {fileID: 0}
+  stageSpaceVelocity: {x: 0, y: 0, z: 0}
+  stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
 --- !u!114 &8705388249272859383
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -994,6 +1129,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  resourcePath: 
   mesh: {fileID: 2524342215456974474, guid: 798d0fdb43da4684188b699daef8e08c, type: 3}
 --- !u!1 &2043126173423470791 stripped
 GameObject:
@@ -1001,21 +1137,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 809770814385887587}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &685817765774139354
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2043126173423470791}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &-1019638984257957619
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1035,19 +1156,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &2055660343019071436 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: -7513184559476670801, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 809770814385887587}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &7882431906880892870
+--- !u!114 &685817765774139354
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2055660343019071436}
+  m_GameObject: {fileID: 2043126173423470791}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -1056,6 +1171,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &2055660343019071436 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -7513184559476670801, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 809770814385887587}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &6111824639666560056
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1075,6 +1197,22 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &7882431906880892870
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2055660343019071436}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!1 &2385785173246935542 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -6187698796706391915, guid: 798d0fdb43da4684188b699daef8e08c,
@@ -1096,6 +1234,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &6479198993759965914
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1121,21 +1260,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 809770814385887587}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &4736497211142469966
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2532744093810825384}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &-3192483447753965547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1155,19 +1279,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &2567009185401618963 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 2928249066992458608, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 809770814385887587}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &5989550044022185457
+--- !u!114 &4736497211142469966
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2567009185401618963}
+  m_GameObject: {fileID: 2532744093810825384}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -1176,6 +1294,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &2567009185401618963 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2928249066992458608, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 809770814385887587}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &-8413613657867842682
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1195,19 +1320,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &4579036527072514730 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3796784307029216201, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 809770814385887587}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &4645722079246568141
+--- !u!114 &5989550044022185457
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4579036527072514730}
+  m_GameObject: {fileID: 2567009185401618963}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -1216,6 +1335,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &4579036527072514730 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3796784307029216201, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 809770814385887587}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &-3965484894502412815
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1235,19 +1361,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &4596962739784200923 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3816610478926867384, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 809770814385887587}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &6388316725608986189
+--- !u!114 &4645722079246568141
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4596962739784200923}
+  m_GameObject: {fileID: 4579036527072514730}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -1256,6 +1376,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &4596962739784200923 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3816610478926867384, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 809770814385887587}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &3714598120837395039
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1275,19 +1402,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &4954257824776008431 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 5764024222578518924, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 809770814385887587}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &136059603277032366
+--- !u!114 &6388316725608986189
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4954257824776008431}
+  m_GameObject: {fileID: 4596962739784200923}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -1296,6 +1417,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &4954257824776008431 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5764024222578518924, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 809770814385887587}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &-7493790280085442299
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1315,6 +1443,22 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &136059603277032366
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4954257824776008431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!1 &5090906053213633071 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -3631473228526116020, guid: 798d0fdb43da4684188b699daef8e08c,
@@ -1336,6 +1480,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &3143000818668779133
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1361,6 +1506,25 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 809770814385887587}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &-9061178630332355002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5857591868694100439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c061a2cc06ada6145b720678031030b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nodeID: 0
+  allowStreaming: 1
+  meshRenderer: {fileID: 0}
+  skinnedMeshRenderer: {fileID: 0}
+  light: {fileID: 0}
+  stageSpaceVelocity: {x: 0, y: 0, z: 0}
+  stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
 --- !u!114 &-7065074690631701906
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1389,46 +1553,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
---- !u!114 &-9061178630332355002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5857591868694100439}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c061a2cc06ada6145b720678031030b5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  nodeID: 0
-  allowStreaming: 1
-  meshRenderer: {fileID: 0}
-  skinnedMeshRenderer: {fileID: 0}
-  light: {fileID: 0}
-  stageSpaceVelocity: {x: 0, y: 0, z: 0}
-  stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+  includeChildren: 1
 --- !u!1 &6349481475726780202 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5990070633754345033, guid: 798d0fdb43da4684188b699daef8e08c,
     type: 3}
   m_PrefabInstance: {fileID: 809770814385887587}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &6523887327238968891
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6349481475726780202}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &2799229052415482581
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1448,19 +1579,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &6732533255790703611 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 6220070390926650008, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 809770814385887587}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1246227196405930488
+--- !u!114 &6523887327238968891
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6732533255790703611}
+  m_GameObject: {fileID: 6349481475726780202}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -1469,6 +1594,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &6732533255790703611 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6220070390926650008, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 809770814385887587}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &-7410311262638140268
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1488,6 +1620,22 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &1246227196405930488
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6732533255790703611}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!1 &7416719669136685281 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7913274785394090370, guid: 798d0fdb43da4684188b699daef8e08c,
@@ -1509,6 +1657,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &8749787592108276750
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1534,21 +1683,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 809770814385887587}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &6555236806645437494
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7994157486025874325}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &6032348888018950473
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1568,19 +1702,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &8128872398738073765 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8931601384318546374, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 809770814385887587}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &6615636371997855056
+--- !u!114 &6555236806645437494
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8128872398738073765}
+  m_GameObject: {fileID: 7994157486025874325}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -1589,6 +1717,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &8128872398738073765 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8931601384318546374, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 809770814385887587}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1954953714586033065
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1608,6 +1743,22 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &6615636371997855056
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8128872398738073765}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!1 &8212136132516934085 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8848372663045941414, guid: 798d0fdb43da4684188b699daef8e08c,
@@ -1629,6 +1780,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &5709203456737768576
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1654,21 +1806,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 809770814385887587}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &8877564123428705216
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8212373427391832722}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &6411294531339649076
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1688,6 +1825,22 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &8877564123428705216
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8212373427391832722}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!1 &8808474807290391235 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -1080547899467205728, guid: 798d0fdb43da4684188b699daef8e08c,
@@ -1709,6 +1862,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &6215138809823862239
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1734,21 +1888,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 809770814385887587}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1261502301635495162
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8911811733187541596}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &-8517430824286445034
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1768,6 +1907,22 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &1261502301635495162
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8911811733187541596}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!1001 &8293226400560513931
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1863,21 +2018,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 8293226400560513931}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &5804616370637094434
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 150424262538915883}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &1559798249168648224
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1897,19 +2037,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &254042946879561908 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: -1111826372331953345, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 8293226400560513931}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &6039699571792240589
+--- !u!114 &5804616370637094434
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 254042946879561908}
+  m_GameObject: {fileID: 150424262538915883}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -1918,6 +2052,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &254042946879561908 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -1111826372331953345, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 8293226400560513931}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &-4661447194353094086
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1937,19 +2078,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &640664929467937357 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8931601384318546374, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 8293226400560513931}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &8532555664232788271
+--- !u!114 &6039699571792240589
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 640664929467937357}
+  m_GameObject: {fileID: 254042946879561908}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -1958,6 +2093,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &640664929467937357 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8931601384318546374, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 8293226400560513931}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &-769843925389144365
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1977,6 +2119,22 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &8532555664232788271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 640664929467937357}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!1 &708086743042242682 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -376942973255992335, guid: 798d0fdb43da4684188b699daef8e08c,
@@ -1998,6 +2156,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &8674322688837769579
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2023,21 +2182,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 8293226400560513931}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &6801964699341096859
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 710664352586033965}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &-1673110056961150094
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2057,19 +2201,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &1647020984028627325 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: -1888114751495929098, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 8293226400560513931}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &5281150054332147821
+--- !u!114 &6801964699341096859
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1647020984028627325}
+  m_GameObject: {fileID: 710664352586033965}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -2078,6 +2216,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &1647020984028627325 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -1888114751495929098, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 8293226400560513931}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &-6772649261692410264
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2097,19 +2242,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &2217719374862967305 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7913274785394090370, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 8293226400560513931}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &6904062286605592502
+--- !u!114 &5281150054332147821
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2217719374862967305}
+  m_GameObject: {fileID: 1647020984028627325}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -2118,6 +2257,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &2217719374862967305 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7913274785394090370, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 8293226400560513931}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &2194922078892932597
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2137,19 +2283,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &2321171275032051138 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 5990070633754345033, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 8293226400560513931}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &5726415921673954536
+--- !u!114 &6904062286605592502
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2321171275032051138}
+  m_GameObject: {fileID: 2217719374862967305}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -2158,6 +2298,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &2321171275032051138 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5990070633754345033, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 8293226400560513931}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &-5173263833293928944
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2177,19 +2324,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &2685645560569309459 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 6220070390926650008, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 8293226400560513931}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &7404411885310655245
+--- !u!114 &5726415921673954536
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2685645560569309459}
+  m_GameObject: {fileID: 2321171275032051138}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -2198,6 +2339,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &2685645560569309459 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6220070390926650008, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 8293226400560513931}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &-5769395365727412154
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2217,12 +2365,47 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &7404411885310655245
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2685645560569309459}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!1 &2981893118913438527 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -2704769437738114892, guid: 798d0fdb43da4684188b699daef8e08c,
     type: 3}
   m_PrefabInstance: {fileID: 8293226400560513931}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &-3432919591918866081
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2981893118913438527}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c061a2cc06ada6145b720678031030b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nodeID: 0
+  allowStreaming: 1
+  meshRenderer: {fileID: 0}
+  skinnedMeshRenderer: {fileID: 0}
+  light: {fileID: 0}
+  stageSpaceVelocity: {x: 0, y: 0, z: 0}
+  stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
 --- !u!114 &1069573457122561598
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2251,46 +2434,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
---- !u!114 &-3432919591918866081
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2981893118913438527}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c061a2cc06ada6145b720678031030b5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  nodeID: 0
-  allowStreaming: 1
-  meshRenderer: {fileID: 0}
-  skinnedMeshRenderer: {fileID: 0}
-  light: {fileID: 0}
-  stageSpaceVelocity: {x: 0, y: 0, z: 0}
-  stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+  includeChildren: 1
 --- !u!1 &4389487934215497735 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5764024222578518924, guid: 798d0fdb43da4684188b699daef8e08c,
     type: 3}
   m_PrefabInstance: {fileID: 8293226400560513931}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &5129063156534249553
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4389487934215497735}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &1853169012346552966
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2310,19 +2460,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &4507293084581699783 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: -3631473228526116020, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 8293226400560513931}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &2213137726631915795
+--- !u!114 &5129063156534249553
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4507293084581699783}
+  m_GameObject: {fileID: 4389487934215497735}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -2331,6 +2475,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &4507293084581699783 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -3631473228526116020, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 8293226400560513931}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &348877725831102591
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2350,19 +2501,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &5163260762944964674 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3796784307029216201, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 8293226400560513931}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &3127304119102267737
+--- !u!114 &2213137726631915795
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5163260762944964674}
+  m_GameObject: {fileID: 4507293084581699783}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -2371,6 +2516,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &5163260762944964674 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3796784307029216201, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 8293226400560513931}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &-5193905383760879645
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2390,6 +2542,22 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &3127304119102267737
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5163260762944964674}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!1 &5179181879809878067 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3816610478926867384, guid: 798d0fdb43da4684188b699daef8e08c,
@@ -2411,6 +2579,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &9139286486840918139
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2436,21 +2605,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 8293226400560513931}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &2528077375305816421
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6428771656276712222}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &-7416821497754502247
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2470,19 +2624,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &6561052440172298816 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: -6333469453868400181, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 8293226400560513931}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &9185732942777055871
+--- !u!114 &2528077375305816421
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6561052440172298816}
+  m_GameObject: {fileID: 6428771656276712222}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -2491,6 +2639,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &6561052440172298816 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -6333469453868400181, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 8293226400560513931}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &-3678475455848129055
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2510,19 +2665,13 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
---- !u!1 &6607992846747785467 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 2928249066992458608, guid: 798d0fdb43da4684188b699daef8e08c,
-    type: 3}
-  m_PrefabInstance: {fileID: 8293226400560513931}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &4880298782915114734
+--- !u!114 &9185732942777055871
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6607992846747785467}
+  m_GameObject: {fileID: 6561052440172298816}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
@@ -2531,6 +2680,13 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
+--- !u!1 &6607992846747785467 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2928249066992458608, guid: 798d0fdb43da4684188b699daef8e08c,
+    type: 3}
+  m_PrefabInstance: {fileID: 8293226400560513931}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &-6632720042713310203
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2550,6 +2706,22 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &4880298782915114734
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6607992846747785467}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!1 &7237622516956238383 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1686112273523184036, guid: 798d0fdb43da4684188b699daef8e08c,
@@ -2571,6 +2743,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &7208779326872112641
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2611,6 +2784,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &4143033900771044669
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2651,6 +2825,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &3956633687686760783
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2676,6 +2851,25 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 8293226400560513931}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &4356576075063149680
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7838823213718978599}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c061a2cc06ada6145b720678031030b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nodeID: 0
+  allowStreaming: 1
+  meshRenderer: {fileID: 0}
+  skinnedMeshRenderer: {fileID: 0}
+  light: {fileID: 0}
+  stageSpaceVelocity: {x: 0, y: 0, z: 0}
+  stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
 --- !u!114 &7253046217621163789
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2691,6 +2885,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &7780696225319981895
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2703,6 +2898,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1dd77eb8c5cbbfa449073d5831af9e46, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  resourcePath: 
   mesh: {fileID: 2524342215456974474, guid: 798d0fdb43da4684188b699daef8e08c, type: 3}
 --- !u!1 &8329630177113266297 stripped
 GameObject:
@@ -2710,21 +2906,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 8293226400560513931}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &4860142268576049767
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8329630177113266297}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &-8370931214515011352
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2744,6 +2925,22 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &4860142268576049767
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8329630177113266297}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!4 &8403096804575437920 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 798d0fdb43da4684188b699daef8e08c,
@@ -2756,21 +2953,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 8293226400560513931}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &4897308180343461885
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8518768915551454783}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _renderingMask: 0
-  streamOnlyWithParent: 0
-  smoothMotionAtClient: 1
 --- !u!114 &279043139581016539
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2790,6 +2972,22 @@ MonoBehaviour:
   light: {fileID: 0}
   stageSpaceVelocity: {x: 0, y: 0, z: 0}
   stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
+--- !u!114 &4897308180343461885
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8518768915551454783}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77be49e9cb8e349b024f116c07aded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderingMask: 0
+  streamOnlyWithParent: 0
+  smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!1 &9207559202290789284 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -8299950257443772369, guid: 798d0fdb43da4684188b699daef8e08c,
@@ -2811,6 +3009,7 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1
 --- !u!114 &8173155203934861733
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2836,6 +3035,25 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 8293226400560513931}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1326826820442138975
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9211581600733609690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c061a2cc06ada6145b720678031030b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nodeID: 0
+  allowStreaming: 1
+  meshRenderer: {fileID: 0}
+  skinnedMeshRenderer: {fileID: 0}
+  light: {fileID: 0}
+  stageSpaceVelocity: {x: 0, y: 0, z: 0}
+  stageSpaceAngularVelocity: {x: 0, y: 0, z: 0}
 --- !u!114 &5876132512722267303
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2851,3 +3069,4 @@ MonoBehaviour:
   _renderingMask: 0
   streamOnlyWithParent: 0
   smoothMotionAtClient: 1
+  includeChildren: 1

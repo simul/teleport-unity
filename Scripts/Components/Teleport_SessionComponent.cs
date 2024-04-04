@@ -742,6 +742,7 @@ namespace teleport
 			clientSettings.backgroundColour = Monitor.Instance.BackgroundColour;
 			clientSettings.drawDistance=teleportSettings.serverSettings.detectionSphereRadius;
 			clientSettings.minimumNodePriority= teleportSettings.defaultMinimumNodePriority;
+			clientSettings.backgroundTexture = 0;
 			int faceSize = clientSettings.captureCubeTextureSize;
 			int doubleFaceSize = faceSize * 2;
 			int halfFaceSize = (int)(faceSize * 0.5);
@@ -763,6 +764,10 @@ namespace teleport
 					cubeMapsOffset.x = halfFaceSize * 3;
 					cubeMapsOffset.y = doubleFaceSize;
 				}
+			}
+			if (clientSettings.backgroundMode == BackgroundMode.TEXTURE)
+			{
+				clientSettings.backgroundTexture = GeometrySource.GetGeometrySource().AddTexture(Monitor.Instance.environmentRenderTexture,gameObject);
 			}
 			UpdateClientDynamicLighting(cubeMapsOffset);
 			// Depth is stored in color's alpha channel if alpha layer encoding is enabled.

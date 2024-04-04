@@ -141,10 +141,11 @@ namespace teleport
         {
 			
         }
-		[Tooltip("Choose a cubemap rendertarget. This will be generated from the 'Environment Cubemap' and used for lighting dynamic objects.")]
+		public RenderTexture environmentRenderTexture;
+		[Tooltip("A cubemap rendertarget. This will be generated from the 'Environment Cubemap' and used for lighting dynamic objects.")]
 		//! This will point to a saved asset texture.
 		public RenderTexture specularRenderTexture;
-		[Tooltip("Choose a cubemap rendertarget. This will be generated from the 'Environment Cubemap' and used for lighting dynamic objects.")]
+		[Tooltip("A cubemap rendertarget. This will be generated from the 'Environment Cubemap' and used for lighting dynamic objects.")]
 		//! This will point to a saved asset texture.
 		public RenderTexture diffuseRenderTexture;
 		[Tooltip("Multiplier for generating the specular render texture from the environment cubemap.")]
@@ -522,6 +523,30 @@ namespace teleport
 				mips--;
 			}
 			string scenePath = SceneManager.GetActiveScene().path;
+			if(environmentRenderTexture)
+			{
+				string environmentRenderTexturePath = UnityEditor.AssetDatabase.GetAssetPath(environmentRenderTexture);
+				if (environmentRenderTexturePath == "")
+					environmentRenderTexture = null;
+			}
+			int renderEnvMapSize=Math.Min(1024,environmentCubemap.width);
+			// If environment rendertexture is unassigned or not the same size as the env cubemap, recreate it as a saved asset.
+			if (environmentRenderTexture == null || environmentRenderTexture.width != renderEnvMapSize ||
+				environmentRenderTexture.mipmapCount != mips)
+			{
+				environmentRenderTexture = new RenderTexture(renderEnvMapSize, renderEnvMapSize
+					, 24, UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_UNorm, mips);
+				environmentRenderTexture.dimension = UnityEngine.Rendering.TextureDimension.Cube;
+				environmentRenderTexture.useMipMap = true;
+				// We will generate the mips with shaders in the render call.
+				environmentRenderTexture.autoGenerateMips = false;
+				string assetPath = scenePath.Replace(".unity", "/environmentRenderTexture.renderTexture");
+				string assetDirectory = scenePath.Replace(".unity", "");
+				string parentDirectory = System.IO.Path.GetDirectoryName(scenePath);
+				string subDirectory = System.IO.Path.GetFileNameWithoutExtension(scenePath);
+				UnityEditor.AssetDatabase.CreateFolder(parentDirectory, subDirectory);
+				UnityEditor.AssetDatabase.CreateAsset(environmentRenderTexture, assetPath);
+			}
 			if (specularRenderTexture)
 			{
 				string specularRenderTexturePath = UnityEditor.AssetDatabase.GetAssetPath(specularRenderTexture);

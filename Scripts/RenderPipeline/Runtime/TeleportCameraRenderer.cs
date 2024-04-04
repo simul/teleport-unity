@@ -303,6 +303,7 @@ namespace teleport
 		{
 			for (int face = 0; face < 6; face++)
 			{
+				VideoEncoding.GenerateSpecularMips(context, Monitor.Instance.environmentCubemap, Monitor.Instance.environmentRenderTexture, 1.0f, face, 0, avs.AxesStandard.EngineeringStyle);
 				VideoEncoding.GenerateSpecularMips(context, Monitor.Instance.environmentCubemap, Monitor.Instance.specularRenderTexture,Monitor.Instance.specularMultiplier, face, 0, avs.AxesStandard.EngineeringStyle);
 				HashSet<Light> bakedLights =new HashSet<Light> ();
 				Light[] lights = UnityEngine.Object.FindObjectsOfType<Light>();

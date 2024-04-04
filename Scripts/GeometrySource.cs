@@ -1097,7 +1097,10 @@ namespace teleport
 				//Store extracted node.
 				Server_StoreNode(nodeID, extractedNode);
 			}
-			if(!streamableProperties||streamableProperties.includeChildren)
+			teleport.StreamableNode streamableNode = gameObject.GetComponentInParent<teleport.StreamableNode>();
+			if(streamableNode!=null)
+				streamableNode.nodeID=nodeID;
+			if (!streamableProperties||streamableProperties.includeChildren)
 				AddChildNodes(gameObject, forceMask, verify);
 			return nodeID;
 		}
@@ -1682,9 +1685,8 @@ namespace teleport
 						Directory.CreateDirectory(dirPath);
 					}
 					textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
-					// Test: write to png. Only for observation/debugging.
 					if (pngCompatibleFormat&&highQualityUASTC)
-									{
+					{
 						writePng=true;
 						highQualityUASTC=false;
 					}
@@ -1694,8 +1696,8 @@ namespace teleport
 					if (writePng || highQualityUASTC)
 					{
 						// We will send the .png instead of a .basis file.
-							textureData.compression = avs.TextureCompression.PNG;
-						}
+						textureData.compression = avs.TextureCompression.PNG;
+					}
 					else
 					{
 						textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
@@ -2054,15 +2056,15 @@ namespace teleport
 		{
 			if (!textCanvas.font)
 				return 0;
-			
-		#if UNITY_EDITOR
+
+			GetResourcePath(textCanvas.font, out string resourcePath, false);
+#if UNITY_EDITOR
 			string fontAssetPath = AssetDatabase.GetAssetPath(textCanvas.font).Replace("Assets/", "");
 			long lastModified = GetAssetWriteTimeUTC(fontAssetPath);
 			string font_ttf_path = System.IO.Directory.GetParent(Application.dataPath).ToString().Replace("\\","/") +"/Assets/"+ fontAssetPath;
-			string resourcePath=fontAssetPath.Replace("Assets/","");
+		
 			uid font_uid= Server_StoreFont(font_ttf_path,resourcePath,lastModified,textCanvas.size);
 		#else
-			GetResourcePath(textCanvas.font, out string resourcePath, false);
 			uid font_uid= Server_GetOrGenerateUid(resourcePath);
 		#endif
 			string canvasAssetPath="Text/"+textCanvas.name;

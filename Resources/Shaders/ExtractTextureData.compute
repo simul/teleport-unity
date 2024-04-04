@@ -79,7 +79,7 @@ float4 FromCubemap(int2 pos)
 	uint FaceWidth, FaceHeight, numFaces;
 	Result.GetDimensions(FaceWidth, FaceHeight);
 	int2 ipos		=int2(pos.x, FaceHeight - 1 - pos.y);
-	int2 sz			=int2(FaceWidth,FaceHeight);
+	int2 sz			=int2(FaceWidth,FaceHeight); 
 	float3 dir		=float3(float2(ipos.xy)/float2(sz)*2.0-float2(1.0,1.0),1.0);
 	float3 dir_g	=(mul(cubeInvViewProj[Face],float4(dir,1.0))).xyz;
 	float4 colour	= SourceCube.SampleLevel(samplerSourceCube,normalize(dir_g),Mip);
