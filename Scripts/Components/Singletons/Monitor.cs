@@ -14,7 +14,8 @@ namespace teleport
 {
 	public interface IStreamedGeometryManagement
 	{
-		public void UpdateStreamedGeometry(Teleport_SessionComponent session, ref List<teleport.StreamableRoot> gainedStreamables, ref List<teleport.StreamableRoot> lostStreamables);
+		public void UpdateStreamedGeometry(Teleport_SessionComponent session, ref List<teleport.StreamableRoot> gainedStreamables, ref List<teleport.StreamableRoot> lostStreamables, List<teleport.StreamableRoot> streamedHierarchies);
+		public bool CheckRootCanStream(teleport.StreamableRoot r);
 	}
 
 	public struct SessionState
@@ -311,7 +312,11 @@ namespace teleport
 		}
 		private void OnEnable()
 		{
-			startUnixTimeUs= GetUnixTimestampNowUs();
+			var mgmt = GetComponent<IStreamedGeometryManagement>();
+			if(mgmt == null)
+			{
+			}
+			startUnixTimeUs = GetUnixTimestampNowUs();
 			ulong unmanagedSize = Server_SizeOf("ServerSettings");
 			ulong managedSize = (ulong)Marshal.SizeOf(typeof(teleport.ServerSettings));
 		
@@ -468,13 +473,21 @@ namespace teleport
 			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 			// Ensure that the RootStreamables are added.
 			var g1=scene.GetRootGameObjects();
-			foreach(GameObject gameObject in g1)
+			var mgmt = GetComponent<IStreamedGeometryManagement>();
+			foreach (GameObject gameObject in g1)
 			{
 				var g2=gameObject.GetComponentsInChildren<StreamableRoot>();
 				foreach(StreamableRoot r in g2)
 				{
 					if (r.priority < teleportSettings.defaultMinimumNodePriority)
 						continue;
+					if (mgmt!= null)
+					{
+						if(!mgmt.CheckRootCanStream(r))
+						{
+							Debug.LogWarning(r.name +" cannot stream.");
+						}
+					}
 					GeometrySource.GetGeometrySource().AddNode(r.gameObject, GeometrySource.ForceExtractionMask.FORCE_NOTHING);
 				}
 			}

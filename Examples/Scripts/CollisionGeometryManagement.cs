@@ -6,6 +6,9 @@ using UnityEngine;
 
 namespace teleport
 {
+	//! An example geometry management class based on collision. StreamableRoots must have a collider.
+	//! We detect collision between a sphere of radius teleportSettings.serverSettings.detectionSphereRadius and the colliders of the 
+	//! streamable roots.
 	public class CollisionGeometryManagement : MonoBehaviour, IStreamedGeometryManagement
 	{
 		private TeleportSettings teleportSettings = null;
@@ -23,7 +26,8 @@ namespace teleport
 		int inner_overlap_count = 0;
 		int outer_overlap_count = 0;
 		// Update is called once per frame
-		public void UpdateStreamedGeometry(Teleport_SessionComponent session,ref List<teleport.StreamableRoot> gainedStreamables,ref List<teleport.StreamableRoot> lostStreamables)
+		public void UpdateStreamedGeometry(Teleport_SessionComponent session,ref List<teleport.StreamableRoot> gainedStreamables
+		,ref List<teleport.StreamableRoot> lostStreamables, List<teleport.StreamableRoot> streamedHierarchies)
 		{
 			if (!session.IsConnected())
 				return;
@@ -65,12 +69,10 @@ namespace teleport
 					var streamable = g.GetComponentInParent<teleport.StreamableRoot>();
 					if (!streamable)
 						continue;
-					if (innerStreamables.Contains(streamable))
+					if(streamedHierarchies.Contains(streamable))
 						continue;
-					innerStreamables.Add(streamable);
 					gainedStreamables.Add(streamable);
 				}
-				lostStreamables = new List<teleport.StreamableRoot>();
 				HashSet<teleport.StreamableRoot> keptOuterStreamables = new HashSet<teleport.StreamableRoot>();
 				for (int i = 0; i < outer_overlap_count; i++)
 				{
@@ -95,6 +97,16 @@ namespace teleport
 					}
 				}
 			}
+		}
+		public bool CheckRootCanStream(teleport.StreamableRoot r)
+		{
+			var c=r.GetComponent<Collider>();
+			if(c==null||!c.enabled)
+			{
+				Debug.LogWarning(r.name + " cannot stream because it has no collider.");
+				return false;
+			}
+			return true;
 		}
 	}
 }

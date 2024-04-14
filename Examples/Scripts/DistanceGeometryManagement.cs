@@ -158,7 +158,8 @@ namespace teleport
 		int inner_overlap_count = 0;
 		//int outer_overlap_count = 0;
 		// Update is called once per frame
-		public void UpdateStreamedGeometry(Teleport_SessionComponent session,ref List<teleport.StreamableRoot> gainedStreamables,ref List<teleport.StreamableRoot> lostStreamables)
+		public void UpdateStreamedGeometry(Teleport_SessionComponent session,ref List<teleport.StreamableRoot> gainedStreamables
+		,ref List<teleport.StreamableRoot> lostStreamables, List<teleport.StreamableRoot> streamedHierarchies)
 		{
 			if (!session.IsConnected())
 				return;
@@ -229,6 +230,10 @@ namespace teleport
 						lostStreamables.Add(streamable);
 				}
 			}
+		}
+		public bool CheckRootCanStream(teleport.StreamableRoot r)
+		{ 
+			return true;
 		}
 	}
 }

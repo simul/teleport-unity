@@ -3,6 +3,7 @@
 
 using avs;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -1099,7 +1100,11 @@ namespace teleport
 			}
 			teleport.StreamableNode streamableNode = gameObject.GetComponentInParent<teleport.StreamableNode>();
 			if(streamableNode!=null)
-				streamableNode.nodeID=nodeID;
+				streamableNode.UpdateNodeID();
+			if(nodeID!=streamableNode.nodeID)
+			{
+				UnityEngine.Debug.LogError("Node Id mismatch: "+nodeID+","+ streamableNode.nodeID);
+			}
 			if (!streamableProperties||streamableProperties.includeChildren)
 				AddChildNodes(gameObject, forceMask, verify);
 			return nodeID;
@@ -1261,7 +1266,7 @@ namespace teleport
 			else
 			{
 				extractedMaterial.pbrMetallicRoughness.metallicFactor = material.HasProperty("_Metallic") ? material.GetFloat("_Metallic") : 0.0f; //Unity doesn't use this factor when the texture is set.
-				float smoothness = material.HasProperty("_Glossiness") ? material.GetFloat("_Glossiness") : 1.0f;
+				float smoothness = material.HasProperty("_Glossiness") ? material.GetFloat("_Glossiness") : 0.0f;
 				extractedMaterial.pbrMetallicRoughness.roughOrSmoothMultiplier = 0;
 				extractedMaterial.pbrMetallicRoughness.roughOffset = 1.0f-smoothness;
 			}
@@ -2383,7 +2388,7 @@ namespace teleport
 				}
 			}
 		}
-		private void ExtractMeshData(avs.AxesStandard extractToBasis, UnityEngine.Mesh mesh, uid meshID,bool verify)
+		private void ExtractMeshData(avs.AxesStandard extractToBasis, UnityEngine.Mesh mesh, uid meshID,bool verify,bool merge=true)
 		{
 			UInt64 localId=1;
 			avs.PrimitiveArray[] primitives = new avs.PrimitiveArray[mesh.subMeshCount];
@@ -2449,6 +2454,7 @@ namespace teleport
 			}
 
 			//Tangent Buffer
+			if(mesh.tangents.Length>0)
 			{
 				CreateMeshBufferAndView(extractToBasis, mesh.tangents, buffers, bufferViews, ref localId, out UInt64 tangentViewID);
 
@@ -2475,15 +2481,17 @@ namespace teleport
 				avs.GeometryBuffer uvBuffer = new avs.GeometryBuffer();
 				uvBuffer.byteLength = (ulong)((mesh.uv.Length + mesh.uv2.Length) * stride);
 				uvBuffer.data = new byte[uvBuffer.byteLength];
-
+				int uv0Size = mesh.uv.Length * stride;
+				//Buffer.BlockCopy(mesh.uv, 0, uvBuffer.data, 0, uv0Size);
+				//Buffer.BlockCopy(mesh.uv2, 0, uvBuffer.data, uv0Size, mesh.uv2.Length*stride);
+				//BitConverter.GetBytes(mesh.uv).CopyTo(uvBuffer.data,0);
 				//Get byte data from first UV channel.
-				for(int i = 0; i < mesh.uv.Length; i++)
+				for (int i = 0; i < mesh.uv.Length; i++)
 				{
 					BitConverter.GetBytes(mesh.uv[i].x).CopyTo(uvBuffer.data, i * stride + 0);
 					BitConverter.GetBytes(mesh.uv[i].y).CopyTo(uvBuffer.data, i * stride + 4);
 				}
 
-				int uv0Size = mesh.uv.Length * stride;
 				//Get byte data from second UV channel.
 				for(int i = 0; i < mesh.uv2.Length; i++)
 				{
@@ -3393,7 +3401,7 @@ namespace teleport
 			}
 			catch (Exception e)
 			{
-				UnityEngine.Debug.LogError("Failed in GetPathFromUid.");
+				UnityEngine.Debug.LogError("Failed in GetPathFromUid. "+e.ToString());
 				if (UnityEditor.EditorApplication.isPlaying)
 					UnityEditor.EditorApplication.isPlaying=false;
 			}

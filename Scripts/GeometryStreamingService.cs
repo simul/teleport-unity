@@ -366,9 +366,11 @@ namespace teleport
 			List<teleport.StreamableRoot> gainedStreamables = new List<teleport.StreamableRoot>();
 			List<teleport.StreamableRoot> lostStreamables = new List<teleport.StreamableRoot>();
 			if (streamedGeometryManagement!=null)
-				streamedGeometryManagement.UpdateStreamedGeometry(session,ref gainedStreamables,ref lostStreamables);
+				streamedGeometryManagement.UpdateStreamedGeometry(session,ref gainedStreamables,ref lostStreamables,  streamedHierarchies);
 			else
 			{
+				Debug.LogError("Please assign a Streamed Geometry Manager in the Monitor.");
+				return;
 				if (!session.IsConnected())
 					return;
 				if(session.GetClientID()==0)
@@ -474,6 +476,8 @@ namespace teleport
         private bool StartStreaming(teleport.StreamableRoot streamable, StreamingReason reason)
         {
 			if(!streamable)
+				return false;
+			if(streamable.priority<teleportSettings.defaultMinimumNodePriority)
 				return false;
 			uint streaming_reason= (uint)reason;
 			GameObject gameObject = streamable.gameObject;

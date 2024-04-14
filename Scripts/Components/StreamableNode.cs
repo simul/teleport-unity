@@ -13,10 +13,12 @@ namespace teleport
 	[DisallowMultipleComponent]
 	public class StreamableNode: MonoBehaviour
 	{
-		public uid nodeID;              //ID of the node.
+		uid _nodeID = 0;
+		public uid nodeID
+		{
+			get { return _nodeID; }
+		}
 		bool nodeEnabled;               //Whether the node is enabled on the server.
-		public bool allowStreaming =true;		// If false, blocks streaming of this node, AND its children.
-
 		//Cached references to components.
 		public MeshRenderer meshRenderer;
 		public SkinnedMeshRenderer skinnedMeshRenderer;
@@ -28,13 +30,16 @@ namespace teleport
 		public Vector3 stageSpaceAngularVelocity = new Vector3(0, 0, 0);
 		public void Awake()
 		{
-			nodeID = GeometrySource.GetGeometrySource().FindResourceID(gameObject);
 			nodeEnabled = true;
-
 			meshRenderer = default;
 			skinnedMeshRenderer = default;
 			light = default;
-		} 
+			UpdateNodeID();
+		}
+		public void UpdateNodeID()
+		{
+			_nodeID = GeometrySource.GetGeometrySource().FindResourceID(gameObject);
+		}
 
 		//Updates nodeEnabled state by checking cached references, and returns whether the nodeEnabled state changed.
 		//WARNING: We currently do not support streaming multiple rendering components on the same GameObject; this will put precedence on MeshRenderers then SkinnedMeshRenderers then Lights.

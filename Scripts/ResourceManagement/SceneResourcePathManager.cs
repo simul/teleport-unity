@@ -130,6 +130,12 @@ namespace teleport
 			p=p.Replace('\\','/');
 			if(path_root.Length>0)
 				p=p.Replace(path_root, "" );
+			if(p.Length>240)
+			{
+				string q="long_path/"+p.GetHashCode().ToString();
+				UnityEngine.Debug.LogWarning("Shortening too-long path "+p+" to "+q);
+				return q;
+			}
 			return p;
 		}
 		/// <summary>

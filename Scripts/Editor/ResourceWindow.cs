@@ -39,6 +39,7 @@ namespace teleport
 		private GUIStyle scrollwindowStyle;
 		private GUIStyle labelTextStyle ;
 		private GUIStyle titleStyle;
+		private GUIStyle groupStyle;
 
 		//GUI variables that control user-changeable properties.
 		private Vector2 scrollPosition_gameObjects;
@@ -93,10 +94,17 @@ namespace teleport
 				vScrollbarStyle = new GUIStyle(GUI.skin.verticalScrollbar);
 				labelTextStyle = new GUIStyle(GUI.skin.label);
 				scrollwindowStyle = new GUIStyle(GUI.skin.box);
-				titleStyle = new GUIStyle(GUI.skin.label);
+				titleStyle = new GUIStyle(EditorStyles.foldout);
 				titleStyle.fontSize = (GUI.skin.label.fontSize * 5) / 4;
 				titleStyle.fontStyle=FontStyle.Bold;
+				titleStyle.padding=new RectOffset(20,10,10,10);
+				titleStyle.border = new RectOffset(20, 10, 10, 10);
+
+				groupStyle =new GUIStyle(GUI.skin.box);
+
 				richText.normal.textColor = Color.white;
+
+
 				richText.richText = true;
 
 				warningText.normal.textColor = new Color(1.0f, 1.0f, 0.0f);
@@ -104,154 +112,175 @@ namespace teleport
 			}
 			DrawExtractionLayout();
 			EditorGUILayout.Separator();
-			EditorGUILayout.Space();
-			EditorGUILayout.LabelField("Advanced",titleStyle);
-			EditorGUILayout.Space(10);
-			EditorGUILayout.BeginHorizontal();
-			selectedCategory = GUILayout.SelectionGrid(selectedCategory, categories, 1, GUILayout.ExpandWidth(false));
+			foldoutAdvanced = EditorGUILayout.BeginFoldoutHeaderGroup(foldoutAdvanced, "Advanced", titleStyle);
+			if (foldoutAdvanced)
+			{ 
+				EditorGUILayout.BeginHorizontal();
+				selectedCategory = GUILayout.SelectionGrid(selectedCategory, categories, 1, GUILayout.ExpandWidth(false));
 
-			EditorGUILayout.BeginVertical();
-			resourceSearchText = EditorGUILayout.TextField("Search ", resourceSearchText);
-			switch ((ResourceWindowCategories)selectedCategory)
-			{
-				case ResourceWindowCategories.TAG_SETUP:
-					DrawTagSetupLayout();
-					break; 
-				case ResourceWindowCategories.COLLISION_SETUP:
-					DrawCollisionSetupLayout();
-					break; 
-				case ResourceWindowCategories.RESOURCES:
-					DrawResourcesLayout();
-					break;
-				case ResourceWindowCategories.SCENE_REFS:
-					DrawSceneRefsLayout();
-					break; 
-				case ResourceWindowCategories.DEBUG:
-					DrawDebugLayout();
-					break;
+				EditorGUILayout.BeginVertical();
+				resourceSearchText = EditorGUILayout.TextField("Search ", resourceSearchText);
+				switch ((ResourceWindowCategories)selectedCategory)
+				{
+					case ResourceWindowCategories.TAG_SETUP:
+						DrawTagSetupLayout();
+						break; 
+					case ResourceWindowCategories.COLLISION_SETUP:
+						DrawCollisionSetupLayout();
+						break; 
+					case ResourceWindowCategories.RESOURCES:
+						DrawResourcesLayout();
+						break;
+					case ResourceWindowCategories.SCENE_REFS:
+						DrawSceneRefsLayout();
+						break; 
+					case ResourceWindowCategories.DEBUG:
+						DrawDebugLayout();
+						break;
+				}
+				EditorGUILayout.EndVertical();
+
+				EditorGUILayout.EndHorizontal();
 			}
-			EditorGUILayout.EndVertical();
-
-			EditorGUILayout.EndHorizontal();
+			EditorGUILayout.EndFoldoutHeaderGroup();
 		}
 
 		private void DrawExtractionLayout()
 		{
-			EditorGUILayout.LabelField("Extraction", titleStyle);
-			EditorGUILayout.Space(10);
-			GUI.enabled = !Application.isPlaying;
-			labelTextStyle.alignment=TextAnchor.MiddleRight;
-			EditorGUILayout.Space(10);
-			EditorGUILayout.BeginHorizontal();
+			foldoutRoots = EditorGUILayout.BeginFoldoutHeaderGroup(foldoutRoots, "Selection", titleStyle);
 
-			EditorGUILayout.BeginVertical();
+			if (foldoutRoots)
 			{
-				UnityEngine.Object[] activeGOs =
-					Selection.GetFiltered(
-						typeof(GameObject),
-						 SelectionMode.TopLevel);
-				{ 
-					bool wasEnabled=GUI.enabled;
-					GUI.enabled = activeGOs.Length>0;
+				EditorGUILayout.BeginVertical(groupStyle);
+				EditorGUILayout.BeginHorizontal();
+				EditorGUILayout.LabelField("Choose objects that should be streamed as geometry.");
+				if (EditorGUILayout.LinkButton("Help"))
+				{
+					System.Diagnostics.Process.Start("explorer", "https://docs.teleportvr.io/unity/index.html#resource-management");
+				}
+				EditorGUILayout.EndHorizontal();
+				if (GUILayout.Button("Select All Roots"))
+				{
+					Selection.objects = GetStreamableRoots(-1000000, 1000000).ToArray();
+				}
+				EditorGUILayout.BeginHorizontal();
+				if (GUILayout.Button("Select by Priority"))
+				{
+					Selection.objects = GetStreamableRoots(minPrior, maxPrior).ToArray();
+				}
+				EditorGUILayout.LabelField("Min:", GUILayout.Width(60));
+				int nextMinPrior = EditorGUILayout.IntField(minPrior, GUILayout.Width(60));
+				if (nextMinPrior != minPrior)
+				{
+					minPrior = nextMinPrior;
+					if (maxPrior < minPrior)
+						maxPrior = minPrior;
+				}
+				EditorGUILayout.LabelField("Max:", GUILayout.Width(60));
+				int nextMaxPrior = EditorGUILayout.IntField(maxPrior, GUILayout.Width(60));
+				if (nextMaxPrior != maxPrior)
+				{
+					maxPrior = nextMaxPrior;
+					if (maxPrior < minPrior)
+						minPrior = maxPrior;
+				}
+
+				EditorGUILayout.EndHorizontal();
+				EditorGUILayout.EndVertical();
+				EditorGUILayout.Space(10);
+			}
+			EditorGUILayout.EndFoldoutHeaderGroup();
+			foldoutExtraction= EditorGUILayout.BeginFoldoutHeaderGroup(foldoutExtraction, "Extraction", titleStyle);
+			if(foldoutExtraction)
+			{ 
+				EditorGUILayout.Space(10);
+				GUI.enabled = !Application.isPlaying;
+				labelTextStyle.alignment=TextAnchor.MiddleRight;
+				EditorGUILayout.Space(10);
+				EditorGUILayout.BeginHorizontal();
+
+				EditorGUILayout.BeginVertical();
+				{
+					UnityEngine.Object[] activeGOs =
+						Selection.GetFiltered(
+							typeof(GameObject),
+							 SelectionMode.TopLevel);
+					{ 
+						bool wasEnabled=GUI.enabled;
+						GUI.enabled = activeGOs.Length>0;
 					
-					EditorGUILayout.BeginHorizontal(); 
-					GUILayout.Label("Selected Geometry:", labelTextStyle, GUILayout.Width(300));
+						EditorGUILayout.BeginHorizontal(); 
+						GUILayout.Label("Selected Geometry:", labelTextStyle, GUILayout.Width(300));
+						if (GUILayout.Button("Extract"))
+						{
+							ExtractSelectedGeometry(forceExtraction? GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES:GeometrySource.ForceExtractionMask.FORCE_NODES);
+						}
+						EditorGUILayout.EndHorizontal();
+						GUI.enabled=wasEnabled;
+					}
+					EditorGUILayout.BeginHorizontal();
+					GUILayout.Label("Scene Geometry:", labelTextStyle, GUILayout.Width(300));
 					if (GUILayout.Button("Extract"))
 					{
-						ExtractSelectedGeometry(forceExtraction? GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES:GeometrySource.ForceExtractionMask.FORCE_NODES);
+						ExtractSceneGeometry(forceExtraction ? GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES : GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
 					}
 					EditorGUILayout.EndHorizontal();
-					GUI.enabled=wasEnabled;
-				}
-				EditorGUILayout.BeginHorizontal();
-				GUILayout.Label("Scene Geometry:", labelTextStyle, GUILayout.Width(300));
-				if (GUILayout.Button("Extract"))
-				{
-					ExtractSceneGeometry(forceExtraction ? GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES : GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
-				}
-				EditorGUILayout.EndHorizontal();
-				EditorGUILayout.BeginHorizontal();
-				GUILayout.Label("Project Geometry:", labelTextStyle, GUILayout.Width(300));
-				if (GUILayout.Button("Extract"))
-				{
-					ExtractProjectGeometry(forceExtraction ? GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES : GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
-				}
-				EditorGUILayout.EndHorizontal();
-				EditorGUILayout.BeginHorizontal();
-				GUILayout.Label("Global Illumination Textures:", labelTextStyle, GUILayout.Width(300));
-				if (GUILayout.Button("Extract"))
-				{
-					ExtractGlobalIlluminationTextures();
-				}
-				EditorGUILayout.EndHorizontal();
-				EditorGUILayout.BeginHorizontal();
-				GUILayout.Label("Dynamic Object Lighting Textures:", labelTextStyle, GUILayout.Width(300));
-                bool wasEnabled2 = GUI.enabled;
-                GUI.enabled &= (Monitor.Instance?Monitor.Instance.envMapsGenerated:false);
-
-                if (GUILayout.Button("Extract"))
-				{
-					for (int i = 0; i < SceneManager.sceneCount; i++)
-					{
-						var scene = SceneManager.GetSceneAt(i);
-						if (scene == null)
-							continue;
-						ExtractDynamicObjectLightingTextures(scene);
-					}
-				}
-				GUI.enabled = wasEnabled2;
-				GUILayout.Label("Background Texture:", labelTextStyle, GUILayout.Width(300));
-
-				if (GUILayout.Button("Extract"))
-				{
-					for (int i = 0; i < SceneManager.sceneCount; i++)
-					{
-						var scene = SceneManager.GetSceneAt(i);
-						if (scene == null)
-							continue;
-						ExtractBackgroundTexture(scene);
-					}
-				}
-                EditorGUILayout.EndHorizontal();
-			}
-			EditorGUILayout.EndVertical();
-
-
-			EditorGUILayout.BeginVertical();
-				verifyGeometry = GUILayout.Toggle(verifyGeometry, "Verify Compressed Geometry");
-				forceExtraction = GUILayout.Toggle(forceExtraction, "Force Extraction");
-				geometrySource.treatTransparentAsDoubleSided = GUILayout.Toggle(geometrySource.treatTransparentAsDoubleSided, "Treat transparent as double-sided");
-			EditorGUILayout.EndVertical();
-
-			/*EditorGUILayout.BeginVertical();
-			
-			foldout_textures = EditorGUILayout.BeginFoldoutHeaderGroup(foldout_textures, "Last Extracted Textures (" + renderTextures.Length + ")");
-			if (foldout_textures)
-			{
-				scrollPosition_textures = EditorGUILayout.BeginScrollView(scrollPosition_textures);
-
-				foreach (RenderTexture renderTexture in renderTextures)
-				{
-					if (!renderTexture)
-						break;
-
 					EditorGUILayout.BeginHorizontal();
-
-					using (new EditorGUI.DisabledScope(true))
+					GUILayout.Label("Project Geometry:", labelTextStyle, GUILayout.Width(300));
+					if (GUILayout.Button("Extract"))
 					{
-						EditorGUILayout.ObjectField(renderTexture, typeof(RenderTexture), true);
+						ExtractProjectGeometry(forceExtraction ? GeometrySource.ForceExtractionMask.FORCE_NODES_HIERARCHIES_AND_SUBRESOURCES : GeometrySource.ForceExtractionMask.FORCE_NODES_AND_HIERARCHIES);
 					}
+					EditorGUILayout.EndHorizontal();
+					EditorGUILayout.BeginHorizontal();
+					GUILayout.Label("Global Illumination Textures:", labelTextStyle, GUILayout.Width(300));
+					if (GUILayout.Button("Extract"))
+					{
+						ExtractGlobalIlluminationTextures();
+					}
+					EditorGUILayout.EndHorizontal();
+					EditorGUILayout.BeginHorizontal();
+					GUILayout.Label("Dynamic Object Lighting Textures:", labelTextStyle, GUILayout.Width(300));
+					bool wasEnabled2 = GUI.enabled;
+					GUI.enabled &= (Monitor.Instance?Monitor.Instance.envMapsGenerated:false);
 
+					if (GUILayout.Button("Extract"))
+					{
+						for (int i = 0; i < SceneManager.sceneCount; i++)
+						{
+							var scene = SceneManager.GetSceneAt(i);
+							if (scene == null)
+								continue;
+							ExtractDynamicObjectLightingTextures(scene);
+						}
+					}
+					GUI.enabled = wasEnabled2;
+					GUILayout.Label("Background Texture:", labelTextStyle, GUILayout.Width(300));
+
+					if (GUILayout.Button("Extract"))
+					{
+						for (int i = 0; i < SceneManager.sceneCount; i++)
+						{
+							var scene = SceneManager.GetSceneAt(i);
+							if (scene == null)
+								continue;
+							ExtractBackgroundTexture(scene);
+						}
+					}
 					EditorGUILayout.EndHorizontal();
 				}
+				EditorGUILayout.EndVertical();
 
-				EditorGUILayout.EndScrollView();
-			}*
+
+				EditorGUILayout.BeginVertical();
+					verifyGeometry = GUILayout.Toggle(verifyGeometry, "Verify Compressed Geometry");
+					forceExtraction = GUILayout.Toggle(forceExtraction, "Force Extraction");
+					geometrySource.treatTransparentAsDoubleSided = GUILayout.Toggle(geometrySource.treatTransparentAsDoubleSided, "Treat transparent as double-sided");
+				EditorGUILayout.EndVertical();
+
+				EditorGUILayout.EndHorizontal();
+			}
 			EditorGUILayout.EndFoldoutHeaderGroup();
-			EditorGUILayout.EndVertical();*/
-			EditorGUILayout.EndHorizontal();
-
-			EditorGUILayout.Space(10);
 			GUI.enabled=true;
 		}
 		private Vector2 scrollPosition_scenes;
@@ -523,13 +552,33 @@ namespace teleport
 			}
 			GUI.enabled = true;
 		}
-
-			private void DrawDebugLayout()
+		int minPrior=0, maxPrior=0;
+		bool foldoutRoots=true;
+		bool foldoutExtraction=true;
+		bool foldoutAdvanced=false;
+		List<GameObject> GetStreamableRoots(int minPrior,int maxPrior)
+		{
+			List<GameObject> rootGameObjects = new List<GameObject>();
+			for (int i = 0; i<SceneManager.sceneCount; i++)
+			{
+				var objs = SceneManager.GetSceneAt(i).GetRootGameObjects();
+				foreach (var o in objs)
+				{
+					teleport.StreamableRoot[] m = o.GetComponentsInChildren<teleport.StreamableRoot>();
+					foreach(var r in m)
+					{
+						if(r.priority>= minPrior&&r.priority<=maxPrior)
+							rootGameObjects.Add(r.gameObject);
+					}
+				}
+			}
+			return rootGameObjects;
+		}
+		private void DrawDebugLayout()
 		{
 			EditorGUILayout.BeginVertical();
 			GUI.enabled = !Application.isPlaying;
-
-			if(GUILayout.Button("Clear Cached Data"))
+			if (GUILayout.Button("Clear Cached Data"))
 			{
 				geometrySource.ClearData();
 
@@ -643,7 +692,7 @@ namespace teleport
 				if(scene==null)
 					continue;
 				ExtractGlobalIlluminationTextures();
-				objectsToExtract.AddRange(geometrySource.GetStreamableNodes(scene));
+				objectsToExtract.AddRange(geometrySource.GetStreamableRoots(scene));
 				if(TagHandler.Instance)
 				{
 					objectsToExtract.AddRange(TagHandler.Instance.GetTaggedObjects(scene));

@@ -373,10 +373,6 @@ namespace teleport
 					{
 						activeNodeTracker.report = reportNodeEnabled;
 					}
-					if (streamableNode.allowStreaming==false)
-					{
-						return;
-					}
 					if(streamableNode!=null&&!streamedHierarchy.Contains(streamableNode))
 						streamedHierarchy.Add(streamableNode);
 					if(_trackAllEnabledStates)
