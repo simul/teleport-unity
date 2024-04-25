@@ -215,6 +215,9 @@ namespace teleport
 
 		private void OnEnable()
 		{
+			TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
+			if (priority < teleportSettings.defaultMinimumNodePriority)
+				return;
 			Teleport_SessionComponent sess=GetComponent<Teleport_SessionComponent>();
 			if(sess)
 			{ 
@@ -225,7 +228,6 @@ namespace teleport
 			// NOTE: The scene itself may not yet be loaded. So we don't necessarily call GeometrySource.AddNode unless it is.
 
 			if(gameObject.scene!=null&& gameObject.scene.isLoaded) { 
-				TeleportSettings teleportSettings = TeleportSettings.GetOrCreateSettings();
 				if (priority < teleportSettings.defaultMinimumNodePriority)
 					return;
 				uid = GeometrySource.GetGeometrySource().AddNode(gameObject, GeometrySource.ForceExtractionMask.FORCE_NOTHING);

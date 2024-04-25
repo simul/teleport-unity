@@ -69,7 +69,9 @@ namespace teleport
 					var streamable = g.GetComponentInParent<teleport.StreamableRoot>();
 					if (!streamable)
 						continue;
-					if(streamedHierarchies.Contains(streamable))
+					if (streamable.priority < teleportSettings.defaultMinimumNodePriority)
+						continue;
+					if (streamedHierarchies.Contains(streamable))
 						continue;
 					gainedStreamables.Add(streamable);
 				}

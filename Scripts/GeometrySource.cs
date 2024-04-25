@@ -1098,12 +1098,18 @@ namespace teleport
 				//Store extracted node.
 				Server_StoreNode(nodeID, extractedNode);
 			}
-			teleport.StreamableNode streamableNode = gameObject.GetComponentInParent<teleport.StreamableNode>();
+			teleport.StreamableNode streamableNode = gameObject.GetComponent<teleport.StreamableNode>();
 			if(streamableNode!=null)
-				streamableNode.UpdateNodeID();
-			if(nodeID!=streamableNode.nodeID)
 			{
-				UnityEngine.Debug.LogError("Node Id mismatch: "+nodeID+","+ streamableNode.nodeID);
+				streamableNode.UpdateNodeID();
+				if(nodeID!=streamableNode.nodeID)
+				{
+					UnityEngine.Debug.LogError("Node "+gameObject.name+", Id mismatch: " + nodeID+","+ streamableNode.nodeID);
+				}
+			}
+			else
+			{
+				UnityEngine.Debug.LogWarning("Node "+gameObject.name+" has no StreamableNode.");
 			}
 			if (!streamableProperties||streamableProperties.includeChildren)
 				AddChildNodes(gameObject, forceMask, verify);
