@@ -16,6 +16,7 @@ namespace teleport
 	{
 		public void UpdateStreamedGeometry(Teleport_SessionComponent session, ref List<teleport.StreamableRoot> gainedStreamables, ref List<teleport.StreamableRoot> lostStreamables, List<teleport.StreamableRoot> streamedHierarchies);
 		public bool CheckRootCanStream(teleport.StreamableRoot r);
+		public string GetLastWarning();
 	}
 
 	public struct SessionState
@@ -485,10 +486,11 @@ namespace teleport
 					{
 						if(!mgmt.CheckRootCanStream(r))
 						{
-							Debug.LogWarning(r.name +" cannot stream.");
+							Debug.LogWarning(mgmt.GetLastWarning(), r.gameObject);
 						}
 					}
-					GeometrySource.GetGeometrySource().AddNode(r.gameObject, GeometrySource.ForceExtractionMask.FORCE_NOTHING);
+					// Specify ForceExtractionMask.FORCE_NODES so that new node properties are updated.
+					GeometrySource.GetGeometrySource().AddNode(r.gameObject, GeometrySource.ForceExtractionMask.FORCE_NODES);
 				}
 			}
 		}

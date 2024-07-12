@@ -634,6 +634,7 @@ namespace avs
 	{
 		public avs.Vector4 lightmapScaleOffset;
 		public uid globalIlluminationTextureUid;
+		public byte lightmapTextureCoordinate ;
 	}
 
 	[StructLayout(LayoutKind.Sequential)]

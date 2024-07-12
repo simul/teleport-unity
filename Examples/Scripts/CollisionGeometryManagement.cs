@@ -100,12 +100,22 @@ namespace teleport
 				}
 			}
 		}
+		string lastWarning="";
+		public string GetLastWarning()
+		{
+			return lastWarning;
+		}
 		public bool CheckRootCanStream(teleport.StreamableRoot r)
 		{
 			var c=r.GetComponent<Collider>();
-			if(c==null||!c.enabled)
+			if(c==null)
 			{
-				Debug.LogWarning(r.name + " cannot stream because it has no collider.");
+				lastWarning = r.name + " cannot stream because it has no collider.";
+				return false;
+			}
+			if ( !c.enabled)
+			{
+				lastWarning = r.name + " cannot stream because its collider is not enabled.";
 				return false;
 			}
 			return true;

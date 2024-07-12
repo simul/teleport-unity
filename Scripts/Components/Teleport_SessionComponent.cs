@@ -845,7 +845,12 @@ namespace teleport
 				if(streamable!=null)
 				{
 					origin_uid = streamable.GetUid();
-					if(!streamable.sendMovementUpdates)
+					if (!GeometrySource.GetGeometrySource().HasNode(origin_uid))
+					{
+						Debug.LogError("Origin node "+origin_uid+" was not stored dll-side.");
+						return;
+					}
+					if (!streamable.sendMovementUpdates)
 						streamable.sendMovementUpdates=true;
 				}
 			}
@@ -853,6 +858,11 @@ namespace teleport
 			{
 				if (!Client_HasOrigin(clientID) || resetOrigin )//|| _clientspaceRoot.transform.hasChanged)
 				{
+					if (!GeometrySource.GetGeometrySource().HasNode(origin_uid))
+					{
+						Debug.LogError("Origin node " + origin_uid + " was not stored dll-side.");
+						return;
+					}
 					if (Client_SetOrigin(clientID,  origin_uid))
 					{
 						_clientspaceRoot.transform.hasChanged = false;

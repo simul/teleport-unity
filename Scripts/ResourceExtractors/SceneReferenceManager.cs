@@ -87,30 +87,33 @@ namespace teleport
             if (Application.isPlaying && meshTracker)
 			{
 				return meshTracker;
-            }
-            List<MeshTracker> meshTrackers = gameObject.GetComponents<MeshTracker>().ToList();
-            MeshFilter[] meshFilters = gameObject.GetComponents<MeshFilter>();
-			while(meshFilters.Length< meshTrackers.Count)
-			{
-				UnityEngine.Object.DestroyImmediate(meshTrackers[meshTrackers.Count-1]);
-				meshTrackers.RemoveAt(meshTrackers.Count - 1);
-            }
-            while (meshTrackers.Count < meshFilters.Length)
-            {
-                gameObject.AddComponent<MeshTracker>();
-                meshTrackers = gameObject.GetComponents<MeshTracker>().ToList();
-            }
-			if (meshTracker == null)
-			{
-				if (meshTrackers.Count > 0)
-					meshTracker = meshTrackers[0];
 			}
-			if (meshTracker == null)
-            {
-				SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
-				if(skinnedMeshRenderer)
+			SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
+			if (skinnedMeshRenderer!=null)
+			{
+				if (meshTracker == null)
 				{
 					meshTracker = gameObject.AddComponent<MeshTracker>();
+				}
+			}
+			else
+			{
+				List<MeshTracker> meshTrackers = gameObject.GetComponents<MeshTracker>().ToList();
+				MeshFilter[] meshFilters = gameObject.GetComponents<MeshFilter>();
+				while(meshFilters.Length< meshTrackers.Count)
+				{
+					UnityEngine.Object.DestroyImmediate(meshTrackers[meshTrackers.Count-1]);
+					meshTrackers.RemoveAt(meshTrackers.Count - 1);
+				}
+				while (meshTrackers.Count < meshFilters.Length)
+				{
+					gameObject.AddComponent<MeshTracker>();
+					meshTrackers = gameObject.GetComponents<MeshTracker>().ToList();
+				}
+				if (meshTracker == null)
+				{
+					if (meshTrackers.Count > 0)
+						meshTracker = meshTrackers[0];
 				}
 			}
 			if (meshTracker == null)
@@ -122,7 +125,8 @@ namespace teleport
 				resourcePath = SceneResourcePathManager.GetNonAssetResourcePath(meshTracker.mesh,gameObject);
 			meshTracker.resourcePath= resourcePath;
 #if UNITY_EDITOR
-			UnityEditor.EditorUtility.SetDirty(this);
+			UnityEditor.EditorUtility.SetDirty(gameObject);
+			UnityEditor.EditorUtility.SetDirty(meshTracker);
 #endif
 			return meshTracker;
 		}

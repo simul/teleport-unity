@@ -235,5 +235,10 @@ namespace teleport
 		{ 
 			return true;
 		}
+		string lastWarning = "";
+		public string GetLastWarning()
+		{
+			return lastWarning;
+		}
 	}
 }

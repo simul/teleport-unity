@@ -33,13 +33,13 @@ namespace avs
 		Link
 	};
 
-	public enum PrimitiveMode
+	public enum PrimitiveMode : UInt32
 	{
 		POINTS, LINES, TRIANGLES, LINE_STRIP, TRIANGLE_STRIP
 	};
 
 	//! The standard glTF attribute semantics.
-	public enum AttributeSemantic
+	public enum AttributeSemantic : UInt32
 	{
 		//Name				Accessor Type(s)	Component Type(s)					Description
 		POSITION,			//"VEC3"			5126 (FLOAT)						XYZ vertex positions
@@ -48,7 +48,22 @@ namespace avs
 		TEXCOORD_0,			//"VEC2"			5126 (FLOAT)
 							//					5121 (UNSIGNED_BYTE) normalized
 							//					5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the first set
-		TEXCOORD_1,			//"VEC2"			5126 (FLOAT)
+		TEXCOORD_1,         //"VEC2"			5126 (FLOAT)
+							//					5121 (UNSIGNED_BYTE) normalized
+							//					5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the second set
+		TEXCOORD_2,         //"VEC2"			5126 (FLOAT)
+							//					5121 (UNSIGNED_BYTE) normalized
+							//					5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the second set
+		TEXCOORD_3,         //"VEC2"			5126 (FLOAT)
+							//					5121 (UNSIGNED_BYTE) normalized
+							//					5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the second set
+		TEXCOORD_4,         //"VEC2"			5126 (FLOAT)
+							//					5121 (UNSIGNED_BYTE) normalized
+							//					5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the second set
+		TEXCOORD_5,         //"VEC2"			5126 (FLOAT)
+							//					5121 (UNSIGNED_BYTE) normalized
+							//					5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the second set
+		TEXCOORD_6,         //"VEC2"			5126 (FLOAT)
 							//					5121 (UNSIGNED_BYTE) normalized
 							//					5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the second set
 		COLOR_0,			//"VEC3"
@@ -71,12 +86,14 @@ namespace avs
 		SIMPLE_GRASS_WIND
 	}
 
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public struct Attribute
 	{
 		public AttributeSemantic semantic;
 		public UInt64 accessor;
 	};
 
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public struct PrimitiveArray
 	{
 		public UInt64 attributeCount;
@@ -86,9 +103,10 @@ namespace avs
 		public PrimitiveMode primitiveMode;
 	};
 
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public struct Accessor
 	{
-		public enum DataType
+		public enum DataType : UInt32
 		{
 			SCALAR=1,
 			VEC2,
@@ -96,7 +114,7 @@ namespace avs
 			VEC4,
 			MAT4
 		};
-		public enum ComponentType
+		public enum ComponentType : UInt32
 		{
 			FLOAT,
 			DOUBLE,
@@ -115,6 +133,7 @@ namespace avs
 		public UInt64 byteOffset;
 	};
 
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public struct BufferView
 	{
 		public UInt64 buffer;
@@ -123,6 +142,7 @@ namespace avs
 		public UInt64 byteStride;
 	};
 
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public struct GeometryBuffer
 	{
 		public UInt64 byteLength;
@@ -135,7 +155,7 @@ namespace avs
 	}
 
 	//Just copied the Unreal texture formats, this will likely need changing.
-	public enum TextureFormat
+	public enum TextureFormat : UInt32
 	{
 		INVALID,
 		G8,
@@ -152,7 +172,7 @@ namespace avs
 		MAX
 	}
 
-	public enum TextureCompression
+	public enum TextureCompression: UInt32
 	{
 		UNCOMPRESSED = 0,
 		BASIS_COMPRESSED,
@@ -166,7 +186,7 @@ namespace avs
 		MULTIPLY_ROUGHNESS
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public class TextureAccessor
 	{
 		public uid index = 0;
@@ -176,7 +196,7 @@ namespace avs
 		public float strength = 1.0f;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public class PBRMetallicRoughness
 	{
 		public TextureAccessor baseColorTexture = new TextureAccessor();
@@ -191,7 +211,7 @@ namespace avs
 	/// <summary>
 	/// Node properties for sending from C# to C++ dll.
 	/// </summary>
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public struct Node
 	{
 		public IntPtr name;
@@ -229,7 +249,41 @@ namespace avs
 		public IntPtr url;
 		public IntPtr query_url;
 	}
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
+	public struct Node2
+	{
+		public IntPtr name;
 
+		public Transform localTransform;
+		//public Transform globalTransform;
+
+		[MarshalAs(UnmanagedType.I1)]
+		public bool stationary;
+		public uid ownerClientId;
+		public NodeDataType dataType;
+		public uid parentID;
+		public uid dataID;
+		public uid skeletonNodeID;  // The node whose dataID is the skeleton asset.
+
+		public Vector4 lightColour;
+		public Vector3 lightDirection;
+		public float lightRadius;
+		public float lightRange;
+		public byte lightType;
+
+		public UInt64 numJoints;
+		public Int32[] jointIndices;
+
+		public UInt64 numAnimations;
+		public uid[] animationIDs;
+
+		public UInt64 numMaterials;
+		public uid[] materialIDs;
+
+		public NodeRenderState renderState;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public class Mesh
 	{
 		public IntPtr name;
@@ -255,6 +309,7 @@ namespace avs
 		public uid inverseBindMatricesAccessor;
 	}
 
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public struct Skeleton
 	{
 		public IntPtr name;
@@ -267,6 +322,7 @@ namespace avs
 		public avs.Transform rootTransform;
 	}
 
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public struct Texture
 	{
 		public IntPtr name;
@@ -303,8 +359,29 @@ namespace avs
 		OPAQUE,
 		TRANSPARENT
 	};
-	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public class Material
+	{
+		public IntPtr name;
+
+		public IntPtr path;
+		[MarshalAs(UnmanagedType.I8)]
+		public MaterialMode materialMode = MaterialMode.UNKNOWN;
+		public PBRMetallicRoughness pbrMetallicRoughness = new PBRMetallicRoughness();
+		public TextureAccessor normalTexture = new TextureAccessor();
+		public TextureAccessor occlusionTexture = new TextureAccessor();
+		public TextureAccessor emissiveTexture = new TextureAccessor();
+		public Vector3 emissiveFactor = new Vector3(0.0f, 0.0f, 0.0f);
+		[MarshalAs(UnmanagedType.I1)]
+		public bool doubleSided = false;
+		[MarshalAs(UnmanagedType.I1)]
+		public byte lightmapTexCoordIndex = 0;
+		public UInt64 extensionAmount;
+		public MaterialExtensionIdentifier[] extensionIDs;
+		public MaterialExtension[] extensions;
+	}
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
+	public class Material1
 	{
 		public IntPtr name;
 		
@@ -315,29 +392,26 @@ namespace avs
 		public TextureAccessor normalTexture = new TextureAccessor();
 		public TextureAccessor occlusionTexture = new TextureAccessor();
 		public TextureAccessor emissiveTexture = new TextureAccessor();
-		public Vector3 emissiveFactor = new Vector3(0.0f,0.0f,0.0f);
+		public Vector3 emissiveFactor = new Vector3(0.0f, 0.0f, 0.0f);
 		[MarshalAs(UnmanagedType.I1)]
-		public bool doubleSided=false;
+		public bool doubleSided = false;
 		[MarshalAs(UnmanagedType.I1)]
-		public byte lightmapTexCoordIndex = 0; 
+		public byte lightmapTexCoordIndex = 0;
 		public UInt64 extensionAmount;
-		[MarshalAs(UnmanagedType.ByValArray)]
 		public MaterialExtensionIdentifier[] extensionIDs;
-		[MarshalAs(UnmanagedType.ByValArray)]
-		public MaterialExtension[] extensions;
 	}
 }
 
 namespace teleport
 {
-	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public struct Glyph
 	{
 	   public UInt16 x0,y0,x1,y1; // coordinates of bounding box in bitmap
 	   public float xOffset,yOffset,xAdvance;
 	   public float xOffset2,yOffset2;
 	}
-	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public struct InteropFontMap
 	{
 		public int size;
@@ -345,7 +419,7 @@ namespace teleport
 		public Glyph [] fontGlyphs;
 	}
 	//! Struct to pass a font atlas back to the engine.
-	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public class InteropFontAtlas
 	{
 		
@@ -353,7 +427,7 @@ namespace teleport
 		public int numMaps;
 		public InteropFontMap [] fontMaps;
 	};
-	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public class InteropTextCanvas
 	{
 		public IntPtr text;
@@ -365,6 +439,7 @@ namespace teleport
 		public float height;
 		public avs.Vector4 colour= new avs.Vector4(0.0f,0.0f,0.0f,0.0f);
 	}
+	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	public struct TextureExtractionData
 	{
 		public uid id;
@@ -387,8 +462,6 @@ namespace teleport
 		private struct LoadedResource
 		{
 			public uid id;      // ID of the resource generated by the dll on load.
-			public IntPtr guid; // GUID of the asset, deprecated.
-			public IntPtr path; // Path of the asset.
 			public IntPtr name; // Name of asset that this resource relates to.
 			public Int64 lastModified;
 		}
@@ -449,7 +522,7 @@ namespace teleport
 		private static extern bool Server_CheckGeometryStoreForErrors();
 
 		[DllImport(TeleportServerDll.name)]
-		private static extern void Server_StoreNode(uid id, avs.Node node);
+		private static extern bool Server_StoreNode(uid id, avs.Node node);
 		[DllImport(TeleportServerDll.name)]
 		private static extern void Server_StoreSkeleton(uid id, avs.Skeleton skeleton);
 		[DllImport(TeleportServerDll.name)]
@@ -463,7 +536,7 @@ namespace teleport
 		private static extern void Server_StoreMaterial(uid id, string guid,
 												string path, Int64 lastModified, avs.Material material);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void Server_StoreTexture(uid id, string guid,
+		private static extern void Server_StoreTexture(uid id, 
 												string path, Int64 lastModified, avs.Texture texture
 												, [MarshalAs(UnmanagedType.I1)] bool genMips
 												, [MarshalAs(UnmanagedType.I1)] bool highQualityUASTC
@@ -476,7 +549,7 @@ namespace teleport
 		private static extern uid Server_StoreTextCanvas(string relative_assetPath,teleport.InteropTextCanvas interopTextCanvas);
 
 		[DllImport(TeleportServerDll.name)]
-		private static extern void Server_StoreShadowMap(uid id, string guid,
+		private static extern void Server_StoreShadowMap(uid id, 
 												string path, Int64 lastModified, avs.Texture shadowMap);
 
 		[DllImport(TeleportServerDll.name)]
@@ -507,6 +580,10 @@ namespace teleport
 		
 		[DllImport(TeleportServerDll.name)]
 		public static extern bool Server_GetFontAtlas( string path, InteropFontAtlas interopFontAtlas);
+
+
+		[DllImport(TeleportServerDll.name)]
+		public static extern int Server_GetStructSize(string name);
 		#endregion
 
 		#region CustomSerialisation
@@ -811,6 +888,10 @@ namespace teleport
 			return sessionResourceUids.ContainsKey(resource);
 		}
 
+		public bool HasNode(uid nodeID)
+		{
+			return Server_IsNodeStored(nodeID);
+		}
 		//Returns the ID of the resource if it has been processed, or zero if the resource has not been processed or was passed in null.
 		public uid FindResourceID(UnityEngine.Object resource)
 		{
@@ -1095,8 +1176,23 @@ namespace teleport
 						extractedNode.dataID=text_canvas_uid;
 					}
 				}
+				if (Marshal.SizeOf<avs.NodeRenderState>() != Server_GetStructSize("NodeRenderState"))
+				{
+					UnityEngine.Debug.LogError("Mismatching struct size for NodeRenderState. C#(" + Marshal.SizeOf<avs.NodeRenderState>() + ") != Dll(" + Server_GetStructSize("NodeRenderState") + "). Update C# and dll.");
+					return 0;
+				}
+				
+				if (Marshal.SizeOf<avs.Node>() != Server_GetStructSize("InteropNode"))
+				{
+					UnityEngine.Debug.LogError("Mismatching struct size for InteropNode. C#(" + Marshal.SizeOf<avs.Node>() + ") != Dll(" + Server_GetStructSize("InteropNode") + "). Update C# and dll.");
+					return 0;
+				}
 				//Store extracted node.
-				Server_StoreNode(nodeID, extractedNode);
+				if(!Server_StoreNode(nodeID, extractedNode))
+				{
+					UnityEngine.Debug.LogError($"Failed to store node {nodeID} {gameObject.name}.");
+					return 0;
+				}
 			}
 			teleport.StreamableNode streamableNode = gameObject.GetComponent<teleport.StreamableNode>();
 			if(streamableNode!=null)
@@ -1329,7 +1425,21 @@ namespace teleport
 			//long fileId=0;
 			SceneReferenceManager.GetGUIDAndLocalFileIdentifier(material, out string guid);
 			extractedMaterial.path = Marshal.StringToCoTaskMemUTF8(resourcePath);
-
+			if (Marshal.SizeOf<avs.TextureAccessor>() != Server_GetStructSize("TextureAccessor"))
+			{
+				UnityEngine.Debug.LogError("Mismatching struct size for TextureAccessor. C#(" + Marshal.SizeOf<avs.TextureAccessor>() + ") != Dll(" + Server_GetStructSize("TextureAccessor") + "). Update C# and dll.");
+				return 0;
+			}
+			if (Marshal.SizeOf<avs.PBRMetallicRoughness>() != Server_GetStructSize("PBRMetallicRoughness"))
+			{
+				UnityEngine.Debug.LogError("Mismatching struct size for PBRMetallicRoughness. C#(" + Marshal.SizeOf<avs.PBRMetallicRoughness>() + ") != Dll(" + Server_GetStructSize("PBRMetallicRoughness") + "). Update C# and dll.");
+				return 0;
+			}
+			if (Marshal.SizeOf<avs.Material>()!= Server_GetStructSize("InteropMaterial"))
+			{
+				UnityEngine.Debug.LogError("Mismatching struct size for InteropMaterial. C#("+ Marshal.SizeOf<avs.Material>()+") != Dll("+ Server_GetStructSize("InteropMaterial") + "). Update C# and dll.");
+				return 0;
+			}
 			Server_StoreMaterial(materialID, guid, resourcePath, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32))), extractedMaterial);
 #endif
 
@@ -1746,7 +1856,7 @@ namespace teleport
 				Marshal.Copy(subresourceImage.bytes, 0, targetPtr, (int)subresourceImage.bytes.Length);
 				targetPtr += subresourceImage.bytes.Length;
 			}
-			geometrySource.AddTextureData(sourceTexture, gameObject,textureData, highQualityUASTC, forceOverwrite);
+			geometrySource.AddTextureData(sourceTexture, gameObject, textureData, highQualityUASTC, forceOverwrite);
 			Marshal.FreeCoTaskMem(textureData.data);
 		}
 		static string basisUExe = "";
@@ -1872,7 +1982,7 @@ namespace teleport
 			string textureAssetPath = AssetDatabase.GetAssetPath(texture).Replace("Assets/","");
 			long lastModified = GetAssetWriteTimeUTC(textureAssetPath);
 			bool genMips=false;
-			Server_StoreTexture(textureID, guid, resourcePath, lastModified, textureData,  genMips, highQualityUASTC, forceOverwrite);
+			Server_StoreTexture(textureID,  resourcePath, lastModified, textureData,  genMips, highQualityUASTC, forceOverwrite);
 #endif
 		}
 
@@ -1884,7 +1994,7 @@ namespace teleport
 			uid boneID=0;
 			sessionResourceUids.TryGetValue(bone, out boneID);
 			if (boneID!=0&&jointIDs.Contains(boneID))
-				return ;
+				return;
 			if (boneID == 0)
             {
 
@@ -3283,7 +3393,7 @@ namespace teleport
 						continue;
 					}
 					string name = Marshal.PtrToStringAnsi(metaResource.name);
-					string path = Marshal.PtrToStringAnsi(metaResource.path);
+					string path = GetPathFromUid(metaResource.id);
 
 #if UNITY_EDITOR
 					string expectedAssetPath = path;
@@ -3360,7 +3470,7 @@ namespace teleport
 						}
 						else
 						{
-							UnityEngine.Debug.Log($"Asset {typeof(UnityAsset).FullName} \"{name}\" has been modified.");
+						//	UnityEngine.Debug.Log($"Asset {typeof(UnityAsset).FullName} \"{name}\" has been modified.");//
 						}
 					}
 					else
@@ -3370,7 +3480,7 @@ namespace teleport
 #endif
 				}
 			}
-			catch (Exception e )
+			catch (Exception e)
 			{
 				UnityEngine.Debug.LogWarning("Exception in AddToProcessedResources: " +e.Message);
 			}

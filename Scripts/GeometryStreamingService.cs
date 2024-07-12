@@ -23,19 +23,21 @@ namespace teleport
 		const string dllName="TeleportServer";
 #else
 		const string dllName="TeleportServer.so";
-		#endif
+#endif
+
 		[DllImport(TeleportServerDll.name)]
-		private static extern UInt64 Client_AddNode(uid clientID, uid nodeID);
+		private static extern UInt64 Client_GetNumNodesToStream(uid clientID);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void Client_RemoveNodeByID(uid clientID, uid nodeID);
+		private static extern UInt64 Client_GetNumNodesCurrentlyStreaming(uid clientID);
+
 		[DllImport(TeleportServerDll.name)]
 		private static extern void Client_AddGenericTexture(uid clientID, uid textureID);
 		[DllImport(TeleportServerDll.name)]
 		public static extern void Client_SetGlobalIlluminationTextures(uid clientID, UInt64 num, uid[] textureIDs);
 		[DllImport(TeleportServerDll.name)]
-		public static extern void Client_NodeEnteredBounds(uid clientID, uid nodeID);
+		public static extern bool Client_StreamNode(uid clientID, uid nodeID);
 		[DllImport(TeleportServerDll.name)]
-		public static extern void Client_NodeLeftBounds(uid clientID, uid nodeID);
+		public static extern bool Client_UnstreamNode(uid clientID, uid nodeID);
 		[DllImport(TeleportServerDll.name)]
 		private static extern bool Client_IsStreamingNodeID(uid clientID, uid nodeID);
 		[DllImport(TeleportServerDll.name)]
@@ -119,7 +121,7 @@ namespace teleport
 			foreach(teleport.StreamableRoot streamableComponent in streamedHierarchies)
 			{
 				streamableComponent.RemoveStreamingClient(session);
-				Client_RemoveNodeByID(session.GetClientID(), streamableComponent.GetUid());
+				Client_UnstreamNode(session.GetClientID(), streamableComponent.GetUid());
 			}
 		}
 
@@ -526,10 +528,18 @@ namespace teleport
 				{
 					continue;
 				}
-				int num_nodes_streamed=(int)Client_AddNode(session.GetClientID(), streamedNode.nodeID);
-				Client_AddNode(session.GetClientID(), streamedNode.nodeID);
-				Client_NodeEnteredBounds(session.GetClientID(), streamedNode.nodeID);
-				if (num_nodes_streamed != streamedGameObjects.Count+1)
+				ulong num_nodes_streamed_before = Client_GetNumNodesToStream(session.GetClientID());
+				if (num_nodes_streamed_before != (ulong)streamedGameObjects.Count)
+				{
+					Debug.LogWarning($"Object Node count mismatch between dll ({num_nodes_streamed_before}) and C# ({(streamedGameObjects.Count + 1)}) before adding " + streamedNode.gameObject.name);
+					//return false;
+				}
+				if (!Client_StreamNode(session.GetClientID(), streamedNode.nodeID))
+				{
+					UnityEngine.Debug.LogError("Failed to stream " + streamedNode.gameObject.name+" with uid "+ streamedNode.nodeID);
+				}
+				ulong num_nodes_streamed= Client_GetNumNodesToStream(session.GetClientID());
+				if (num_nodes_streamed != (ulong)streamedGameObjects.Count+1)
                 {
 					Debug.LogWarning($"Object Node count mismatch between dll ({num_nodes_streamed}) and C# ({(streamedGameObjects.Count + 1)}) after adding " + streamedNode.gameObject.name);
 					//return false;
@@ -570,8 +580,7 @@ namespace teleport
 			foreach(teleport.StreamableNode streamedNode in streamable.GetStreamableNodes())
 			{
 				streamedGameObjects.Remove(streamedNode);
-				Client_RemoveNodeByID(session.GetClientID(), streamedNode.nodeID);
-				Client_NodeLeftBounds(session.GetClientID(), streamedNode.nodeID);
+				Client_UnstreamNode(session.GetClientID(), streamedNode.nodeID);
 			}
 
 			//Remove GameObject's colliders from list.

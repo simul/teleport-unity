@@ -7,7 +7,7 @@ namespace teleport
     [HelpURL("https://docs.teleportvr.io/unity")]
     public class MeshTracker : MonoBehaviour
     {
-        public string resourcePath = "";
+        public string resourcePath;
         public Mesh mesh;
     }
 
