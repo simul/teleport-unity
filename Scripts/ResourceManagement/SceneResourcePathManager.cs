@@ -128,7 +128,9 @@ namespace teleport
 			p=p.Replace(",","_--_");
 			p=p.Replace(" ","___");
 			p=p.Replace('\\','/');
-			if(path_root.Length>0)
+			// Replace legacy paths that include hashes. These are not valid generic URL characters, use tildes instead.
+			p = p.Replace('#', '~');
+			if (path_root.Length>0)
 				p=p.Replace(path_root, "" );
 			if(p.Length>240)
 			{
@@ -161,10 +163,10 @@ namespace teleport
 				p = p.Replace(path_root, "");
 				p=path_root+p;
 			}
-			int hash = p.IndexOf("##");
-			if (hash >= 0)
+			int tilde= p.IndexOf("~~");
+			if (tilde >= 0)
 			{
-				p = p.Substring(0, hash);
+				p = p.Substring(0, tilde);
 			}
 			return p;
 		}
@@ -258,8 +260,12 @@ namespace teleport
 		{
 			if(sceneResourcePaths_keys!=null)
 			for (int i = 0; i < sceneResourcePaths_keys.Length; i++)
-			{
-				sceneResourcePaths[sceneResourcePaths_keys[i]] = sceneResourcePaths_values[i];
+				{
+					UnityEngine.Object obj = sceneResourcePaths_keys[i];
+					string value= sceneResourcePaths_values[i];
+					// Replace legacy paths that include hashes. These are not valid generic URL characters, use tildes instead.
+					value = value.Replace("#", "~");
+					sceneResourcePaths[obj] = value;
 			}
 		}
 

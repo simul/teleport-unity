@@ -95,6 +95,7 @@ namespace teleport
 				teleportSettings = TeleportSettings.GetOrCreateSettings();
 			// Use IMGUI to display UI:
 			teleportSettings.cachePath = EditorGUILayout.TextField("Cache path", teleportSettings.cachePath);
+			teleportSettings.httpRoot = EditorGUILayout.TextField("HTTP root", teleportSettings.httpRoot);
 			teleportSettings.defaultScene = EditorGUILayout.TextField("Default Scene", teleportSettings.defaultScene);
 			teleportSettings.additiveScene = EditorGUILayout.TextField("Additive Scene", teleportSettings.additiveScene);
 			teleportSettings.TagToStream = EditorGUILayout.TagField("Tag to Stream",teleportSettings.TagToStream);

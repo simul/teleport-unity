@@ -175,7 +175,7 @@ namespace avs
 	public enum TextureCompression: UInt32
 	{
 		UNCOMPRESSED = 0,
-		BASIS_COMPRESSED,
+		BASIS_COMPRESSED_DEPRECATED,
 		PNG,
 		KTX
 	}
@@ -332,19 +332,18 @@ namespace avs
 		public uint width;
 		public uint height;
 		public uint depth;
-		public uint bytesPerPixel;
 		public uint arrayCount;
 		public uint mipCount;
 
+		[MarshalAs(UnmanagedType.U4)]
 		public TextureFormat format;
+		[MarshalAs(UnmanagedType.U4)]
 		public TextureCompression compression;
 		[MarshalAs(UnmanagedType.I1)]
 		public bool compressed;
 
 		public uint dataSize;
 		public IntPtr data;
-
-		public uid samplerID;
 
 		public float valueScale;
 
@@ -498,6 +497,8 @@ namespace teleport
 		[DllImport(TeleportServerDll.name)]
 		private static extern bool Server_SetCachePath(string name);
 		[DllImport(TeleportServerDll.name)]
+		private static extern bool Server_SetHttpRoot(string h);
+		[DllImport(TeleportServerDll.name)]
 		private static extern void Server_DeleteUnmanagedArray(in IntPtr unmanagedArray);
 
 		[DllImport(TeleportServerDll.name)]
@@ -527,13 +528,12 @@ namespace teleport
 		private static extern void Server_StoreSkeleton(uid id, avs.Skeleton skeleton);
 		[DllImport(TeleportServerDll.name)]
 		private static extern bool Server_StoreMesh(uid id,
-												string guid,
 												string path,
 												Int64 lastModified,
 												[MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(MeshMarshaler))] avs.Mesh mesh,
 												 [MarshalAs(UnmanagedType.I1)] avs.AxesStandard extractToStandard,  [MarshalAs(UnmanagedType.I1)] bool verify);
 		[DllImport(TeleportServerDll.name)]
-		private static extern void Server_StoreMaterial(uid id, string guid,
+		private static extern void Server_StoreMaterial(uid id, 
 												string path, Int64 lastModified, avs.Material material);
 		[DllImport(TeleportServerDll.name)]
 		private static extern void Server_StoreTexture(uid id, 
@@ -731,6 +731,16 @@ namespace teleport
 			}
 			return valid;
 		}
+		public bool SetHttpRoot(string r)
+		{
+			bool valid = Server_SetHttpRoot(r);
+			if (!valid)
+			{
+				UnityEngine.Debug.LogError("Failed to set the HTTP Root Path to: " + r);
+				UnityEngine.Debug.LogError("Unable to serve files via http.");
+			}
+			return valid;
+		}
 
 		public void SaveToDisk()
 		{
@@ -810,13 +820,15 @@ namespace teleport
 			// We can't therefore just use the file name.
 			// For now at least, let's not do this for textures.
 
-			// The double # is used to separate the source file name from the subobject name.
+			// The double ~ is used to separate the source file name from the subobject name.
+			// see https://stackoverflow.com/questions/1856785/characters-allowed-in-a-url
+			// - we want the path to be an allowable HTTP url so we can server resources via that protocol.
 			if (obj.GetType() != typeof(UnityEngine.Texture))
 			{
 				string filename = Path.GetFileName(path);
 				path = Path.GetDirectoryName(path);
 				path = Path.Combine(path, filename);
-				path +="##"+obj.name;
+				path +="~~"+obj.name;
 			}
 			// Further disambiguation is needed for meshes because Unity discards internal structure from fbx files
 			// so more than one mesh with the same name can appear as part of the same asset.
@@ -828,7 +840,7 @@ namespace teleport
 			// So here, we use the localId's to distinguish them.
 			if (path.Contains("unity default resources"))
 			{
-				path += "##" + obj.name + "_" + localId;
+				path += "~~" + obj.name + "_" + localId;
 			}
 			if (path.Contains("unity editor resources"))
 			{
@@ -1054,8 +1066,12 @@ namespace teleport
 			{
 				bool isRoot=(gameObject.GetComponent<StreamableRoot>() != null);
 				avs.Node extractedNode = new avs.Node();
-				// If this is a root, we treat it as parentless.
-				if (!isRoot&&gameObject.transform.parent!=null)
+				// If this is a root, should we treat it as parentless? This would lead to problems with the positioning.
+				if (isRoot&&gameObject.transform.parent!=null)
+				{
+					extractedNode.parentID = FindResourceID(gameObject.transform.parent.gameObject);
+				}
+				else if(gameObject.transform.parent != null)
 				{
 					extractedNode.parentID = FindResourceID(gameObject.transform.parent.gameObject);
 				}
@@ -1440,7 +1456,7 @@ namespace teleport
 				UnityEngine.Debug.LogError("Mismatching struct size for InteropMaterial. C#("+ Marshal.SizeOf<avs.Material>()+") != Dll("+ Server_GetStructSize("InteropMaterial") + "). Update C# and dll.");
 				return 0;
 			}
-			Server_StoreMaterial(materialID, guid, resourcePath, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32))), extractedMaterial);
+			Server_StoreMaterial(materialID, resourcePath, GetAssetWriteTimeUTC(AssetDatabase.GUIDToAssetPath(guid.Substring(0,32))), extractedMaterial);
 #endif
 
 			return materialID;
@@ -1460,8 +1476,8 @@ namespace teleport
 				Directory.CreateDirectory(folderPath);
 			}
 			compressedFilePath = folderPath +"/" +compressedFilePath;
-			if(textureCompression ==avs.TextureCompression.BASIS_COMPRESSED)
-				compressedFilePath+=".basis"; //Combine folder path, unique name, and basis file extension to create basis file path and name.
+			if(textureCompression ==avs.TextureCompression.BASIS_COMPRESSED_DEPRECATED)
+				return "";
 			else if (textureCompression == avs.TextureCompression.PNG)
 				compressedFilePath += ".png";
 			else if (textureCompression == avs.TextureCompression.KTX)
@@ -1477,6 +1493,7 @@ namespace teleport
 			//According to the Unity docs, we need to call Release() on any render textures we are done with.
 			//Resize the array, instead of simply creating a new one, as we want to keep the same render textures for quicker debugging.
 			int rendertextureIndex=0;
+			avs.TextureCompression avsTextureCompression = avs.TextureCompression.KTX;
 			//Extract texture data with a compute shader, rip the data, and store in the native C++ plugin.
 			for (int i = 0; i < geometrySource.texturesWaitingForExtraction.Count; i++)
 			{
@@ -1489,7 +1506,6 @@ namespace teleport
 					EditorUtility.ClearProgressBar();
 					return false;
 				}
-				bool writePng = false;
 				UnityEngine.TextureFormat textureFormat = UnityEngine.TextureFormat.RGBA32;
 				bool isCubemap = false;
 				int arraySize = 1;
@@ -1574,20 +1590,18 @@ namespace teleport
 								highQualityUASTC = false;
 								break;
 							case UnityEngine.TextureFormat.DXT5:
-								writePng = true;
+								avsTextureCompression = avs.TextureCompression.PNG;
 								break;
 							case UnityEngine.TextureFormat.BC6H:
-								rtFormat = RenderTextureFormat.ARGB32;
+								rtFormat = RenderTextureFormat.ARGBHalf;
+								avsTextureCompression = avs.TextureCompression.KTX;
 								highQualityUASTC = true;
-								writePng = true;
 								break;
 							case UnityEngine.TextureFormat.RGBAHalf:
 								// Basis can't compress half format, so convert to 32-bit float.
-								rtFormat = RenderTextureFormat.ARGB32;
-								//rtFormat = RenderTextureFormat.ARGBHalf;
+								rtFormat = RenderTextureFormat.ARGBHalf;
 								highQualityUASTC = true;
-								// No point in Png, can't support floats.
-								writePng = true;
+								avsTextureCompression = avs.TextureCompression.KTX;
 								break;
 							case UnityEngine.TextureFormat.RGBA32:
 								rtFormat = RenderTextureFormat.ARGB32;
@@ -1636,7 +1650,7 @@ namespace teleport
 				if (isNormal || textureImporter != null && textureImporter.GetDefaultPlatformTextureSettings().textureCompression == TextureImporterCompression.CompressedHQ)
 					highQualityUASTC = true;
 				if (highQualityUASTC)
-					writePng = true;
+					avsTextureCompression = avs.TextureCompression.KTX;
 				bool flipY=true;
 				int[] offsets = { 0, 0 };
 				if (flipY)
@@ -1701,7 +1715,7 @@ namespace teleport
 					continue;
 				}
 				//Rip data from render texture, and store in GeometryStore.
-				ExtractAndStoreTexture(sourceTexture, textureExtractionData.gameObject, textureArray, textureExtractionData.textureData, targetWidth, targetHeight, writePng, highQualityUASTC, forceOverwrite);
+				ExtractAndStoreTexture(sourceTexture, textureExtractionData.gameObject, textureArray, textureExtractionData.textureData, targetWidth, targetHeight, avsTextureCompression, highQualityUASTC, forceOverwrite);
 				rendertextureIndex+=arraySize;
 			}
 
@@ -1722,7 +1736,7 @@ namespace teleport
 			public byte[] bytes;
 		}
 
-		void ExtractAndStoreTexture(UnityEngine.Texture sourceTexture, GameObject gameObject,List<RenderTexture> renderTextures, avs.Texture textureData,int targetWidth, int targetHeight,bool writePng, bool highQualityUASTC,  bool forceOverwrite)
+		void ExtractAndStoreTexture(UnityEngine.Texture sourceTexture, GameObject gameObject,List<RenderTexture> renderTextures, avs.Texture textureData,int targetWidth, int targetHeight, avs.TextureCompression avsTextureCompression, bool highQualityUASTC,  bool forceOverwrite)
 		{
 			int arraySize=1;
 			if(sourceTexture.GetType()==typeof(Cubemap)|| sourceTexture.GetType() == typeof(RenderTexture)&&
@@ -1768,7 +1782,6 @@ namespace teleport
 					{
 						Color[] pixelData = readTexture.GetPixels();
 						textureData.format = avs.TextureFormat.RGBAFloat;
-						textureData.bytesPerPixel = 16;
 						int floatSize = Marshal.SizeOf<float>();
 						int imageSize= Marshal.SizeOf<Color>() * pixelData.Length;
 						var srcBytes = MemoryMarshal.Cast<Color, byte>(pixelData);
@@ -1779,50 +1792,39 @@ namespace teleport
 						byte[] pixelData = readTexture.GetRawTextureData();
 
 						textureData.format = avs.TextureFormat.RGBA16F;
-						textureData.bytesPerPixel = 8;
-
-						int imageSize = pixelData.Length * (int)textureData.bytesPerPixel;
+						int bytesPerPixel =8;
+						int imageSize = pixelData.Length * (int)bytesPerPixel;
 						subresourceImage.bytes = new byte[imageSize];
 						subresourceImage.bytes = pixelData;
 					}
 					else
 					{
-						 pngCompatibleFormat = true;
+						pngCompatibleFormat = true;
 						Color32[] pixelData = readTexture.GetPixels32();
 
 						textureData.format = avs.TextureFormat.RGBA8;
-						textureData.bytesPerPixel = 4;
-
 						int imageSize =pixelData.Length * Marshal.SizeOf<Color32>();
 						subresourceImage.bytes = new byte[imageSize];
 						var srcBytes = MemoryMarshal.Cast<Color32, byte>(pixelData);
 						subresourceImage.bytes = srcBytes.ToArray();
 					}
 					string textureAssetPath = AssetDatabase.GetAssetPath(sourceTexture).Replace("Assets/","");
-					string basisFile = geometrySource.GenerateCompressedFilePath(textureAssetPath, avs.TextureCompression.BASIS_COMPRESSED);
+					string basisFile = geometrySource.GenerateCompressedFilePath(textureAssetPath, avs.TextureCompression.KTX);
 					string dirPath = System.IO.Path.GetDirectoryName(basisFile);
 					if (!Directory.Exists(dirPath))
 					{
 						Directory.CreateDirectory(dirPath);
 					}
-					textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
+					textureData.compression = avs.TextureCompression.KTX;
 					if (pngCompatibleFormat&&highQualityUASTC)
 					{
-						writePng=true;
+						avsTextureCompression =avs.TextureCompression.PNG;
 						highQualityUASTC=false;
 					}
 					float valueScale = 1.0f;
 					textureData.valueScale = valueScale;
 					textureData.compressed=false;
-					if (writePng || highQualityUASTC)
-					{
-						// We will send the .png instead of a .basis file.
-						textureData.compression = avs.TextureCompression.PNG;
-					}
-					else
-					{
-						textureData.compression = avs.TextureCompression.BASIS_COMPRESSED;
-					}
+					textureData.compression=avsTextureCompression;
 					n++;
 					w = (w + 1) / 2;
 					h = (h + 1) / 2;
@@ -1982,7 +1984,147 @@ namespace teleport
 			string textureAssetPath = AssetDatabase.GetAssetPath(texture).Replace("Assets/","");
 			long lastModified = GetAssetWriteTimeUTC(textureAssetPath);
 			bool genMips=false;
+			int unmanagedSize = Server_GetStructSize("InteropTexture");
+			int managedSize = (int)Marshal.SizeOf(typeof(avs.Texture));
+
+			if (managedSize != unmanagedSize)
+			{
+				UnityEngine.Debug.LogError($"{nameof(avs.Texture)} struct size mismatch between unmanaged code({unmanagedSize}) and managed code({managedSize})!\n"
+					+ $"This usually means that your TeleportServer.dll (or .so) is out of sync with the Unity plugin C# code.\n" +
+					$"One or both of these needs to be updated.");
+			}
 			Server_StoreTexture(textureID,  resourcePath, lastModified, textureData,  genMips, highQualityUASTC, forceOverwrite);
+#endif
+		}
+		class SubresourceImage16
+		{
+			public short[] bytes;
+		}/*
+ * Convert a 32-bit floating-point number in IEEE single-precision format to a 16-bit floating-point number in
+ * IEEE half-precision format, in bit representation.
+ *
+ * @note The implementation relies on IEEE-like (no assumption about rounding mode and no operations on denormals)
+ * floating-point operations and bitcasts between integer and floating-point variables.
+ 
+		public static unsafe float fp32_from_bits(UInt32 value)
+		{
+			return *(float*)(&value);
+		}
+		public static unsafe UInt32 fp32_to_bits(float value)
+		{
+			return *(UInt32*)(&value);
+		}
+		short ConvertFloatToFloat16(float f)
+		{
+			float scale_to_inf = fp32_from_bits((UInt32)0x77800000); // exponent is 112
+			float scale_to_zero = fp32_from_bits((UInt32)0x08800000); // exponent is -110
+			// If 15 < e then inf, otherwise e += 2
+			float basebase = (Math.Abs(f) * scale_to_inf) * scale_to_zero;
+
+			UInt32 w = fp32_to_bits(f);
+			// Right shift 1, so the sign bit is dropped, only exponent and mantissa are left
+			UInt32 shl1_w = w + w;
+			UInt32 sign = w & (UInt32)(0x80000000);
+			UInt32 bias = shl1_w & (UInt32)(0xFF000000); // Get the exponent bits/value of fp32
+			if (bias < (UInt32)(0x71000000))
+			{ // 113 - 127 = -14, if true e is less than -14, then it is -14
+				bias = (UInt32)(0x71000000);
+			}
+
+			// bias >> 1 move exponent bits to the bit positions they are supposed to be and assume sign to be positive
+			// 0x07800000 (0000 0111 1000 000 ...) --> exponent 15 = 15 << 23
+			// fp32_from_bits((bias >> 1) + (UInt32)(0x07800000)) --> exponent + 15
+			// base: exponent + 2
+			// To make the exponent the same as bigger operand, namely, exponent + 15, the base needes to be
+			// shifted right 13 bits, the result of exponent would be exponent + 15, which
+			// is the biased exponent in fp16
+			// If true exponent is less than -14, then bias = -14, + (UInt32)(0x07800000) --> bias is fixed
+			// at 1, base exponent is exponent e + 2, if e is -15, e + 2 is -13, so need to right shifted 14
+			// bits, if e is -16, 15 bits.
+			basebase = fp32_from_bits((bias >> 1) + (UInt32)(0x07800000)) + basebase;
+			UInt32 bits = fp32_to_bits(basebase);
+			// exp_bits needs to be right shifted 13 bits to shift from bit27 in fp32 to bit14 in fp16, droping 3 exponent bits away
+			// If input exponent is 142 (1000 1110) (142 - 127 = 15), 142 + 15 = 1001 1101, discarding top 3 bits
+			// 1 1101 --> 5 bits = 29
+			// mantissa_bits takes bit10 also, which should be 1 when input exponent is 142, so 1 1101 + 1 = 1 1110 = 30
+			// true exponent for 30 in fp16 is 30 - 15 = 15 which is the same as 142 in fp32
+			// So droping top 3 bits is the same as substracting 128, and later adding mantissa_bits adds
+			// 1 in exponent, so the whole effect of exponent + 15 - 128 + 1 = exponent - 127 + 15, which
+			// is the formular to change exponent biased in fp32 to exponent biased in fp16
+			UInt32 exp_bits = (bits >> 13) & (UInt32)(0x00007C00);// Get the 5-bit exponents 0111 1100
+			UInt32 mantissa_bits = bits & (UInt32)(0x00000FFF);
+			UInt32 nonsign = exp_bits + mantissa_bits;
+			return (short)((sign >> 16) | (shl1_w > (UInt32)(0xFF000000) ? (UInt16)(0x7E00) : nonsign));
+		}*/
+		public void AddFp16TestTexture()
+		{
+#if UNITY_EDITOR
+			string resourcePath ="TestFloat16Texture";
+			string textureAssetPath = resourcePath;
+			int unmanagedSize = Server_GetStructSize("InteropTexture");
+			int managedSize = (int)Marshal.SizeOf(typeof(avs.Texture));
+			if (managedSize != unmanagedSize)
+			{
+				UnityEngine.Debug.LogError($"{nameof(avs.Texture)} struct size mismatch between unmanaged code({unmanagedSize}) and managed code({managedSize})!\n"
+					+ $"This usually means that your TeleportServer.dll (or .so) is out of sync with the Unity plugin C# code.\n" +
+					$"One or both of these needs to be updated.");
+			}
+			uid textureID=Server_GetOrGenerateUid(resourcePath);
+			avs.Texture avsTexture=new avs.Texture();
+			string name=resourcePath;
+			avsTexture.name=Marshal.StringToCoTaskMemUTF8(name);
+			avsTexture.path = Marshal.StringToCoTaskMemUTF8(resourcePath);
+			avsTexture.width=4;
+			avsTexture.height=4;
+			avsTexture.depth=1;
+			avsTexture.arrayCount=1;
+			avsTexture.mipCount=1;
+
+			avsTexture.format=avs.TextureFormat.RGBA16F;
+			avsTexture.compression=avs.TextureCompression.KTX;
+			avsTexture.compressed =false;
+
+			avsTexture.valueScale=1.0F;
+			avsTexture.cubemap=false;
+
+			List<SubresourceImage16> subresourceImages = new List<SubresourceImage16>();
+			subresourceImages.Add(new SubresourceImage16());
+
+			UInt16[] numImages = { ((UInt16)1) };
+			byte[] numImagesBytes = MemoryMarshal.Cast<UInt16, byte>(numImages).ToArray();
+
+			int memoryRequired = Marshal.SizeOf<UInt16>();
+			List<UInt32> offsets = new List<UInt32>();
+			memoryRequired += Marshal.SizeOf<UInt32>() * 1;
+			foreach (SubresourceImage16 subresourceImage in subresourceImages)
+			{
+				offsets.Add((UInt32)memoryRequired);
+				subresourceImage.bytes=new short[4*2*avsTexture.width * avsTexture.height];
+				for(UInt32 i = 0; i < subresourceImage.bytes.Length/4; i++)
+				{
+					subresourceImage.bytes[i*4+0]=15360;//ConvertFloatToFloat16(1.0F);
+					subresourceImage.bytes[i * 4 + 1] = 0;//ConvertFloatToFloat16(0.0F);
+					subresourceImage.bytes[i * 4 + 2] = 15360;//ConvertFloatToFloat16(1.0F);
+					subresourceImage.bytes[i * 4 + 3] = 15360;//ConvertFloatToFloat16(1.0F);
+				}
+				memoryRequired += subresourceImage.bytes.Length;
+			}
+			avsTexture.data = Marshal.AllocCoTaskMem((int)memoryRequired);
+			IntPtr targetPtr = avsTexture.data;
+			Marshal.Copy(numImagesBytes, 0, targetPtr, Marshal.SizeOf<UInt16>());
+			targetPtr += Marshal.SizeOf<UInt16>();
+
+			byte[] offsetsBytes = MemoryMarshal.Cast<UInt32, byte>(offsets.ToArray()).ToArray();
+			Marshal.Copy(offsetsBytes, 0, targetPtr, offsetsBytes.Length);
+			targetPtr += offsetsBytes.Length;
+			foreach (SubresourceImage16 subresourceImage in subresourceImages)
+			{
+				Marshal.Copy(subresourceImage.bytes, 0, targetPtr, (int)subresourceImage.bytes.Length);
+				targetPtr += subresourceImage.bytes.Length;
+			}
+			avsTexture.dataSize=(uint)memoryRequired;
+			Server_StoreTexture(textureID, resourcePath, 0, avsTexture, false, true, true);
+			Marshal.FreeCoTaskMem(avsTexture.data);
 #endif
 		}
 
@@ -2887,7 +3029,6 @@ namespace teleport
 			if (!Server_StoreMesh
 			(
 				meshID,
-				guid,
 				resourcePath,
 				last_modified,
 				avsMesh,
@@ -3311,7 +3452,7 @@ namespace teleport
 				format = avs.TextureFormat.INVALID, //Assumed
 				compression = avs.TextureCompression.UNCOMPRESSED, //Assumed
 
-				samplerID = 0
+				valueScale=1.0F
 			};
 
 			switch(texture)
@@ -3324,17 +3465,14 @@ namespace teleport
 				case Texture2DArray texture2DArray:
 					extractedTexture.depth = 1;
 					extractedTexture.arrayCount = (uint)texture2DArray.depth;
-					extractedTexture.bytesPerPixel = GetBytesPerPixel(texture2DArray.format);
 					break;
 				case Texture3D texture3D:
 					extractedTexture.depth = (uint)texture3D.depth;
 					extractedTexture.arrayCount = 1;
-					extractedTexture.bytesPerPixel = GetBytesPerPixel(texture3D.format);
 					break;
 				case Cubemap cubemap:
 					extractedTexture.depth = 1;
 					extractedTexture.arrayCount = 6;
-					extractedTexture.bytesPerPixel = GetBytesPerPixel(cubemap.format);
 					extractedTexture.cubemap=true;
 					break;
 				case RenderTexture renderTexture:
@@ -3346,7 +3484,6 @@ namespace teleport
 						extractedTexture.cubemap = true;
 					}
 					extractedTexture.mipCount=(uint)renderTexture.mipmapCount;
-					extractedTexture.bytesPerPixel = GetBytesPerPixel(renderTexture.format);
 					break;
 				default:
 					UnityEngine.Debug.LogError("Passed texture was unsupported type: " + texture.GetType() + "!");

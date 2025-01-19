@@ -578,6 +578,10 @@ namespace teleport
 		{
 			EditorGUILayout.BeginVertical();
 			GUI.enabled = !Application.isPlaying;
+			if (GUILayout.Button("Test BC6H Texture"))
+			{
+				geometrySource.AddFp16TestTexture();
+			}
 			if (GUILayout.Button("Clear Cached Data"))
 			{
 				geometrySource.ClearData();

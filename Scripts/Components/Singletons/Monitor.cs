@@ -367,6 +367,10 @@ namespace teleport
 			{
 				Debug.LogError($"Teleport_Initialize failed, so server cannot start.");
 			}
+			if (!GeometrySource.GetGeometrySource().SetHttpRoot(teleportSettings.httpRoot))
+			{
+				
+			}
 			// Sets connection timeouts for peers (milliseconds)
 			Server_SetConnectionTimeout(teleportSettings.connectionTimeout);
 

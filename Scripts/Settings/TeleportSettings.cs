@@ -16,6 +16,7 @@ namespace teleport
 		static private TeleportSettings teleportSettings=null;
 		// the cache path is global, shared with player instances.
 		public string cachePath="";
+		public string httpRoot="http://localhost:80";
 		// We always store the settings in this path:
 		public const string k_TeleportSettingsPath = "TeleportVR";
 		public const string k_TeleportSettingsFilename = "TeleportSettings";
